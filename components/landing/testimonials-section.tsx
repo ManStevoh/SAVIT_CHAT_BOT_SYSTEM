@@ -1,27 +1,18 @@
-import { Star } from "lucide-react"
+"use client"
 
-const testimonials = [
-  {
-    name: "Sarah Johnson",
-    role: "Owner, QuickBite Restaurant",
-    content: "Savit Chat transformed our order management. We now handle 3x more orders with the same team. The AI chatbot understands our menu perfectly and customers love the instant responses.",
-    rating: 5,
-  },
-  {
-    name: "Michael Chen",
-    role: "CEO, TechStore",
-    content: "The ROI has been incredible. We reduced response time from hours to seconds and our customer satisfaction scores increased by 45%. Best investment we made this year.",
-    rating: 5,
-  },
-  {
-    name: "Emily Rodriguez",
-    role: "Marketing Director, FashionCo",
-    content: "Setting up was surprisingly easy. Within a day, we had our AI bot handling FAQs and order inquiries. The analytics dashboard helps us understand our customers better.",
-    rating: 5,
-  },
+import { Star } from "lucide-react"
+import { useLanding } from "@/lib/api-hooks"
+
+const FALLBACK_TESTIMONIALS = [
+  { id: "1", name: "Sarah Johnson", role: "Owner, QuickBite Restaurant", content: "Savit Chat transformed our order management. We now handle 3x more orders with the same team. The AI chatbot understands our menu perfectly and customers love the instant responses.", rating: 5 },
+  { id: "2", name: "Michael Chen", role: "CEO, TechStore", content: "The ROI has been incredible. We reduced response time from hours to seconds and our customer satisfaction scores increased by 45%. Best investment we made this year.", rating: 5 },
+  { id: "3", name: "Emily Rodriguez", role: "Marketing Director, FashionCo", content: "Setting up was surprisingly easy. Within a day, we had our AI bot handling FAQs and order inquiries. The analytics dashboard helps us understand our customers better.", rating: 5 },
 ]
 
 export function TestimonialsSection() {
+  const { data, isLoading, error } = useLanding()
+  const testimonials = (data?.testimonials?.length ? data.testimonials : FALLBACK_TESTIMONIALS)
+
   return (
     <section id="testimonials" className="py-20 lg:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -34,32 +25,41 @@ export function TestimonialsSection() {
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
-          {testimonials.map((testimonial) => (
-            <div
-              key={testimonial.name}
-              className="rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-primary/5"
-            >
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: testimonial.rating }).map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-primary text-primary" />
-                ))}
-              </div>
-              <blockquote className="text-muted-foreground mb-6 leading-relaxed">
-                {`"${testimonial.content}"`}
-              </blockquote>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
-                  {testimonial.name.charAt(0)}
+        {isLoading && !data?.testimonials?.length ? (
+          <div className="flex justify-center py-12">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : (
+          <div className="grid gap-8 md:grid-cols-3">
+            {testimonials.map((testimonial) => (
+              <div
+                key={testimonial.id}
+                className="rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-primary/5"
+              >
+                <div className="flex gap-1 mb-4">
+                  {Array.from({ length: testimonial.rating }).map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-primary text-primary" />
+                  ))}
                 </div>
-                <div>
-                  <div className="font-medium text-foreground">{testimonial.name}</div>
-                  <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                <blockquote className="text-muted-foreground mb-6 leading-relaxed">
+                  {`"${testimonial.content}"`}
+                </blockquote>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
+                    {testimonial.name.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="font-medium text-foreground">{testimonial.name}</div>
+                    <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+        {error && !data?.testimonials?.length && (
+          <p className="text-center text-sm text-muted-foreground">Showing sample testimonials. Configure them in Admin → Testimonials.</p>
+        )}
       </div>
     </section>
   )

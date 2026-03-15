@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Settings, Shield, Mail, Bell, Plug, Palette, Upload } from "lucide-react"
+import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe } from "lucide-react"
 import {
   getPlatformSettings,
   updatePlatformSettings,
@@ -38,6 +38,7 @@ export default function AdminSettingsPage() {
   const [savingSecurity, setSavingSecurity] = useState(false)
   const [savingIntegrations, setSavingIntegrations] = useState(false)
   const [savingNotifications, setSavingNotifications] = useState(false)
+  const [savingLanding, setSavingLanding] = useState(false)
   const [sendingTest, setSendingTest] = useState(false)
   const [testEmailTo, setTestEmailTo] = useState("")
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -187,6 +188,25 @@ export default function AdminSettingsPage() {
     }
   }
 
+  const handleSaveLanding = async () => {
+    if (!settings) return
+    setSavingLanding(true)
+    try {
+      const res = await updatePlatformSettings({
+        landingTrustedCompanies: settings.landingTrustedCompanies ?? [],
+      })
+      if (res.success) {
+        toast({ title: res.message ?? "Landing settings saved" })
+      } else {
+        toast({ title: res.message ?? "Save failed", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Failed to save landing settings", variant: "destructive" })
+    } finally {
+      setSavingLanding(false)
+    }
+  }
+
   const handleSaveIntegrations = async () => {
     if (!settings) return
     setSavingIntegrations(true)
@@ -275,6 +295,10 @@ export default function AdminSettingsPage() {
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
             Notifications
+          </TabsTrigger>
+          <TabsTrigger value="landing" className="gap-2">
+            <Globe className="h-4 w-4" />
+            Landing
           </TabsTrigger>
         </TabsList>
 
@@ -806,6 +830,41 @@ export default function AdminSettingsPage() {
 
               <Button onClick={handleSaveNotifications} disabled={savingNotifications}>
                 {savingNotifications ? "Saving…" : "Save Notification Settings"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="landing">
+          <Card>
+            <CardHeader>
+              <CardTitle>Landing page</CardTitle>
+              <CardDescription>Trusted companies shown on the public landing page (one per line). Testimonials are managed under Admin → Testimonials.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="landingTrustedCompanies">Trusted companies</FieldLabel>
+                  <Textarea
+                    id="landingTrustedCompanies"
+                    placeholder={"FoodHub\nShopEase\nTechStore\nFashionCo"}
+                    rows={8}
+                    value={(settings?.landingTrustedCompanies ?? []).join("\n")}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev!,
+                        landingTrustedCompanies: e.target.value
+                          .split("\n")
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">One company name per line. Leave empty to hide the section or use default placeholders.</p>
+                </Field>
+              </FieldGroup>
+              <Button onClick={handleSaveLanding} disabled={savingLanding}>
+                {savingLanding ? "Saving…" : "Save Landing Settings"}
               </Button>
             </CardContent>
           </Card>

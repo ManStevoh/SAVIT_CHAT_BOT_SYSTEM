@@ -11,32 +11,32 @@ const features = [
   {
     icon: Bot,
     title: "AI Chatbot Automation",
-    description: "Deploy intelligent AI chatbots that understand context and provide human-like responses to customer inquiries 24/7.",
+    description: "Context-aware AI that uses conversation history for natural replies. Custom fallback and away messages, working-hours support, and automatic escalation when customers ask for a human.",
   },
   {
     icon: ShoppingCart,
     title: "WhatsApp Order Management",
-    description: "Process orders directly through WhatsApp. Customers can browse products, place orders, and track deliveries seamlessly.",
+    description: "Full order flow in chat: product → quantity → address → confirm. Close sales automatically with M-Pesa (STK push) or card (Stripe); when payment is received the order is marked paid and the customer gets a WhatsApp confirmation. Your team gets email notifications for every new order.",
   },
   {
     icon: Users,
     title: "Customer CRM",
-    description: "Manage all your customer relationships in one place. Track conversations, purchase history, and preferences.",
+    description: "One place for all conversations and purchase history. Human takeover when needed, then hand the chat back to the bot. Customer names sync from WhatsApp for a clear view of who you're talking to.",
   },
   {
     icon: MessageCircleQuestion,
     title: "Smart FAQ Bot",
-    description: "Train your bot with FAQs and let it handle repetitive questions automatically, freeing up your team for complex issues.",
+    description: "Train your bot with FAQs and improve matching beyond simple keywords. Handles repetitive questions so your team can focus on complex or high-value conversations.",
   },
   {
     icon: BarChart3,
     title: "Analytics Dashboard",
-    description: "Get insights into customer behavior, message volumes, response times, and sales performance with detailed analytics.",
+    description: "Message volumes, response times, and sales performance in one dashboard. See delivery and read status from WhatsApp and monitor usage against your plan limits.",
   },
   {
     icon: Inbox,
     title: "Multi-Agent Inbox",
-    description: "Enable multiple team members to handle conversations simultaneously with smart routing and collision detection.",
+    description: "Agents can take over any conversation; the bot pauses automatically. Use “Hand back to bot” when done. Subscription and per-plan message limits keep usage under control.",
   },
 ]
 
@@ -49,7 +49,7 @@ export function FeaturesSection() {
             Everything you need to automate WhatsApp
           </h2>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Powerful features designed to help businesses scale their customer engagement without scaling their team.
+            From AI replies and full order flows to in-chat payments and human takeover—close sales and run WhatsApp at scale.
           </p>
         </div>
 

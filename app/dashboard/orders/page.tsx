@@ -23,7 +23,29 @@ import {
   X,
   Eye,
   MessageSquare,
+  Download,
+  Loader2,
 } from 'lucide-react'
+import { companyExportData } from '@/lib/api-actions'
+import { downloadFile } from '@/lib/api-client'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
 import { useSWRConfig } from 'swr'
 
 export default function OrdersPage() {
@@ -34,6 +56,10 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [newStatus, setNewStatus] = useState('')
+  const [newPaymentStatus, setNewPaymentStatus] = useState<Order['paymentStatus']>('pending')
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv')
+  const [exporting, setExporting] = useState(false)
 
   // API: GET /api/company/orders (useOrders)
   const { data, isLoading, error } = useOrders({
@@ -71,25 +97,42 @@ export default function OrdersPage() {
     })
   }
 
-  // Handle status update — api-actions.updateOrderStatus → PATCH /api/company/orders/:orderId
+  // Handle status/payment update — PATCH /api/company/orders/:orderId (status, paymentStatus)
   const handleUpdateStatus = useCallback(async () => {
     if (!selectedOrder || !newStatus) return
 
     setIsUpdating(true)
     try {
-      const result = await updateOrderStatus(selectedOrder.id, newStatus as Order['status'])
+      const result = await updateOrderStatus(
+        selectedOrder.id,
+        newStatus as Order['status'],
+        newPaymentStatus
+      )
       if (result.success) {
-        // Revalidate orders data
         mutate(['orders', { status: statusFilter, search: searchQuery, page, limit: 10 }])
         setSelectedOrder(null)
         setNewStatus('')
+        setNewPaymentStatus('pending')
       }
     } catch (error) {
-      console.error('Failed to update order status:', error)
+      console.error('Failed to update order', error)
     } finally {
       setIsUpdating(false)
     }
-  }, [selectedOrder, newStatus, mutate, statusFilter, searchQuery, page])
+  }, [selectedOrder, newStatus, newPaymentStatus, mutate, statusFilter, searchQuery, page])
+
+  const handleExportOrders = async () => {
+    setExporting(true)
+    try {
+      const result = await companyExportData('orders', exportFormat)
+      if (result.success && result.downloadUrl && result.filename) {
+        await downloadFile(result.downloadUrl, result.filename)
+        setExportOpen(false)
+      }
+    } finally {
+      setExporting(false)
+    }
+  }
 
   // Table columns definition
   const columns: Column<Order>[] = [
@@ -151,6 +194,7 @@ export default function OrdersPage() {
         <Button variant="outline" size="sm" onClick={() => {
           setSelectedOrder(order)
           setNewStatus(order.status)
+          setNewPaymentStatus(order.paymentStatus)
         }}>
           <Eye className="h-4 w-4 mr-1" />
           View
@@ -178,9 +222,44 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Orders</h1>
-        <p className="text-muted-foreground">Manage and track customer orders</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Orders</h1>
+          <p className="text-muted-foreground">Manage and track customer orders</p>
+        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="end">
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Export orders</p>
+                    <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'csv' | 'json')}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="csv">CSV (Excel)</SelectItem>
+                        <SelectItem value="json">JSON</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" className="w-full" onClick={handleExportOrders} disabled={exporting}>
+                      {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                      {exporting ? 'Exporting…' : 'Download'}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">
+              Download order history as CSV (for Excel) or JSON. Includes order lines and customer details.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Stats Grid - API Ready */}
@@ -256,14 +335,15 @@ export default function OrdersPage() {
           if (!open) {
             setSelectedOrder(null)
             setNewStatus('')
+            setNewPaymentStatus('pending')
           }
         }}
         title={`Order ${selectedOrder?.orderNumber}`}
         description="Order details and status management"
         onSubmit={handleUpdateStatus}
-        submitLabel="Update Status"
+        submitLabel="Update"
         isLoading={isUpdating}
-        isValid={newStatus !== selectedOrder?.status}
+        isValid={newStatus !== selectedOrder?.status || newPaymentStatus !== selectedOrder?.paymentStatus}
       >
         {selectedOrder && (
           <div className="space-y-4">
@@ -331,6 +411,19 @@ export default function OrdersPage() {
                 { value: 'cancelled', label: 'Cancelled' },
               ]}
               description="Update the order status to notify the customer"
+            />
+
+            <SelectField
+              label="Payment Status"
+              name="paymentStatus"
+              value={newPaymentStatus}
+              onChange={(v) => setNewPaymentStatus(v as Order['paymentStatus'])}
+              options={[
+                { value: 'pending', label: 'Pending' },
+                { value: 'paid', label: 'Paid' },
+                { value: 'refunded', label: 'Refunded' },
+              ]}
+              description="Mark as paid when payment is received (e.g. M-Pesa or Stripe)"
             />
 
             {/* Quick Actions */}

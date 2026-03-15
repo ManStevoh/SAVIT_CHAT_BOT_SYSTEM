@@ -24,7 +24,7 @@ export function HeroSection() {
             </h1>
             
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0">
-              Transform your customer engagement with intelligent AI chatbots. Automatically reply to inquiries, handle orders seamlessly, and provide 24/7 customer support on WhatsApp.
+              Context-aware AI, full order flows, and in-chat payments (M-Pesa or card) so you close sales automatically. Human takeover and CRM in one place—all on WhatsApp.
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">

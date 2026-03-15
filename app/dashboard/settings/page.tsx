@@ -24,12 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Building2, MessageSquare, Bot, Users, Bell, Plus, Trash2, Check } from "lucide-react"
+import { Building2, MessageSquare, Bot, Users, Bell, Plus, Trash2, Check, CreditCard } from "lucide-react"
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
 import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers } from "@/lib/api-hooks"
+import { useSWRConfig } from "swr"
 import { updateSettings, connectWhatsApp, getWhatsAppStatus, disconnectWhatsApp, type WhatsAppStatus } from "@/lib/api-actions"
 
 export default function SettingsPage() {
+  const { mutate } = useSWRConfig()
   const { data: settings } = useCompanySettings()
   const { data: teamMembers = [] } = useCompanyTeam()
   const { data: whatsappNumbers = [] } = useWhatsAppNumbers()
@@ -89,6 +91,21 @@ export default function SettingsPage() {
     loadWhatsAppStatus()
   }
 
+  const [ordersCollectPaymentEnabled, setOrdersCollectPaymentEnabled] = useState(true)
+  const [orderPaymentManualInstructions, setOrderPaymentManualInstructions] = useState('')
+  const [ordersAcceptMpesa, setOrdersAcceptMpesa] = useState(false)
+  const [ordersAcceptStripe, setOrdersAcceptStripe] = useState(false)
+  const [orderPaymentsSaving, setOrderPaymentsSaving] = useState(false)
+  const [orderPaymentsMessage, setOrderPaymentsMessage] = useState<string | null>(null)
+  const [mpesaType, setMpesaType] = useState<'paybill' | 'till'>('paybill')
+  const [mpesaShortcode, setMpesaShortcode] = useState('')
+  const [mpesaPasskey, setMpesaPasskey] = useState('')
+  const [mpesaConsumerKey, setMpesaConsumerKey] = useState('')
+  const [mpesaConsumerSecret, setMpesaConsumerSecret] = useState('')
+  const [mpesaEnv, setMpesaEnv] = useState<'sandbox' | 'production'>('sandbox')
+  const [stripeSecret, setStripeSecret] = useState('')
+  const [stripeCurrency, setStripeCurrency] = useState('usd')
+
   // Load initial values from GET /api/company/settings when available
   useEffect(() => {
     if (settings) {
@@ -96,6 +113,10 @@ export default function SettingsPage() {
       if (settings.email != null) setEmail(settings.email)
       if (settings.phone != null) setPhone(settings.phone)
       if (settings.address != null) setAddress(settings.address)
+      if (settings.ordersCollectPaymentEnabled != null) setOrdersCollectPaymentEnabled(settings.ordersCollectPaymentEnabled)
+      if (settings.orderPaymentManualInstructions != null) setOrderPaymentManualInstructions(settings.orderPaymentManualInstructions)
+      if (settings.ordersAcceptMpesa != null) setOrdersAcceptMpesa(settings.ordersAcceptMpesa)
+      if (settings.ordersAcceptStripe != null) setOrdersAcceptStripe(settings.ordersAcceptStripe)
     }
   }, [settings])
 
@@ -116,6 +137,66 @@ export default function SettingsPage() {
       return
     }
     setProfileSuccess(true)
+  }
+
+  const handleOrderPaymentsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setOrderPaymentsMessage(null)
+    setOrderPaymentsSaving(true)
+    const payload: Parameters<typeof updateSettings>[0] = {
+      ordersCollectPaymentEnabled,
+      orderPaymentManualInstructions: orderPaymentManualInstructions.trim() || null,
+      ordersAcceptMpesa,
+      ordersAcceptStripe,
+    }
+    if (mpesaShortcode.trim() && mpesaPasskey.trim()) {
+      payload.orderPaymentMpesaConfig = {
+        type: mpesaType,
+        shortcode: mpesaShortcode.trim(),
+        passkey: mpesaPasskey.trim(),
+        consumer_key: mpesaConsumerKey.trim() || undefined,
+        consumer_secret: mpesaConsumerSecret.trim() || undefined,
+        env: mpesaEnv,
+      }
+    }
+    if (stripeSecret.trim()) {
+      payload.orderPaymentStripeConfig = { secret: stripeSecret.trim(), currency: stripeCurrency.trim() || 'usd' }
+    }
+    const result = await updateSettings(payload)
+    setOrderPaymentsSaving(false)
+    setOrderPaymentsMessage(result.success ? 'Saved. Customers can now choose these payment methods when placing orders.' : (result.message ?? 'Failed to save.'))
+    if (result.success) {
+      setMpesaType('paybill')
+      setMpesaShortcode('')
+      setMpesaPasskey('')
+      setMpesaConsumerKey('')
+      setMpesaConsumerSecret('')
+      setStripeSecret('')
+      mutate('company-settings')
+    }
+  }
+
+  const handleClearMpesaConfig = async () => {
+    setOrderPaymentsMessage(null)
+    const result = await updateSettings({ orderPaymentMpesaConfig: null })
+    setOrderPaymentsMessage(result.success ? 'M-Pesa config cleared. Platform default will be used.' : (result.message ?? 'Failed.'))
+    if (result.success) {
+      setMpesaShortcode('')
+      setMpesaPasskey('')
+      setMpesaConsumerKey('')
+      setMpesaConsumerSecret('')
+      mutate('company-settings')
+    }
+  }
+
+  const handleClearStripeConfig = async () => {
+    setOrderPaymentsMessage(null)
+    const result = await updateSettings({ orderPaymentStripeConfig: null })
+    setOrderPaymentsMessage(result.success ? 'Stripe config cleared. Platform default will be used.' : (result.message ?? 'Failed.'))
+    if (result.success) {
+      setStripeSecret('')
+      mutate('company-settings')
+    }
   }
 
   return (
@@ -146,6 +227,10 @@ export default function SettingsPage() {
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
             Notifications
+          </TabsTrigger>
+          <TabsTrigger value="order-payments" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Order Payments
           </TabsTrigger>
         </TabsList>
 
@@ -503,6 +588,156 @@ export default function SettingsPage() {
               </div>
 
               <Button>Save Preferences</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Order Payments — enable M-Pesa and/or Stripe for customer orders */}
+        <TabsContent value="order-payments">
+          <Card>
+            <CardHeader>
+              <CardTitle>Collect payment for orders</CardTitle>
+              <CardDescription>
+                Choose whether to collect payment after orders. You can use M-Pesa, card (Stripe), and/or manual payment details (e.g. bank account). Turn off to skip payment and only confirm the order.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleOrderPaymentsSubmit} className="space-y-6">
+                {orderPaymentsMessage && (
+                  <p className={`text-sm ${orderPaymentsMessage.startsWith('Saved') ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {orderPaymentsMessage}
+                  </p>
+                )}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">Collect payment for orders</p>
+                    <p className="text-sm text-muted-foreground">When on, the bot will ask the customer how to pay (M-Pesa, card, or manual). When off, the bot only confirms the order.</p>
+                  </div>
+                  <Switch checked={ordersCollectPaymentEnabled} onCheckedChange={setOrdersCollectPaymentEnabled} />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">M-Pesa (STK push)</p>
+                    <p className="text-sm text-muted-foreground">Customer receives M-Pesa prompt on their phone to pay</p>
+                  </div>
+                  <Switch checked={ordersAcceptMpesa} onCheckedChange={setOrdersAcceptMpesa} disabled={!ordersCollectPaymentEnabled} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">Card (Stripe)</p>
+                    <p className="text-sm text-muted-foreground">Customer gets a payment link to pay by card online</p>
+                  </div>
+                  <Switch checked={ordersAcceptStripe} onCheckedChange={setOrdersAcceptStripe} disabled={!ordersCollectPaymentEnabled} />
+                </div>
+
+                <FieldGroup>
+                  <div>
+                    <p className="font-medium text-foreground">Manual payment instructions (optional)</p>
+                    <p className="text-sm text-muted-foreground">Bank account, PayBill to pay manually, etc. The bot will show this to the customer as option 3 or as the only payment option if you don&apos;t use M-Pesa/Stripe.</p>
+                  </div>
+                  <Textarea
+                    placeholder="e.g. Pay via M-Pesa to Till 123456&#10;Or bank: KCB 1234567890, Account: MyShop. Use order number as reference."
+                    value={orderPaymentManualInstructions}
+                    onChange={(e) => setOrderPaymentManualInstructions(e.target.value)}
+                    rows={4}
+                    className="mt-2"
+                    disabled={!ordersCollectPaymentEnabled}
+                  />
+                </FieldGroup>
+
+                <div className="border-t border-border pt-6 space-y-6">
+                  <h3 className="font-medium text-foreground">Use your own payment details (optional)</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Add your M-Pesa till or Stripe account so payments go to you. Otherwise the platform default is used.
+                  </p>
+
+                  <FieldGroup>
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-foreground">M-Pesa (Lipa Na M-Pesa Online)</p>
+                        <p className="text-sm text-muted-foreground">PayBill or Till (Buy Goods); shortcode + passkey. Optional: Daraja consumer key/secret</p>
+                      </div>
+                      {settings?.orderPaymentMpesaConfigured && (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="gap-1"><Check className="h-3 w-3" /> Configured</Badge>
+                          <Button type="button" variant="outline" size="sm" onClick={handleClearMpesaConfig}>Clear</Button>
+                        </div>
+                      )}
+                    </div>
+                    <Field>
+                      <FieldLabel>Type</FieldLabel>
+                      <Select value={mpesaType} onValueChange={(v) => setMpesaType(v as 'paybill' | 'till')}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="paybill">PayBill</SelectItem>
+                          <SelectItem value="till">Till (Buy Goods and Services)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">Use PayBill if you have a business PayBill number; use Till if you have a Lipa Na M-Pesa Till (Buy Goods) number.</p>
+                    </Field>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field>
+                        <FieldLabel>Shortcode</FieldLabel>
+                        <Input placeholder={mpesaType === 'till' ? 'Till number' : 'e.g. 174379'} value={mpesaShortcode} onChange={(e) => setMpesaShortcode(e.target.value)} />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Passkey</FieldLabel>
+                        <Input type="password" placeholder="Lipa Na M-Pesa passkey" value={mpesaPasskey} onChange={(e) => setMpesaPasskey(e.target.value)} />
+                      </Field>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field>
+                        <FieldLabel>Consumer key (optional)</FieldLabel>
+                        <Input placeholder="Daraja app consumer key" value={mpesaConsumerKey} onChange={(e) => setMpesaConsumerKey(e.target.value)} />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Consumer secret (optional)</FieldLabel>
+                        <Input type="password" placeholder="Daraja app consumer secret" value={mpesaConsumerSecret} onChange={(e) => setMpesaConsumerSecret(e.target.value)} />
+                      </Field>
+                    </div>
+                    <Field>
+                      <FieldLabel>Environment</FieldLabel>
+                      <Select value={mpesaEnv} onValueChange={(v) => setMpesaEnv(v as 'sandbox' | 'production')}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sandbox">Sandbox</SelectItem>
+                          <SelectItem value="production">Production</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </FieldGroup>
+
+                  <FieldGroup>
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-foreground">Stripe account</p>
+                        <p className="text-sm text-muted-foreground">Secret key (sk_live_... or sk_test_...) so payments go to your Stripe</p>
+                      </div>
+                      {settings?.orderPaymentStripeConfigured && (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="gap-1"><Check className="h-3 w-3" /> Configured</Badge>
+                          <Button type="button" variant="outline" size="sm" onClick={handleClearStripeConfig}>Clear</Button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field>
+                        <FieldLabel>Secret key</FieldLabel>
+                        <Input type="password" placeholder="sk_live_... or sk_test_..." value={stripeSecret} onChange={(e) => setStripeSecret(e.target.value)} />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Currency</FieldLabel>
+                        <Input placeholder="usd, kes, etc." value={stripeCurrency} onChange={(e) => setStripeCurrency(e.target.value)} />
+                      </Field>
+                    </div>
+                  </FieldGroup>
+                </div>
+
+                <Button type="submit" disabled={orderPaymentsSaving}>
+                  {orderPaymentsSaving ? 'Saving…' : 'Save'}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

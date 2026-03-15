@@ -1,12 +1,12 @@
+"use client"
+
+import { useLanding } from "@/lib/api-hooks"
+
+const FALLBACK_COMPANIES = ["FoodHub", "ShopEase", "TechStore", "FashionCo", "QuickBite", "HomeGoods"]
+
 export function TrustedCompanies() {
-  const companies = [
-    "FoodHub",
-    "ShopEase",
-    "TechStore",
-    "FashionCo",
-    "QuickBite",
-    "HomeGoods",
-  ]
+  const { data } = useLanding()
+  const companies = (data?.trustedCompanies?.length ? data.trustedCompanies : FALLBACK_COMPANIES)
 
   return (
     <section className="border-y border-border/50 bg-card/30 py-12">

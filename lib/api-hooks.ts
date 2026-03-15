@@ -63,6 +63,51 @@ export function usePlans() {
   )
 }
 
+/** Landing page testimonial (public API) */
+export interface LandingTestimonial {
+  id: string
+  name: string
+  role: string
+  content: string
+  rating: number
+}
+
+/** Landing page data (testimonials + trusted companies). GET /api/landing */
+/** Landing FAQ item (public API) */
+export interface LandingFaqItem {
+  id: string
+  question: string
+  answer: string
+}
+
+export interface LandingData {
+  testimonials: LandingTestimonial[]
+  trustedCompanies: string[]
+  faqs: LandingFaqItem[]
+}
+
+/**
+ * Fetch landing page data (testimonials, trusted companies) for public landing page
+ * API Endpoint: GET /api/landing
+ */
+export function useLanding() {
+  return useSWR<LandingData>(
+    'landing',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<LandingData>('/api/landing')
+      }
+      await delay(300)
+      return {
+        testimonials: [],
+        trustedCompanies: ['FoodHub', 'ShopEase', 'TechStore', 'FashionCo', 'QuickBite', 'HomeGoods'],
+        faqs: [],
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
 /** Build path with optional query params (excludes undefined and empty string). */
 function buildPath(
   base: string,
@@ -371,8 +416,15 @@ export interface CompanySettings {
   awayMessage?: string
   timezone?: string
   workingHours?: Record<string, string>
+  learnFromConversations?: boolean
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
+  ordersAcceptMpesa?: boolean
+  ordersAcceptStripe?: boolean
+  ordersCollectPaymentEnabled?: boolean
+  orderPaymentManualInstructions?: string
+  orderPaymentMpesaConfigured?: boolean
+  orderPaymentStripeConfigured?: boolean
 }
 
 /**
@@ -549,6 +601,66 @@ export function useAdminUsers(filters?: { role?: string; status?: string; search
         )
       }
       return data
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+/** Admin testimonial (full fields) */
+export interface AdminTestimonial {
+  id: string
+  name: string
+  role: string
+  content: string
+  rating: number
+  sortOrder: number
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+/**
+ * Fetch all testimonials (admin only)
+ * API Endpoint: GET /api/admin/testimonials
+ */
+export function useAdminTestimonials() {
+  return useSWR<AdminTestimonial[]>(
+    'admin-testimonials',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<AdminTestimonial[]>('/api/admin/testimonials')
+      }
+      await delay(300)
+      return []
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+/** Admin landing FAQ (full fields) */
+export interface AdminLandingFaq {
+  id: string
+  question: string
+  answer: string
+  sortOrder: number
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+/**
+ * Fetch all landing FAQs (admin only)
+ * API Endpoint: GET /api/admin/landing-faqs
+ */
+export function useAdminLandingFaqs() {
+  return useSWR<AdminLandingFaq[]>(
+    'admin-landing-faqs',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<AdminLandingFaq[]>('/api/admin/landing-faqs')
+      }
+      await delay(300)
+      return []
     },
     { revalidateOnFocus: false }
   )

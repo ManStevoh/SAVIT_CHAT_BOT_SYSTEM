@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,7 +12,8 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField, SwitchField, TagInputField } from '@/components/shared/form-field'
 import { useFAQs, useCompanySettings } from '@/lib/api-hooks'
-import { createFAQ, updateFAQ, deleteFAQ, updateSettings } from '@/lib/api-actions'
+import { createFAQ, updateFAQ, deleteFAQ, updateSettings, companyExportData, importFaqs } from '@/lib/api-actions'
+import { downloadFile } from '@/lib/api-client'
 import type { FAQ } from '@/lib/mock-data'
 import {
   Plus,
@@ -21,7 +22,28 @@ import {
   HelpCircle,
   Bot,
   MessageSquare,
+  Download,
+  Upload,
+  Loader2,
 } from 'lucide-react'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
 import { useSWRConfig } from 'swr'
 
 interface FAQFormData {
@@ -74,6 +96,12 @@ export default function FAQAutomationPage() {
   const [botSettings, setBotSettings] = useState<BotSettings>(initialBotSettings)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv')
+  const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ created: number; errors?: { row: number; errors: string[] }[] } | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const { data: companySettings } = useCompanySettings()
 
@@ -92,6 +120,7 @@ export default function FAQAutomationPage() {
         away: companySettings.awayMessage ?? prev.away,
         timezone: companySettings.timezone ?? prev.timezone,
         workingHours: companySettings.workingHours ?? prev.workingHours,
+        learnFromConversations: companySettings.learnFromConversations ?? prev.learnFromConversations,
         autoReplyEnabled: companySettings.autoReplyEnabled ?? prev.autoReplyEnabled,
       }))
     }
@@ -209,6 +238,36 @@ export default function FAQAutomationPage() {
     }
   }, [selectedFAQ, mutate, categoryFilter, searchQuery])
 
+  const handleExportFaqs = async () => {
+    setExporting(true)
+    try {
+      const result = await companyExportData('faqs', exportFormat)
+      if (result.success && result.downloadUrl && result.filename) {
+        await downloadFile(result.downloadUrl, result.filename)
+        setExportOpen(false)
+      }
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleImportFaqs = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportResult(null)
+    setImporting(true)
+    try {
+      const result = await importFaqs(file)
+      if (result.success) {
+        setImportResult({ created: result.created ?? 0, errors: result.errors })
+        mutate(['faqs', { category: categoryFilter, search: searchQuery }])
+      }
+    } finally {
+      setImporting(false)
+    }
+    e.target.value = ''
+  }
+
   // Handle toggle FAQ active status — api-actions.updateFAQ (isActive) → PUT /api/company/faqs/:faqId
   const handleToggleFAQStatus = useCallback(async (faq: FAQ) => {
     try {
@@ -231,6 +290,7 @@ export default function FAQAutomationPage() {
         awayMessage: botSettings.away,
         timezone: botSettings.timezone,
         workingHours: Object.keys(botSettings.workingHours).length ? botSettings.workingHours : undefined,
+        learnFromConversations: botSettings.learnFromConversations,
         autoReplyEnabled: botSettings.autoReplyEnabled,
       })
 
@@ -404,21 +464,92 @@ export default function FAQAutomationPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">FAQ Automation</h1>
-          <p className="text-muted-foreground">
-            Configure AI responses for common questions
-          </p>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">FAQ Automation</h1>
+            <p className="text-muted-foreground">
+              Configure AI responses for common questions
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64" align="end">
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">Export FAQs</p>
+                        <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'csv' | 'json')}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="csv">CSV (Excel)</SelectItem>
+                            <SelectItem value="json">JSON</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" className="w-full" onClick={handleExportFaqs} disabled={exporting}>
+                          {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                          {exporting ? 'Exporting…' : 'Download'}
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  Download your FAQs as CSV or JSON for backup or editing.
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      className="hidden"
+                      ref={importInputRef}
+                      onChange={handleImportFaqs}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={importing}
+                      onClick={() => importInputRef.current?.click()}
+                    >
+                      {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                      {importing ? 'Importing…' : 'Import CSV'}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  Upload a CSV with columns: question, answer, category. Optional: keywords (comma-separated), is_active.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/sample-data/faqs_sample.csv" download="faqs_sample.csv">Sample CSV</a>
+            </Button>
+            <Button onClick={() => {
+              setFormData(initialFormData)
+              setFormErrors({})
+              setIsAddModalOpen(true)
+            }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add FAQ
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => {
-          setFormData(initialFormData)
-          setFormErrors({})
-          setIsAddModalOpen(true)
-        }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add FAQ
-        </Button>
+        {importResult !== null && (
+          <p className="text-sm text-muted-foreground">
+            Imported {importResult.created} FAQ(s).
+            {importResult.errors?.length ? ` ${importResult.errors.length} row(s) had errors.` : ''}
+          </p>
+        )}
       </div>
 
       <Tabs defaultValue="faqs" className="space-y-6">

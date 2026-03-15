@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useChats, useMessages, useCustomers } from '@/lib/api-hooks'
-import { sendMessage } from '@/lib/api-actions'
+import { useChats, useMessages } from '@/lib/api-hooks'
+import { sendMessage, handBackToBot } from '@/lib/api-actions'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
 import {
   Search,
@@ -26,14 +26,17 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ChatsPage() {
+  const { toast } = useToast()
   const { mutate } = useSWRConfig()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [isHandingBack, setIsHandingBack] = useState(false)
 
   const {
     data: chats,
@@ -66,8 +69,14 @@ export default function ChatsPage() {
 
       if (result.success) {
         setMessageInput('')
-        // Revalidate messages to show new message
         mutate(['messages', selectedChatId])
+        if (result.whatsappSent === false && result.whatsappError) {
+          toast({
+            title: result.message ?? 'Message saved but not delivered',
+            description: result.whatsappError,
+            variant: 'destructive',
+          })
+        }
       }
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -76,6 +85,21 @@ export default function ChatsPage() {
     }
   }, [messageInput, selectedChatId, mutate])
 
+  const handleHandBackToBot = useCallback(async () => {
+    if (!selectedChatId) return
+    setIsHandingBack(true)
+    try {
+      const result = await handBackToBot(selectedChatId)
+      if (result.success) {
+        mutate(['chats', { status: statusFilter, search: searchQuery }])
+      }
+    } catch (e) {
+      console.error('Hand back failed:', e)
+    } finally {
+      setIsHandingBack(false)
+    }
+  }, [selectedChatId, statusFilter, searchQuery, mutate])
+
   // Handle keyboard shortcut for sending
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -83,6 +107,8 @@ export default function ChatsPage() {
       handleSendMessage()
     }
   }
+
+  const isAgentHandling = selectedChat?.agentHandlingAt != null
 
   return (
     <div className="flex h-[calc(100vh-7rem)] gap-4">
@@ -244,11 +270,28 @@ export default function ChatsPage() {
                         AI is handling
                       </div>
                     )}
+                    {isAgentHandling && (
+                      <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                        <User className="h-3 w-3" />
+                        Agent handling
+                      </div>
+                    )}
                     <StatusBadge status={selectedChat.status} />
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {isAgentHandling && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleHandBackToBot}
+                    disabled={isHandingBack}
+                    className="shrink-0"
+                  >
+                    {isHandingBack ? '…' : 'Hand back to bot'}
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon">
                   <Phone className="h-4 w-4" />
                 </Button>

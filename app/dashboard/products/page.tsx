@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,7 +10,8 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField } from '@/components/shared/form-field'
 import { useProducts } from '@/lib/api-hooks'
-import { createProduct, updateProduct, deleteProduct } from '@/lib/api-actions'
+import { createProduct, updateProduct, deleteProduct, companyExportData, importProducts } from '@/lib/api-actions'
+import { downloadFile } from '@/lib/api-client'
 import type { Product } from '@/lib/mock-data'
 import {
   Plus,
@@ -21,7 +22,28 @@ import {
   Edit,
   Trash2,
   BarChart3,
+  Download,
+  Upload,
+  Loader2,
 } from 'lucide-react'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +82,12 @@ export default function ProductsPage() {
   const [formData, setFormData] = useState<ProductFormData>(initialFormData)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv')
+  const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ created: number; errors?: { row: number; errors: string[] }[] } | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   // API: GET /api/company/products (useProducts)
   const { data: products, isLoading, error } = useProducts({
@@ -201,6 +229,36 @@ export default function ProductsPage() {
     })
     setFormErrors({})
     setIsEditModalOpen(true)
+  }
+
+  const handleExportProducts = async () => {
+    setExporting(true)
+    try {
+      const result = await companyExportData('products', exportFormat)
+      if (result.success && result.downloadUrl && result.filename) {
+        await downloadFile(result.downloadUrl, result.filename)
+        setExportOpen(false)
+      }
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleImportProducts = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportResult(null)
+    setImporting(true)
+    try {
+      const result = await importProducts(file)
+      if (result.success) {
+        setImportResult({ created: result.created ?? 0, errors: result.errors })
+        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+      }
+    } finally {
+      setImporting(false)
+    }
+    e.target.value = ''
   }
 
   // Get product stock status
@@ -395,19 +453,93 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Products</h1>
-          <p className="text-muted-foreground">Manage your product catalog</p>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Products</h1>
+            <p className="text-muted-foreground">Manage your product catalog</p>
+          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64" align="end">
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium">Export products</p>
+                      <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'csv' | 'json')}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="csv">CSV (Excel)</SelectItem>
+                          <SelectItem value="json">JSON</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" className="w-full" onClick={handleExportProducts} disabled={exporting}>
+                        {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                        {exporting ? 'Exporting…' : 'Download'}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                Download your product catalog as CSV (opens in Excel) or JSON.
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    className="hidden"
+                    ref={importInputRef}
+                    onChange={handleImportProducts}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={importing}
+                    onClick={() => importInputRef.current?.click()}
+                  >
+                    {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                    {importing ? 'Importing…' : 'Import CSV'}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                Upload a CSV with columns: name, description, price, category, status. Optional: stock. Use the sample CSV as a template.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/sample-data/products_sample.csv" download="products_sample.csv">
+              Sample CSV
+            </a>
+          </Button>
+          <Button onClick={() => {
+            setFormData(initialFormData)
+            setFormErrors({})
+            setIsAddModalOpen(true)
+          }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
         </div>
-        <Button onClick={() => {
-          setFormData(initialFormData)
-          setFormErrors({})
-          setIsAddModalOpen(true)
-        }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
+        </div>
+        {importResult !== null && (
+          <p className="text-sm text-muted-foreground">
+            Imported {importResult.created} product(s).
+            {importResult.errors?.length ? ` ${importResult.errors.length} row(s) had errors.` : ''}
+          </p>
+        )}
+        </div>
       </div>
 
       {/* Stats Grid - API Ready */}

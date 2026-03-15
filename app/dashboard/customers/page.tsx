@@ -19,7 +19,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, MoreVertical, Users, UserPlus, UserCheck, TrendingUp } from "lucide-react"
+import { Search, MoreVertical, Users, UserPlus, UserCheck, TrendingUp, Download, Loader2 } from "lucide-react"
+import { companyExportData } from "@/lib/api-actions"
+import { downloadFile } from "@/lib/api-client"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip"
 // API: GET /api/company/customers — list customers (useCustomers in api-hooks)
 import { useCustomers, useCustomerStats } from "@/lib/api-hooks"
 import type { Customer } from "@/lib/mock-data"
@@ -52,9 +72,25 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(1)
   const limit = 10
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv")
+  const [exporting, setExporting] = useState(false)
 
   // API call: GET /api/company/customers?search=&page=1&limit=10
   const { data, error, isLoading, mutate } = useCustomers({ search: searchQuery || undefined, page, limit })
+
+  const handleExportCustomers = async () => {
+    setExporting(true)
+    try {
+      const result = await companyExportData("customers", exportFormat)
+      if (result.success && result.downloadUrl && result.filename) {
+        await downloadFile(result.downloadUrl, result.filename)
+        setExportOpen(false)
+      }
+    } finally {
+      setExporting(false)
+    }
+  }
 
   // Loading state: show skeleton or spinner
   if (isLoading && !data) {
@@ -119,9 +155,44 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Customers</h1>
-        <p className="text-muted-foreground">Manage your customer relationships</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Customers</h1>
+          <p className="text-muted-foreground">Manage your customer relationships</p>
+        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="end">
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Export customers</p>
+                    <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as "csv" | "json")}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="csv">CSV (Excel)</SelectItem>
+                        <SelectItem value="json">JSON</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" className="w-full" onClick={handleExportCustomers} disabled={exporting}>
+                      {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                      {exporting ? "Exporting…" : "Download"}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">
+              Download customer list (phone, name, order count, total spent) as CSV or JSON.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Stats — API: optional GET /api/company/customers/stats */}

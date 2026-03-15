@@ -32,6 +32,8 @@ export interface Chat {
   unreadCount: number
   status: 'active' | 'pending' | 'resolved'
   aiHandled: boolean
+  /** When set, an agent is handling this chat; bot is paused. Clear via "Hand back to bot". */
+  agentHandlingAt?: string | null
 }
 
 export interface Message {

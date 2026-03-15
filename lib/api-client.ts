@@ -81,8 +81,43 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
       return new Promise(() => {}) as T
     }
     const message = (data as { message?: string })?.message ?? data?.errors ?? response.statusText
-    throw new Error(typeof message === 'string' ? message : JSON.stringify(message))
+    const err = new Error(typeof message === 'string' ? message : JSON.stringify(message)) as Error & { code?: string; responseData?: unknown }
+    err.code = code
+    err.responseData = data
+    throw err
   }
 
   return data as T
+}
+
+/**
+ * Download a file from the API (e.g. export). Uses auth token. Triggers browser download.
+ */
+export async function downloadFile(
+  pathOrUrl: string,
+  filename: string
+): Promise<void> {
+  const url = pathOrUrl.startsWith('http') ? pathOrUrl : apiUrl(pathOrUrl)
+  const token = getAuthToken()
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(url, { credentials: 'include', headers })
+  if (!res.ok) {
+    const text = await res.text()
+    let msg: string
+    try {
+      const j = JSON.parse(text)
+      msg = (j as { message?: string }).message ?? text
+    } catch {
+      msg = text || res.statusText
+    }
+    throw new Error(msg || 'Download failed')
+  }
+  const blob = await res.blob()
+  const blobUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = blobUrl
+  a.download = filename || 'export'
+  a.click()
+  URL.revokeObjectURL(blobUrl)
 }

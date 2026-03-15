@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { login, type LoginCredentials } from '@/lib/api-actions'
+import { login, resendVerificationEmail, type LoginCredentials } from '@/lib/api-actions'
 import { setAuthCookie } from '@/lib/auth-cookie'
 import { Eye, EyeOff, AlertCircle } from 'lucide-react'
 
@@ -26,10 +26,14 @@ export default function LoginPage() {
 
   const planId = searchParams.get('plan')
   const subscribeRedirect = planId ? `/dashboard/subscription?subscribe=${planId}` : null
+  const verifiedParam = searchParams.get('verified') === '1'
 
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailNotVerified, setEmailNotVerified] = useState(false)
+  const [resendSent, setResendSent] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
   
   // Form state
   const [formData, setFormData] = useState<LoginCredentials>({
@@ -61,10 +65,31 @@ export default function LoginPage() {
     return Object.keys(errors).length === 0
   }
 
+  const handleResendVerification = useCallback(async () => {
+    if (!formData.email.trim()) return
+    setResendLoading(true)
+    setResendSent(false)
+    try {
+      const result = await resendVerificationEmail(formData.email.trim())
+      if (result.success) {
+        setResendSent(true)
+        setError(null)
+      } else {
+        setError(result.message || 'Failed to resend verification email.')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to resend.')
+    } finally {
+      setResendLoading(false)
+    }
+  }, [formData.email])
+
   // Handle field change
   const handleFieldChange = (field: keyof LoginCredentials, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-    setError(null) // Clear general error on change
+    setError(null)
+    setEmailNotVerified(false)
+    setResendSent(false)
     if (formErrors[field]) {
       setFormErrors((prev) => ({ ...prev, [field]: '' }))
     }
@@ -83,6 +108,7 @@ export default function LoginPage() {
       const result = await login(formData)
 
       if (result.success && result.user) {
+        setEmailNotVerified(false)
         if (result.token) {
           if (formData.rememberMe) {
             localStorage.setItem('auth_token', result.token)
@@ -93,17 +119,20 @@ export default function LoginPage() {
           }
           setAuthCookie(result.user.role, formData.rememberMe)
         }
-        // Redirect to requested page, subscription (with plan), or by role
         const target =
           redirectTo ||
           subscribeRedirect ||
           (result.user.role === 'admin' ? '/admin' : '/dashboard')
         router.push(target)
       } else {
+        const code = (result as { code?: string }).code
+        setEmailNotVerified(code === 'email_not_verified')
         setError(result.message || 'Invalid email or password')
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.')
+      const e = err as Error & { code?: string }
+      setEmailNotVerified(e?.code === 'email_not_verified')
+      setError(e?.message || 'An unexpected error occurred. Please try again.')
       console.error('Login error:', err)
     } finally {
       setIsLoading(false)
@@ -120,11 +149,35 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Email verified success (from redirect after verification) */}
+        {verifiedParam && (
+          <div className="mb-6 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
+            Email verified successfully. You can now sign in.
+          </div>
+        )}
+
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
+          <div className="mb-6 flex flex-col gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+            {emailNotVerified && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit border-destructive/50 text-destructive hover:bg-destructive/10"
+                onClick={handleResendVerification}
+                disabled={resendLoading || !formData.email.trim()}
+              >
+                {resendLoading ? 'Sending…' : 'Resend verification email'}
+              </Button>
+            )}
+            {resendSent && (
+              <p className="text-xs text-green-600 dark:text-green-400">New verification link sent. Check your inbox.</p>
+            )}
           </div>
         )}
 

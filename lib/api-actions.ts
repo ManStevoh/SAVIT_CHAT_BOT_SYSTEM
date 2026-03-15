@@ -14,8 +14,13 @@ import { useMockApi, apiRequest } from './api-client'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-function handleApiError(e: unknown): { success: false; message: string } {
-  return { success: false, message: e instanceof Error ? e.message : 'Request failed' }
+function handleApiError(e: unknown): { success: false; message: string; code?: string } {
+  const err = e as Error & { code?: string }
+  return {
+    success: false,
+    message: err instanceof Error ? err.message : 'Request failed',
+    code: err?.code,
+  }
 }
 
 // ============================================
@@ -161,6 +166,25 @@ export async function resetPassword(data: ResetPasswordData): Promise<{ success:
 }
 
 /**
+ * Resend email verification link
+ * Laravel: POST /api/auth/resend-verification
+ */
+export async function resendVerificationEmail(email: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(800)
+    return { success: true, message: 'A new verification link has been sent to your email address.' }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>('/api/auth/resend-verification', {
+      method: 'POST',
+      body: { email },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
  * Logout user
  * Laravel: POST /api/auth/logout
  */
@@ -189,15 +213,44 @@ export interface SendMessageData {
  * Send message in chat
  * Laravel: POST /api/company/chats/:chatId/messages
  */
-export async function sendMessage(data: SendMessageData): Promise<{ success: boolean; message?: string }> {
+export async function sendMessage(data: SendMessageData): Promise<{
+  success: boolean
+  message?: string
+  whatsappSent?: boolean
+  whatsappError?: string | null
+}> {
   if (useMockApi()) {
     await delay(500)
-    return { success: true }
+    return { success: true, whatsappSent: true }
+  }
+  try {
+    return await apiRequest<{
+      success: boolean
+      message?: string
+      whatsappSent?: boolean
+      whatsappError?: string | null
+    }>(`/api/company/chats/${data.chatId}/messages`, {
+      method: 'POST',
+      body: { content: data.content },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Hand back chat to bot (clear agent_handling_at so auto-reply resumes).
+ * Laravel: POST /api/company/chats/:chatId/hand-back
+ */
+export async function handBackToBot(chatId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, message: 'Chat handed back to bot.' }
   }
   try {
     return await apiRequest<{ success: boolean; message?: string }>(
-      `/api/company/chats/${data.chatId}/messages`,
-      { method: 'POST', body: { content: data.content } }
+      `/api/company/chats/${chatId}/hand-back`,
+      { method: 'POST' }
     )
   } catch (e) {
     return handleApiError(e)
@@ -205,21 +258,46 @@ export async function sendMessage(data: SendMessageData): Promise<{ success: boo
 }
 
 /**
- * Update order status
- * Laravel: PATCH /api/company/orders/:orderId
+ * Update order status and/or payment status
+ * Laravel: PATCH /api/company/orders/:orderId  body: { status?, paymentStatus? }
  */
 export async function updateOrderStatus(
   orderId: string,
-  status: Order['status']
+  status: Order['status'],
+  paymentStatus?: 'pending' | 'paid' | 'refunded'
 ): Promise<{ success: boolean; message?: string }> {
   if (useMockApi()) {
     await delay(800)
-    return { success: true, message: 'Order status updated successfully' }
+    return { success: true, message: 'Order updated successfully' }
+  }
+  try {
+    const body: { status: Order['status']; paymentStatus?: string } = { status }
+    if (paymentStatus !== undefined) body.paymentStatus = paymentStatus
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/company/orders/${orderId}`, {
+      method: 'PATCH',
+      body,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Update only payment status (e.g. mark as paid manually).
+ * Laravel: PATCH /api/company/orders/:orderId with body: { paymentStatus }
+ */
+export async function updateOrderPaymentStatus(
+  orderId: string,
+  paymentStatus: 'pending' | 'paid' | 'refunded'
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(800)
+    return { success: true, message: 'Order updated successfully' }
   }
   try {
     return await apiRequest<{ success: boolean; message?: string }>(`/api/company/orders/${orderId}`, {
       method: 'PATCH',
-      body: { status },
+      body: { paymentStatus },
     })
   } catch (e) {
     return handleApiError(e)
@@ -414,8 +492,25 @@ export interface UpdateSettingsData {
   awayMessage?: string
   timezone?: string
   workingHours?: Record<string, string>
+  learnFromConversations?: boolean
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
+  ordersAcceptMpesa?: boolean
+  ordersAcceptStripe?: boolean
+  ordersCollectPaymentEnabled?: boolean
+  orderPaymentManualInstructions?: string | null
+  orderPaymentMpesaConfig?: {
+    type?: 'paybill' | 'till'
+    shortcode?: string
+    passkey?: string
+    consumer_key?: string
+    consumer_secret?: string
+    env?: 'sandbox' | 'production'
+  } | null
+  orderPaymentStripeConfig?: {
+    secret?: string
+    currency?: string
+  } | null
 }
 
 /**
@@ -589,6 +684,116 @@ export async function deletePlan(planId: string): Promise<{ success: boolean; me
   }
   try {
     return await apiRequest<{ success: boolean }>(`/api/admin/plans/${planId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+// ——— Admin Testimonials ———
+
+export interface CreateTestimonialData {
+  name: string
+  role?: string
+  content: string
+  rating?: number
+  sortOrder?: number
+  isActive?: boolean
+}
+
+export interface UpdateTestimonialData {
+  name?: string
+  role?: string
+  content?: string
+  rating?: number
+  sortOrder?: number
+  isActive?: boolean
+}
+
+export async function createTestimonial(data: CreateTestimonialData): Promise<{ success: boolean; testimonial?: { id: string; name: string; role: string; content: string; rating: number; sortOrder: number; isActive: boolean }; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, testimonial: { id: String(Date.now()), name: data.name, role: data.role ?? '', content: data.content, rating: data.rating ?? 5, sortOrder: data.sortOrder ?? 0, isActive: data.isActive ?? true } }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; testimonial: { id: string; name: string; role: string; content: string; rating: number; sortOrder: number; isActive: boolean } }>('/api/admin/testimonials', { method: 'POST', body: data })
+    return res
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function updateTestimonial(testimonialId: string, data: UpdateTestimonialData): Promise<{ success: boolean; testimonial?: unknown; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean; testimonial: unknown }>(`/api/admin/testimonials/${testimonialId}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function deleteTestimonial(testimonialId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/admin/testimonials/${testimonialId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+// ——— Admin Landing FAQs ———
+
+export interface CreateLandingFaqData {
+  question: string
+  answer: string
+  sortOrder?: number
+  isActive?: boolean
+}
+
+export interface UpdateLandingFaqData {
+  question?: string
+  answer?: string
+  sortOrder?: number
+  isActive?: boolean
+}
+
+export async function createLandingFaq(data: CreateLandingFaqData): Promise<{ success: boolean; faq?: { id: string; question: string; answer: string; sortOrder: number; isActive: boolean }; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, faq: { id: String(Date.now()), question: data.question, answer: data.answer, sortOrder: data.sortOrder ?? 0, isActive: data.isActive ?? true } }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; faq: { id: string; question: string; answer: string; sortOrder: number; isActive: boolean } }>('/api/admin/landing-faqs', { method: 'POST', body: data })
+    return res
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function updateLandingFaq(faqId: string, data: UpdateLandingFaqData): Promise<{ success: boolean; faq?: unknown; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean; faq: unknown }>(`/api/admin/landing-faqs/${faqId}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function deleteLandingFaq(faqId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/admin/landing-faqs/${faqId}`, { method: 'DELETE' })
   } catch (e) {
     return handleApiError(e)
   }
@@ -929,6 +1134,7 @@ export interface PlatformSettings {
   notifySystemErrors?: boolean
   notifyUsageAlerts?: boolean
   notifyDailySummary?: boolean
+  landingTrustedCompanies?: string[]
 }
 
 export interface UpdatePlatformSettingsData {
@@ -968,6 +1174,7 @@ export interface UpdatePlatformSettingsData {
   notifySystemErrors?: boolean
   notifyUsageAlerts?: boolean
   notifyDailySummary?: boolean
+  landingTrustedCompanies?: string[]
 }
 
 /** Public app branding (name, logo, colors) for theme/invoices. GET /api/app-branding */
@@ -1088,25 +1295,102 @@ export async function sendTestEmail(to: string): Promise<{ success: boolean; mes
 }
 
 /**
- * Export data (admin only)
+ * Export data (admin only). Use downloadFile(downloadUrl, filename) after success to trigger download.
  * Laravel: POST /api/admin/export
  */
 export async function exportData(
-  dataType: 'companies' | 'users' | 'subscriptions' | 'revenue',
-  format: 'csv' | 'json' | 'xlsx'
-): Promise<{ success: boolean; downloadUrl?: string; message?: string }> {
+  dataType: 'companies' | 'users' | 'subscriptions' | 'revenue' | 'logs',
+  format: 'csv' | 'json'
+): Promise<{ success: boolean; downloadUrl?: string; filename?: string; message?: string }> {
   if (useMockApi()) {
     await delay(2000)
+    const filename = `${dataType}-${Date.now()}.${format}`
     return {
       success: true,
-      downloadUrl: `/exports/${dataType}-${Date.now()}.${format}`,
+      downloadUrl: `/api/admin/export/download/${filename}`,
+      filename,
       message: 'Export generated successfully',
     }
   }
   try {
-    return await apiRequest<{ success: boolean; downloadUrl?: string; message?: string }>('/api/admin/export', {
+    return await apiRequest<{ success: boolean; downloadUrl?: string; filename?: string; message?: string }>('/api/admin/export', {
       method: 'POST',
       body: { dataType, format },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Company export. Use downloadFile(downloadUrl, filename) after success to trigger download.
+ * Laravel: POST /api/company/export
+ */
+export async function companyExportData(
+  dataType: 'orders' | 'products' | 'customers' | 'faqs',
+  format: 'csv' | 'json'
+): Promise<{ success: boolean; downloadUrl?: string; filename?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(2000)
+    const filename = `${dataType}-${Date.now()}.${format}`
+    return { success: true, downloadUrl: `/api/company/export/download/${filename}`, filename, message: 'Export generated successfully' }
+  }
+  try {
+    return await apiRequest<{ success: boolean; downloadUrl?: string; filename?: string; message?: string }>('/api/company/export', {
+      method: 'POST',
+      body: { dataType, format },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Import products from CSV (company). Columns: name, description, price, category, status, stock (optional).
+ * Laravel: POST /api/company/import/products
+ */
+export async function importProducts(file: File): Promise<{
+  success: boolean
+  message?: string
+  created?: number
+  errors?: { row: number; errors: string[] }[]
+}> {
+  if (useMockApi()) {
+    await delay(1500)
+    return { success: true, message: 'Imported 0 product(s) (mock).', created: 0 }
+  }
+  const form = new FormData()
+  form.append('file', file)
+  try {
+    return await apiRequest<{ success: boolean; message?: string; created?: number; errors?: { row: number; errors: string[] }[] }>('/api/company/import/products', {
+      method: 'POST',
+      body: form,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Import FAQs from CSV (company). Columns: question, answer, category, keywords (optional), is_active (optional).
+ * Laravel: POST /api/company/import/faqs
+ */
+export async function importFaqs(file: File): Promise<{
+  success: boolean
+  message?: string
+  created?: number
+  errors?: { row: number; errors: string[] }[]
+}> {
+  if (useMockApi()) {
+    await delay(1500)
+    return { success: true, message: 'Imported 0 FAQ(s) (mock).', created: 0 }
+  }
+  const form = new FormData()
+  form.append('file', file)
+  try {
+    return await apiRequest<{ success: boolean; message?: string; created?: number; errors?: { row: number; errors: string[] }[] }>('/api/company/import/faqs', {
+      method: 'POST',
+      body: form,
     })
   } catch (e) {
     return handleApiError(e)

@@ -15,6 +15,8 @@ import {
   MessageSquare,
   Layers,
   Wallet,
+  Quote,
+  HelpCircle,
 } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
@@ -23,6 +25,8 @@ const navigation = [
   { name: "Companies", href: "/admin/companies", icon: Building2 },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Plans", href: "/admin/plans", icon: Layers },
+  { name: "Testimonials", href: "/admin/testimonials", icon: Quote },
+  { name: "Landing FAQ", href: "/admin/landing-faqs", icon: HelpCircle },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { name: "Payment Gateways", href: "/admin/payment-gateways", icon: Wallet },
