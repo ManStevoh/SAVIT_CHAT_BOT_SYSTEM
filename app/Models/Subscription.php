@@ -15,6 +15,7 @@ class Subscription extends Model
         'end_date',
         'amount',
         'billing_cycle',
+        'stripe_subscription_id',
     ];
 
     protected $casts = [

@@ -15,6 +15,7 @@ class Company extends Model
         'logo',
         'plan',
         'status',
+        'stripe_customer_id',
     ];
 
     public function users(): HasMany

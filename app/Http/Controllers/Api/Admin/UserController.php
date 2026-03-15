@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class UserController extends Controller
 {
@@ -56,6 +58,31 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User status updated successfully',
+        ]);
+    }
+
+    /**
+     * Set or reset password for a user (admin only). Cannot change admin user password.
+     */
+    public function resetPassword(Request $request, User $user): JsonResponse
+    {
+        if ($user->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot change password for an admin user.',
+            ], 403);
+        }
+
+        $request->merge(['password_confirmation' => $request->input('confirmPassword', $request->input('password_confirmation'))]);
+        $validated = $request->validate([
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+        ]);
+
+        $user->update(['password' => Hash::make($validated['password'])]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password updated successfully.',
         ]);
     }
 }
