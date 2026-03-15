@@ -55,6 +55,11 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
+        // Support both snake_case (password_confirmation) and camelCase (confirmPassword) from frontend
+        $request->merge([
+            'password_confirmation' => $request->input('password_confirmation') ?? $request->input('confirmPassword'),
+        ]);
+
         $validated = $request->validate([
             'companyName' => 'required|string|max:255',
             'name' => 'required|string|max:255',
