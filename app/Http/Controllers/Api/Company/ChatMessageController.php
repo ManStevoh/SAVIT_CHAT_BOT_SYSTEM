@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Company;
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\Message;
+use App\Services\WhatsAppMessageSenderService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,6 +49,13 @@ class ChatMessageController extends Controller
             'last_message' => $request->content,
             'last_message_at' => now(),
         ]);
+
+        // Send to WhatsApp if company has connected account (so customer sees reply in WhatsApp)
+        $account = $chat->company->whatsappAccount;
+        if ($account && $account->isActive() && $chat->customer_phone) {
+            $waSender = app(WhatsAppMessageSenderService::class);
+            $waSender->sendText($account, $chat->customer_phone, $request->content);
+        }
 
         return response()->json(['success' => true, 'message' => 'Message sent.']);
     }

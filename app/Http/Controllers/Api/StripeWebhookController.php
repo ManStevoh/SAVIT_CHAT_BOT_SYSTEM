@@ -3,15 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Plan;
+use App\Models\Subscription;
+use App\Services\MailService;
 use App\Services\StripeService;
 use Illuminate\Http\Request;
+use Stripe\StripeObject;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class StripeWebhookController extends Controller
 {
     public function __construct(
-        protected StripeService $stripe
+        protected StripeService $stripe,
+        protected MailService $mailService
     ) {}
 
     /**
@@ -31,12 +36,16 @@ class StripeWebhookController extends Controller
             switch ($event->type) {
                 case 'checkout.session.completed':
                     $this->stripe->handleCheckoutSessionCompleted($event->data->object);
+                    $this->sendSubscriptionConfirmedEmail($event->data->object);
                     break;
                 case 'customer.subscription.updated':
                     $this->stripe->handleSubscriptionUpdated($event->data->object);
                     break;
                 case 'customer.subscription.deleted':
                     $this->stripe->handleSubscriptionDeleted($event->data->object);
+                    break;
+                case 'invoice.paid':
+                    $this->stripe->handleInvoicePaid($event->data->object, $this->mailService);
                     break;
                 default:
                     Log::info('Stripe webhook unhandled type: '.$event->type);
@@ -48,5 +57,32 @@ class StripeWebhookController extends Controller
         }
 
         return response('OK', 200);
+    }
+
+    /**
+     * Send subscription confirmed email after checkout (company email, plan name, end date).
+     */
+    protected function sendSubscriptionConfirmedEmail(StripeObject $session): void
+    {
+        $companyId = $session->metadata->company_id ?? $session->metadata['company_id'] ?? null;
+        $planSlug = $session->metadata->plan_slug ?? $session->metadata['plan_slug'] ?? null;
+        if (! $companyId) {
+            return;
+        }
+
+        $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
+        if (! $subscription) {
+            return;
+        }
+
+        $company = $subscription->company;
+        if (! $company?->email) {
+            return;
+        }
+
+        $planName = Plan::where('slug', $planSlug ?? $subscription->plan)->first()?->name ?? ucfirst($planSlug ?? $subscription->plan);
+        $endDate = $subscription->end_date->format('F j, Y');
+
+        $this->mailService->sendSubscriptionConfirmed($company->email, $planName, $endDate);
     }
 }

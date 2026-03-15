@@ -12,6 +12,7 @@ class Message extends Model
         'content',
         'sender',
         'status',
+        'whatsapp_message_id',
     ];
 
     public function chat(): BelongsTo

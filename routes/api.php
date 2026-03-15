@@ -4,9 +4,17 @@ use Illuminate\Support\Facades\Route;
 
 // Public (no auth)
 Route::get('plans', [App\Http\Controllers\Api\PlanController::class, 'index']);
+Route::get('app-branding', [App\Http\Controllers\Api\AppBrandingController::class, 'show']);
 
 // Stripe webhook (no auth; verified by Stripe signature)
 Route::post('stripe/webhook', App\Http\Controllers\Api\StripeWebhookController::class);
+
+// M-Pesa callback (no auth; called by Safaricom)
+Route::post('mpesa/callback', App\Http\Controllers\Api\MpesaCallbackController::class);
+
+// WhatsApp webhook (no auth; Meta calls for verification and incoming messages)
+Route::get('whatsapp/webhook', [App\Http\Controllers\Api\WhatsAppWebhookController::class, 'verify']);
+Route::post('whatsapp/webhook', [App\Http\Controllers\Api\WhatsAppWebhookController::class, 'receive']);
 
 // Auth (no auth required)
 Route::prefix('auth')->group(function () {
@@ -35,8 +43,11 @@ Route::prefix('company')->middleware('auth:sanctum')->group(function () {
     Route::get('settings', [App\Http\Controllers\Api\Company\SettingsController::class, 'show']);
     Route::put('settings', [App\Http\Controllers\Api\Company\SettingsController::class, 'update']);
     Route::post('whatsapp/connect', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'connect']);
+    Route::post('whatsapp/disconnect', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'disconnect']);
+    Route::get('whatsapp/status', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'status']);
     Route::post('checkout', [App\Http\Controllers\Api\Company\StripeCheckoutController::class, 'createSession']);
     Route::post('billing-portal', [App\Http\Controllers\Api\Company\StripeCheckoutController::class, 'createPortalSession']);
+    Route::post('mpesa/initiate', [App\Http\Controllers\Api\Company\MpesaCheckoutController::class, 'initiate']);
 });
 
 // Admin (auth:sanctum + admin role)
@@ -59,7 +70,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('logs', [App\Http\Controllers\Api\Admin\LogController::class, 'index']);
     Route::get('payment-gateways', [App\Http\Controllers\Api\Admin\PaymentGatewayController::class, 'index']);
     Route::put('payment-gateways/{slug}', [App\Http\Controllers\Api\Admin\PaymentGatewayController::class, 'update']);
+    Route::get('settings', [App\Http\Controllers\Api\Admin\PlatformSettingsController::class, 'show']);
     Route::put('settings', [App\Http\Controllers\Api\Admin\PlatformSettingsController::class, 'update']);
+    Route::post('settings', [App\Http\Controllers\Api\Admin\PlatformSettingsController::class, 'update']);
+    Route::post('settings/test-email', [App\Http\Controllers\Api\Admin\PlatformSettingsController::class, 'testEmail']);
     Route::post('export', [App\Http\Controllers\Api\Admin\ExportController::class, 'export']);
     Route::post('impersonate/user/{user}', [App\Http\Controllers\Api\Admin\ImpersonateController::class, 'impersonateUser']);
     Route::post('impersonate/company/{company}', [App\Http\Controllers\Api\Admin\ImpersonateController::class, 'impersonateCompany']);

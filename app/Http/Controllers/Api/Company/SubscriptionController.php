@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Subscription;
+use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SubscriptionController extends Controller
 {
+    public function __construct(
+        protected StripeService $stripe
+    ) {}
+
     public function show(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
@@ -49,11 +54,17 @@ class SubscriptionController extends Controller
     public function invoices(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
-        if (!$companyId) {
+        if (! $companyId) {
             return response()->json(['message' => 'No company.'], 403);
         }
-        // Return billing invoices: extend with Payment/Invoice model when available
-        $invoices = [];
+
+        $company = $request->user()->company;
+        if (! $company?->stripe_customer_id || ! StripeService::isEnabled()) {
+            return response()->json([]);
+        }
+
+        $invoices = $this->stripe->listInvoicesForCustomer($company->stripe_customer_id);
+
         return response()->json($invoices);
     }
 }

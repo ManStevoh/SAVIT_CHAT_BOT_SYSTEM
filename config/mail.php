@@ -75,6 +75,16 @@ return [
             'channel' => env('MAIL_LOG_CHANNEL'),
         ],
 
+        // Runtime-configured by MailService from platform_settings (admin SMTP)
+        'platform_smtp' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_HOST', '127.0.0.1'),
+            'port' => env('MAIL_PORT', 2525),
+            'username' => env('MAIL_USERNAME'),
+            'password' => env('MAIL_PASSWORD'),
+            'timeout' => null,
+        ],
+
         'array' => [
             'transport' => 'array',
         ],

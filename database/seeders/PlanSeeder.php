@@ -26,6 +26,11 @@ class PlanSeeder extends Seeder
                 'popular' => false,
                 'cta' => 'Start Free Trial',
                 'sort_order' => 0,
+                'stripe_price_id' => null,
+                'is_free' => false,
+                'has_trial' => true,
+                'trial_days' => 14,
+                'trial_elapsed_action' => 'downgrade',
             ],
             [
                 'name' => 'Growth',
@@ -45,6 +50,11 @@ class PlanSeeder extends Seeder
                 'popular' => true,
                 'cta' => 'Start Free Trial',
                 'sort_order' => 1,
+                'stripe_price_id' => null,
+                'is_free' => false,
+                'has_trial' => true,
+                'trial_days' => 14,
+                'trial_elapsed_action' => 'downgrade',
             ],
             [
                 'name' => 'Enterprise',
@@ -64,6 +74,11 @@ class PlanSeeder extends Seeder
                 'popular' => false,
                 'cta' => 'Contact Sales',
                 'sort_order' => 2,
+                'stripe_price_id' => null,
+                'is_free' => false,
+                'has_trial' => false,
+                'trial_days' => null,
+                'trial_elapsed_action' => null,
             ],
         ];
 

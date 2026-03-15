@@ -48,6 +48,11 @@ class Company extends Model
         return $this->hasMany(Chat::class);
     }
 
+    public function whatsappAccount(): HasOne
+    {
+        return $this->hasOne(WhatsAppAccount::class);
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);

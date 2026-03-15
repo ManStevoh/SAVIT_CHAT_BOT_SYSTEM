@@ -6,10 +6,12 @@ use App\Models\Company;
 use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Services\MailService;
 use Illuminate\Support\Facades\Log;
 use Stripe\Checkout\Session as StripeSession;
 use Stripe\Customer;
 use Stripe\Exception\SignatureVerificationException;
+use Stripe\Invoice;
 use Stripe\Stripe;
 use Stripe\StripeObject;
 use Stripe\Subscription as StripeSubscription;
@@ -300,6 +302,7 @@ class StripeService
                 'end_date' => $endDate,
                 'amount' => $amount,
                 'billing_cycle' => $interval,
+                'payment_method' => 'stripe',
             ]
         );
     }
@@ -309,5 +312,61 @@ class StripeService
         $existing = Subscription::where('stripe_subscription_id', $stripeSub->id)->first();
 
         return $existing?->plan ?? 'starter';
+    }
+
+    /**
+     * List invoices for a Stripe customer. Returns array of [id, date, amount, status, invoicePdf].
+     *
+     * @return array<int, array{id: string, date: string, amount: string, status: string, invoicePdf: string|null}>
+     */
+    public function listInvoicesForCustomer(string $stripeCustomerId, int $limit = 50): array
+    {
+        try {
+            $invoices = Invoice::all([
+                'customer' => $stripeCustomerId,
+                'limit' => $limit,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Stripe list invoices failed: '.$e->getMessage());
+
+            return [];
+        }
+
+        $result = [];
+        foreach ($invoices->data as $inv) {
+            $amount = isset($inv->amount_paid) ? $inv->amount_paid / 100 : 0;
+            $result[] = [
+                'id' => $inv->number ?? $inv->id,
+                'date' => isset($inv->created) ? date('Y-m-d', $inv->created) : now()->format('Y-m-d'),
+                'amount' => '$'.number_format($amount, 2),
+                'status' => $inv->status ?? 'unknown',
+                'invoicePdf' => $inv->invoice_pdf ?? $inv->hosted_invoice_url ?? null,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Handle invoice.paid: send payment received email to company.
+     */
+    public function handleInvoicePaid(StripeObject $invoice, MailService $mailService): void
+    {
+        $customerId = $invoice->customer ?? null;
+        if (! $customerId) {
+            return;
+        }
+
+        $company = Company::where('stripe_customer_id', $customerId)->first();
+        $email = $company?->email ?? $invoice->customer_email ?? null;
+        if (! $email) {
+            return;
+        }
+
+        $amount = isset($invoice->amount_paid) ? $invoice->amount_paid / 100 : 0;
+        $invoiceId = $invoice->number ?? $invoice->id;
+        $date = isset($invoice->created) ? date('Y-m-d', $invoice->created) : now()->format('Y-m-d');
+
+        $mailService->sendInvoicePaid($email, (string) $invoiceId, $amount, $date);
     }
 }

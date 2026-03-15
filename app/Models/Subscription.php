@@ -16,6 +16,8 @@ class Subscription extends Model
         'amount',
         'billing_cycle',
         'stripe_subscription_id',
+        'payment_method',
+        'external_payment_id',
     ];
 
     protected $casts = [
