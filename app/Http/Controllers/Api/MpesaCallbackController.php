@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\Order;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\MailService;
+use App\Services\OrderPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -15,11 +17,13 @@ use Illuminate\Support\Facades\Log;
 class MpesaCallbackController extends Controller
 {
     public function __construct(
-        protected MailService $mailService
+        protected MailService $mailService,
+        protected OrderPaymentService $orderPaymentService
     ) {}
 
     /**
      * Daraja API calls this URL with STK push result. No auth; validate by processing only known structure.
+     * Handles both: order payments (mpesa_pending_order) and subscription payments (mpesa_pending).
      */
     public function __invoke(Request $request): Response
     {
@@ -44,6 +48,18 @@ class MpesaCallbackController extends Controller
             return response('OK', 200);
         }
 
+        // Order payment: key mpesa_pending_order:{CheckoutRequestID}
+        $pendingOrder = $checkoutRequestId ? Cache::get(OrderPaymentService::CACHE_KEY_ORDER_PREFIX . $checkoutRequestId) : null;
+        if ($pendingOrder && ! empty($pendingOrder['order_id'])) {
+            $order = Order::find($pendingOrder['order_id']);
+            if ($order && $order->payment_status !== 'paid') {
+                $this->orderPaymentService->markOrderPaid($order);
+            }
+            Cache::forget(OrderPaymentService::CACHE_KEY_ORDER_PREFIX . $checkoutRequestId);
+            return response('OK', 200);
+        }
+
+        // Subscription payment: key mpesa_pending:{CheckoutRequestID}
         $pending = $checkoutRequestId ? Cache::get('mpesa_pending:'.$checkoutRequestId) : null;
         if (! $pending) {
             Log::warning('M-Pesa callback: no pending record for CheckoutRequestID '.$checkoutRequestId);

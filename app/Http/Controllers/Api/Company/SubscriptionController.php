@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Message;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\PlanLimitService;
 use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -83,21 +84,10 @@ class SubscriptionController extends Controller
 
         $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
         $plan = $subscription?->plan ?? 'starter';
-        $start = $subscription ? $subscription->start_date->copy()->startOfDay() : now()->startOfMonth();
-        $end = $subscription ? $subscription->end_date->copy()->endOfDay() : now()->endOfMonth();
-
-        $messageCount = Message::whereHas('chat', fn ($q) => $q->where('company_id', $companyId))
-            ->whereBetween('created_at', [$start, $end])
-            ->count();
-
+        $company = $request->user()->company;
+        $messageCount = PlanLimitService::getMessagesUsedInCurrentPeriod($company);
         $teamCount = User::where('company_id', $companyId)->count();
-
-        $limits = [
-            'starter' => ['messages' => 5000, 'team' => 3],
-            'professional' => ['messages' => 50000, 'team' => 10],
-            'enterprise' => ['messages' => 500000, 'team' => 50],
-        ];
-        $planLimits = $limits[$plan] ?? $limits['starter'];
+        $planLimits = PlanLimitService::getLimitsForPlan($plan);
 
         $items = [
             ['name' => 'Messages', 'used' => $messageCount, 'limit' => $planLimits['messages']],

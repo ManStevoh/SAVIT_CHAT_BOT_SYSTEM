@@ -9,6 +9,7 @@ use App\Models\Subscription;
 use App\Services\AIReplyService;
 use App\Services\MailService;
 use App\Services\OrderFlowService;
+use App\Services\PlanLimitService;
 use App\Services\WhatsAppMessageSenderService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -61,6 +62,12 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue
         if (! $this->companyHasActiveSubscription($company)) {
             $replyText = 'Our service is temporarily unavailable. Please try again later or contact support.';
             $this->sendReplyAndSave($waSender, $company, $chat, $replyText);
+            return;
+        }
+
+        if (! PlanLimitService::isWithinMessageLimit($company)) {
+            Log::info('ProcessIncomingWhatsAppMessage: message limit reached, skipping auto-reply', ['company_id' => $company->id]);
+            $this->notifyCompanyNewMessage($company, $mailService, false);
             return;
         }
 

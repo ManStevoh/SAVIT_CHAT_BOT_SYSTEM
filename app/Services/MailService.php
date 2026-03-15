@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PlatformSetting;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
@@ -161,6 +162,22 @@ class MailService
         $html .= '<p><a href="' . e($chatsUrl) . '" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View in dashboard</a></p>';
         $html = self::wrapEmailBody($html);
         $this->send($to, $subject, $html, strip_tags($html));
+    }
+
+    /**
+     * Send welcome + email verification to new user. Uses the provided signed verification URL.
+     * Called after registration; link should point to API verify-email endpoint.
+     */
+    public function sendWelcomeVerificationEmail(User $user, string $verificationUrl): void
+    {
+        $appName = self::applicationName();
+        $subject = '[' . $appName . '] Verify your email address';
+        $html = '<p>Welcome, ' . e($user->name) . '!</p>';
+        $html .= '<p>Thanks for signing up. Please verify your email by clicking the link below.</p>';
+        $html .= '<p><a href="' . e($verificationUrl) . '" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Verify email address</a></p>';
+        $html .= '<p>This link will expire in 60 minutes. If you did not create an account, you can ignore this email.</p>';
+        $html = self::wrapEmailBody($html);
+        $this->send($user->email, $subject, $html, strip_tags($html));
     }
 
     /**

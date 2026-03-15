@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Company;
+use App\Models\Order;
 use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -120,6 +121,77 @@ class StripeService
 
             return null;
         }
+    }
+
+    /**
+     * Create one-time Checkout Session for a customer order. Returns payment URL or null.
+     * Webhook checkout.session.completed will mark order paid when metadata contains order_id.
+     *
+     * @param  array{secret: string, currency?: string}|null  $companyStripeConfig  When set, use company's Stripe secret (and optional currency) instead of platform config.
+     */
+    public function createOneTimePaymentSessionForOrder(Order $order, ?array $companyStripeConfig = null): ?string
+    {
+        $config = $companyStripeConfig ?? $this->stripeConfig();
+        $secret = $config['secret'] ?? '';
+        if ($secret !== '') {
+            Stripe::setApiKey($secret);
+        }
+        $currency = $config['currency'] ?? $config['order_currency'] ?? 'usd';
+        $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+        $amountCents = (int) round((float) $order->total * 100);
+        if ($amountCents <= 0) {
+            return null;
+        }
+
+        try {
+            $session = StripeSession::create([
+                'mode' => 'payment',
+                'payment_method_types' => ['card'],
+                'line_items' => [
+                    [
+                        'price_data' => [
+                            'currency' => strtolower((string) $currency),
+                            'product_data' => [
+                                'name' => 'Order ' . $order->order_number,
+                                'description' => 'Payment for order from ' . ($order->company->name ?? 'Store'),
+                            ],
+                            'unit_amount' => $amountCents,
+                        ],
+                        'quantity' => 1,
+                    ],
+                ],
+                'success_url' => $frontendUrl . '/order-paid?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => $frontendUrl . '/order-paid?cancelled=1',
+                'metadata' => [
+                    'order_id' => (string) $order->id,
+                    'order_number' => $order->order_number,
+                ],
+            ]);
+
+            return $session->url;
+        } catch (\Throwable $e) {
+            Log::error('Stripe one-time session failed: ' . $e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
+     * Handle one-time order payment (checkout.session.completed with mode=payment and order_id in metadata).
+     */
+    public function handleOrderPaymentCompleted(StripeObject $session, OrderPaymentService $orderPaymentService): void
+    {
+        $orderId = $session->metadata->order_id ?? $session->metadata['order_id'] ?? null;
+        if (! $orderId) {
+            return;
+        }
+
+        $order = Order::find($orderId);
+        if (! $order || $order->payment_status === 'paid') {
+            return;
+        }
+
+        $orderPaymentService->markOrderPaid($order);
     }
 
     /**

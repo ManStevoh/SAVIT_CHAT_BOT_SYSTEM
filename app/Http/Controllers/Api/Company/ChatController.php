@@ -43,8 +43,33 @@ class ChatController extends Controller
             'unreadCount' => (int) $chat->unread_count,
             'status' => $chat->status,
             'aiHandled' => (bool) $chat->ai_handled,
+            'agentHandlingAt' => $chat->agent_handling_at?->toIso8601String(),
         ]);
 
         return response()->json($data);
+    }
+
+    /**
+     * Clear agent_handling_at for this chat so the bot can auto-reply again (hand back to bot).
+     * POST /api/company/chats/{chatId}/hand-back
+     */
+    public function handBack(Request $request, string $chatId): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $chat = Chat::where('id', $chatId)->where('company_id', $companyId)->first();
+        if (! $chat) {
+            return response()->json(['message' => 'Chat not found.'], 404);
+        }
+
+        $chat->update(['agent_handling_at' => null]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Chat handed back to bot. Auto-reply will resume for new messages.',
+        ]);
     }
 }

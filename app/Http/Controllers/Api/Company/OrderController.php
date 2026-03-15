@@ -63,18 +63,28 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order): JsonResponse
     {
         $request->validate([
-            'status' => 'required|in:pending,confirmed,shipped,delivered,cancelled',
+            'status' => 'sometimes|in:pending,confirmed,shipped,delivered,cancelled',
+            'paymentStatus' => 'sometimes|in:pending,paid,refunded',
         ]);
 
         if ($order->company_id !== $request->user()->company_id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
-        $order->update(['status' => $request->status]);
+        $updates = [];
+        if ($request->has('status')) {
+            $updates['status'] = $request->status;
+        }
+        if ($request->has('paymentStatus')) {
+            $updates['payment_status'] = $request->paymentStatus;
+        }
+        if ($updates !== []) {
+            $order->update($updates);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Order status updated successfully',
+            'message' => 'Order updated successfully',
         ]);
     }
 }

@@ -32,8 +32,15 @@ class SettingsController extends Controller
             'awayMessage' => $settings?->away_message,
             'timezone' => $settings?->timezone ?? 'UTC',
             'workingHours' => $settings?->working_hours,
+            'learnFromConversations' => ($settings?->learn_from_conversations ?? true) !== false,
             'autoReplyEnabled' => (bool) ($settings?->auto_reply_enabled ?? false),
             'notificationsEnabled' => (bool) ($settings?->notifications_enabled ?? false),
+            'ordersAcceptMpesa' => (bool) ($settings?->orders_accept_mpesa ?? false),
+            'ordersAcceptStripe' => (bool) ($settings?->orders_accept_stripe ?? false),
+            'ordersCollectPaymentEnabled' => ($settings?->orders_collect_payment_enabled ?? true) !== false,
+            'orderPaymentManualInstructions' => $settings?->order_payment_manual_instructions ?? '',
+            'orderPaymentMpesaConfigured' => $settings?->hasOrderPaymentMpesaConfig() ?? false,
+            'orderPaymentStripeConfigured' => $settings?->hasOrderPaymentStripeConfig() ?? false,
         ]);
     }
 
@@ -67,8 +74,23 @@ class SettingsController extends Controller
             'timezone' => 'nullable|string|max:50',
             'workingHours' => 'nullable|array',
             'workingHours.*' => 'nullable|string|max:50',
+            'learnFromConversations' => 'sometimes|boolean',
             'autoReplyEnabled' => 'sometimes|boolean',
             'notificationsEnabled' => 'sometimes|boolean',
+            'ordersAcceptMpesa' => 'sometimes|boolean',
+            'ordersAcceptStripe' => 'sometimes|boolean',
+            'ordersCollectPaymentEnabled' => 'sometimes|boolean',
+            'orderPaymentManualInstructions' => 'sometimes|nullable|string|max:2000',
+            'orderPaymentMpesaConfig' => 'sometimes|nullable|array',
+            'orderPaymentMpesaConfig.type' => 'nullable|string|in:paybill,till',
+            'orderPaymentMpesaConfig.shortcode' => 'required_with:orderPaymentMpesaConfig|nullable|string|max:20',
+            'orderPaymentMpesaConfig.passkey' => 'required_with:orderPaymentMpesaConfig|nullable|string|max:255',
+            'orderPaymentMpesaConfig.consumer_key' => 'nullable|string|max:255',
+            'orderPaymentMpesaConfig.consumer_secret' => 'nullable|string|max:255',
+            'orderPaymentMpesaConfig.env' => 'nullable|string|in:sandbox,production',
+            'orderPaymentStripeConfig' => 'sometimes|nullable|array',
+            'orderPaymentStripeConfig.secret' => 'required_with:orderPaymentStripeConfig|nullable|string|max:255',
+            'orderPaymentStripeConfig.currency' => 'nullable|string|max:10',
         ]);
 
         if (isset($companyValidated['companyName'])) {
@@ -107,11 +129,53 @@ class SettingsController extends Controller
         if (array_key_exists('workingHours', $companyValidated)) {
             $settings->working_hours = $companyValidated['workingHours'];
         }
+        if (array_key_exists('learnFromConversations', $companyValidated)) {
+            $settings->learn_from_conversations = $companyValidated['learnFromConversations'];
+        }
         if (array_key_exists('autoReplyEnabled', $companyValidated)) {
             $settings->auto_reply_enabled = $companyValidated['autoReplyEnabled'];
         }
         if (array_key_exists('notificationsEnabled', $companyValidated)) {
             $settings->notifications_enabled = $companyValidated['notificationsEnabled'];
+        }
+        if (array_key_exists('ordersAcceptMpesa', $companyValidated)) {
+            $settings->orders_accept_mpesa = $companyValidated['ordersAcceptMpesa'];
+        }
+        if (array_key_exists('ordersAcceptStripe', $companyValidated)) {
+            $settings->orders_accept_stripe = $companyValidated['ordersAcceptStripe'];
+        }
+        if (array_key_exists('ordersCollectPaymentEnabled', $companyValidated)) {
+            $settings->orders_collect_payment_enabled = $companyValidated['ordersCollectPaymentEnabled'];
+        }
+        if (array_key_exists('orderPaymentManualInstructions', $companyValidated)) {
+            $v = $companyValidated['orderPaymentManualInstructions'];
+            $settings->order_payment_manual_instructions = (is_string($v) && trim($v) !== '') ? trim($v) : null;
+        }
+        if (array_key_exists('orderPaymentMpesaConfig', $companyValidated)) {
+            $v = $companyValidated['orderPaymentMpesaConfig'];
+            if (is_array($v) && ! empty(trim((string) ($v['shortcode'] ?? ''))) && ! empty(trim((string) ($v['passkey'] ?? ''))) {
+                $settings->order_payment_mpesa_config = [
+                    'type' => in_array($v['type'] ?? null, ['paybill', 'till'], true) ? $v['type'] : 'paybill',
+                    'shortcode' => trim((string) $v['shortcode']),
+                    'passkey' => trim((string) $v['passkey']),
+                    'consumer_key' => isset($v['consumer_key']) ? trim((string) $v['consumer_key']) : null,
+                    'consumer_secret' => isset($v['consumer_secret']) ? trim((string) $v['consumer_secret']) : null,
+                    'env' => in_array($v['env'] ?? null, ['sandbox', 'production'], true) ? $v['env'] : 'sandbox',
+                ];
+            } else {
+                $settings->order_payment_mpesa_config = null;
+            }
+        }
+        if (array_key_exists('orderPaymentStripeConfig', $companyValidated)) {
+            $v = $companyValidated['orderPaymentStripeConfig'];
+            if (is_array($v) && ! empty(trim((string) ($v['secret'] ?? ''))) {
+                $settings->order_payment_stripe_config = [
+                    'secret' => trim((string) $v['secret']),
+                    'currency' => isset($v['currency']) ? trim((string) $v['currency']) : 'usd',
+                ];
+            } else {
+                $settings->order_payment_stripe_config = null;
+            }
         }
         $settings->save();
 

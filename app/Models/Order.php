@@ -12,6 +12,7 @@ class Order extends Model
 {
     protected $fillable = [
         'company_id',
+        'chat_id',
         'order_number',
         'customer_name',
         'customer_phone',
@@ -27,6 +28,11 @@ class Order extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function chat(): BelongsTo
+    {
+        return $this->belongsTo(Chat::class);
     }
 
     public function orderProducts(): HasMany

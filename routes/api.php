@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 // Public (no auth)
 Route::get('plans', [App\Http\Controllers\Api\PlanController::class, 'index']);
 Route::get('app-branding', [App\Http\Controllers\Api\AppBrandingController::class, 'show']);
+Route::get('landing', [App\Http\Controllers\Api\LandingController::class, 'index']);
 
 // Stripe webhook (no auth; verified by Stripe signature)
 Route::post('stripe/webhook', App\Http\Controllers\Api\StripeWebhookController::class);
@@ -18,16 +19,19 @@ Route::post('whatsapp/webhook', [App\Http\Controllers\Api\WhatsAppWebhookControl
 
 // Auth (no auth required)
 Route::prefix('auth')->group(function () {
+    Route::get('verify-email', App\Http\Controllers\Api\EmailVerificationController::class)->name('api.verification.verify');
     Route::post('login', [App\Http\Controllers\Api\AuthController::class, 'login']);
     Route::post('register', [App\Http\Controllers\Api\AuthController::class, 'register']);
     Route::post('forgot-password', [App\Http\Controllers\Api\AuthController::class, 'forgotPassword']);
     Route::post('reset-password', [App\Http\Controllers\Api\AuthController::class, 'resetPassword']);
+    Route::post('resend-verification', [App\Http\Controllers\Api\AuthController::class, 'resendVerification']);
     Route::post('logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
 });
 
 // Company (auth required; subscription must be active except for subscription/checkout routes)
 Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->group(function () {
     Route::get('chats', [App\Http\Controllers\Api\Company\ChatController::class, 'index']);
+    Route::post('chats/{chatId}/hand-back', [App\Http\Controllers\Api\Company\ChatController::class, 'handBack']);
     Route::get('chats/{chatId}/messages', [App\Http\Controllers\Api\Company\ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [App\Http\Controllers\Api\Company\ChatMessageController::class, 'store']);
     Route::get('orders', [App\Http\Controllers\Api\Company\OrderController::class, 'index']);
@@ -81,4 +85,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::post('export', [App\Http\Controllers\Api\Admin\ExportController::class, 'export']);
     Route::post('impersonate/user/{user}', [App\Http\Controllers\Api\Admin\ImpersonateController::class, 'impersonateUser']);
     Route::post('impersonate/company/{company}', [App\Http\Controllers\Api\Admin\ImpersonateController::class, 'impersonateCompany']);
+    Route::get('testimonials', [App\Http\Controllers\Api\Admin\TestimonialController::class, 'index']);
+    Route::post('testimonials', [App\Http\Controllers\Api\Admin\TestimonialController::class, 'store']);
+    Route::put('testimonials/{testimonial}', [App\Http\Controllers\Api\Admin\TestimonialController::class, 'update']);
+    Route::delete('testimonials/{testimonial}', [App\Http\Controllers\Api\Admin\TestimonialController::class, 'destroy']);
 });

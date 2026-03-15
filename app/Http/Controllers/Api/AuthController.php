@@ -26,10 +26,18 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please verify your email address before logging in. Check your inbox for the verification link.',
+                'code' => 'email_not_verified',
+            ], 403);
         }
 
         $user->update(['last_login_at' => now()]);
@@ -65,7 +73,7 @@ class AuthController extends Controller
             'status' => 'pending',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -76,6 +84,8 @@ class AuthController extends Controller
         ]);
 
         $this->createDefaultTrialSubscription($company);
+
+        $user->sendEmailVerificationNotification();
 
         return response()->json([
             'success' => true,
@@ -123,6 +133,36 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Password reset successful! You can now login with your new password.',
+        ]);
+    }
+
+    /**
+     * Resend email verification link. POST /api/auth/resend-verification { email }
+     */
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $user = User::where('email', $request->email)->first();
+        if (! $user) {
+            return response()->json([
+                'success' => true,
+                'message' => 'If an account exists with this email, a new verification link has been sent.',
+            ]);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'This account is already verified. You can log in.',
+            ]);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'A new verification link has been sent to your email address.',
         ]);
     }
 

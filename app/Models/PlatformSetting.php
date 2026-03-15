@@ -43,6 +43,7 @@ class PlatformSetting extends Model
         'notify_system_errors',
         'notify_usage_alerts',
         'notify_daily_summary',
+        'landing_trusted_companies',
     ];
 
     protected $casts = [
@@ -58,6 +59,7 @@ class PlatformSetting extends Model
         'notify_system_errors' => 'boolean',
         'notify_usage_alerts' => 'boolean',
         'notify_daily_summary' => 'boolean',
+        'landing_trusted_companies' => 'array',
     ];
 
     /** Hide secrets when serializing (e.g. for API GET); controller returns masked values. */

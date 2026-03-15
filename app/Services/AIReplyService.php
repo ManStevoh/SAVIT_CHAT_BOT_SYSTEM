@@ -3,10 +3,11 @@
 namespace App\Services;
 
 use App\Models\Company;
+use App\Models\ConversationLearningSample;
 use App\Models\Faq;
-use App\Models\Message;
 use App\Models\PlatformSetting;
 use App\Models\Product;
+use App\Services\AI\OpenAIConversationBuilder;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -17,7 +18,9 @@ class AIReplyService
     private const PLATFORM_SETTINGS_CACHE_TTL = 300;
 
     public function __construct(
-        protected WhatsAppMessageSenderService $whatsAppSender
+        protected WhatsAppMessageSenderService $whatsAppSender,
+        protected OpenAIConversationBuilder $conversationBuilder,
+        protected ConversationLearningService $learningService
     ) {}
 
     /**
@@ -214,20 +217,7 @@ class AIReplyService
         $model = $platform?->openai_model ?? config('openai.model', 'gpt-4o-mini');
         $maxTokens = $platform?->openai_max_tokens ?? config('openai.max_tokens', 512);
 
-        $systemPrompt = $this->buildSystemPrompt($company);
-        $messages = [['role' => 'system', 'content' => $systemPrompt]];
-
-        if ($chatId) {
-            $history = Message::where('chat_id', $chatId)->orderBy('created_at')->latest()->take(10)->get()->reverse();
-            foreach ($history as $m) {
-                $role = $m->sender === 'customer' ? 'user' : 'assistant';
-                $messages[] = ['role' => $role, 'content' => $m->content];
-            }
-        }
-        if (empty(array_filter($messages, fn ($m) => $m['role'] === 'user'))) {
-            $userContent = $customerName ? "[Customer: {$customerName}]\n\n{$message}" : $message;
-            $messages[] = ['role' => 'user', 'content' => $userContent];
-        }
+        $messages = $this->conversationBuilder->build($company, $message, $customerName, $chatId);
 
         try {
             $response = Http::withToken($apiKey)
@@ -245,38 +235,30 @@ class AIReplyService
 
             $data = $response->json();
             $content = $data['choices'][0]['message']['content'] ?? null;
-            return $content ? trim($content) : null;
+            $reply = $content ? trim($content) : null;
+
+            if ($reply !== null && $this->shouldStoreLearningSample($company)) {
+                $this->learningService->storeSample(
+                    $company->id,
+                    $message,
+                    $reply,
+                    ConversationLearningSample::SOURCE_OPENAI,
+                    $chatId,
+                    null
+                );
+            }
+
+            return $reply;
         } catch (\Throwable $e) {
             Log::error('OpenAI request failed', ['message' => $e->getMessage()]);
             return null;
         }
     }
 
-    protected function buildSystemPrompt(Company $company): string
+    protected function shouldStoreLearningSample(Company $company): bool
     {
         $settings = $company->settings;
-        $tone = $settings?->ai_tone ?? 'friendly and professional';
-        $name = $company->name;
-        $parts = [
-            "You are a helpful customer service assistant for the business: {$name}.",
-            "Reply in a {$tone} tone. Keep replies concise (1-3 short paragraphs).",
-            "Do not invent prices or product names. If the customer asks about prices or products, say they can type 'prices' or 'catalog'.",
-        ];
-        $faqs = Faq::where('company_id', $company->id)->where('is_active', true)->get();
-        if ($faqs->isNotEmpty()) {
-            $parts[] = "\nKnowledge base (use when relevant):";
-            foreach ($faqs->take(15) as $faq) {
-                $parts[] = "Q: {$faq->question}\nA: {$faq->answer}";
-            }
-        }
-        $products = Product::where('company_id', $company->id)->where('status', 'active')->get();
-        if ($products->isNotEmpty()) {
-            $parts[] = "\nProducts (do not invent; refer to catalog if they ask):";
-            foreach ($products->take(20) as $p) {
-                $parts[] = "- {$p->name}: {$p->price}";
-            }
-        }
-        return implode("\n", $parts);
+        return $settings && ($settings->learn_from_conversations ?? true);
     }
 
     protected function fallbackReply(Company $company): string

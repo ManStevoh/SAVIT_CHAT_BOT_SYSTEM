@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\MailService;
+use App\Services\OrderPaymentService;
 use App\Services\StripeService;
 use Illuminate\Http\Request;
 use Stripe\StripeObject;
@@ -16,7 +17,8 @@ class StripeWebhookController extends Controller
 {
     public function __construct(
         protected StripeService $stripe,
-        protected MailService $mailService
+        protected MailService $mailService,
+        protected OrderPaymentService $orderPaymentService
     ) {}
 
     /**
@@ -35,8 +37,14 @@ class StripeWebhookController extends Controller
         try {
             switch ($event->type) {
                 case 'checkout.session.completed':
-                    $this->stripe->handleCheckoutSessionCompleted($event->data->object);
-                    $this->sendSubscriptionConfirmedEmail($event->data->object);
+                    $session = $event->data->object;
+                    $orderId = $session->metadata->order_id ?? $session->metadata['order_id'] ?? null;
+                    if ($orderId) {
+                        $this->stripe->handleOrderPaymentCompleted($session, $this->orderPaymentService);
+                    } else {
+                        $this->stripe->handleCheckoutSessionCompleted($session);
+                        $this->sendSubscriptionConfirmedEmail($session);
+                    }
                     break;
                 case 'customer.subscription.updated':
                     $this->stripe->handleSubscriptionUpdated($event->data->object);

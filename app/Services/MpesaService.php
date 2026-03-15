@@ -32,18 +32,21 @@ class MpesaService
 
     /**
      * Get OAuth access token from Daraja API.
+     *
+     * @param  array<string, mixed>|null  $configOverride  When provided (e.g. company's own config), use for this call only.
      */
-    public function getAccessToken(): ?string
+    public function getAccessToken(?array $configOverride = null): ?string
     {
-        $consumerKey = $this->config['consumer_key'] ?? '';
-        $consumerSecret = $this->config['consumer_secret'] ?? '';
+        $config = $configOverride ?? $this->config;
+        $consumerKey = $config['consumer_key'] ?? '';
+        $consumerSecret = $config['consumer_secret'] ?? '';
         if (! $consumerKey || ! $consumerSecret) {
             Log::warning('M-Pesa: consumer key or secret not configured');
 
             return null;
         }
 
-        $baseUrl = $this->baseUrl();
+        $baseUrl = $this->baseUrl($config);
         $url = $baseUrl.'/oauth/v1/generate?grant_type=client_credentials';
 
         try {
@@ -65,9 +68,13 @@ class MpesaService
         }
     }
 
-    protected function baseUrl(): string
+    /**
+     * @param  array<string, mixed>|null  $configOverride
+     */
+    protected function baseUrl(?array $configOverride = null): string
     {
-        $env = $this->config['env'] ?? 'sandbox';
+        $config = $configOverride ?? $this->config;
+        $env = $config['env'] ?? 'sandbox';
 
         return $env === 'production'
             ? 'https://api.safaricom.co.ke'
@@ -78,17 +85,19 @@ class MpesaService
      * Initiate STK push (Lipa Na M-Pesa Online).
      * Phone must be in format 254XXXXXXXXX (no +).
      *
+     * @param  array<string, mixed>|null  $configOverride  Company's own M-Pesa config (shortcode, passkey, optional consumer_key, consumer_secret, env). When set, used instead of platform config.
      * @return array{CheckoutRequestID?: string, ResponseCode?: string, ResponseDescription?: string, MerchantRequestID?: string, error?: string}
      */
-    public function stkPush(string $phone, float $amount, string $accountReference, string $transactionDesc, string $callbackUrl): array
+    public function stkPush(string $phone, float $amount, string $accountReference, string $transactionDesc, string $callbackUrl, ?array $configOverride = null): array
     {
-        $shortcode = $this->config['shortcode'] ?? '';
-        $passkey = $this->config['passkey'] ?? '';
+        $config = $configOverride ?? $this->config;
+        $shortcode = $config['shortcode'] ?? '';
+        $passkey = $config['passkey'] ?? '';
         if (! $shortcode || ! $passkey) {
             return ['error' => 'M-Pesa shortcode or passkey not configured'];
         }
 
-        $token = $this->getAccessToken();
+        $token = $this->getAccessToken($config);
         if (! $token) {
             return ['error' => 'Could not obtain M-Pesa access token'];
         }
@@ -103,11 +112,15 @@ class MpesaService
             $phone = '254'.substr($phone, 1);
         }
 
+        $transactionType = ($config['type'] ?? $config['transaction_type'] ?? 'paybill') === 'till'
+            ? 'CustomerBuyGoodsOnline'
+            : 'CustomerPayBillOnline';
+
         $payload = [
             'BusinessShortcode' => (int) $shortcode,
             'Password' => $password,
             'Timestamp' => $timestamp,
-            'TransactionType' => 'CustomerPayBillOnline',
+            'TransactionType' => $transactionType,
             'Amount' => (int) round($amount),
             'PartyA' => (int) $phone,
             'PartyB' => (int) $shortcode,
@@ -117,7 +130,7 @@ class MpesaService
             'TransactionDesc' => substr($transactionDesc, 0, 13),
         ];
 
-        $url = $this->baseUrl().'/mpesa/stkpush/v1/processrequest';
+        $url = $this->baseUrl($config).'/mpesa/stkpush/v1/processrequest';
 
         try {
             $response = Http::withToken($token)

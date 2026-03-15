@@ -64,6 +64,7 @@ class PlatformSettingsController extends Controller
             'notifySystemErrors' => (bool) ($data['notify_system_errors'] ?? true),
             'notifyUsageAlerts' => (bool) ($data['notify_usage_alerts'] ?? true),
             'notifyDailySummary' => (bool) ($data['notify_daily_summary'] ?? true),
+            'landingTrustedCompanies' => $data['landing_trusted_companies'] ?? [],
         ];
         return response()->json($out);
     }
@@ -119,6 +120,8 @@ class PlatformSettingsController extends Controller
             'notifySystemErrors' => 'sometimes|boolean',
             'notifyUsageAlerts' => 'sometimes|boolean',
             'notifyDailySummary' => 'sometimes|boolean',
+            'landingTrustedCompanies' => 'nullable|array',
+            'landingTrustedCompanies.*' => 'string|max:255',
         ]);
 
         $settings = PlatformSetting::firstOrNew([]);
@@ -158,6 +161,7 @@ class PlatformSettingsController extends Controller
             'notifySystemErrors' => 'notify_system_errors',
             'notifyUsageAlerts' => 'notify_usage_alerts',
             'notifyDailySummary' => 'notify_daily_summary',
+            'landingTrustedCompanies' => 'landing_trusted_companies',
         ];
         $skipIfMasked = ['smtp_password', 'meta_app_secret', 'openai_api_key'];
         foreach ($validated as $key => $value) {

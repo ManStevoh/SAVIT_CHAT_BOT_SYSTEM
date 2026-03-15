@@ -7,6 +7,8 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderProduct;
 use App\Models\Product;
+use App\Services\MpesaService;
+use App\Services\StripeService;
 use Illuminate\Support\Str;
 
 class OrderFlowService
@@ -16,6 +18,12 @@ class OrderFlowService
     public const STEP_QUANTITY = 'quantity';
     public const STEP_ADDRESS = 'address';
     public const STEP_CONFIRM = 'confirm';
+    public const STEP_PAYMENT_METHOD = 'payment_method';
+    public const STEP_MPESA_PHONE = 'mpesa_phone';
+
+    public function __construct(
+        protected OrderPaymentService $orderPayment
+    ) {}
 
     /**
      * Process customer message in order flow context.
@@ -69,12 +77,165 @@ class OrderFlowService
 
         if ($step === self::STEP_CONFIRM) {
             if ($this->wantsConfirm($lower)) {
-                $order = $this->createOrderFromDraft($company, $draft, $customerName, $customerPhone);
+                $order = $this->createOrderFromDraft($company, $chat, $draft, $customerName, $customerPhone);
+                $settings = $company->settings;
+                $collectEnabled = $settings && $settings->orders_collect_payment_enabled !== false;
+                if (! $collectEnabled) {
+                    $this->clearState($chat);
+                    return "Order confirmed! Your order number is: {$order->order_number}. Total: " . number_format((float) $order->total, 2) . ". We'll prepare it and contact you for delivery.";
+                }
+                $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
+                $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
+                $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
+                if ($acceptMpesa || $acceptStripe) {
+                    $draft['order_id'] = $order->id;
+                    $this->setStep($chat, self::STEP_PAYMENT_METHOD, $draft);
+                    return $this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual);
+                }
+                if ($acceptManual) {
+                    $this->clearState($chat);
+                    return $this->formatOrderWithManualPaymentInstructions($order);
+                }
                 $this->clearState($chat);
                 return "Order confirmed! Your order number is: {$order->order_number}. Total: " . number_format((float) $order->total, 2) . ". We'll prepare it and contact you for delivery.";
             }
         }
 
+        if ($step === self::STEP_PAYMENT_METHOD) {
+            $order = isset($draft['order_id']) ? Order::find($draft['order_id']) : null;
+            if (! $order) {
+                $this->clearState($chat);
+                return 'Something went wrong. Please start over with "order" or "2".';
+            }
+            $settings = $company->settings;
+            $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
+            $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
+            $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
+            if ($this->wantsManual($lower)) {
+                $this->clearState($chat);
+                return $this->formatOrderWithManualPaymentInstructions($order);
+            }
+            if ($this->wantsMpesa($lower)) {
+                $draft['payment_method'] = 'mpesa';
+                $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
+                $displayPhone = $this->formatPhoneForDisplay($customerPhone);
+                return "We'll send an M-Pesa payment request to your phone. Use this number ({$displayPhone}) or reply with a different number to receive the prompt.";
+            }
+            if ($this->wantsStripe($lower)) {
+                $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
+                $this->clearState($chat);
+                if ($result['success'] && ! empty($result['url'])) {
+                    return "Order #{$order->order_number} – Pay by card here: {$result['url']}\n\nReply once you've completed payment. Thank you!";
+                }
+                return "Order confirmed! Your order number is: {$order->order_number}. Total: " . number_format((float) $order->total, 2) . ". We'll prepare it and contact you for delivery. (" . ($result['error'] ?? 'Payment link unavailable.') . ")";
+            }
+            return $this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual, true);
+        }
+
+        if ($step === self::STEP_MPESA_PHONE) {
+            $order = isset($draft['order_id']) ? Order::find($draft['order_id']) : null;
+            if (! $order) {
+                $this->clearState($chat);
+                return 'Something went wrong. Please start over with "order" or "2".';
+            }
+            $phone = $this->resolveMpesaPhone(trim($messageText), $customerPhone);
+            if (! $phone) {
+                return 'Please reply with "yes" to use this chat number, or send the phone number to receive the M-Pesa prompt (e.g. 254712345678).';
+            }
+            $result = $this->orderPayment->sendStkPushForOrder($order, $phone);
+            $this->clearState($chat);
+            if ($result['success']) {
+                return "We've sent an M-Pesa payment request to your phone. Enter your M-Pesa PIN to complete payment. You'll get a confirmation here once payment is received.";
+            }
+            return "Order #{$order->order_number} confirmed. Total: " . number_format((float) $order->total, 2) . ". We couldn't send M-Pesa right now (" . ($result['error'] ?? 'please try again later') . "). We'll contact you for payment.";
+        }
+
+        return null;
+    }
+
+    protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptManual = false, bool $invalid = false): string
+    {
+        $line = "Order #{$order->order_number} – Total: " . number_format((float) $order->total, 2) . ".\n\nHow would you like to pay?";
+        $opts = [];
+        if ($acceptMpesa) {
+            $opts[] = '1. M-Pesa (pay on your phone)';
+        }
+        if ($acceptStripe) {
+            $opts[] = '2. Card (pay online)';
+        }
+        if ($acceptManual) {
+            $opts[] = '3. Pay manually (bank / other details)';
+        }
+        $line .= "\n" . implode("\n", $opts);
+        if ($invalid) {
+            $line .= "\n\nPlease reply with 1, 2 or 3 (or M-Pesa / Card / Manual).";
+        }
+        return $line;
+    }
+
+    protected function formatOrderWithManualPaymentInstructions(Order $order): string
+    {
+        $settings = $order->company?->settings;
+        $instructions = $settings && $settings->hasOrderPaymentManualInstructions()
+            ? trim($settings->order_payment_manual_instructions)
+            : '';
+        $total = number_format((float) $order->total, 2);
+        $line = "Order #{$order->order_number} confirmed. Total: {$total}.\n\nTo complete payment, please use the following details:\n\n{$instructions}\n\nReply once you have made the payment. Thank you!";
+        return $line;
+    }
+
+    protected function wantsManual(string $lower): bool
+    {
+        return in_array($lower, ['3', 'manual', 'bank', 'bank transfer', 'pay manually', 'other'], true)
+            || str_contains($lower, 'bank') || str_contains($lower, 'manual');
+    }
+
+    protected function wantsMpesa(string $lower): bool
+    {
+        return in_array($lower, ['1', 'mpesa', 'm-pesa', 'mobile', 'phone'], true)
+            || str_contains($lower, 'mpesa') || str_contains($lower, 'm-pesa');
+    }
+
+    protected function wantsStripe(string $lower): bool
+    {
+        return in_array($lower, ['2', 'card', 'stripe', 'pay online', 'online', 'link'], true)
+            || str_contains($lower, 'card') || str_contains($lower, 'pay online');
+    }
+
+    protected function formatPhoneForDisplay(string $customerPhone): string
+    {
+        $digits = preg_replace('/\D/', '', $customerPhone);
+        if (strlen($digits) === 9 && str_starts_with($digits, '7')) {
+            return '254' . $digits;
+        }
+        if (strlen($digits) === 10 && str_starts_with($digits, '0')) {
+            return '254' . substr($digits, 1);
+        }
+        return $customerPhone ?: '—';
+    }
+
+    /**
+     * Resolve phone number for M-Pesa: "yes"/"ok"/"same" = customerPhone; else parse digits.
+     */
+    protected function resolveMpesaPhone(string $message, string $customerPhone): ?string
+    {
+        $lower = mb_strtolower($message);
+        if (in_array($lower, ['yes', 'ok', 'same', 'this one', 'use this', 'current'], true)) {
+            return $customerPhone ?: null;
+        }
+        $digits = preg_replace('/\D/', '', $message);
+        if (strlen($digits) >= 9) {
+            if (strlen($digits) === 9 && str_starts_with($digits, '7')) {
+                return '254' . $digits;
+            }
+            if (strlen($digits) === 10 && str_starts_with($digits, '0')) {
+                return '254' . substr($digits, 1);
+            }
+            if (strlen($digits) >= 12) {
+                return $digits;
+            }
+            return '254' . $digits;
+        }
         return null;
     }
 
@@ -226,7 +387,7 @@ class OrderFlowService
         return implode("\n", $lines);
     }
 
-    protected function createOrderFromDraft(Company $company, array $draft, string $customerName, string $customerPhone): Order
+    protected function createOrderFromDraft(Company $company, Chat $chat, array $draft, string $customerName, string $customerPhone): Order
     {
         $items = $draft['items'] ?? [];
         $total = 0.0;
@@ -241,6 +402,7 @@ class OrderFlowService
 
         $order = Order::create([
             'company_id' => $company->id,
+            'chat_id' => $chat->id,
             'order_number' => $orderNumber,
             'customer_name' => $customerName ?: 'Customer',
             'customer_phone' => $customerPhone,
