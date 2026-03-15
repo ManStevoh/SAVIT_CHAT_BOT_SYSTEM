@@ -104,13 +104,29 @@ export function PricingSection() {
                     {checkoutPlanId === plan.id ? "Redirecting…" : ctaText}
                   </Button>
                 ) : showContactSales ? (
-                  <Button asChild className="w-full" variant={plan.popular ? "default" : "outline"}>
-                    <Link href="/register">{ctaText}</Link>
-                  </Button>
+                  <div className="space-y-2">
+                    <Button asChild className="w-full" variant={plan.popular ? "default" : "outline"}>
+                      <Link href={`/register?plan=${plan.id}`}>{ctaText}</Link>
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground">
+                      Already have an account?{" "}
+                      <Link href={`/login?plan=${plan.id}`} className="text-primary hover:underline">
+                        Sign in
+                      </Link>
+                    </p>
+                  </div>
                 ) : (
-                  <Button asChild className="w-full" variant={plan.popular ? "default" : "outline"}>
-                    <Link href="/register">{ctaText}</Link>
-                  </Button>
+                  <div className="space-y-2">
+                    <Button asChild className="w-full" variant={plan.popular ? "default" : "outline"}>
+                      <Link href={`/register?plan=${plan.id}`}>{ctaText}</Link>
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground">
+                      Already have an account?{" "}
+                      <Link href={`/login?plan=${plan.id}`} className="text-primary hover:underline">
+                        Sign in
+                      </Link>
+                    </p>
+                  </div>
                 )}
               </div>
             )

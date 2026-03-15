@@ -11,7 +11,9 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -23,6 +25,9 @@ import {
   type PlatformSettings,
 } from "@/lib/api-actions"
 import { useToast } from "@/hooks/use-toast"
+import { getTimezoneGroups } from "@/lib/timezones"
+
+const timezoneGroups = getTimezoneGroups()
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<PlatformSettings | null>(null)
@@ -61,6 +66,9 @@ export default function AdminSettingsPage() {
         platformName: settings.platformName ?? undefined,
         supportEmail: settings.supportEmail ?? undefined,
         maintenanceMode: settings.maintenanceMode,
+        defaultTimezone: settings.defaultTimezone ?? undefined,
+        maintenanceMessage: settings.maintenanceMessage ?? undefined,
+        allowNewRegistrations: settings.allowNewRegistrations,
       })
       if (res.success) {
         toast({ title: res.message ?? "Settings saved" })
@@ -301,25 +309,39 @@ export default function AdminSettingsPage() {
 
                 <Field>
                   <FieldLabel htmlFor="defaultTimezone">Default Timezone</FieldLabel>
-                  <Select defaultValue="utc">
-                    <SelectTrigger>
+                  <Select
+                    value={settings?.defaultTimezone ?? "UTC"}
+                    onValueChange={(v) => updateSetting("defaultTimezone", v)}
+                  >
+                    <SelectTrigger id="defaultTimezone" className="w-full max-w-md">
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="utc">UTC</SelectItem>
-                      <SelectItem value="est">Eastern Time (EST)</SelectItem>
-                      <SelectItem value="pst">Pacific Time (PST)</SelectItem>
-                      <SelectItem value="gmt">GMT</SelectItem>
+                    <SelectContent className="max-h-[300px]">
+                      {timezoneGroups.map((group) => (
+                        <SelectGroup key={group.label}>
+                          <SelectLabel>{group.label}</SelectLabel>
+                          {group.options.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Used for date/time in emails, exports, and reports when a timezone is not set per company. Affects: system emails (invoices, reminders), admin export timestamps, and future company default when they don’t set their own.
+                  </p>
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="maintenanceMessage">Maintenance Message</FieldLabel>
-                  <Textarea 
-                    id="maintenanceMessage" 
-                    placeholder="Message to show during maintenance" 
+                  <Textarea
+                    id="maintenanceMessage"
+                    placeholder="Message to show during maintenance"
                     rows={3}
+                    value={settings?.maintenanceMessage ?? ""}
+                    onChange={(e) => updateSetting("maintenanceMessage", e.target.value)}
                   />
                 </Field>
               </FieldGroup>
@@ -341,7 +363,10 @@ export default function AdminSettingsPage() {
                     <p className="font-medium text-foreground">New Registrations</p>
                     <p className="text-sm text-muted-foreground">Allow new companies to register</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={settings?.allowNewRegistrations ?? true}
+                    onCheckedChange={(v) => updateSetting("allowNewRegistrations", v)}
+                  />
                 </div>
               </div>
 

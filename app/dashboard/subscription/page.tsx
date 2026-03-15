@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Check, CreditCard, Download, MessageSquare, Smartphone, Users, Zap } from "lucide-react"
-import { useSubscription, useSubscriptionInvoices, usePlans, type BillingInvoice } from "@/lib/api-hooks"
+import { useSubscription, useSubscriptionInvoices, useSubscriptionUsage, usePlans, type BillingInvoice } from "@/lib/api-hooks"
 import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout } from "@/lib/api-actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,6 +24,7 @@ export default function SubscriptionPage() {
   const searchParams = useSearchParams()
   const { data: subscription, error, isLoading, mutate } = useSubscription()
   const { data: billingHistory = [] } = useSubscriptionInvoices()
+  const { data: usageData } = useSubscriptionUsage()
   const { data: plansData = [] } = usePlans()
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
@@ -32,6 +33,7 @@ export default function SubscriptionPage() {
   const [mpesaPhone, setMpesaPhone] = useState("")
   const [mpesaWaiting, setMpesaWaiting] = useState<string | null>(null)
   const [mpesaError, setMpesaError] = useState<string | null>(null)
+  const [autoSubscribeDone, setAutoSubscribeDone] = useState(false)
 
   useEffect(() => {
     const q = searchParams.get("checkout")
@@ -41,6 +43,20 @@ export default function SubscriptionPage() {
       if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
     }
   }, [searchParams, mutate])
+
+  // Auto-start checkout when redirected from register/login with ?subscribe=planId
+  useEffect(() => {
+    const subscribePlanId = searchParams.get("subscribe")
+    if (!subscribePlanId || autoSubscribeDone || !plansData.length) return
+    const plan = plansData.find((p) => p.id === subscribePlanId)
+    if (!plan?.checkoutAvailable) return
+    setAutoSubscribeDone(true)
+    if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
+    createCheckoutSession(subscribePlanId).then((result) => {
+      if (result.success && result.url) window.location.href = result.url
+      else if (!result.success) alert(result.message ?? "Could not start checkout.")
+    })
+  }, [searchParams, plansData, autoSubscribeDone])
 
   // Poll subscription when M-Pesa payment is pending
   useEffect(() => {
@@ -109,11 +125,13 @@ export default function SubscriptionPage() {
   const renewalDate = subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"
   const status = subscription?.status ?? "active"
 
-  const usage = [
-    { name: "Messages", used: 7234, limit: 10000, icon: MessageSquare },
-    { name: "WhatsApp Numbers", used: 2, limit: 3, icon: Zap },
-    { name: "Team Members", used: 4, limit: 10, icon: Users },
-  ]
+  const usage = (usageData?.items ?? [
+    { name: "Messages", used: 0, limit: 5000 },
+    { name: "Team members", used: 0, limit: 3 },
+  ]).map((item) => ({
+    ...item,
+    icon: item.name === "Messages" ? MessageSquare : Users,
+  }))
 
   const handleSubscribe = async (planId: string) => {
     setCheckoutPlanId(planId)
@@ -183,6 +201,11 @@ export default function SubscriptionPage() {
         <p className="text-muted-foreground">Manage your subscription and billing</p>
       </div>
 
+      {searchParams.get("expired") === "1" && (
+        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+          Your subscription has expired or was cancelled. Choose a plan below to continue using the service.
+        </div>
+      )}
       {checkoutMessage === "success" && (
         <div className="rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
           Payment successful. Your subscription is now active.
@@ -225,7 +248,7 @@ export default function SubscriptionPage() {
         </CardContent>
       </Card>
 
-      {/* Usage — TODO: GET /api/company/subscription/usage */}
+      {/* Usage — API: GET /api/company/subscription/usage */}
       <Card>
         <CardHeader>
           <CardTitle>Usage</CardTitle>

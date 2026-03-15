@@ -26,20 +26,13 @@ import {
 } from "@/components/ui/select"
 import { Building2, MessageSquare, Bot, Users, Bell, Plus, Trash2, Check } from "lucide-react"
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
-import { useCompanySettings } from "@/lib/api-hooks"
+import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers } from "@/lib/api-hooks"
 import { updateSettings, connectWhatsApp, getWhatsAppStatus, disconnectWhatsApp, type WhatsAppStatus } from "@/lib/api-actions"
-
-// Team members: API GET /api/company/team — replace with useCompanyTeam() when available
-const teamMembersPlaceholder = [
-  { id: 1, name: "John Doe", email: "john@company.com", role: "Admin", status: "active" },
-  { id: 2, name: "Jane Smith", email: "jane@company.com", role: "Agent", status: "active" },
-  { id: 3, name: "Bob Wilson", email: "bob@company.com", role: "Agent", status: "active" },
-  { id: 4, name: "Alice Brown", email: "alice@company.com", role: "Viewer", status: "pending" },
-]
-
 
 export default function SettingsPage() {
   const { data: settings } = useCompanySettings()
+  const { data: teamMembers = [] } = useCompanyTeam()
+  const { data: whatsappNumbers = [] } = useWhatsAppNumbers()
   const [activeTab, setActiveTab] = useState("profile")
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
@@ -115,6 +108,7 @@ export default function SettingsPage() {
       companyName: businessName,
       email,
       phone,
+      address,
     })
     setProfileSaving(false)
     if (!result.success) {
@@ -248,6 +242,16 @@ export default function SettingsPage() {
                       {process.env.NEXT_PUBLIC_API_URL ?? "https://your-backend.com"}/api/whatsapp/webhook
                     </code>
                   </p>
+                  {whatsappNumbers.length > 0 && (
+                    <div className="rounded-lg border border-border p-3 space-y-2">
+                      <p className="text-sm font-medium text-foreground">Connected numbers</p>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        {whatsappNumbers.map((n) => (
+                          <li key={n.id}>{n.displayPhoneNumber || n.phoneNumberId} {n.status !== "active" && `(${n.status})`}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <Button variant="outline" onClick={handleWhatsAppDisconnect} disabled={waLoading}>
                     Disconnect WhatsApp
                   </Button>
@@ -391,7 +395,7 @@ export default function SettingsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teamMembersPlaceholder.map((member) => (
+                  {teamMembers.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">

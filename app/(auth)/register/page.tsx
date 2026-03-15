@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -13,6 +13,8 @@ import { register as registerApi, type RegisterData } from "@/lib/api-actions"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const planId = searchParams.get("plan")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -28,8 +30,8 @@ export default function RegisterPage() {
     const name = (form.elements.namedItem("name") as HTMLInputElement | null)?.value.trim() ?? companyName
     const email = (form.elements.namedItem("email") as HTMLInputElement).value.trim()
     const phone = (form.elements.namedItem("phone") as HTMLInputElement | null)?.value.trim() ?? ""
-    const password = (form.elements.namedItem("password") as HTMLInputElement).value
-    const confirmPassword = (form.elements.namedItem("confirmPassword") as HTMLInputElement).value
+    const password = (form.elements.namedItem("password") as HTMLInputElement).value.trim()
+    const confirmPassword = (form.elements.namedItem("confirmPassword") as HTMLInputElement).value.trim()
     // Validation placeholder: add more client-side rules as needed (e.g. password strength)
     if (password !== confirmPassword) {
       setError("Passwords do not match")
@@ -51,7 +53,11 @@ export default function RegisterPage() {
       setError(result.message ?? "Registration failed")
       return
     }
-    router.push("/dashboard")
+    if (planId) {
+      router.push(`/dashboard/subscription?subscribe=${planId}`)
+    } else {
+      router.push("/dashboard")
+    }
   }
 
   return (

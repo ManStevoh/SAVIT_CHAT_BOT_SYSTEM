@@ -333,6 +333,10 @@ export interface CompanySettings {
   whatsappNumber?: string
   aiGreeting?: string
   aiTone?: string
+  fallbackMessage?: string
+  awayMessage?: string
+  timezone?: string
+  workingHours?: Record<string, string>
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
 }
@@ -355,6 +359,93 @@ export function useCompanySettings() {
         phone: '+1 555-0100',
         address: '123 Main Street, New York, NY 10001',
       }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+/** Team member shape — API: GET /api/company/team */
+export interface TeamMember {
+  id: string
+  name: string
+  email: string
+  role: string
+  status: string
+}
+
+/**
+ * Fetch team members for the current company
+ * API Endpoint: GET /api/company/team
+ */
+export function useCompanyTeam() {
+  return useSWR<TeamMember[]>(
+    'company-team',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<TeamMember[]>('/api/company/team')
+      }
+      await delay(400)
+      return [
+        { id: '1', name: 'John Doe', email: 'john@company.com', role: 'Admin', status: 'active' },
+        { id: '2', name: 'Jane Smith', email: 'jane@company.com', role: 'Agent', status: 'active' },
+        { id: '3', name: 'Bob Wilson', email: 'bob@company.com', role: 'Agent', status: 'active' },
+      ]
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+/** Usage item shape — API: GET /api/company/subscription/usage */
+export interface UsageItem {
+  name: string
+  used: number
+  limit: number
+}
+
+/**
+ * Fetch subscription usage for current billing period
+ * API Endpoint: GET /api/company/subscription/usage
+ */
+export function useSubscriptionUsage() {
+  return useSWR<{ items: UsageItem[] }>(
+    'subscription-usage',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<{ items: UsageItem[] }>('/api/company/subscription/usage')
+      }
+      await delay(400)
+      return {
+        items: [
+          { name: 'Messages', used: 3240, limit: 5000 },
+          { name: 'Team members', used: 3, limit: 5 },
+        ],
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+/** WhatsApp number shape — API: GET /api/company/whatsapp/numbers */
+export interface WhatsAppNumber {
+  id: string
+  phoneNumberId: string
+  displayPhoneNumber: string
+  status: string
+}
+
+/**
+ * Fetch WhatsApp numbers connected to the company
+ * API Endpoint: GET /api/company/whatsapp/numbers
+ */
+export function useWhatsAppNumbers() {
+  return useSWR<WhatsAppNumber[]>(
+    'whatsapp-numbers',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<WhatsAppNumber[]>('/api/company/whatsapp/numbers')
+      }
+      await delay(400)
+      return []
     },
     { revalidateOnFocus: false }
   )
@@ -572,11 +663,15 @@ export function useAdminOverview() {
     activeCompanies: number
     totalUsers: number
     totalRevenue: number
+    monthlyRevenue?: number
     totalMessages: number
     totalOrders: number
     companiesChange: number
     revenueChange: number
     messagesChange: number
+    usersChange?: number
+    companyGrowthData?: { name: string; companies: number }[]
+    messageVolumeData?: { name: string; messages: number }[]
   }>(
     'admin-overview',
     async () => {
@@ -591,19 +686,42 @@ export function useAdminOverview() {
           companiesChange: number
           revenueChange: number
           messagesChange: number
+          companyGrowthData?: { name: string; companies: number }[]
+          messageVolumeData?: { name: string; messages: number }[]
         }>('/api/admin/overview')
       }
       await delay(800)
+      const monthlyRevenue = 125000
       return {
         totalCompanies: 295,
         activeCompanies: 248,
         totalUsers: 1250,
         totalRevenue: 125000,
+        monthlyRevenue,
         totalMessages: 2500000,
         totalOrders: 45000,
         companiesChange: 12.5,
         revenueChange: 18.3,
         messagesChange: 25.4,
+        usersChange: 8.2,
+        companyGrowthData: [
+          { name: 'Jan', companies: 890 },
+          { name: 'Feb', companies: 945 },
+          { name: 'Mar', companies: 1020 },
+          { name: 'Apr', companies: 1085 },
+          { name: 'May', companies: 1140 },
+          { name: 'Jun', companies: 1190 },
+          { name: 'Jul', companies: 1234 },
+        ],
+        messageVolumeData: [
+          { name: 'Mon', messages: 320000 },
+          { name: 'Tue', messages: 450000 },
+          { name: 'Wed', messages: 380000 },
+          { name: 'Thu', messages: 520000 },
+          { name: 'Fri', messages: 480000 },
+          { name: 'Sat', messages: 350000 },
+          { name: 'Sun', messages: 280000 },
+        ],
       }
     },
     { revalidateOnFocus: false }

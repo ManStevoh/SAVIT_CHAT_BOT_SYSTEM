@@ -10,9 +10,13 @@ const getBaseUrl = (): string => {
   return process.env.NEXT_PUBLIC_API_URL ?? ''
 }
 
-/** Whether to use mock responses (no real HTTP calls). Default true until Laravel is ready. */
-export const useMockApi = (): boolean =>
-  process.env.NEXT_PUBLIC_USE_MOCK_API !== 'false'
+/** Use real API when API URL is set, unless mock is explicitly enabled. */
+export const useMockApi = (): boolean => {
+  const url = process.env.NEXT_PUBLIC_API_URL ?? ''
+  const useMock = process.env.NEXT_PUBLIC_USE_MOCK_API
+  if (url && useMock !== 'true') return false
+  return useMock !== 'false'
+}
 
 /** Full URL for an API path (e.g. /api/auth/login -> http://localhost:8000/api/auth/login). */
 export function apiUrl(path: string): string {
@@ -71,6 +75,11 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const data = await response.json().catch(() => ({}))
 
   if (!response.ok) {
+    const code = (data as { code?: string })?.code
+    if (response.status === 403 && code === 'subscription_expired' && typeof window !== 'undefined') {
+      window.location.href = '/dashboard/subscription?expired=1'
+      return new Promise(() => {}) as T
+    }
     const message = (data as { message?: string })?.message ?? data?.errors ?? response.statusText
     throw new Error(typeof message === 'string' ? message : JSON.stringify(message))
   }

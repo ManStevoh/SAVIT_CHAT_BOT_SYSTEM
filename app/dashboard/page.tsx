@@ -43,40 +43,40 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Stats Grid - API Ready */}
+      {/* Stats Grid — real data from GET /api/company/analytics */}
       <StatsGrid columns={4}>
         <StatsCard
-          title="Messages Today"
+          title={chartPeriod === '7d' ? 'Messages (7d)' : chartPeriod === '30d' ? 'Messages (30d)' : 'Messages (90d)'}
           value={analytics?.totalMessages || 0}
           change={analytics?.messagesChange}
-          changeLabel="vs yesterday"
+          changeLabel="vs previous period"
           icon={MessageSquare}
           isLoading={analyticsLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
-          title="Orders Today"
+          title={chartPeriod === '7d' ? 'Orders (7d)' : chartPeriod === '30d' ? 'Orders (30d)' : 'Orders (90d)'}
           value={analytics?.totalOrders || 0}
           change={analytics?.ordersChange}
-          changeLabel="vs yesterday"
+          changeLabel="vs previous period"
           icon={ShoppingCart}
           isLoading={analyticsLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
-          title="Active Customers"
+          title={chartPeriod === '7d' ? 'Customers (7d)' : chartPeriod === '30d' ? 'Customers (30d)' : 'Customers (90d)'}
           value={analytics?.totalCustomers || 0}
           change={analytics?.customersChange}
-          changeLabel="vs last week"
+          changeLabel="vs previous period"
           icon={Users}
           isLoading={analyticsLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
-          title="Total Revenue"
+          title={chartPeriod === '7d' ? 'Revenue (7d)' : chartPeriod === '30d' ? 'Revenue (30d)' : 'Revenue (90d)'}
           value={analytics?.totalRevenue || 0}
           change={analytics?.revenueChange}
-          changeLabel="vs last week"
+          changeLabel="vs previous period"
           icon={Bot}
           isLoading={analyticsLoading}
           formatter={formatCurrency}

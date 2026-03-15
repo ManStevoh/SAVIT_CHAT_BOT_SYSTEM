@@ -24,6 +24,9 @@ export default function LoginPage() {
     return null
   }, [searchParams])
 
+  const planId = searchParams.get('plan')
+  const subscribeRedirect = planId ? `/dashboard/subscription?subscribe=${planId}` : null
+
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,9 +93,10 @@ export default function LoginPage() {
           }
           setAuthCookie(result.user.role, formData.rememberMe)
         }
-        // Redirect to requested page or by role
+        // Redirect to requested page, subscription (with plan), or by role
         const target =
           redirectTo ||
+          subscribeRedirect ||
           (result.user.role === 'admin' ? '/admin' : '/dashboard')
         router.push(target)
       } else {
@@ -104,7 +108,7 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [formData, router])
+  }, [formData, redirectTo, subscribeRedirect, router])
 
   return (
     <div className="w-full max-w-md">

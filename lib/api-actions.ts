@@ -405,10 +405,15 @@ export interface UpdateSettingsData {
   companyName?: string
   email?: string
   phone?: string
+  address?: string
   logo?: File
   whatsappNumber?: string
   aiGreeting?: string
   aiTone?: string
+  fallbackMessage?: string
+  awayMessage?: string
+  timezone?: string
+  workingHours?: Record<string, string>
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
 }
@@ -894,6 +899,9 @@ export interface PlatformSettings {
   appLogo?: string | null
   supportEmail?: string | null
   maintenanceMode?: boolean
+  defaultTimezone?: string | null
+  maintenanceMessage?: string | null
+  allowNewRegistrations?: boolean
   aiModel?: string | null
   maxTokensPerRequest?: number | null
   rateLimitPerMinute?: number | null
@@ -930,6 +938,9 @@ export interface UpdatePlatformSettingsData {
   logo?: File
   supportEmail?: string
   maintenanceMode?: boolean
+  defaultTimezone?: string
+  maintenanceMessage?: string
+  allowNewRegistrations?: boolean
   aiModel?: string
   maxTokensPerRequest?: number
   rateLimitPerMinute?: number
@@ -978,6 +989,9 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
       platformName: 'Savit Chat',
       supportEmail: 'support@chatflow.ai',
       maintenanceMode: false,
+      defaultTimezone: 'UTC',
+      maintenanceMessage: null,
+      allowNewRegistrations: true,
       smtpHost: 'smtp.sendgrid.net',
       smtpPort: 587,
       smtpEncryption: 'tls',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,7 +11,7 @@ import { DataTable, type Column, type Filter } from '@/components/shared/data-ta
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField, SwitchField, TagInputField } from '@/components/shared/form-field'
-import { useFAQs } from '@/lib/api-hooks'
+import { useFAQs, useCompanySettings } from '@/lib/api-hooks'
 import { createFAQ, updateFAQ, deleteFAQ, updateSettings } from '@/lib/api-actions'
 import type { FAQ } from '@/lib/mock-data'
 import {
@@ -35,6 +35,8 @@ interface BotSettings {
   greeting: string
   fallback: string
   away: string
+  timezone: string
+  workingHours: Record<string, string>
   autoReplyEnabled: boolean
   humanHandoff: boolean
   learnFromConversations: boolean
@@ -49,8 +51,10 @@ const initialFormData: FAQFormData = {
 
 const initialBotSettings: BotSettings = {
   greeting: 'Hello! Welcome to our store. How can I help you today?',
-  fallback: "I'm sorry, I didn't understand that. Let me connect you with a human agent who can help.",
+  fallback: "Thanks for your message. Our team will get back to you shortly.",
   away: "Thanks for your message! We're currently closed but will get back to you as soon as we open.",
+  timezone: 'UTC',
+  workingHours: {},
   autoReplyEnabled: true,
   humanHandoff: true,
   learnFromConversations: true,
@@ -71,11 +75,27 @@ export default function FAQAutomationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
+  const { data: companySettings } = useCompanySettings()
+
   // API: GET /api/company/faqs (useFAQs)
   const { data: faqs, isLoading, error } = useFAQs({
     category: categoryFilter,
     search: searchQuery,
   })
+
+  useEffect(() => {
+    if (companySettings) {
+      setBotSettings((prev) => ({
+        ...prev,
+        greeting: companySettings.aiGreeting ?? prev.greeting,
+        fallback: companySettings.fallbackMessage ?? prev.fallback,
+        away: companySettings.awayMessage ?? prev.away,
+        timezone: companySettings.timezone ?? prev.timezone,
+        workingHours: companySettings.workingHours ?? prev.workingHours,
+        autoReplyEnabled: companySettings.autoReplyEnabled ?? prev.autoReplyEnabled,
+      }))
+    }
+  }, [companySettings])
 
   // Calculate stats from data
   const stats = {
@@ -114,7 +134,7 @@ export default function FAQAutomationPage() {
   }
 
   // Handle bot settings change
-  const handleSettingsChange = (field: keyof BotSettings, value: string | boolean) => {
+  const handleSettingsChange = (field: keyof BotSettings, value: string | boolean | Record<string, string>) => {
     setBotSettings((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -207,6 +227,10 @@ export default function FAQAutomationPage() {
     try {
       const result = await updateSettings({
         aiGreeting: botSettings.greeting,
+        fallbackMessage: botSettings.fallback,
+        awayMessage: botSettings.away,
+        timezone: botSettings.timezone,
+        workingHours: Object.keys(botSettings.workingHours).length ? botSettings.workingHours : undefined,
         autoReplyEnabled: botSettings.autoReplyEnabled,
       })
 
@@ -486,6 +510,14 @@ export default function FAQAutomationPage() {
                 onChange={(value) => handleSettingsChange('away', value)}
                 rows={3}
                 description="Message sent outside of business hours"
+              />
+
+              <InputField
+                label="Timezone"
+                name="timezone"
+                value={botSettings.timezone}
+                onChange={(value) => handleSettingsChange('timezone', value)}
+                description="e.g. UTC, Africa/Nairobi, America/New_York (for away message hours)"
               />
 
               <div className="space-y-4 border-t border-border/50 pt-4">

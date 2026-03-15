@@ -15,42 +15,21 @@ import {
 } from "recharts"
 // API: GET /api/admin/overview — stats (useAdminOverview)
 // API: GET /api/admin/companies — recent companies (useAdminCompanies, slice for "recent")
-// Charts: GET /api/admin/overview can return companyGrowthData, messageVolumeData; until then use placeholder
+// Charts: GET /api/admin/overview returns companyGrowthData, messageVolumeData
 import { useAdminOverview, useAdminCompanies } from "@/lib/api-hooks"
-
-// Chart data placeholders — replace when API returns e.g. overview.companyGrowthData, overview.messageVolumeData
-const chartPlaceholder = {
-  companyGrowth: [
-    { name: "Jan", companies: 890 },
-    { name: "Feb", companies: 945 },
-    { name: "Mar", companies: 1020 },
-    { name: "Apr", companies: 1085 },
-    { name: "May", companies: 1140 },
-    { name: "Jun", companies: 1190 },
-    { name: "Jul", companies: 1234 },
-  ],
-  messageVolume: [
-    { name: "Mon", messages: 320000 },
-    { name: "Tue", messages: 450000 },
-    { name: "Wed", messages: 380000 },
-    { name: "Thu", messages: 520000 },
-    { name: "Fri", messages: 480000 },
-    { name: "Sat", messages: 350000 },
-    { name: "Sun", messages: 280000 },
-  ],
-}
 
 export default function AdminOverviewPage() {
   const { data: overview, error: overviewError, isLoading: overviewLoading } = useAdminOverview()
   const { data: companies, isLoading: companiesLoading } = useAdminCompanies({})
 
   const recentCompanies = companies?.slice(0, 4) ?? []
+  const monthlyRevenue = overview?.monthlyRevenue ?? overview?.totalRevenue ?? 0
   const stats = overview
     ? [
         { name: "Total Companies", value: overview.totalCompanies.toLocaleString(), change: `+${overview.companiesChange}%`, icon: Building2 },
-        { name: "Active Users", value: overview.totalUsers.toLocaleString(), change: "+18%", icon: Users },
+        { name: "Active Users", value: overview.totalUsers.toLocaleString(), change: `${overview.usersChange != null ? (overview.usersChange >= 0 ? '+' : '') + overview.usersChange : 0}%`, icon: Users },
         { name: "Messages Processed", value: (overview.totalMessages / 1e6).toFixed(1) + "M", change: `+${overview.messagesChange}%`, icon: MessageSquare },
-        { name: "Monthly Revenue", value: `$${(overview.totalRevenue / 1000).toFixed(0)}k`, change: `+${overview.revenueChange}%`, icon: DollarSign },
+        { name: "Monthly Revenue", value: `$${(monthlyRevenue / 1000).toFixed(0)}k`, change: `+${overview.revenueChange}%`, icon: DollarSign },
       ]
     : [
         { name: "Total Companies", value: "—", change: "—", icon: Building2 },
@@ -126,7 +105,7 @@ export default function AdminOverviewPage() {
         ))}
       </div>
 
-      {/* Charts — TODO: API GET /api/admin/overview return companyGrowthData, messageVolumeData */}
+      {/* Charts — from GET /api/admin/overview (companyGrowthData, messageVolumeData) */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -136,7 +115,7 @@ export default function AdminOverviewPage() {
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartPlaceholder.companyGrowth}>
+                <LineChart data={overview.companyGrowthData ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
@@ -156,7 +135,7 @@ export default function AdminOverviewPage() {
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartPlaceholder.messageVolume}>
+                <BarChart data={overview.messageVolumeData ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => `${value / 1000}k`} />

@@ -4,7 +4,7 @@ import { AUTH_COOKIE_NAMES } from './lib/auth-cookie'
 
 const LOGIN_PATH = '/login'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/')
