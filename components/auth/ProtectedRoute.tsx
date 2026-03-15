@@ -60,8 +60,11 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
 
   if (!mounted || !allowed) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-4 bg-background text-foreground">
         <Spinner className="h-8 w-8 text-primary" />
+        <p className="text-sm text-muted-foreground">
+          {!mounted ? "Loading…" : "Redirecting to login…"}
+        </p>
       </div>
     )
   }
