@@ -20,6 +20,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts"
 // API: GET /api/admin/revenue?period=6m — stats and chart data (useAdminRevenue)
 import { useAdminRevenue } from "@/lib/api-hooks"

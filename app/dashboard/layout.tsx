@@ -1,5 +1,6 @@
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { DashboardNavbar } from "@/components/dashboard/navbar"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 
 export default function DashboardLayout({
   children,
@@ -7,12 +8,14 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardSidebar />
-      <div className="pl-64 transition-all duration-300">
-        <DashboardNavbar />
-        <main className="p-6">{children}</main>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background">
+        <DashboardSidebar />
+        <div className="pl-64 transition-all duration-300">
+          <DashboardNavbar />
+          <main className="p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -11,8 +11,18 @@ import { Spinner } from '@/components/ui/spinner'
 import { login, type LoginCredentials } from '@/lib/api-actions'
 import { Eye, EyeOff, AlertCircle } from 'lucide-react'
 
+const SAFE_REDIRECT_PREFIXES = ['/admin', '/dashboard']
+
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = useMemo(() => {
+    const r = searchParams.get('redirect')
+    if (!r || !r.startsWith('/')) return null
+    if (SAFE_REDIRECT_PREFIXES.some((p) => r === p || r.startsWith(p + '/'))) return r
+    return null
+  }, [searchParams])
+
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,16 +82,17 @@ export default function LoginPage() {
         if (result.token) {
           if (formData.rememberMe) {
             localStorage.setItem('auth_token', result.token)
+            localStorage.setItem('auth_user', JSON.stringify(result.user))
           } else {
             sessionStorage.setItem('auth_token', result.token)
+            sessionStorage.setItem('auth_user', JSON.stringify(result.user))
           }
         }
-        // Redirect based on user role
-        if (result.user.role === 'admin') {
-          router.push('/admin')
-        } else {
-          router.push('/dashboard')
-        }
+        // Redirect to requested page or by role
+        const target =
+          redirectTo ||
+          (result.user.role === 'admin' ? '/admin' : '/dashboard')
+        router.push(target)
       } else {
         setError(result.message || 'Invalid email or password')
       }
