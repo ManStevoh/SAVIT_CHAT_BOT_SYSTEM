@@ -10,20 +10,24 @@ use App\Models\PlatformSetting;
 use App\Models\WhatsAppAccount;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppWebhookController extends Controller
 {
+    /** Minutes to cache platform settings. */
+    private const PLATFORM_SETTINGS_CACHE_TTL = 5;
+
     /**
      * Webhook verification (GET). Meta sends hub.mode, hub.verify_token, hub.challenge.
      */
     public function verify(Request $request): Response|string
     {
+        $verifyToken = $this->getPlatformSettings()?->whatsapp_webhook_verify_token ?? config('whatsapp.webhook_verify_token');
         $mode = $request->query('hub_mode');
         $token = $request->query('hub_verify_token');
         $challenge = $request->query('hub_challenge');
 
-        $verifyToken = PlatformSetting::first()?->whatsapp_webhook_verify_token ?? config('whatsapp.webhook_verify_token');
         if ($mode === 'subscribe' && $verifyToken !== '' && $token === $verifyToken) {
             return response($challenge ?? '', 200)->header('Content-Type', 'text/plain');
         }
@@ -32,12 +36,11 @@ class WhatsAppWebhookController extends Controller
     }
 
     /**
-     * Webhook receiver (POST). Meta sends incoming messages and status updates.
-     * Respond 200 quickly and process in a job.
+     * Webhook receiver (POST). Always return 200 so Meta doesn't retry; process in try/catch.
      */
     public function receive(Request $request): Response
     {
-        $secret = PlatformSetting::first()?->meta_app_secret ?? config('whatsapp.app_secret');
+        $secret = $this->getPlatformSettings()?->meta_app_secret ?? config('whatsapp.app_secret');
         if ($secret !== null && $secret !== '') {
             $signature = $request->header('X-Hub-Signature-256');
             if (! $signature || ! $this->verifySignature($request->getContent(), $signature, $secret)) {
@@ -46,23 +49,50 @@ class WhatsAppWebhookController extends Controller
             }
         }
 
-        $body = $request->all();
-        $object = $body['object'] ?? null;
-        if ($object !== 'whatsapp_business_account') {
-            return response('', 200);
-        }
-
-        foreach ($body['entry'] ?? [] as $entry) {
-            foreach ($entry['changes'] ?? [] as $change) {
-                if (($change['field'] ?? '') !== 'messages') {
-                    continue;
-                }
-                $value = $change['value'] ?? [];
-                $this->processValue($value);
+        try {
+            $this->rateLimitWebhook($request);
+            $body = $request->all();
+            $object = $body['object'] ?? null;
+            if ($object !== 'whatsapp_business_account') {
+                return response('', 200);
             }
+
+            foreach ($body['entry'] ?? [] as $entry) {
+                foreach ($entry['changes'] ?? [] as $change) {
+                    $field = $change['field'] ?? '';
+                    $value = $change['value'] ?? [];
+                    if ($field === 'messages') {
+                        $this->processMessagesValue($value);
+                        $this->processStatusesValue($value);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp webhook processing failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
 
         return response('', 200);
+    }
+
+    protected function getPlatformSettings(): ?PlatformSetting
+    {
+        return Cache::remember('platform_settings_whatsapp', self::PLATFORM_SETTINGS_CACHE_TTL * 60, function () {
+            return PlatformSetting::first();
+        });
+    }
+
+    protected function rateLimitWebhook(Request $request): void
+    {
+        $key = 'wa_webhook_' . $request->ip();
+        $count = (int) Cache::get($key, 0);
+        if ($count >= 120) {
+            Log::warning('WhatsApp webhook rate limit exceeded', ['ip' => $request->ip()]);
+            throw new \RuntimeException('Rate limit');
+        }
+        Cache::put($key, $count + 1, 60);
     }
 
     protected function verifySignature(string $payload, string $signature, string $secret): bool
@@ -74,7 +104,7 @@ class WhatsAppWebhookController extends Controller
         return hash_equals('sha256=' . $hash, $signature);
     }
 
-    protected function processValue(array $value): void
+    protected function processMessagesValue(array $value): void
     {
         $phoneNumberId = (string) ($value['metadata']['phone_number_id'] ?? '');
         if ($phoneNumberId === '') {
@@ -102,6 +132,10 @@ class WhatsAppWebhookController extends Controller
         $from = (string) ($msg['from'] ?? '');
         $waMessageId = $msg['id'] ?? null;
 
+        if ($type === 'reaction') {
+            return;
+        }
+
         if ($type === 'text') {
             $text = $msg['text']['body'] ?? '';
             $this->saveIncomingAndDispatchReply($companyId, $phoneNumberId, $from, $customerName, $text, $waMessageId);
@@ -112,6 +146,18 @@ class WhatsAppWebhookController extends Controller
             $caption = $msg[$type]['caption'] ?? '';
             $text = $caption !== '' ? $caption : "[{$type} received]";
             $this->saveIncomingAndDispatchReply($companyId, $phoneNumberId, $from, $customerName, $text, $waMessageId);
+        }
+    }
+
+    protected function processStatusesValue(array $value): void
+    {
+        foreach ($value['statuses'] ?? [] as $status) {
+            $waId = $status['id'] ?? null;
+            $statusValue = $status['status'] ?? null;
+            if (! $waId || ! $statusValue) {
+                continue;
+            }
+            Message::where('whatsapp_message_id', $waId)->update(['status' => $statusValue]);
         }
     }
 
@@ -139,7 +185,10 @@ class WhatsAppWebhookController extends Controller
             ]
         );
 
-        if ($chat->wasRecentlyCreated === false) {
+        if (! $chat->wasRecentlyCreated) {
+            if ($customerName !== null && $customerName !== '') {
+                $chat->update(['customer_name' => $customerName]);
+            }
             $chat->increment('unread_count');
             $chat->update([
                 'last_message' => $text,
@@ -168,7 +217,8 @@ class WhatsAppWebhookController extends Controller
             $customerPhone,
             $phoneNumberId,
             $text,
-            $customerName
+            $customerName,
+            $waMessageId
         );
     }
 }

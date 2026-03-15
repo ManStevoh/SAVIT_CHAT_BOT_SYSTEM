@@ -3,12 +3,35 @@
 namespace App\Services;
 
 use App\Models\PlatformSetting;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class MailService
 {
+    /**
+     * Platform default timezone (from Admin → Settings → General). Used when formatting
+     * dates in emails, exports, and reports. Falls back to config('app.timezone') or UTC.
+     */
+    public static function platformTimezone(): string
+    {
+        $settings = PlatformSetting::first();
+        $tz = $settings && ! empty($settings->default_timezone) ? $settings->default_timezone : config('app.timezone', 'UTC');
+
+        return $tz ?: 'UTC';
+    }
+
+    /**
+     * Format a date/time in the platform default timezone for display in emails/reports.
+     */
+    public static function formatInPlatformTimezone($date, string $format = 'M j, Y g:i A T'): string
+    {
+        $dt = $date instanceof Carbon ? $date : Carbon::parse($date);
+
+        return $dt->copy()->setTimezone(self::platformTimezone())->format($format);
+    }
+
     /**
      * Application name for emails/invoices: from platform settings or config fallback.
      */
@@ -70,7 +93,11 @@ class MailService
     {
         $appName = self::applicationName();
         $subject = '[' . $appName . '] Test email';
-        $html = self::wrapEmailBody('<p>This is a test email from your platform. If you received this, SMTP is working correctly.</p>');
+        $sentAt = self::formatInPlatformTimezone(now());
+        $html = self::wrapEmailBody(
+            '<p>This is a test email from your platform. If you received this, SMTP is working correctly.</p>'
+            . '<p class="text-muted" style="color:#6b7280;font-size:12px;">Sent at ' . e($sentAt) . ' (platform timezone).</p>'
+        );
 
         $this->send($to, $subject, $html, strip_tags($html));
     }
@@ -85,7 +112,7 @@ class MailService
         $html = '<p>Your subscription to <strong>' . e($planName) . '</strong> is now active.</p>';
         $html .= '<p>Your current period ends on <strong>' . e($endDate) . '</strong>. You can manage your subscription and view invoices in your dashboard.</p>';
         $html .= '<p>Thank you for your business.</p>';
-        $html = self::wrapEmailBody($html, $this->emailLogoUrl());
+        $html = self::wrapEmailBody($html, self::getEmailLogoUrl());
         $this->send($to, $subject, $html, strip_tags($html));
     }
 
@@ -112,6 +139,45 @@ class MailService
         $subject = "[{$appName}] Your subscription expires in {$daysLeft} " . ($daysLeft === 1 ? 'day' : 'days');
         $html = '<p>This is a reminder that your <strong>' . e($planName) . '</strong> subscription will end on <strong>' . e($endDate) . '</strong>.</p>';
         $html .= '<p>To avoid any interruption, please renew or update your subscription in your dashboard (Subscription → Manage billing).</p>';
+        $html = self::wrapEmailBody($html);
+        $this->send($to, $subject, $html, strip_tags($html));
+    }
+
+    /**
+     * Send new message notification to company when a customer sends a message (if notifications_enabled).
+     */
+    public function sendNewMessageNotification(
+        string $to,
+        string $customerName,
+        string $customerPhone,
+        string $messagePreview,
+        string $chatsUrl
+    ): void {
+        $appName = self::applicationName();
+        $subject = '[' . $appName . '] New message from ' . $customerName;
+        $html = '<p>You have received a new message from a customer.</p>';
+        $html .= '<p><strong>From:</strong> ' . e($customerName) . ' (' . e($customerPhone) . ')</p>';
+        $html .= '<p><strong>Message:</strong></p><p>' . nl2br(e($messagePreview)) . '</p>';
+        $html .= '<p><a href="' . e($chatsUrl) . '" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View in dashboard</a></p>';
+        $html = self::wrapEmailBody($html);
+        $this->send($to, $subject, $html, strip_tags($html));
+    }
+
+    /**
+     * Send new order notification to company email (if notifications_enabled).
+     */
+    public function sendNewOrderNotification(
+        string $to,
+        string $orderNumber,
+        string $customerName,
+        float $total,
+        string $ordersUrl
+    ): void {
+        $appName = self::applicationName();
+        $subject = '[' . $appName . '] New order #' . $orderNumber;
+        $html = '<p>You have received a new order.</p>';
+        $html .= '<p><strong>Order:</strong> ' . e($orderNumber) . '<br><strong>Customer:</strong> ' . e($customerName) . '<br><strong>Total:</strong> ' . number_format($total, 2) . '</p>';
+        $html .= '<p><a href="' . e($ordersUrl) . '" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View in dashboard</a></p>';
         $html = self::wrapEmailBody($html);
         $this->send($to, $subject, $html, strip_tags($html));
     }

@@ -14,8 +14,14 @@ class RevenueController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $period = $request->input('period', '30d');
-        $months = $period === '90d' ? 12 : ($period === '7d' ? 1 : 6);
+        $period = $request->input('period', '6m');
+        $months = match ($period) {
+            '7d', '30d' => 1,
+            '3m' => 3,
+            '6m' => 6,
+            '90d', '1y' => 12,
+            default => 6,
+        };
         $since = now()->subMonths($months);
 
         $totalRevenue = (float) Order::where('created_at', '>=', $since)->sum('total');

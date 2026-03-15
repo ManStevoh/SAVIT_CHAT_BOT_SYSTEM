@@ -79,4 +79,28 @@ class WhatsAppController extends Controller
             'displayPhoneNumber' => $account?->display_phone_number,
         ]);
     }
+
+    /**
+     * List WhatsApp numbers connected to the company.
+     * GET /api/company/whatsapp/numbers
+     */
+    public function numbers(Request $request): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $accounts = WhatsAppAccount::where('company_id', $companyId)
+            ->get(['id', 'phone_number_id', 'display_phone_number', 'status']);
+
+        $items = $accounts->map(fn ($a) => [
+            'id' => (string) $a->id,
+            'phoneNumberId' => $a->phone_number_id,
+            'displayPhoneNumber' => $a->display_phone_number ?? $a->phone_number_id,
+            'status' => $a->status,
+        ]);
+
+        return response()->json($items);
+    }
 }

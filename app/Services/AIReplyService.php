@@ -4,21 +4,28 @@ namespace App\Services;
 
 use App\Models\Company;
 use App\Models\Faq;
+use App\Models\Message;
 use App\Models\PlatformSetting;
 use App\Models\Product;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class AIReplyService
 {
+    private const PLATFORM_SETTINGS_CACHE_TTL = 300;
+
     public function __construct(
         protected WhatsAppMessageSenderService $whatsAppSender
     ) {}
 
     /**
-     * Get reply text for an incoming customer message: try FAQ match first, then OpenAI.
+     * Get reply text for an incoming customer message.
+     *
+     * @param  int|null  $chatId  For conversation history (OpenAI) and context
      */
-    public function getReplyForMessage(Company $company, string $customerMessage, ?string $customerName = null): string
+    public function getReplyForMessage(Company $company, string $customerMessage, ?string $customerName = null, ?int $chatId = null): string
     {
         $message = trim($customerMessage);
         if ($message === '') {
@@ -27,35 +34,76 @@ class AIReplyService
 
         $lower = mb_strtolower($message);
 
-        // 1) Greeting / first message
+        if ($this->isOutsideWorkingHours($company)) {
+            $away = $company->settings?->away_message;
+            if ($away) {
+                return $away;
+            }
+            return "Thanks for your message. We're currently outside business hours. We'll get back to you as soon as we can.";
+        }
+
         if ($this->looksLikeGreeting($lower)) {
             $settings = $company->settings;
             $greeting = $settings?->ai_greeting;
             if ($greeting) {
-                return $greeting;
+                return $this->appendQuickMenu($greeting);
             }
-            return "Hello" . ($customerName ? " {$customerName}" : '') . "! Thanks for reaching out. How can we help you today?";
+            $default = "Hello" . ($customerName ? " {$customerName}" : '') . "! Thanks for reaching out. How can we help you today?";
+            return $this->appendQuickMenu($default);
         }
 
-        // 2) Keyword triggers: price, prices, catalog, menu, order, etc.
         $keywordReply = $this->matchKeywordReply($company, $lower);
         if ($keywordReply !== null) {
             return $keywordReply;
         }
 
-        // 3) FAQ match (question/answer or keywords)
         $faqReply = $this->matchFaq($company, $message, $lower);
         if ($faqReply !== null) {
             return $faqReply;
         }
 
-        // 4) OpenAI for open-ended questions (if API key set)
-        $openAiReply = $this->getOpenAiReply($company, $message, $customerName);
+        $openAiReply = $this->getOpenAiReply($company, $message, $customerName, $chatId);
         if ($openAiReply !== null) {
             return $openAiReply;
         }
 
         return $this->fallbackReply($company);
+    }
+
+    protected function appendQuickMenu(string $text): string
+    {
+        $menu = "\n\nReply with: 1. Prices  2. Order  3. Talk to agent";
+        if (str_contains($text, $menu)) {
+            return $text;
+        }
+        return rtrim($text) . $menu;
+    }
+
+    protected function isOutsideWorkingHours(Company $company): bool
+    {
+        $settings = $company->settings;
+        if (! $settings || ! $settings->working_hours || ! is_array($settings->working_hours)) {
+            return false;
+        }
+        $tz = $settings->timezone ?? 'UTC';
+        try {
+            $now = Carbon::now($tz);
+        } catch (\Throwable) {
+            return false;
+        }
+        $day = strtolower($now->format('D'));
+        $schedule = $settings->working_hours[$day] ?? $settings->working_hours['*'] ?? null;
+        if (! $schedule || ! is_string($schedule)) {
+            return false;
+        }
+        $parts = explode('-', $schedule);
+        if (count($parts) !== 2) {
+            return false;
+        }
+        $open = trim($parts[0]);
+        $close = trim($parts[1]);
+        $current = $now->format('H:i');
+        return $current < $open || $current > $close;
     }
 
     protected function looksLikeGreeting(string $lower): bool
@@ -80,6 +128,29 @@ class AIReplyService
         if (str_contains($lower, 'order') || str_contains($lower, 'place order')) {
             return "You can place an order by telling us the product name and quantity. For example: \"I want 2 x Product Name\". We'll confirm availability and delivery details.";
         }
+        if (str_contains($lower, 'location') || str_contains($lower, 'address') || str_contains($lower, 'where')) {
+            $addr = $company->address ?? null;
+            if ($addr) {
+                return "We're located at: " . $addr;
+            }
+            return "Please contact us for our address.";
+        }
+        if (str_contains($lower, 'hour') || str_contains($lower, 'open') || str_contains($lower, 'when are you')) {
+            $wh = $company->settings?->working_hours;
+            if ($wh && is_array($wh)) {
+                $lines = ['Our hours:'];
+                foreach ($wh as $day => $hours) {
+                    if ($hours && is_string($hours)) {
+                        $lines[] = ucfirst($day) . ': ' . $hours;
+                    }
+                }
+                return implode("\n", $lines);
+            }
+            return "Please contact us for our opening hours.";
+        }
+        if (str_contains($lower, 'delivery') || str_contains($lower, 'shipping')) {
+            return "We offer delivery. For details and delivery areas, please type 'order' to place an order or ask us a specific question.";
+        }
         return null;
     }
 
@@ -101,9 +172,15 @@ class AIReplyService
     protected function matchFaq(Company $company, string $message, string $lower): ?string
     {
         $faqs = Faq::where('company_id', $company->id)->where('is_active', true)->get();
+        $messageWords = $this->tokenize($lower);
         foreach ($faqs as $faq) {
             $question = mb_strtolower($faq->question);
             if (str_contains($lower, $question) || str_contains($question, $lower)) {
+                $faq->increment('usage_count');
+                return $faq->answer;
+            }
+            $questionWords = $this->tokenize($question);
+            if (count(array_intersect($messageWords, $questionWords)) >= min(2, count($questionWords))) {
                 $faq->increment('usage_count');
                 return $faq->answer;
             }
@@ -120,9 +197,15 @@ class AIReplyService
         return null;
     }
 
-    protected function getOpenAiReply(Company $company, string $message, ?string $customerName): ?string
+    protected function tokenize(string $text): array
     {
-        $platform = PlatformSetting::first();
+        $words = preg_split('/\s+/', trim(preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text)), -1, PREG_SPLIT_NO_EMPTY);
+        return array_unique(array_map('mb_strtolower', $words ?: []));
+    }
+
+    protected function getOpenAiReply(Company $company, string $message, ?string $customerName, ?int $chatId): ?string
+    {
+        $platform = Cache::remember('platform_settings_openai', self::PLATFORM_SETTINGS_CACHE_TTL, fn () => PlatformSetting::first());
         $apiKey = $platform?->openai_api_key ?? config('openai.api_key');
         if (! $apiKey) {
             return null;
@@ -132,7 +215,19 @@ class AIReplyService
         $maxTokens = $platform?->openai_max_tokens ?? config('openai.max_tokens', 512);
 
         $systemPrompt = $this->buildSystemPrompt($company);
-        $userPrompt = $customerName ? "[Customer name: {$customerName}]\n\nMessage: {$message}" : "Customer message: {$message}";
+        $messages = [['role' => 'system', 'content' => $systemPrompt]];
+
+        if ($chatId) {
+            $history = Message::where('chat_id', $chatId)->orderBy('created_at')->latest()->take(10)->get()->reverse();
+            foreach ($history as $m) {
+                $role = $m->sender === 'customer' ? 'user' : 'assistant';
+                $messages[] = ['role' => $role, 'content' => $m->content];
+            }
+        }
+        if (empty(array_filter($messages, fn ($m) => $m['role'] === 'user'))) {
+            $userContent = $customerName ? "[Customer: {$customerName}]\n\n{$message}" : $message;
+            $messages[] = ['role' => 'user', 'content' => $userContent];
+        }
 
         try {
             $response = Http::withToken($apiKey)
@@ -140,10 +235,7 @@ class AIReplyService
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model' => $model,
                     'max_tokens' => $maxTokens,
-                    'messages' => [
-                        ['role' => 'system', 'content' => $systemPrompt],
-                        ['role' => 'user', 'content' => $userPrompt],
-                    ],
+                    'messages' => $messages,
                 ]);
 
             if (! $response->successful()) {
@@ -168,11 +260,11 @@ class AIReplyService
         $parts = [
             "You are a helpful customer service assistant for the business: {$name}.",
             "Reply in a {$tone} tone. Keep replies concise (1-3 short paragraphs).",
-            "Do not invent prices or product names. If the customer asks about prices or products, say you'll share the catalog or ask them to type 'prices' or 'catalog'.",
+            "Do not invent prices or product names. If the customer asks about prices or products, say they can type 'prices' or 'catalog'.",
         ];
         $faqs = Faq::where('company_id', $company->id)->where('is_active', true)->get();
         if ($faqs->isNotEmpty()) {
-            $parts[] = "\nKnowledge base (use this when relevant):";
+            $parts[] = "\nKnowledge base (use when relevant):";
             foreach ($faqs->take(15) as $faq) {
                 $parts[] = "Q: {$faq->question}\nA: {$faq->answer}";
             }
@@ -190,12 +282,10 @@ class AIReplyService
     protected function fallbackReply(Company $company): string
     {
         $settings = $company->settings;
-        if ($settings && method_exists($settings, 'getAttributes')) {
-            $fallback = $settings->getAttributes()['fallback_message'] ?? null;
-            if ($fallback) {
-                return $fallback;
-            }
+        $fallback = $settings?->fallback_message;
+        if ($fallback && trim($fallback) !== '') {
+            return trim($fallback);
         }
-        return "Thanks for your message. Our team will get back to you shortly. You can also type 'prices' for our product list or 'order' to place an order.";
+        return "Thanks for your message. Our team will get back to you shortly. Reply with 'prices' for our product list or 'order' to place an order.";
     }
 }

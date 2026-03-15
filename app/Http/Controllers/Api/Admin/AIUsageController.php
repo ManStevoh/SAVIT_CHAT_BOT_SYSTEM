@@ -14,7 +14,13 @@ class AIUsageController extends Controller
     public function index(Request $request): JsonResponse
     {
         $period = $request->input('period', '30d');
-        $days = $period === '90d' ? 90 : ($period === '7d' ? 7 : 30);
+        $days = match ($period) {
+            '24h' => 1,
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            default => 30,
+        };
         $since = now()->subDays($days);
 
         $totalRequests = Message::where('sender', 'bot')->where('created_at', '>=', $since)->count();

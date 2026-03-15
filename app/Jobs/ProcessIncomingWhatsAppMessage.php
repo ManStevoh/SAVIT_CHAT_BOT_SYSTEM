@@ -5,7 +5,9 @@ namespace App\Jobs;
 use App\Models\Chat;
 use App\Models\Company;
 use App\Models\Message;
+use App\Models\Subscription;
 use App\Services\AIReplyService;
+use App\Services\MailService;
 use App\Services\WhatsAppMessageSenderService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,16 +20,21 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $tries = 3;
+
+    public array $backoff = [10, 60, 300];
+
     public function __construct(
         public int $companyId,
         public int $chatId,
         public string $customerPhone,
         public string $phoneNumberId,
         public string $messageText,
-        public ?string $customerName = null
+        public ?string $customerName = null,
+        public ?string $whatsappMessageId = null
     ) {}
 
-    public function handle(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender): void
+    public function handle(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
     {
         $company = Company::find($this->companyId);
         if (! $company) {
@@ -35,8 +42,30 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue
             return;
         }
 
+        $chat = Chat::find($this->chatId);
+        if (! $chat) {
+            return;
+        }
+
+        if ($chat->isAgentHandling(30)) {
+            $this->notifyCompanyNewMessage($company, $mailService, true);
+            return;
+        }
+
+        if ($this->wantsHumanEscalation()) {
+            $this->notifyCompanyNewMessage($company, $mailService, true);
+            return;
+        }
+
+        if (! $this->companyHasActiveSubscription($company)) {
+            $replyText = 'Our service is temporarily unavailable. Please try again later or contact support.';
+            $this->sendReplyAndSave($waSender, $company, $chat, $replyText);
+            return;
+        }
+
         $settings = $company->settings;
         if (! $settings || ! $settings->auto_reply_enabled) {
+            $this->notifyCompanyNewMessage($company, $mailService, false);
             return;
         }
 
@@ -46,27 +75,107 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue
             return;
         }
 
-        $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName);
+        if ($this->alreadyRepliedToThisMessage()) {
+            return;
+        }
+
+        $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName, $this->chatId);
+        $this->sendReplyAndSave($waSender, $company, $chat, $replyText);
+    }
+
+    protected function wantsHumanEscalation(): bool
+    {
+        $lower = mb_strtolower($this->messageText);
+        $keywords = ['agent', 'human', 'representative', 'talk to someone', 'real person', 'support', 'speak to'];
+        foreach ($keywords as $kw) {
+            if (str_contains($lower, $kw)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected function companyHasActiveSubscription(Company $company): bool
+    {
+        return Subscription::where('company_id', $company->id)
+            ->where('status', 'active')
+            ->where('end_date', '>=', now()->toDateString())
+            ->exists();
+    }
+
+    protected function alreadyRepliedToThisMessage(): bool
+    {
+        if (! $this->whatsappMessageId) {
+            return false;
+        }
+        $incoming = Message::where('chat_id', $this->chatId)
+            ->where('whatsapp_message_id', $this->whatsappMessageId)
+            ->where('sender', 'customer')
+            ->first();
+        if (! $incoming) {
+            return false;
+        }
+        return Message::where('chat_id', $this->chatId)
+            ->where('sender', 'bot')
+            ->where('created_at', '>=', $incoming->created_at)
+            ->exists();
+    }
+
+    protected function sendReplyAndSave(
+        WhatsAppMessageSenderService $waSender,
+        Company $company,
+        Chat $chat,
+        string $replyText
+    ): void {
+        $account = $company->whatsappAccount;
+        if (! $account || ! $account->isActive()) {
+            return;
+        }
+
         $result = $waSender->sendText($account, $this->customerPhone, $replyText);
 
-        $chat = Chat::find($this->chatId);
-        if ($chat) {
-            Message::create([
-                'chat_id' => $this->chatId,
-                'content' => $replyText,
-                'sender' => 'bot',
-                'status' => $result['success'] ? 'sent' : 'failed',
-                'whatsapp_message_id' => $result['message_id'] ?? null,
-            ]);
-            $chat->update([
-                'last_message' => $replyText,
-                'last_message_at' => now(),
-                'ai_handled' => true,
-            ]);
-        }
+        Message::create([
+            'chat_id' => $this->chatId,
+            'content' => $replyText,
+            'sender' => 'bot',
+            'status' => $result['success'] ? 'sent' : 'failed',
+            'whatsapp_message_id' => $result['message_id'] ?? null,
+        ]);
+        $chat->update([
+            'last_message' => $replyText,
+            'last_message_at' => now(),
+            'ai_handled' => true,
+        ]);
 
         if (! $result['success']) {
             Log::error('ProcessIncomingWhatsAppMessage: send failed', ['error' => $result['error'] ?? 'unknown']);
+            throw new \RuntimeException($result['error'] ?? 'WhatsApp send failed');
+        }
+    }
+
+    protected function notifyCompanyNewMessage(Company $company, MailService $mailService, bool $escalation): void
+    {
+        $settings = $company->settings;
+        if (! $settings || ! $settings->notifications_enabled) {
+            return;
+        }
+        $to = $company->email;
+        if (! $to) {
+            return;
+        }
+        $appName = MailService::applicationName();
+        $chatsUrl = rtrim(config('app.frontend_url', config('app.url')), '/') . '/dashboard/chats';
+        $subject = $escalation
+            ? "[{$appName}] Customer requested human – " . ($this->customerName ?: $this->customerPhone)
+            : "[{$appName}] New message from " . ($this->customerName ?: $this->customerPhone);
+        $preview = mb_substr($this->messageText, 0, 200);
+        if (mb_strlen($this->messageText) > 200) {
+            $preview .= '…';
+        }
+        try {
+            $mailService->sendNewMessageNotification($to, $this->customerName ?: 'Customer', $this->customerPhone, $preview, $chatsUrl);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send new message notification', ['company_id' => $company->id, 'error' => $e->getMessage()]);
         }
     }
 }

@@ -13,6 +13,9 @@ class PlatformSetting extends Model
         'app_logo',
         'support_email',
         'maintenance_mode',
+        'default_timezone',
+        'maintenance_message',
+        'allow_new_registrations',
         'ai_model',
         'max_tokens_per_request',
         'rate_limit_per_minute',
@@ -44,6 +47,7 @@ class PlatformSetting extends Model
 
     protected $casts = [
         'maintenance_mode' => 'boolean',
+        'allow_new_registrations' => 'boolean',
         'smtp_port' => 'integer',
         'require_2fa' => 'boolean',
         'ip_allowlist_enabled' => 'boolean',

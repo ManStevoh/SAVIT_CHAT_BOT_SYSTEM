@@ -38,25 +38,36 @@ class ChatMessageController extends Controller
         $user = $request->user();
         $chat = Chat::where('id', $chatId)->where('company_id', $user->company_id)->firstOrFail();
 
-        Message::create([
+        $whatsappSent = false;
+        $whatsappError = null;
+
+        $account = $chat->company->whatsappAccount;
+        if ($account && $account->isActive() && $chat->customer_phone) {
+            $waSender = app(WhatsAppMessageSenderService::class);
+            $result = $waSender->sendText($account, $chat->customer_phone, $request->content);
+            $whatsappSent = $result['success'];
+            $whatsappError = $result['error'] ?? null;
+        }
+
+        $message = Message::create([
             'chat_id' => $chat->id,
             'content' => $request->content,
             'sender' => 'agent',
-            'status' => 'sent',
+            'status' => $whatsappSent ? 'sent' : ($whatsappError ? 'failed' : 'sent'),
+            'whatsapp_message_id' => null,
         ]);
 
         $chat->update([
             'last_message' => $request->content,
             'last_message_at' => now(),
+            'agent_handling_at' => now(),
         ]);
 
-        // Send to WhatsApp if company has connected account (so customer sees reply in WhatsApp)
-        $account = $chat->company->whatsappAccount;
-        if ($account && $account->isActive() && $chat->customer_phone) {
-            $waSender = app(WhatsAppMessageSenderService::class);
-            $waSender->sendText($account, $chat->customer_phone, $request->content);
-        }
-
-        return response()->json(['success' => true, 'message' => 'Message sent.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Message sent.',
+            'whatsappSent' => $whatsappSent,
+            'whatsappError' => $whatsappError,
+        ]);
     }
 }

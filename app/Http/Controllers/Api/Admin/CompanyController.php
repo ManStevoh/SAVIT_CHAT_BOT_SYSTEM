@@ -50,7 +50,7 @@ class CompanyController extends Controller
             });
         }
 
-        $companies = $query->orderBy('name')->get();
+        $companies = $query->orderByDesc('created_at')->get();
         $data = $companies->map(fn (Company $c) => $this->companyToArray($c));
 
         return response()->json($data->values()->all());

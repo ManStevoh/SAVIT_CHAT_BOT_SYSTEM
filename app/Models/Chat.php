@@ -18,12 +18,23 @@ class Chat extends Model
         'unread_count',
         'status',
         'ai_handled',
+        'agent_handling_at',
     ];
 
     protected $casts = [
         'last_message_at' => 'datetime',
         'ai_handled' => 'boolean',
+        'agent_handling_at' => 'datetime',
     ];
+
+    /** Whether an agent is currently handling this chat (bot should not auto-reply). */
+    public function isAgentHandling(int $withinMinutes = 30): bool
+    {
+        if (! $this->agent_handling_at) {
+            return false;
+        }
+        return $this->agent_handling_at->diffInMinutes(now(), false) < $withinMinutes;
+    }
 
     public function company(): BelongsTo
     {

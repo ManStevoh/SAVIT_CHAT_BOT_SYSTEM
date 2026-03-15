@@ -12,6 +12,10 @@ class CompanySetting extends Model
         'whatsapp_number',
         'ai_greeting',
         'ai_tone',
+        'fallback_message',
+        'away_message',
+        'timezone',
+        'working_hours',
         'auto_reply_enabled',
         'notifications_enabled',
     ];
@@ -19,6 +23,7 @@ class CompanySetting extends Model
     protected $casts = [
         'auto_reply_enabled' => 'boolean',
         'notifications_enabled' => 'boolean',
+        'working_hours' => 'array',
     ];
 
     public function company(): BelongsTo

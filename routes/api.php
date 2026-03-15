@@ -25,8 +25,8 @@ Route::prefix('auth')->group(function () {
     Route::post('logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
 });
 
-// Company (auth required)
-Route::prefix('company')->middleware('auth:sanctum')->group(function () {
+// Company (auth required; subscription must be active except for subscription/checkout routes)
+Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->group(function () {
     Route::get('chats', [App\Http\Controllers\Api\Company\ChatController::class, 'index']);
     Route::get('chats/{chatId}/messages', [App\Http\Controllers\Api\Company\ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [App\Http\Controllers\Api\Company\ChatMessageController::class, 'store']);
@@ -40,11 +40,14 @@ Route::prefix('company')->middleware('auth:sanctum')->group(function () {
     Route::get('analytics', [App\Http\Controllers\Api\Company\AnalyticsController::class, 'index']);
     Route::get('subscription', [App\Http\Controllers\Api\Company\SubscriptionController::class, 'show']);
     Route::get('subscription/invoices', [App\Http\Controllers\Api\Company\SubscriptionController::class, 'invoices']);
+    Route::get('subscription/usage', [App\Http\Controllers\Api\Company\SubscriptionController::class, 'usage']);
+    Route::get('team', [App\Http\Controllers\Api\Company\TeamController::class, 'index']);
     Route::get('settings', [App\Http\Controllers\Api\Company\SettingsController::class, 'show']);
     Route::put('settings', [App\Http\Controllers\Api\Company\SettingsController::class, 'update']);
     Route::post('whatsapp/connect', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'connect']);
     Route::post('whatsapp/disconnect', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'disconnect']);
     Route::get('whatsapp/status', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'status']);
+    Route::get('whatsapp/numbers', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'numbers']);
     Route::post('checkout', [App\Http\Controllers\Api\Company\StripeCheckoutController::class, 'createSession']);
     Route::post('billing-portal', [App\Http\Controllers\Api\Company\StripeCheckoutController::class, 'createPortalSession']);
     Route::post('mpesa/initiate', [App\Http\Controllers\Api\Company\MpesaCheckoutController::class, 'initiate']);

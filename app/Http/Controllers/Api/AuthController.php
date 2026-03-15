@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,6 +75,8 @@ class AuthController extends Controller
             'status' => 'active',
         ]);
 
+        $this->createDefaultTrialSubscription($company);
+
         return response()->json([
             'success' => true,
             'message' => 'Registration successful! Please check your email to verify your account.',
@@ -127,6 +131,31 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Create default free trial subscription for a new company.
+     * All companies get a trial so they can use the system until trial ends or they subscribe.
+     */
+    private function createDefaultTrialSubscription(Company $company): void
+    {
+        $planSlug = config('subscription.default_plan_slug', 'starter');
+        $trialDays = config('subscription.default_trial_days', 14);
+
+        $plan = Plan::where('slug', $planSlug)->first();
+        if (! $plan) {
+            $planSlug = 'starter';
+        }
+
+        Subscription::create([
+            'company_id' => $company->id,
+            'plan' => $planSlug,
+            'status' => 'trial',
+            'start_date' => now()->format('Y-m-d'),
+            'end_date' => now()->addDays($trialDays)->format('Y-m-d'),
+            'amount' => 0,
+            'billing_cycle' => 'monthly',
+        ]);
     }
 
     private function userToArray(User $user): array

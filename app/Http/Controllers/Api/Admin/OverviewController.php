@@ -20,11 +20,13 @@ class OverviewController extends Controller
         $totalOrders = Order::count();
         $totalMessages = Message::whereHas('chat')->count();
 
-        $totalRevenue = (float) Order::sum('total');
-
+        $currentMonthStart = now()->startOfMonth();
+        $currentMonthEnd = now()->endOfMonth();
         $previousMonthStart = now()->subMonth()->startOfMonth();
         $previousMonthEnd = now()->subMonth()->endOfMonth();
-        $currentMonthStart = now()->startOfMonth();
+
+        $monthlyRevenue = (float) Order::whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])->sum('total');
+        $totalRevenue = (float) Order::sum('total');
 
         $companiesPrevious = Company::whereBetween('created_at', [$previousMonthStart, $previousMonthEnd])->count();
         $companiesCurrent = Company::where('created_at', '>=', $currentMonthStart)->count();
@@ -33,7 +35,7 @@ class OverviewController extends Controller
             : 0;
 
         $revenuePrevious = (float) Order::whereBetween('created_at', [$previousMonthStart, $previousMonthEnd])->sum('total');
-        $revenueCurrent = (float) Order::where('created_at', '>=', $currentMonthStart)->sum('total');
+        $revenueCurrent = $monthlyRevenue;
         $revenueChange = $revenuePrevious > 0
             ? round((($revenueCurrent - $revenuePrevious) / $revenuePrevious) * 100, 1)
             : 0;
@@ -44,16 +46,59 @@ class OverviewController extends Controller
             ? round((($messagesCurrent - $messagesPrevious) / $messagesPrevious) * 100, 1)
             : 0;
 
+        $usersPrevious = User::whereBetween('created_at', [$previousMonthStart, $previousMonthEnd])->count();
+        $usersCurrent = User::where('created_at', '>=', $currentMonthStart)->count();
+        $usersChange = $usersPrevious > 0
+            ? round((($usersCurrent - $usersPrevious) / $usersPrevious) * 100, 1)
+            : 0;
+
+        $companyGrowthData = $this->buildCompanyGrowthData();
+        $messageVolumeData = $this->buildMessageVolumeData();
+
         return response()->json([
             'totalCompanies' => $totalCompanies,
             'activeCompanies' => $activeCompanies,
             'totalUsers' => $totalUsers,
             'totalRevenue' => $totalRevenue,
+            'monthlyRevenue' => $monthlyRevenue,
             'totalMessages' => $totalMessages,
             'totalOrders' => $totalOrders,
             'companiesChange' => $companiesChange,
             'revenueChange' => $revenueChange,
             'messagesChange' => $messagesChange,
+            'usersChange' => $usersChange,
+            'companyGrowthData' => $companyGrowthData,
+            'messageVolumeData' => $messageVolumeData,
         ]);
+    }
+
+    /** Last 7 months: cumulative companies by month label. */
+    private function buildCompanyGrowthData(): array
+    {
+        $months = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $months[] = [
+                'name' => $date->format('M'),
+                'companies' => Company::where('created_at', '<=', $date->endOfMonth())->count(),
+            ];
+        }
+        return $months;
+    }
+
+    /** Last 7 days: message count per day. */
+    private function buildMessageVolumeData(): array
+    {
+        $days = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $dayStart = $date->copy()->startOfDay();
+            $dayEnd = $date->copy()->endOfDay();
+            $days[] = [
+                'name' => $date->format('D'),
+                'messages' => Message::whereHas('chat')->whereBetween('created_at', [$dayStart, $dayEnd])->count(),
+            ];
+        }
+        return $days;
     }
 }

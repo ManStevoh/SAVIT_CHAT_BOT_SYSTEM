@@ -28,6 +28,10 @@ class SettingsController extends Controller
             'whatsappNumber' => $settings?->whatsapp_number,
             'aiGreeting' => $settings?->ai_greeting,
             'aiTone' => $settings?->ai_tone,
+            'fallbackMessage' => $settings?->fallback_message,
+            'awayMessage' => $settings?->away_message,
+            'timezone' => $settings?->timezone ?? 'UTC',
+            'workingHours' => $settings?->working_hours,
             'autoReplyEnabled' => (bool) ($settings?->auto_reply_enabled ?? false),
             'notificationsEnabled' => (bool) ($settings?->notifications_enabled ?? false),
         ]);
@@ -54,9 +58,15 @@ class SettingsController extends Controller
             'companyName' => 'sometimes|string|max:255',
             'email' => 'sometimes|email',
             'phone' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:500',
             'whatsappNumber' => 'nullable|string|max:50',
             'aiGreeting' => 'nullable|string',
             'aiTone' => 'nullable|string|max:255',
+            'fallbackMessage' => 'nullable|string',
+            'awayMessage' => 'nullable|string',
+            'timezone' => 'nullable|string|max:50',
+            'workingHours' => 'nullable|array',
+            'workingHours.*' => 'nullable|string|max:50',
             'autoReplyEnabled' => 'sometimes|boolean',
             'notificationsEnabled' => 'sometimes|boolean',
         ]);
@@ -70,6 +80,9 @@ class SettingsController extends Controller
         if (array_key_exists('phone', $companyValidated)) {
             $company->update(['phone' => $companyValidated['phone']]);
         }
+        if (array_key_exists('address', $companyValidated)) {
+            $company->update(['address' => $companyValidated['address']]);
+        }
 
         $settings = $company->settings()->firstOrNew([]);
         $settings->company_id = $company->id;
@@ -81,6 +94,18 @@ class SettingsController extends Controller
         }
         if (array_key_exists('aiTone', $companyValidated)) {
             $settings->ai_tone = $companyValidated['aiTone'];
+        }
+        if (array_key_exists('fallbackMessage', $companyValidated)) {
+            $settings->fallback_message = $companyValidated['fallbackMessage'];
+        }
+        if (array_key_exists('awayMessage', $companyValidated)) {
+            $settings->away_message = $companyValidated['awayMessage'];
+        }
+        if (array_key_exists('timezone', $companyValidated)) {
+            $settings->timezone = $companyValidated['timezone'] ?? 'UTC';
+        }
+        if (array_key_exists('workingHours', $companyValidated)) {
+            $settings->working_hours = $companyValidated['workingHours'];
         }
         if (array_key_exists('autoReplyEnabled', $companyValidated)) {
             $settings->auto_reply_enabled = $companyValidated['autoReplyEnabled'];
