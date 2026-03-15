@@ -84,6 +84,7 @@ class MpesaService
     /**
      * Initiate STK push (Lipa Na M-Pesa Online).
      * Phone must be in format 254XXXXXXXXX (no +).
+     * 9-digit (7...) and 10-digit (0...) numbers are normalized to 254 internally.
      *
      * @param  array<string, mixed>|null  $configOverride  Company's own M-Pesa config (shortcode, passkey, optional consumer_key, consumer_secret, env). When set, used instead of platform config.
      * @return array{CheckoutRequestID?: string, ResponseCode?: string, ResponseDescription?: string, MerchantRequestID?: string, error?: string}

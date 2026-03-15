@@ -42,18 +42,22 @@ class ChatMessageController extends Controller
         $whatsappError = null;
 
         $account = $chat->company->whatsappAccount;
-        if ($account && $account->isActive() && $chat->customer_phone) {
+        if (! $account || ! $account->isActive()) {
+            $whatsappError = 'No active WhatsApp connection';
+        } elseif (empty($chat->customer_phone)) {
+            $whatsappError = 'No customer phone number';
+        } else {
             $waSender = app(WhatsAppMessageSenderService::class);
             $result = $waSender->sendText($account, $chat->customer_phone, $request->content);
             $whatsappSent = $result['success'];
             $whatsappError = $result['error'] ?? null;
         }
 
-        $message = Message::create([
+        Message::create([
             'chat_id' => $chat->id,
             'content' => $request->content,
             'sender' => 'agent',
-            'status' => $whatsappSent ? 'sent' : ($whatsappError ? 'failed' : 'sent'),
+            'status' => $whatsappSent ? 'sent' : 'failed',
             'whatsapp_message_id' => null,
         ]);
 
@@ -65,7 +69,7 @@ class ChatMessageController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Message sent.',
+            'message' => $whatsappSent ? 'Message sent.' : 'Message saved but not delivered via WhatsApp.',
             'whatsappSent' => $whatsappSent,
             'whatsappError' => $whatsappError,
         ]);

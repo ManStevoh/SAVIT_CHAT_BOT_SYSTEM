@@ -43,18 +43,12 @@ class EnsureSubscriptionActive
             return $next($request);
         }
 
-        $subscription = Subscription::where('company_id', $user->company_id)
-            ->orderByDesc('end_date')
-            ->first();
+        $hasActiveSubscription = Subscription::where('company_id', $user->company_id)
+            ->where('status', 'active')
+            ->where('end_date', '>=', now()->toDateString())
+            ->exists();
 
-        if (! $subscription) {
-            return $next($request);
-        }
-
-        $isExpired = $subscription->end_date->isPast();
-        $isCancelled = $subscription->status === 'cancelled';
-
-        if ($isExpired || $isCancelled) {
+        if (! $hasActiveSubscription) {
             return response()->json([
                 'message' => 'Your subscription has expired or was cancelled. Please renew to continue using the service.',
                 'code' => 'subscription_expired',

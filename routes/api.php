@@ -53,6 +53,10 @@ Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->g
     Route::post('whatsapp/disconnect', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'disconnect']);
     Route::get('whatsapp/status', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'status']);
     Route::get('whatsapp/numbers', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'numbers']);
+    Route::post('export', [App\Http\Controllers\Api\Company\ExportController::class, 'export']);
+    Route::get('export/download/{filename}', [App\Http\Controllers\Api\Company\ExportController::class, 'download']);
+    Route::post('import/products', [App\Http\Controllers\Api\Company\ImportController::class, 'importProducts']);
+    Route::post('import/faqs', [App\Http\Controllers\Api\Company\ImportController::class, 'importFaqs']);
     Route::post('checkout', [App\Http\Controllers\Api\Company\StripeCheckoutController::class, 'createSession']);
     Route::post('billing-portal', [App\Http\Controllers\Api\Company\StripeCheckoutController::class, 'createPortalSession']);
     Route::post('mpesa/initiate', [App\Http\Controllers\Api\Company\MpesaCheckoutController::class, 'initiate']);
@@ -83,10 +87,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::post('settings', [App\Http\Controllers\Api\Admin\PlatformSettingsController::class, 'update']);
     Route::post('settings/test-email', [App\Http\Controllers\Api\Admin\PlatformSettingsController::class, 'testEmail']);
     Route::post('export', [App\Http\Controllers\Api\Admin\ExportController::class, 'export']);
+    Route::get('export/download/{filename}', [App\Http\Controllers\Api\Admin\ExportController::class, 'download']);
     Route::post('impersonate/user/{user}', [App\Http\Controllers\Api\Admin\ImpersonateController::class, 'impersonateUser']);
     Route::post('impersonate/company/{company}', [App\Http\Controllers\Api\Admin\ImpersonateController::class, 'impersonateCompany']);
     Route::get('testimonials', [App\Http\Controllers\Api\Admin\TestimonialController::class, 'index']);
     Route::post('testimonials', [App\Http\Controllers\Api\Admin\TestimonialController::class, 'store']);
     Route::put('testimonials/{testimonial}', [App\Http\Controllers\Api\Admin\TestimonialController::class, 'update']);
     Route::delete('testimonials/{testimonial}', [App\Http\Controllers\Api\Admin\TestimonialController::class, 'destroy']);
+    Route::get('landing-faqs', [App\Http\Controllers\Api\Admin\LandingFaqController::class, 'index']);
+    Route::post('landing-faqs', [App\Http\Controllers\Api\Admin\LandingFaqController::class, 'store']);
+    Route::put('landing-faqs/{landing_faq}', [App\Http\Controllers\Api\Admin\LandingFaqController::class, 'update']);
+    Route::delete('landing-faqs/{landing_faq}', [App\Http\Controllers\Api\Admin\LandingFaqController::class, 'destroy']);
 });

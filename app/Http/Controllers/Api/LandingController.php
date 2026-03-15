@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\LandingFaq;
 use App\Models\PlatformSetting;
 use App\Models\Testimonial;
 use Illuminate\Http\JsonResponse;
 
 /**
  * Public landing page data (no auth).
- * GET /api/landing → { testimonials, trustedCompanies }
+ * GET /api/landing → { testimonials, trustedCompanies, faqs }
  */
 class LandingController extends Controller
 {
@@ -34,9 +35,22 @@ class LandingController extends Controller
             ? (array) $settings->landing_trusted_companies
             : [];
 
+        $faqs = LandingFaq::where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['id', 'question', 'answer'])
+            ->map(fn ($f) => [
+                'id' => (string) $f->id,
+                'question' => $f->question,
+                'answer' => $f->answer,
+            ])
+            ->values()
+            ->all();
+
         return response()->json([
             'testimonials' => $testimonials,
             'trustedCompanies' => $trustedCompanies,
+            'faqs' => $faqs,
         ]);
     }
 }

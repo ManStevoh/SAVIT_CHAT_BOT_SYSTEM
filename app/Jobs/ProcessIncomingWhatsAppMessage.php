@@ -12,19 +12,31 @@ use App\Services\OrderFlowService;
 use App\Services\PlanLimitService;
 use App\Services\WhatsAppMessageSenderService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ProcessIncomingWhatsAppMessage implements ShouldQueue
+class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
 
     public array $backoff = [10, 60, 300];
+
+    /**
+     * Unique key so only one job runs per incoming message (avoids duplicate replies when Meta retries the webhook).
+     */
+    public function uniqueId(): string
+    {
+        if ($this->whatsappMessageId) {
+            return "wa_incoming:{$this->chatId}:{$this->whatsappMessageId}";
+        }
+        return "wa_incoming:{$this->chatId}:" . md5($this->messageText . ':' . $this->customerPhone);
+    }
 
     public function __construct(
         public int $companyId,

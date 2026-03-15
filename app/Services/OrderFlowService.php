@@ -216,6 +216,7 @@ class OrderFlowService
 
     /**
      * Resolve phone number for M-Pesa: "yes"/"ok"/"same" = customerPhone; else parse digits.
+     * Normalizes 9-digit (7...) and 10-digit (0...) to 254XXXXXXXXX for Safaricom API.
      */
     protected function resolveMpesaPhone(string $message, string $customerPhone): ?string
     {
