@@ -53,10 +53,11 @@ export default function RegisterPage() {
       setError(result.message ?? "Registration failed")
       return
     }
+    // Registration does not issue a token; user must log in after verifying email.
     if (planId) {
-      router.push(`/dashboard/subscription?subscribe=${planId}`)
+      router.push(`/login?registered=1&plan=${planId}`)
     } else {
-      router.push("/dashboard")
+      router.push("/login?registered=1")
     }
   }
 

@@ -27,6 +27,7 @@ export default function LoginPage() {
   const planId = searchParams.get('plan')
   const subscribeRedirect = planId ? `/dashboard/subscription?subscribe=${planId}` : null
   const verifiedParam = searchParams.get('verified') === '1'
+  const registeredParam = searchParams.get('registered') === '1'
 
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -153,6 +154,13 @@ export default function LoginPage() {
         {verifiedParam && (
           <div className="mb-6 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
             Email verified successfully. You can now sign in.
+          </div>
+        )}
+
+        {/* Post-registration: must sign in (no token issued on register) */}
+        {registeredParam && !verifiedParam && (
+          <div className="mb-6 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
+            Account created. Please check your email to verify your account, then sign in below.
           </div>
         )}
 
