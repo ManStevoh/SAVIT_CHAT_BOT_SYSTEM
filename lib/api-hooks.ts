@@ -85,12 +85,12 @@ function buildPath(
  * Fetch all chats for the current company
  * API Endpoint: GET /api/company/chats
  */
-export function useChats(filters?: { status?: string; search?: string }) {
+export function useChats(filters?: { status?: string; search?: string; limit?: number }) {
   return useSWR<Chat[]>(
     ['chats', filters],
     async () => {
       if (!useMockApi()) {
-        return apiRequest<Chat[]>(buildPath('/api/company/chats', filters as Record<string, string | undefined>))
+        return apiRequest<Chat[]>(buildPath('/api/company/chats', filters as Record<string, string | number | undefined>))
       }
       await delay(800)
       let data = [...mockChats]
@@ -102,7 +102,41 @@ export function useChats(filters?: { status?: string; search?: string }) {
           chat.customerName.toLowerCase().includes(filters.search!.toLowerCase())
         )
       }
+      if (filters?.limit) {
+        data = data.slice(0, filters.limit)
+      }
       return data
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+/** Customer stats from GET /api/company/customers/stats */
+export interface CustomerStats {
+  totalCustomers: number
+  newThisMonth: number
+  activeCustomers: number
+  avgOrdersPerCustomer: number
+}
+
+/**
+ * Fetch customer stats for the current company
+ * API Endpoint: GET /api/company/customers/stats
+ */
+export function useCustomerStats() {
+  return useSWR<CustomerStats>(
+    'customer-stats',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<CustomerStats>('/api/company/customers/stats')
+      }
+      await delay(400)
+      return {
+        totalCustomers: 0,
+        newThisMonth: 0,
+        activeCustomers: 0,
+        avgOrdersPerCustomer: 0,
+      }
     },
     { revalidateOnFocus: false }
   )

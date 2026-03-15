@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -35,30 +35,25 @@ export default function ChatsPage() {
   const [messageInput, setMessageInput] = useState('')
   const [isSending, setIsSending] = useState(false)
 
-  // API Hooks - Replace with actual API endpoints
-  // TODO: Connect to GET /api/company/chats
   const {
     data: chats,
     isLoading: chatsLoading,
     error: chatsError,
   } = useChats({ status: statusFilter, search: searchQuery })
 
-  // TODO: Connect to GET /api/company/chats/:chatId/messages
   const {
     data: messages,
     isLoading: messagesLoading,
   } = useMessages(selectedChatId)
 
-  // Get selected chat details
   const selectedChat = chats?.find((c) => c.id === selectedChatId) || (chats?.[0] ?? null)
 
-  // Auto-select first chat if none selected
-  if (!selectedChatId && chats && chats.length > 0) {
-    setSelectedChatId(chats[0].id)
-  }
+  useEffect(() => {
+    if (!selectedChatId && chats && chats.length > 0) {
+      setSelectedChatId(chats[0].id)
+    }
+  }, [chats, selectedChatId])
 
-  // Handle sending message
-  // TODO: Connect to POST /api/company/chats/:chatId/messages
   const handleSendMessage = useCallback(async () => {
     if (!messageInput.trim() || !selectedChatId) return
 

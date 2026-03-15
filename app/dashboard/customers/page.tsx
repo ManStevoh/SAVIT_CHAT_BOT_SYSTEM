@@ -21,7 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, MoreVertical, Users, UserPlus, UserCheck, TrendingUp } from "lucide-react"
 // API: GET /api/company/customers — list customers (useCustomers in api-hooks)
-import { useCustomers } from "@/lib/api-hooks"
+import { useCustomers, useCustomerStats } from "@/lib/api-hooks"
 import type { Customer } from "@/lib/mock-data"
 
 function formatCurrency(value: number): string {
@@ -109,12 +109,12 @@ export default function CustomersPage() {
   const total = data?.total ?? 0
   const totalPages = data?.totalPages ?? 1
 
-  // Stats: TODO replace with GET /api/company/customers/stats when available
+  const { data: statsData } = useCustomerStats()
   const stats = [
-    { name: "Total Customers", value: total.toLocaleString(), icon: Users, change: "+12%" },
-    { name: "New This Month", value: "—", icon: UserPlus, change: "—" },
-    { name: "Active Customers", value: "—", icon: UserCheck, change: "—" },
-    { name: "Avg. Orders/Customer", value: customers.length ? (customers.reduce((s, c) => s + c.totalOrders, 0) / customers.length).toFixed(1) : "0", icon: TrendingUp, change: "—" },
+    { name: "Total Customers", value: statsData?.totalCustomers?.toLocaleString() ?? total.toLocaleString(), icon: Users, change: "—" },
+    { name: "New This Month", value: statsData?.newThisMonth?.toLocaleString() ?? "—", icon: UserPlus, change: "—" },
+    { name: "Active Customers", value: statsData?.activeCustomers?.toLocaleString() ?? "—", icon: UserCheck, change: "—" },
+    { name: "Avg. Orders/Customer", value: statsData?.avgOrdersPerCustomer?.toFixed(1) ?? (customers.length ? (customers.reduce((s, c) => s + c.totalOrders, 0) / customers.length).toFixed(1) : "0"), icon: TrendingUp, change: "—" },
   ]
 
   return (

@@ -14,15 +14,10 @@ import { MessageSquare, ShoppingCart, Users, Bot, ArrowRight } from 'lucide-reac
 export default function DashboardPage() {
   const [chartPeriod, setChartPeriod] = useState('7d')
   
-  // API Hooks - Replace mock data with actual API calls
-  // TODO: Connect to GET /api/company/analytics
+  // API: GET /api/company/analytics, orders?limit=5, chats?limit=5
   const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useAnalytics(chartPeriod)
-  
-  // TODO: Connect to GET /api/company/orders?limit=5
   const { data: ordersData, isLoading: ordersLoading } = useOrders({ limit: 5 })
-  
-  // TODO: Connect to GET /api/company/chats?limit=5
-  const { data: chats, isLoading: chatsLoading } = useChats()
+  const { data: chats, isLoading: chatsLoading } = useChats({ limit: 5 })
 
   // Format currency helper
   const formatCurrency = (value: number) => {
