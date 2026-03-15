@@ -11,6 +11,39 @@ use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
+    public function stats(Request $request): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $totalCustomers = Order::where('company_id', $companyId)
+            ->distinct('customer_phone')
+            ->count('customer_phone');
+
+        $thisMonthStart = now()->startOfMonth();
+        $newThisMonth = Order::where('company_id', $companyId)
+            ->where('created_at', '>=', $thisMonthStart)
+            ->distinct('customer_phone')
+            ->count('customer_phone');
+
+        $activeCustomers = Order::where('company_id', $companyId)
+            ->where('updated_at', '>=', now()->subDays(30))
+            ->distinct('customer_phone')
+            ->count('customer_phone');
+
+        $totalOrders = Order::where('company_id', $companyId)->count();
+        $avgOrdersPerCustomer = $totalCustomers > 0 ? round($totalOrders / $totalCustomers, 1) : 0;
+
+        return response()->json([
+            'totalCustomers' => $totalCustomers,
+            'newThisMonth' => $newThisMonth,
+            'activeCustomers' => $activeCustomers,
+            'avgOrdersPerCustomer' => $avgOrdersPerCustomer,
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;

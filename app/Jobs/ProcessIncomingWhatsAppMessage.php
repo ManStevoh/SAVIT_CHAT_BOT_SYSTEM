@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\Subscription;
 use App\Services\AIReplyService;
 use App\Services\MailService;
+use App\Services\OrderFlowService;
 use App\Services\WhatsAppMessageSenderService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -76,6 +77,13 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue
         }
 
         if ($this->alreadyRepliedToThisMessage()) {
+            return;
+        }
+
+        $orderFlow = app(OrderFlowService::class);
+        $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
+        if ($orderReply !== null) {
+            $this->sendReplyAndSave($waSender, $company, $chat, $orderReply);
             return;
         }
 

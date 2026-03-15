@@ -19,12 +19,15 @@ class Chat extends Model
         'status',
         'ai_handled',
         'agent_handling_at',
+        'conversation_step',
+        'order_draft',
     ];
 
     protected $casts = [
         'last_message_at' => 'datetime',
         'ai_handled' => 'boolean',
         'agent_handling_at' => 'datetime',
+        'order_draft' => 'array',
     ];
 
     /** Whether an agent is currently handling this chat (bot should not auto-reply). */

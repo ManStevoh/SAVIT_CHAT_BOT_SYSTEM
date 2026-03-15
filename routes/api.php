@@ -32,6 +32,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->g
     Route::post('chats/{chatId}/messages', [App\Http\Controllers\Api\Company\ChatMessageController::class, 'store']);
     Route::get('orders', [App\Http\Controllers\Api\Company\OrderController::class, 'index']);
     Route::patch('orders/{order}', [App\Http\Controllers\Api\Company\OrderController::class, 'updateStatus']);
+    Route::get('customers/stats', [App\Http\Controllers\Api\Company\CustomerController::class, 'stats']);
     Route::get('customers', [App\Http\Controllers\Api\Company\CustomerController::class, 'index']);
     Route::get('products', [App\Http\Controllers\Api\Company\ProductController::class, 'index']);
     Route::apiResource('products', App\Http\Controllers\Api\Company\ProductController::class)->only(['store', 'update', 'destroy']);

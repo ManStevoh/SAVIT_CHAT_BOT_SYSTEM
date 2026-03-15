@@ -30,7 +30,8 @@ class ChatController extends Controller
             });
         }
 
-        $chats = $query->get();
+        $limit = $request->filled('limit') ? max(1, min(100, (int) $request->limit)) : null;
+        $chats = $limit ? $query->take($limit)->get() : $query->get();
 
         $data = $chats->map(fn (Chat $chat) => [
             'id' => (string) $chat->id,
