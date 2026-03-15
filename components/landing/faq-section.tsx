@@ -43,7 +43,7 @@ export function FAQSection() {
             Frequently asked questions
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            {"Everything you need to know about ChatFlow AI"}
+            {"Everything you need to know about Savit Chat"}
           </p>
         </div>
 

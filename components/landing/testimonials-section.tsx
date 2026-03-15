@@ -4,7 +4,7 @@ const testimonials = [
   {
     name: "Sarah Johnson",
     role: "Owner, QuickBite Restaurant",
-    content: "ChatFlow AI transformed our order management. We now handle 3x more orders with the same team. The AI chatbot understands our menu perfectly and customers love the instant responses.",
+    content: "Savit Chat transformed our order management. We now handle 3x more orders with the same team. The AI chatbot understands our menu perfectly and customers love the instant responses.",
     rating: 5,
   },
   {
@@ -30,7 +30,7 @@ export function TestimonialsSection() {
             Loved by businesses worldwide
           </h2>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            See what our customers have to say about ChatFlow AI
+            See what our customers have to say about Savit Chat
           </p>
         </div>
 

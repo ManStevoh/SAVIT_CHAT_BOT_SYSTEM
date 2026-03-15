@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ChatFlow AI - Automate Your WhatsApp Business',
+  title: 'Savit Chat - Automate Your WhatsApp Business',
   description: 'AI-powered WhatsApp automation platform for businesses. Automatically reply to customers, manage orders, and analyze conversations.',
   keywords: ['WhatsApp automation', 'AI chatbot', 'business messaging', 'customer engagement', 'order management'],
 }

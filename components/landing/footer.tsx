@@ -39,7 +39,7 @@ export function Footer() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                   <MessageSquare className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <span className="text-xl font-bold text-foreground">ChatFlow AI</span>
+                <span className="text-xl font-bold text-foreground">Savit Chat</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-xs mb-6">
                 Automate your WhatsApp business communication with AI-powered chatbots and order management.
@@ -82,7 +82,7 @@ export function Footer() {
 
         <div className="border-t border-border py-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ChatFlow AI. All rights reserved.
+            © {new Date().getFullYear()} Savit Chat. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

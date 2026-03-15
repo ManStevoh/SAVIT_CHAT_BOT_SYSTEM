@@ -47,7 +47,7 @@ export function DashboardSidebar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <MessageSquare className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-sidebar-foreground">ChatFlow AI</span>
+            <span className="font-bold text-sidebar-foreground">Savit Chat</span>
           </Link>
         )}
         {collapsed && (

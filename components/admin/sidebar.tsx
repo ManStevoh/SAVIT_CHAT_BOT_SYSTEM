@@ -37,7 +37,7 @@ export function AdminSidebar() {
           <Shield className="h-4 w-4 text-primary-foreground" />
         </div>
         <div>
-          <span className="font-bold text-sidebar-foreground">ChatFlow AI</span>
+          <span className="font-bold text-sidebar-foreground">Savit Chat</span>
           <span className="ml-2 text-xs text-muted-foreground">Admin</span>
         </div>
       </div>

@@ -16,7 +16,7 @@ export function LandingNavbar() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <MessageSquare className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">ChatFlow AI</span>
+            <span className="text-xl font-bold text-foreground">Savit Chat</span>
           </div>
 
           <div className="hidden md:flex md:items-center md:gap-8">

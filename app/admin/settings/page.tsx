@@ -54,7 +54,7 @@ export default function AdminSettingsPage() {
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="platformName">Platform Name</FieldLabel>
-                  <Input id="platformName" defaultValue="ChatFlow AI" />
+                  <Input id="platformName" defaultValue="Savit Chat" />
                 </Field>
 
                 <Field>
