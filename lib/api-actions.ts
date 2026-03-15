@@ -6,6 +6,7 @@ import type {
   Product,
   FAQ,
   Plan,
+  PaymentGateway,
   Company,
   User,
 } from './mock-data'
@@ -483,6 +484,10 @@ export interface CreatePlanData {
   cta?: string
   sortOrder?: number
   stripePriceId?: string
+  isFree?: boolean
+  hasTrial?: boolean
+  trialDays?: number | null
+  trialElapsedAction?: string | null
 }
 
 export interface UpdatePlanData {
@@ -496,6 +501,10 @@ export interface UpdatePlanData {
   cta?: string
   sortOrder?: number
   stripePriceId?: string
+  isFree?: boolean
+  hasTrial?: boolean
+  trialDays?: number | null
+  trialElapsedAction?: string | null
 }
 
 /**
@@ -505,7 +514,7 @@ export interface UpdatePlanData {
 export async function createPlan(data: CreatePlanData): Promise<{ success: boolean; plan?: Plan; message?: string }> {
   if (useMockApi()) {
     await delay(600)
-    return { success: true, plan: { id: String(Date.now()), name: data.name, slug: data.slug, priceDisplay: data.priceDisplay, priceAmount: data.priceAmount ?? null, description: data.description ?? '', features: data.features ?? [], popular: data.popular ?? false, cta: data.cta ?? 'Start Free Trial', sortOrder: data.sortOrder ?? 0 } as Plan }
+    return { success: true, plan: { id: String(Date.now()), name: data.name, slug: data.slug, priceDisplay: data.priceDisplay, priceAmount: data.priceAmount ?? null, description: data.description ?? '', features: data.features ?? [], popular: data.popular ?? false, cta: data.cta ?? 'Start Free Trial', sortOrder: data.sortOrder ?? 0, isFree: data.isFree ?? false, hasTrial: data.hasTrial ?? false, trialDays: data.trialDays ?? null, trialElapsedAction: data.trialElapsedAction ?? null } as Plan }
   }
   try {
     const res = await apiRequest<{ success: boolean; plan: Plan }>('/api/admin/plans', { method: 'POST', body: data })
@@ -590,6 +599,29 @@ export async function createBillingPortalSession(
     return { success: true, url: res.url }
   } catch (e) {
     return { success: false, message: e instanceof Error ? e.message : 'Could not open billing portal' }
+  }
+}
+
+/**
+ * Update payment gateway (admin only)
+ * Laravel: PUT /api/admin/payment-gateways/:slug
+ */
+export async function updatePaymentGateway(
+  slug: string,
+  data: { isEnabled?: boolean; config?: Record<string, string | number> }
+): Promise<{ success: boolean; gateway?: PaymentGateway; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; gateway: PaymentGateway }>(`/api/admin/payment-gateways/${slug}`, {
+      method: 'PUT',
+      body: data,
+    })
+    return res
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
   }
 }
 

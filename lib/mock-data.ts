@@ -110,6 +110,22 @@ export interface Subscription {
   billingCycle: 'monthly' | 'yearly'
 }
 
+/** What happens to the customer account when trial ends */
+export type TrialElapsedAction =
+  | "downgrade"
+  | "suspend"
+  | "require_payment"
+  | "cancel"
+  | string
+
+export interface PaymentGateway {
+  id: string
+  slug: string
+  name: string
+  isEnabled: boolean
+  config: Record<string, string | number>
+}
+
 export interface Plan {
   id: string
   name: string
@@ -125,6 +141,14 @@ export interface Plan {
   stripePriceId?: string
   /** When true, user can start Stripe Checkout for this plan */
   checkoutAvailable?: boolean
+  /** Plan is free (no payment required) */
+  isFree?: boolean
+  /** Paid plan offers a trial period */
+  hasTrial?: boolean
+  /** Trial length in days */
+  trialDays?: number | null
+  /** What happens when trial elapses: downgrade, suspend, require_payment, cancel, or custom */
+  trialElapsedAction?: string | null
 }
 
 export interface Company {

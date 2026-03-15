@@ -14,6 +14,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -36,6 +43,13 @@ import { useAdminPlans } from "@/lib/api-hooks"
 import { createPlan, updatePlan, deletePlan, type CreatePlanData } from "@/lib/api-actions"
 import type { Plan } from "@/lib/mock-data"
 
+const TRIAL_ELAPSED_OPTIONS: { value: string; label: string }[] = [
+  { value: "require_payment", label: "Require payment to continue" },
+  { value: "downgrade", label: "Downgrade to free plan" },
+  { value: "suspend", label: "Suspend account" },
+  { value: "cancel", label: "Cancel subscription" },
+]
+
 const defaultForm: CreatePlanData & { featuresText: string } = {
   name: "",
   slug: "",
@@ -48,6 +62,10 @@ const defaultForm: CreatePlanData & { featuresText: string } = {
   cta: "Start Free Trial",
   sortOrder: 0,
   stripePriceId: "",
+  isFree: false,
+  hasTrial: false,
+  trialDays: null,
+  trialElapsedAction: null,
 }
 
 function slugify(s: string): string {
@@ -87,7 +105,11 @@ export default function AdminPlansPage() {
       popular: plan.popular ?? false,
       cta: plan.cta ?? "Start Free Trial",
       sortOrder: plan.sortOrder ?? 0,
-      stripePriceId: (plan as { stripePriceId?: string }).stripePriceId ?? "",
+      stripePriceId: plan.stripePriceId ?? "",
+      isFree: plan.isFree ?? false,
+      hasTrial: plan.hasTrial ?? false,
+      trialDays: plan.trialDays ?? null,
+      trialElapsedAction: plan.trialElapsedAction ?? null,
     })
     setFormError("")
     setDialogOpen(true)
@@ -111,6 +133,10 @@ export default function AdminPlansPage() {
       cta: form.cta?.trim() || "Start Free Trial",
       sortOrder: form.sortOrder ?? 0,
       stripePriceId: form.stripePriceId?.trim() || undefined,
+      isFree: form.isFree ?? false,
+      hasTrial: form.hasTrial ?? false,
+      trialDays: form.hasTrial && form.trialDays != null && form.trialDays > 0 ? form.trialDays : null,
+      trialElapsedAction: form.hasTrial && form.trialElapsedAction ? form.trialElapsedAction : null,
     }
     if (!payload.name || !payload.slug || !payload.priceDisplay) {
       setFormError("Name, slug, and price display are required.")
@@ -223,7 +249,9 @@ export default function AdminPlansPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Slug</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Price</TableHead>
+                  <TableHead>Trial</TableHead>
                   <TableHead>Popular</TableHead>
                   <TableHead>CTA</TableHead>
                   <TableHead>Order</TableHead>
@@ -236,9 +264,30 @@ export default function AdminPlansPage() {
                     <TableCell className="font-medium text-foreground">{plan.name}</TableCell>
                     <TableCell className="text-muted-foreground font-mono text-sm">{plan.slug}</TableCell>
                     <TableCell>
+                      {plan.isFree ? (
+                        <Badge variant="secondary">Free</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Paid</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       {plan.priceDisplay ?? plan.price ?? "—"}
                       {plan.priceAmount != null && (
                         <span className="ml-1 text-muted-foreground text-xs">(${plan.priceAmount})</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {plan.hasTrial && plan.trialDays != null ? (
+                        <span>
+                          {plan.trialDays} days
+                          {plan.trialElapsedAction && (
+                            <span className="block text-xs">
+                              → {TRIAL_ELAPSED_OPTIONS.find((o) => o.value === plan.trialElapsedAction)?.label ?? plan.trialElapsedAction}
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        "—"
                       )}
                     </TableCell>
                     <TableCell>
@@ -351,6 +400,80 @@ export default function AdminPlansPage() {
                 placeholder="Start Free Trial"
               />
             </div>
+
+            <div className="space-y-4 rounded-lg border border-border p-4">
+              <p className="text-sm font-medium text-foreground">Plan type & trial</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="plan-is-free"
+                  checked={form.isFree}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      isFree: e.target.checked,
+                      hasTrial: e.target.checked ? false : f.hasTrial,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-input"
+                />
+                <Label htmlFor="plan-is-free">This is a free plan (no payment required)</Label>
+              </div>
+              {!form.isFree && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="plan-has-trial"
+                      checked={form.hasTrial}
+                      onChange={(e) => setForm((f) => ({ ...f, hasTrial: e.target.checked }))}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                    <Label htmlFor="plan-has-trial">This plan has a trial period users can try</Label>
+                  </div>
+                  {form.hasTrial && (
+                    <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="plan-trial-days">Trial length (days)</Label>
+                        <Input
+                          id="plan-trial-days"
+                          type="number"
+                          min={1}
+                          max={365}
+                          value={form.trialDays ?? ""}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              trialDays: e.target.value === "" ? null : parseInt(e.target.value, 10) || null,
+                            }))
+                          }
+                          placeholder="e.g. 14"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="plan-trial-elapsed">When trial elapses, what happens to the customer account?</Label>
+                        <Select
+                          value={form.trialElapsedAction ?? ""}
+                          onValueChange={(value) => setForm((f) => ({ ...f, trialElapsedAction: value || null }))}
+                        >
+                          <SelectTrigger id="plan-trial-elapsed" className="w-full">
+                            <SelectValue placeholder="Select behavior..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TRIAL_ELAPSED_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"

@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Shield,
   Layers,
+  Wallet,
 } from "lucide-react"
 
 const navigation = [
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Plans", href: "/admin/plans", icon: Layers },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
+  { name: "Payment Gateways", href: "/admin/payment-gateways", icon: Wallet },
   { name: "AI Usage", href: "/admin/ai-usage", icon: Bot },
   { name: "System Logs", href: "/admin/logs", icon: FileText },
   { name: "Settings", href: "/admin/settings", icon: Settings },
