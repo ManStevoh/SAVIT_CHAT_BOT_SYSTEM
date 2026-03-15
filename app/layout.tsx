@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppBrandingProvider } from '@/components/providers/AppBrandingProvider'
+import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
 const inter = Inter({ 
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
         <AppBrandingProvider>
           {children}
+          <Toaster />
           <Analytics />
         </AppBrandingProvider>
       </body>

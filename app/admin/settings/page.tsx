@@ -133,8 +133,9 @@ export default function AdminSettingsPage() {
       } else {
         toast({ title: res.message ?? "Save failed", variant: "destructive" })
       }
-    } catch {
-      toast({ title: "Failed to save email settings", variant: "destructive" })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to save email settings"
+      toast({ title: message, variant: "destructive" })
     } finally {
       setSavingEmail(false)
     }
@@ -244,8 +245,9 @@ export default function AdminSettingsPage() {
       } else {
         toast({ title: res.message ?? "Failed to send test email", variant: "destructive" })
       }
-    } catch {
-      toast({ title: "Failed to send test email", variant: "destructive" })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to send test email"
+      toast({ title: message, variant: "destructive" })
     } finally {
       setSendingTest(false)
     }
@@ -667,7 +669,7 @@ export default function AdminSettingsPage() {
               </FieldGroup>
 
               <div className="flex flex-wrap gap-2 items-end">
-                <Button onClick={handleSaveEmail} disabled={savingEmail}>
+                <Button type="button" onClick={handleSaveEmail} disabled={savingEmail}>
                   {savingEmail ? "Saving…" : "Save Email Settings"}
                 </Button>
                 <div className="flex gap-2 items-center">
@@ -676,9 +678,15 @@ export default function AdminSettingsPage() {
                     placeholder="Email to receive test"
                     value={testEmailTo}
                     onChange={(e) => setTestEmailTo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        handleSendTestEmail()
+                      }
+                    }}
                     className="w-56"
                   />
-                  <Button variant="outline" onClick={handleSendTestEmail} disabled={sendingTest}>
+                  <Button type="button" variant="outline" onClick={handleSendTestEmail} disabled={sendingTest}>
                     {sendingTest ? "Sending…" : "Send Test Email"}
                   </Button>
                 </div>
