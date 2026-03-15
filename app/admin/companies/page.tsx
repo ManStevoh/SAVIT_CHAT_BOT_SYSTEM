@@ -167,6 +167,8 @@ export default function AdminCompaniesPage() {
       const res = await adminImpersonateCompany(company.id)
       setImpersonateLoading(null)
       if (res.success && res.token && res.user) {
+        localStorage.removeItem("auth_token")
+        localStorage.removeItem("auth_user")
         sessionStorage.setItem("auth_token", res.token)
         sessionStorage.setItem("auth_user", JSON.stringify(res.user))
         router.push("/dashboard")
