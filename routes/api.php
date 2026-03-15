@@ -1,0 +1,47 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+// Auth (no auth required)
+Route::prefix('auth')->group(function () {
+    Route::post('login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+    Route::post('register', [App\Http\Controllers\Api\AuthController::class, 'register']);
+    Route::post('forgot-password', [App\Http\Controllers\Api\AuthController::class, 'forgotPassword']);
+    Route::post('reset-password', [App\Http\Controllers\Api\AuthController::class, 'resetPassword']);
+    Route::post('logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
+});
+
+// Company (auth required)
+Route::prefix('company')->middleware('auth:sanctum')->group(function () {
+    Route::get('chats', [App\Http\Controllers\Api\Company\ChatController::class, 'index']);
+    Route::get('chats/{chatId}/messages', [App\Http\Controllers\Api\Company\ChatMessageController::class, 'index']);
+    Route::post('chats/{chatId}/messages', [App\Http\Controllers\Api\Company\ChatMessageController::class, 'store']);
+    Route::get('orders', [App\Http\Controllers\Api\Company\OrderController::class, 'index']);
+    Route::patch('orders/{order}', [App\Http\Controllers\Api\Company\OrderController::class, 'updateStatus']);
+    Route::get('customers', [App\Http\Controllers\Api\Company\CustomerController::class, 'index']);
+    Route::get('products', [App\Http\Controllers\Api\Company\ProductController::class, 'index']);
+    Route::apiResource('products', App\Http\Controllers\Api\Company\ProductController::class)->only(['store', 'update', 'destroy']);
+    Route::get('faqs', [App\Http\Controllers\Api\Company\FaqController::class, 'index']);
+    Route::apiResource('faqs', App\Http\Controllers\Api\Company\FaqController::class)->only(['store', 'update', 'destroy']);
+    Route::get('analytics', [App\Http\Controllers\Api\Company\AnalyticsController::class, 'index']);
+    Route::get('subscription', [App\Http\Controllers\Api\Company\SubscriptionController::class, 'show']);
+    Route::get('subscription/invoices', [App\Http\Controllers\Api\Company\SubscriptionController::class, 'invoices']);
+    Route::get('settings', [App\Http\Controllers\Api\Company\SettingsController::class, 'show']);
+    Route::put('settings', [App\Http\Controllers\Api\Company\SettingsController::class, 'update']);
+    Route::post('whatsapp/connect', [App\Http\Controllers\Api\Company\WhatsAppController::class, 'connect']);
+});
+
+// Admin (auth:sanctum + admin role)
+Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('overview', [App\Http\Controllers\Api\Admin\OverviewController::class, 'index']);
+    Route::get('companies', [App\Http\Controllers\Api\Admin\CompanyController::class, 'index']);
+    Route::patch('companies/{company}', [App\Http\Controllers\Api\Admin\CompanyController::class, 'updateStatus']);
+    Route::get('users', [App\Http\Controllers\Api\Admin\UserController::class, 'index']);
+    Route::patch('users/{user}', [App\Http\Controllers\Api\Admin\UserController::class, 'updateStatus']);
+    Route::get('subscriptions', [App\Http\Controllers\Api\Admin\SubscriptionController::class, 'index']);
+    Route::get('revenue', [App\Http\Controllers\Api\Admin\RevenueController::class, 'index']);
+    Route::get('ai-usage', [App\Http\Controllers\Api\Admin\AIUsageController::class, 'index']);
+    Route::get('logs', [App\Http\Controllers\Api\Admin\LogController::class, 'index']);
+    Route::put('settings', [App\Http\Controllers\Api\Admin\PlatformSettingsController::class, 'update']);
+    Route::post('export', [App\Http\Controllers\Api\Admin\ExportController::class, 'export']);
+});
