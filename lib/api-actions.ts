@@ -99,9 +99,19 @@ export async function register(data: RegisterData): Promise<{ success: boolean; 
     return { success: true, message: 'Registration successful! Please check your email to verify your account.' }
   }
   try {
+    // Laravel's 'confirmed' rule expects password_confirmation, not confirmPassword
+    const body = {
+      companyName: data.companyName,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      password: data.password,
+      password_confirmation: data.confirmPassword,
+      acceptTerms: data.acceptTerms,
+    }
     return await apiRequest<{ success: boolean; message?: string }>('/api/auth/register', {
       method: 'POST',
-      body: data,
+      body,
     })
   } catch (e) {
     return handleApiError(e)
@@ -472,6 +482,7 @@ export interface CreatePlanData {
   popular?: boolean
   cta?: string
   sortOrder?: number
+  stripePriceId?: string
 }
 
 export interface UpdatePlanData {
@@ -484,6 +495,7 @@ export interface UpdatePlanData {
   popular?: boolean
   cta?: string
   sortOrder?: number
+  stripePriceId?: string
 }
 
 /**
@@ -533,6 +545,51 @@ export async function deletePlan(planId: string): Promise<{ success: boolean; me
     return await apiRequest<{ success: boolean }>(`/api/admin/plans/${planId}`, { method: 'DELETE' })
   } catch (e) {
     return handleApiError(e)
+  }
+}
+
+/**
+ * Create Stripe Checkout Session (company user). Returns redirect URL.
+ * Laravel: POST /api/company/checkout
+ */
+export async function createCheckoutSession(
+  planId: string,
+  options?: { successUrl?: string; cancelUrl?: string }
+): Promise<{ success: boolean; url?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true, url: 'https://checkout.stripe.com/c/pay/cs_test_placeholder' }
+  }
+  try {
+    const res = await apiRequest<{ url: string }>('/api/company/checkout', {
+      method: 'POST',
+      body: { planId, ...options },
+    })
+    return { success: true, url: res.url }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Checkout failed' }
+  }
+}
+
+/**
+ * Create Stripe Billing Portal session (company user). Returns redirect URL.
+ * Laravel: POST /api/company/billing-portal
+ */
+export async function createBillingPortalSession(
+  returnUrl?: string
+): Promise<{ success: boolean; url?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, url: 'https://billing.stripe.com/session/placeholder' }
+  }
+  try {
+    const res = await apiRequest<{ url: string }>('/api/company/billing-portal', {
+      method: 'POST',
+      body: returnUrl ? { returnUrl } : {},
+    })
+    return { success: true, url: res.url }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Could not open billing portal' }
   }
 }
 

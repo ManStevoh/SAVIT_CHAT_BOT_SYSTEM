@@ -1,5 +1,7 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -13,34 +15,26 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Check, CreditCard, Download, MessageSquare, Users, Zap } from "lucide-react"
-// API: GET /api/company/subscription (useSubscription), GET /api/company/subscription/invoices (useSubscriptionInvoices)
-import { useSubscription, useSubscriptionInvoices, type BillingInvoice } from "@/lib/api-hooks"
-
-// Available plans: API GET /api/company/plans or static until backend provides
-const PLANS_PLACEHOLDER = [
-  {
-    name: "Starter",
-    price: "$29",
-    current: false,
-    features: ["1 WhatsApp number", "1,000 messages/month", "Basic AI chatbot", "Email support"],
-  },
-  {
-    name: "Growth",
-    price: "$99",
-    current: true,
-    features: ["3 WhatsApp numbers", "10,000 messages/month", "Advanced AI with GPT-4", "Multi-agent inbox", "Analytics dashboard", "Priority support"],
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    current: false,
-    features: ["Unlimited WhatsApp numbers", "Unlimited messages", "Custom AI training", "Dedicated account manager", "Custom integrations", "SLA guarantee"],
-  },
-]
+import { useSubscription, useSubscriptionInvoices, usePlans, type BillingInvoice } from "@/lib/api-hooks"
+import { createCheckoutSession, createBillingPortalSession } from "@/lib/api-actions"
 
 export default function SubscriptionPage() {
+  const searchParams = useSearchParams()
   const { data: subscription, error, isLoading, mutate } = useSubscription()
   const { data: billingHistory = [] } = useSubscriptionInvoices()
+  const { data: plansData = [] } = usePlans()
+  const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [checkoutMessage, setCheckoutMessage] = useState<"success" | "cancelled" | null>(null)
+
+  useEffect(() => {
+    const q = searchParams.get("checkout")
+    if (q === "success" || q === "cancelled") {
+      setCheckoutMessage(q)
+      mutate()
+      if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
+    }
+  }, [searchParams, mutate])
 
   if (isLoading && !subscription) {
     return (
@@ -80,19 +74,43 @@ export default function SubscriptionPage() {
     )
   }
 
+  const planSlug = subscription?.plan ?? "starter"
   const planName = subscription?.plan === "professional" ? "Growth" : subscription?.plan === "starter" ? "Starter" : subscription?.plan === "enterprise" ? "Enterprise" : "Growth"
-  const planPrice = subscription?.amount ? `$${subscription.amount}` : "$99"
-  const renewalDate = subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "April 14, 2024"
+  const planPrice = subscription?.amount ? `$${Number(subscription.amount)}` : "$99"
+  const renewalDate = subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"
   const status = subscription?.status ?? "active"
 
-  // Usage: TODO from API GET /api/company/subscription/usage when available
   const usage = [
     { name: "Messages", used: 7234, limit: 10000, icon: MessageSquare },
     { name: "WhatsApp Numbers", used: 2, limit: 3, icon: Zap },
     { name: "Team Members", used: 4, limit: 10, icon: Users },
   ]
 
-  const plans = PLANS_PLACEHOLDER.map((p) => ({ ...p, current: p.name === planName }))
+  const handleSubscribe = async (planId: string) => {
+    setCheckoutPlanId(planId)
+    const result = await createCheckoutSession(planId)
+    setCheckoutPlanId(null)
+    if (result.success && result.url) window.location.href = result.url
+    else alert(result.message ?? "Could not start checkout.")
+  }
+
+  const handleBillingPortal = async () => {
+    setPortalLoading(true)
+    const result = await createBillingPortalSession()
+    setPortalLoading(false)
+    if (result.success && result.url) window.location.href = result.url
+    else alert(result.message ?? "Could not open billing portal.")
+  }
+
+  const plans = plansData.map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    price: p.price ?? p.priceDisplay ?? "—",
+    features: p.features ?? [],
+    current: p.slug === planSlug,
+    checkoutAvailable: p.checkoutAvailable ?? false,
+  }))
   const billingList = billingHistory.length > 0 ? billingHistory : [
     { id: "INV-001", date: "Mar 14, 2024", amount: planPrice + ".00", status: "paid" },
     { id: "INV-002", date: "Feb 14, 2024", amount: planPrice + ".00", status: "paid" },
@@ -104,6 +122,17 @@ export default function SubscriptionPage() {
         <h1 className="text-2xl font-bold text-foreground">Subscription</h1>
         <p className="text-muted-foreground">Manage your subscription and billing</p>
       </div>
+
+      {checkoutMessage === "success" && (
+        <div className="rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
+          Payment successful. Your subscription is now active.
+        </div>
+      )}
+      {checkoutMessage === "cancelled" && (
+        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+          Checkout was cancelled. You can try again when ready.
+        </div>
+      )}
 
       {/* Current Plan — from useSubscription() */}
       <Card>
@@ -128,8 +157,9 @@ export default function SubscriptionPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline">Change Plan</Button>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
+                {portalLoading ? "Opening…" : "Manage billing"}
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -161,7 +191,7 @@ export default function SubscriptionPage() {
         </CardContent>
       </Card>
 
-      {/* Available Plans — API: GET /api/company/plans (optional) */}
+      {/* Available Plans — from usePlans() */}
       <Card>
         <CardHeader>
           <CardTitle>Available Plans</CardTitle>
@@ -171,7 +201,7 @@ export default function SubscriptionPage() {
           <div className="grid gap-6 md:grid-cols-3">
             {plans.map((plan) => (
               <div
-                key={plan.name}
+                key={plan.id}
                 className={`relative rounded-xl border p-6 ${
                   plan.current ? "border-primary bg-primary/5" : "border-border"
                 }`}
@@ -201,9 +231,16 @@ export default function SubscriptionPage() {
                 <Button
                   className="w-full"
                   variant={plan.current ? "secondary" : "default"}
-                  disabled={plan.current}
+                  disabled={plan.current || (checkoutPlanId !== null && checkoutPlanId !== plan.id)}
+                  onClick={() => plan.checkoutAvailable && !plan.current && handleSubscribe(plan.id)}
                 >
-                  {plan.current ? "Current Plan" : plan.price === "Custom" ? "Contact Sales" : "Upgrade"}
+                  {plan.current
+                    ? "Current Plan"
+                    : plan.price === "Custom" || !plan.checkoutAvailable
+                      ? "Contact Sales"
+                      : checkoutPlanId === plan.id
+                        ? "Redirecting…"
+                        : "Subscribe"}
                 </Button>
               </div>
             ))}
@@ -218,9 +255,9 @@ export default function SubscriptionPage() {
             <CardTitle>Billing History</CardTitle>
             <CardDescription>Your recent invoices</CardDescription>
           </div>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleBillingPortal} disabled={portalLoading}>
             <CreditCard className="h-4 w-4 mr-2" />
-            Update Payment
+            {portalLoading ? "Opening…" : "Manage billing"}
           </Button>
         </CardHeader>
         <CardContent>

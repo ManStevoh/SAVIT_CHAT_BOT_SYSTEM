@@ -1,57 +1,35 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
-
-const plans = [
-  {
-    name: "Starter",
-    price: "$29",
-    description: "Perfect for small businesses just getting started",
-    features: [
-      "1 WhatsApp number",
-      "1,000 messages/month",
-      "Basic AI chatbot",
-      "Order management",
-      "Email support",
-    ],
-    cta: "Start Free Trial",
-    popular: false,
-  },
-  {
-    name: "Growth",
-    price: "$99",
-    description: "For growing businesses with higher volume",
-    features: [
-      "3 WhatsApp numbers",
-      "10,000 messages/month",
-      "Advanced AI with GPT-4",
-      "Multi-agent inbox",
-      "Analytics dashboard",
-      "Priority support",
-      "API access",
-    ],
-    cta: "Start Free Trial",
-    popular: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    description: "For large organizations with custom needs",
-    features: [
-      "Unlimited WhatsApp numbers",
-      "Unlimited messages",
-      "Custom AI training",
-      "Dedicated account manager",
-      "Custom integrations",
-      "SLA guarantee",
-      "On-premise option",
-    ],
-    cta: "Contact Sales",
-    popular: false,
-  },
-]
+import { usePlans } from "@/lib/api-hooks"
+import { createCheckoutSession } from "@/lib/api-actions"
+import { getAuthToken } from "@/lib/api-client"
 
 export function PricingSection() {
+  const { data: plans, error, isLoading } = usePlans()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setIsLoggedIn(!!getAuthToken())
+  }, [])
+
+  const list = plans ?? []
+
+  const handleSubscribe = async (planId: string) => {
+    setCheckoutPlanId(planId)
+    const result = await createCheckoutSession(planId)
+    setCheckoutPlanId(null)
+    if (result.success && result.url) {
+      window.location.href = result.url
+    } else {
+      alert(result.message ?? "Could not start checkout.")
+    }
+  }
+
   return (
     <section id="pricing" className="py-20 lg:py-32 bg-card/30 border-y border-border/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -64,54 +42,81 @@ export function PricingSection() {
           </p>
         </div>
 
+        {isLoading && list.length === 0 ? (
+          <div className="flex justify-center py-12">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 text-muted-foreground">
+            Unable to load pricing. Please try again later.
+          </div>
+        ) : (
         <div className="grid gap-8 lg:grid-cols-3">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`relative rounded-2xl border ${
-                plan.popular
-                  ? "border-primary bg-card shadow-xl shadow-primary/10"
-                  : "border-border bg-card"
-              } p-8 transition-all hover:shadow-lg`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center rounded-full bg-primary px-4 py-1 text-sm font-medium text-primary-foreground">
-                    Most Popular
-                  </span>
-                </div>
-              )}
+          {list.map((plan) => {
+            const canCheckout = plan.checkoutAvailable && isLoggedIn
+            const showContactSales = !plan.checkoutAvailable
+            const ctaText = plan.cta ?? "Start Free Trial"
 
-              <div className="text-center mb-8">
-                <h3 className="text-xl font-semibold text-foreground">{plan.name}</h3>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-foreground">{plan.price}</span>
-                  {plan.price !== "Custom" && (
-                    <span className="text-muted-foreground">/month</span>
-                  )}
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
-              </div>
-
-              <ul className="space-y-3 mb-8">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-3">
-                    <Check className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-sm text-muted-foreground">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button
-                asChild
-                className="w-full"
-                variant={plan.popular ? "default" : "outline"}
+            return (
+              <div
+                key={plan.id}
+                className={`relative rounded-2xl border ${
+                  plan.popular
+                    ? "border-primary bg-card shadow-xl shadow-primary/10"
+                    : "border-border bg-card"
+                } p-8 transition-all hover:shadow-lg`}
               >
-                <Link href="/register">{plan.cta}</Link>
-              </Button>
-            </div>
-          ))}
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <span className="inline-flex items-center rounded-full bg-primary px-4 py-1 text-sm font-medium text-primary-foreground">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-center mb-8">
+                  <h3 className="text-xl font-semibold text-foreground">{plan.name}</h3>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold text-foreground">{plan.price ?? plan.priceDisplay}</span>
+                    {(plan.price ?? plan.priceDisplay) !== "Custom" && (
+                      <span className="text-muted-foreground">/month</span>
+                    )}
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {(plan.features ?? []).map((feature) => (
+                    <li key={feature} className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-primary shrink-0" />
+                      <span className="text-sm text-muted-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {canCheckout ? (
+                  <Button
+                    className="w-full"
+                    variant={plan.popular ? "default" : "outline"}
+                    disabled={checkoutPlanId !== null}
+                    onClick={() => handleSubscribe(plan.id)}
+                  >
+                    {checkoutPlanId === plan.id ? "Redirecting…" : ctaText}
+                  </Button>
+                ) : showContactSales ? (
+                  <Button asChild className="w-full" variant={plan.popular ? "default" : "outline"}>
+                    <Link href="/register">{ctaText}</Link>
+                  </Button>
+                ) : (
+                  <Button asChild className="w-full" variant={plan.popular ? "default" : "outline"}>
+                    <Link href="/register">{ctaText}</Link>
+                  </Button>
+                )}
+              </div>
+            )
+          })}
         </div>
+        )}
       </div>
     </section>
   )

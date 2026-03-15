@@ -122,6 +122,9 @@ export interface Plan {
   popular: boolean
   cta?: string
   sortOrder?: number
+  stripePriceId?: string
+  /** When true, user can start Stripe Checkout for this plan */
+  checkoutAvailable?: boolean
 }
 
 export interface Company {

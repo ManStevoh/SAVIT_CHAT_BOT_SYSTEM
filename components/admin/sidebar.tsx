@@ -14,12 +14,14 @@ import {
   Settings,
   MessageSquare,
   Shield,
+  Layers,
 } from "lucide-react"
 
 const navigation = [
   { name: "Platform Overview", href: "/admin", icon: LayoutDashboard },
   { name: "Companies", href: "/admin/companies", icon: Building2 },
   { name: "Users", href: "/admin/users", icon: Users },
+  { name: "Plans", href: "/admin/plans", icon: Layers },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { name: "AI Usage", href: "/admin/ai-usage", icon: Bot },
