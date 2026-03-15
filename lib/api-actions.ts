@@ -626,6 +626,67 @@ export async function updatePaymentGateway(
 }
 
 /**
+ * Get single company (admin only)
+ * Laravel: GET /api/admin/companies/:companyId
+ */
+export async function getAdminCompany(companyId: string): Promise<{ success: boolean; company?: Company; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return {
+      success: true,
+      company: {
+        id: companyId,
+        name: 'Sample Company',
+        email: 'contact@sample.com',
+        phone: '+1 555-0100',
+        plan: 'starter',
+        status: 'active',
+        totalChats: 0,
+        totalOrders: 0,
+        createdAt: new Date().toISOString().slice(0, 10),
+      } as Company,
+    }
+  }
+  try {
+    const company = await apiRequest<Company>(`/api/admin/companies/${companyId}`)
+    return { success: true, company }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Failed to load company' }
+  }
+}
+
+export interface UpdateAdminCompanyData {
+  name?: string
+  email?: string
+  phone?: string
+  plan?: Company['plan']
+  status?: Company['status']
+}
+
+/**
+ * Update company (admin only)
+ * Laravel: PUT /api/admin/companies/:companyId
+ */
+export async function updateAdminCompany(
+  companyId: string,
+  data: UpdateAdminCompanyData
+): Promise<{ success: boolean; company?: Company; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true, message: 'Company updated successfully' }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; company: Company }>(`/api/admin/companies/${companyId}`, {
+      method: 'PUT',
+      body: data,
+    })
+    return { success: true, company: res.company }
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+/**
  * Update company status (admin only)
  * Laravel: PATCH /api/admin/companies/:companyId
  */
@@ -666,6 +727,108 @@ export async function updateUserStatus(
     })
   } catch (e) {
     return handleApiError(e)
+  }
+}
+
+/**
+ * Reset user password (admin only)
+ * Laravel: POST /api/admin/users/:userId/reset-password
+ */
+export async function adminResetUserPassword(
+  userId: string,
+  password: string,
+  confirmPassword: string
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    if (password !== confirmPassword) return { success: false, message: 'Passwords do not match' }
+    return { success: true, message: 'Password updated successfully.' }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/admin/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: { password, confirmPassword },
+    })
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Failed to reset password' }
+  }
+}
+
+/**
+ * Impersonate a user (admin only). Returns token and user to log in as that user.
+ * Laravel: POST /api/admin/impersonate/user/:userId
+ */
+export async function adminImpersonateUser(userId: string): Promise<{
+  success: boolean
+  token?: string
+  user?: User
+  message?: string
+}> {
+  if (useMockApi()) {
+    await delay(500)
+    return {
+      success: true,
+      token: 'mock-impersonation-token',
+      user: {
+        id: userId,
+        name: 'Impersonated User',
+        email: 'user@company.com',
+        role: 'company_owner',
+        companyId: '1',
+        companyName: 'Test Company',
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        createdAt: new Date().toISOString().slice(0, 10),
+      } as User,
+    }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; token: string; user: User }>(
+      `/api/admin/impersonate/user/${userId}`,
+      { method: 'POST' }
+    )
+    return res
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Impersonation failed' }
+  }
+}
+
+/**
+ * Impersonate a company (admin only). Returns token and user for first user of company.
+ * Laravel: POST /api/admin/impersonate/company/:companyId
+ */
+export async function adminImpersonateCompany(companyId: string): Promise<{
+  success: boolean
+  token?: string
+  user?: User
+  message?: string
+}> {
+  if (useMockApi()) {
+    await delay(500)
+    return {
+      success: true,
+      token: 'mock-impersonation-token',
+      user: {
+        id: '1',
+        name: 'Company User',
+        email: 'owner@company.com',
+        role: 'company_owner',
+        companyId,
+        companyName: 'Test Company',
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        createdAt: new Date().toISOString().slice(0, 10),
+      } as User,
+    }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; token: string; user: User }>(
+      `/api/admin/impersonate/company/${companyId}`,
+      { method: 'POST' }
+    )
+    return res
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Impersonation failed' }
   }
 }
 

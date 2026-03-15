@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -18,10 +20,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, MoreVertical, Users, UserCheck, UserPlus, Shield } from "lucide-react"
-// API: GET /api/admin/users — list users (useAdminUsers)
+import { Search, MoreVertical, Users, UserCheck, UserPlus, Shield, LogIn, KeyRound } from "lucide-react"
 import { useAdminUsers } from "@/lib/api-hooks"
+import { adminResetUserPassword, updateUserStatus, adminImpersonateUser } from "@/lib/api-actions"
 import type { User } from "@/lib/mock-data"
 
 function formatRelativeTime(iso: string): string {
@@ -42,8 +62,16 @@ function formatRelativeTime(iso: string): string {
 }
 
 export default function AdminUsersPage() {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [suspendTarget, setSuspendTarget] = useState<User | null>(null)
+  const [impersonateLoading, setImpersonateLoading] = useState<string | null>(null)
   const { data: users, error, isLoading, mutate } = useAdminUsers({
     search: searchQuery || undefined,
     role: roleFilter !== "all" ? roleFilter : undefined,
@@ -86,6 +114,52 @@ export default function AdminUsersPage() {
   }
 
   const list = users ?? []
+
+  const saveResetPassword = useCallback(async () => {
+    if (!resetPasswordUser) return
+    if (newPassword.length < 8) {
+      setResetError("Password must be at least 8 characters")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError("Passwords do not match")
+      return
+    }
+    setResetLoading(true)
+    setResetError(null)
+    const res = await adminResetUserPassword(resetPasswordUser.id, newPassword, confirmPassword)
+    setResetLoading(false)
+    if (res.success) {
+      setResetPasswordUser(null)
+      setNewPassword("")
+      setConfirmPassword("")
+    } else {
+      setResetError(res.message ?? "Failed to reset password")
+    }
+  }, [resetPasswordUser, newPassword, confirmPassword])
+
+  const confirmSuspend = useCallback(async () => {
+    if (!suspendTarget) return
+    await updateUserStatus(suspendTarget.id, "inactive")
+    mutate()
+    setSuspendTarget(null)
+  }, [suspendTarget, mutate])
+
+  const handleImpersonateUser = useCallback(
+    async (user: User) => {
+      if (user.role === "admin") return
+      setImpersonateLoading(user.id)
+      const res = await adminImpersonateUser(user.id)
+      setImpersonateLoading(null)
+      if (res.success && res.token && res.user) {
+        sessionStorage.setItem("auth_token", res.token)
+        sessionStorage.setItem("auth_user", JSON.stringify(res.user))
+        router.push("/dashboard")
+      }
+    },
+    [router]
+  )
+
   const stats = [
     { name: "Total Users", value: list.length.toLocaleString(), icon: Users },
     { name: "Active Today", value: "—", icon: UserCheck },
@@ -190,10 +264,28 @@ export default function AdminUsersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>View Profile</DropdownMenuItem>
-                          <DropdownMenuItem>Edit User</DropdownMenuItem>
-                          <DropdownMenuItem>Reset Password</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">Suspend</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setResetPasswordUser(user)}>
+                            <KeyRound className="mr-2 h-4 w-4" />
+                            Reset Password
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleImpersonateUser(user)}
+                            disabled={!!impersonateLoading || user.role === "admin"}
+                          >
+                            {impersonateLoading === user.id ? (
+                              <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                            ) : (
+                              <LogIn className="mr-2 h-4 w-4" />
+                            )}
+                            Login as user
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setSuspendTarget(user)}
+                            disabled={user.role === "admin" || user.status === "inactive"}
+                          >
+                            Suspend
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -204,6 +296,85 @@ export default function AdminUsersPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!resetPasswordUser}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetPasswordUser(null)
+            setNewPassword("")
+            setConfirmPassword("")
+            setResetError(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset password</DialogTitle>
+            <DialogDescription>
+              {resetPasswordUser
+                ? `Set a new password for ${resetPasswordUser.name} (${resetPasswordUser.email}). They will need to use this to sign in.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {resetError && (
+              <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">{resetError}</p>
+            )}
+            <div className="grid gap-2">
+              <Label htmlFor="new-password">New password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min 8 characters"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="confirm-password">Confirm password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetPasswordUser(null)}>
+              Cancel
+            </Button>
+            <Button onClick={saveResetPassword} disabled={resetLoading}>
+              {resetLoading ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              ) : (
+                "Update password"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!suspendTarget} onOpenChange={(open) => !open && setSuspendTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Suspend user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {suspendTarget
+                ? `"${suspendTarget.name}" will be set to inactive and will not be able to sign in until reactivated.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSuspend} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Suspend
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
