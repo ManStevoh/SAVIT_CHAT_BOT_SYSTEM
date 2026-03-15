@@ -105,7 +105,7 @@ export async function register(data: RegisterData): Promise<{ success: boolean; 
     return { success: true, message: 'Registration successful! Please check your email to verify your account.' }
   }
   try {
-    // Laravel's 'confirmed' rule expects password_confirmation, not confirmPassword
+    // Laravel's 'confirmed' rule expects password_confirmation; backend also accepts confirmPassword
     const body = {
       companyName: data.companyName,
       name: data.name,
@@ -113,6 +113,7 @@ export async function register(data: RegisterData): Promise<{ success: boolean; 
       phone: data.phone,
       password: data.password,
       password_confirmation: data.confirmPassword,
+      confirmPassword: data.confirmPassword,
       acceptTerms: data.acceptTerms,
     }
     return await apiRequest<{ success: boolean; message?: string }>('/api/auth/register', {
