@@ -446,24 +446,56 @@ export async function updateSettings(data: UpdateSettingsData): Promise<{ succes
   }
 }
 
+/** Payload for connecting WhatsApp via Meta Cloud API */
+export interface ConnectWhatsAppPayload {
+  phoneNumberId: string
+  accessToken: string
+  displayPhoneNumber?: string
+  whatsappBusinessAccountId?: string
+}
+
 /**
- * Connect WhatsApp number
+ * Connect WhatsApp Business number (Meta Cloud API).
  * Laravel: POST /api/company/whatsapp/connect
  */
-export async function connectWhatsApp(phoneNumber: string): Promise<{ success: boolean; qrCode?: string; message?: string }> {
+export async function connectWhatsApp(payload: ConnectWhatsAppPayload): Promise<{ success: boolean; message?: string }> {
   if (useMockApi()) {
     await delay(2000)
-    return {
-      success: true,
-      qrCode: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=example',
-      message: 'Scan the QR code with WhatsApp to connect',
-    }
+    return { success: true, message: 'WhatsApp account connected.' }
   }
   try {
-    return await apiRequest<{ success: boolean; qrCode?: string; message?: string }>('/api/company/whatsapp/connect', {
+    return await apiRequest<{ success: boolean; message?: string }>('/api/company/whatsapp/connect', {
       method: 'POST',
-      body: { phoneNumber },
+      body: payload,
     })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/** WhatsApp connection status from backend */
+export interface WhatsAppStatus {
+  connected: boolean
+  phoneNumberId: string | null
+  displayPhoneNumber: string | null
+}
+
+export async function getWhatsAppStatus(): Promise<WhatsAppStatus> {
+  if (useMockApi()) {
+    await delay(300)
+    return { connected: false, phoneNumberId: null, displayPhoneNumber: null }
+  }
+  const res = await apiRequest<WhatsAppStatus>('/api/company/whatsapp/status', { method: 'GET' })
+  return res
+}
+
+export async function disconnectWhatsApp(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true, message: 'WhatsApp disconnected.' }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>('/api/company/whatsapp/disconnect', { method: 'POST' })
   } catch (e) {
     return handleApiError(e)
   }
@@ -577,6 +609,29 @@ export async function createCheckoutSession(
     return { success: true, url: res.url }
   } catch (e) {
     return { success: false, message: e instanceof Error ? e.message : 'Checkout failed' }
+  }
+}
+
+/**
+ * Initiate M-Pesa STK push for subscription (company user). User completes payment on phone.
+ * Laravel: POST /api/company/mpesa/initiate
+ */
+export async function createMpesaCheckout(
+  planId: string,
+  phone: string
+): Promise<{ success: boolean; checkoutRequestId?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(800)
+    return { success: true, checkoutRequestId: 'mock-req-'.concat(planId), message: 'Enter your M-Pesa PIN on your phone.' }
+  }
+  try {
+    const res = await apiRequest<{ checkoutRequestId: string; message: string }>('/api/company/mpesa/initiate', {
+      method: 'POST',
+      body: { planId, phone },
+    })
+    return { success: true, checkoutRequestId: res.checkoutRequestId, message: res.message }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'M-Pesa initiation failed' }
   }
 }
 
@@ -832,18 +887,123 @@ export async function adminImpersonateCompany(companyId: string): Promise<{
   }
 }
 
+export interface PlatformSettings {
+  platformName?: string | null
+  primaryColor?: string | null
+  secondaryColor?: string | null
+  appLogo?: string | null
+  supportEmail?: string | null
+  maintenanceMode?: boolean
+  aiModel?: string | null
+  maxTokensPerRequest?: number | null
+  rateLimitPerMinute?: number | null
+  smtpHost?: string | null
+  smtpPort?: number | null
+  smtpEncryption?: string | null
+  smtpUser?: string | null
+  smtpPassword?: string | null
+  fromEmail?: string | null
+  fromName?: string | null
+  whatsappWebhookVerifyToken?: string | null
+  metaAppSecret?: string | null
+  openaiApiKey?: string | null
+  openaiModel?: string | null
+  openaiMaxTokens?: number | null
+  sessionTimeoutMinutes?: number | null
+  maxLoginAttempts?: number | null
+  passwordMinLength?: number | null
+  require2fa?: boolean
+  ipAllowlistEnabled?: boolean
+  auditLoggingEnabled?: boolean
+  notifyNewRegistrations?: boolean
+  notifyFailedPayments?: boolean
+  notifySecurityAlerts?: boolean
+  notifySystemErrors?: boolean
+  notifyUsageAlerts?: boolean
+  notifyDailySummary?: boolean
+}
+
 export interface UpdatePlatformSettingsData {
   platformName?: string
+  primaryColor?: string
+  secondaryColor?: string
+  logo?: File
   supportEmail?: string
   maintenanceMode?: boolean
   aiModel?: string
   maxTokensPerRequest?: number
   rateLimitPerMinute?: number
+  smtpHost?: string
+  smtpPort?: number
+  smtpEncryption?: string
+  smtpUser?: string
+  smtpPassword?: string
+  fromEmail?: string
+  fromName?: string
+  whatsappWebhookVerifyToken?: string
+  metaAppSecret?: string
+  openaiApiKey?: string
+  openaiModel?: string
+  openaiMaxTokens?: number
+  sessionTimeoutMinutes?: number
+  maxLoginAttempts?: number
+  passwordMinLength?: number
+  require2fa?: boolean
+  ipAllowlistEnabled?: boolean
+  auditLoggingEnabled?: boolean
+  notifyNewRegistrations?: boolean
+  notifyFailedPayments?: boolean
+  notifySecurityAlerts?: boolean
+  notifySystemErrors?: boolean
+  notifyUsageAlerts?: boolean
+  notifyDailySummary?: boolean
+}
+
+/** Public app branding (name, logo, colors) for theme/invoices. GET /api/app-branding */
+export interface AppBranding {
+  applicationName: string
+  appLogo: string | null
+  primaryColor: string | null
+  secondaryColor: string | null
 }
 
 /**
- * Update platform settings (admin only)
- * Laravel: PUT /api/admin/settings
+ * Get platform settings (admin only)
+ * Laravel: GET /api/admin/settings
+ */
+export async function getPlatformSettings(): Promise<PlatformSettings> {
+  if (useMockApi()) {
+    await delay(300)
+    return {
+      platformName: 'Savit Chat',
+      supportEmail: 'support@chatflow.ai',
+      maintenanceMode: false,
+      smtpHost: 'smtp.sendgrid.net',
+      smtpPort: 587,
+      smtpEncryption: 'tls',
+      smtpUser: 'apikey',
+      fromEmail: 'noreply@chatflow.ai',
+      fromName: 'Savit Chat',
+      sessionTimeoutMinutes: 60,
+      maxLoginAttempts: 5,
+      passwordMinLength: 8,
+      require2fa: true,
+      ipAllowlistEnabled: false,
+      auditLoggingEnabled: true,
+      notifyNewRegistrations: true,
+      notifyFailedPayments: true,
+      notifySecurityAlerts: true,
+      notifySystemErrors: true,
+      notifyUsageAlerts: true,
+      notifyDailySummary: true,
+    }
+  }
+  return apiRequest<PlatformSettings>('/api/admin/settings')
+}
+
+/**
+ * Update platform settings (admin only). Use FormData when logo is included.
+ * Laravel: PUT /api/admin/settings (JSON or multipart with logo)
  */
 export async function updatePlatformSettings(data: UpdatePlatformSettingsData): Promise<{ success: boolean; message?: string }> {
   if (useMockApi()) {
@@ -851,9 +1011,62 @@ export async function updatePlatformSettings(data: UpdatePlatformSettingsData): 
     return { success: true, message: 'Platform settings updated successfully' }
   }
   try {
+    const hasLogo = data.logo != null
+    if (hasLogo) {
+      const form = new FormData()
+      const { logo, ...rest } = data
+      form.append('logo', logo!)
+      Object.entries(rest).forEach(([k, v]) => {
+        if (v === undefined || v === null) return
+        form.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v))
+      })
+      return await apiRequest<{ success: boolean; message?: string }>('/api/admin/settings', {
+        method: 'POST',
+        body: form,
+      })
+    }
     return await apiRequest<{ success: boolean; message?: string }>('/api/admin/settings', {
       method: 'PUT',
       body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Get public app branding (no auth). For theme, invoices, email headers.
+ * Laravel: GET /api/app-branding
+ */
+export async function getAppBranding(): Promise<AppBranding> {
+  if (useMockApi()) {
+    await delay(100)
+    return {
+      applicationName: 'Savit Chat',
+      appLogo: null,
+      primaryColor: null,
+      secondaryColor: null,
+    }
+  }
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || ''
+  const res = await fetch(`${baseUrl}/api/app-branding`, { headers: { Accept: 'application/json' } })
+  if (!res.ok) throw new Error('Failed to load app branding')
+  return res.json()
+}
+
+/**
+ * Send a test email (admin only). Uses current SMTP settings.
+ * Laravel: POST /api/admin/settings/test-email
+ */
+export async function sendTestEmail(to: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(1500)
+    return { success: true, message: `Test email sent to ${to}` }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>('/api/admin/settings/test-email', {
+      method: 'POST',
+      body: { to },
     })
   } catch (e) {
     return handleApiError(e)

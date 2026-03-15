@@ -298,6 +298,8 @@ export interface BillingInvoice {
   date: string
   amount: string
   status: string
+  /** Stripe hosted invoice PDF URL (optional) */
+  invoicePdf?: string | null
 }
 
 /**

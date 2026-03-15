@@ -13,10 +13,10 @@ import {
   FileText,
   Settings,
   MessageSquare,
-  Shield,
   Layers,
   Wallet,
 } from "lucide-react"
+import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
 const navigation = [
   { name: "Platform Overview", href: "/admin", icon: LayoutDashboard },
@@ -37,13 +37,11 @@ export function AdminSidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
       <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <Shield className="h-4 w-4 text-primary-foreground" />
-        </div>
-        <div>
-          <span className="font-bold text-sidebar-foreground">Savit Chat</span>
-          <span className="ml-2 text-xs text-muted-foreground">Admin</span>
-        </div>
+        <AppLogoAndName
+          variant="admin"
+          showAdminBadge
+          suffix={<span className="ml-2 text-xs text-muted-foreground">Admin</span>}
+        />
       </div>
 
       <nav className="flex flex-col gap-1 p-2">

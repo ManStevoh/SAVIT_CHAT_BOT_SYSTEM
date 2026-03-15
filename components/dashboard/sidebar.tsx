@@ -17,6 +17,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { useState } from "react"
+import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -43,17 +44,14 @@ export function DashboardSidebar() {
     >
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
         {!collapsed && (
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <MessageSquare className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-sidebar-foreground">Savit Chat</span>
+          <Link href="/dashboard">
+            <AppLogoAndName variant="sidebar" />
           </Link>
         )}
         {collapsed && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary mx-auto">
-            <MessageSquare className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <Link href="/dashboard" className="mx-auto flex justify-center">
+            <AppLogoAndName variant="sidebar" iconOnly />
+          </Link>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}

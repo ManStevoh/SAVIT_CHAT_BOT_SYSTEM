@@ -1,5 +1,9 @@
+"use client"
+
 import Link from "next/link"
-import { MessageSquare, Twitter, Linkedin, Github } from "lucide-react"
+import { Twitter, Linkedin, Github } from "lucide-react"
+import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
+import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
 const footerLinks = {
   Product: [
@@ -29,6 +33,9 @@ const footerLinks = {
 }
 
 export function Footer() {
+  const branding = useAppBranding()
+  const appName = branding.applicationName || "Savit Chat"
+
   return (
     <footer className="border-t border-border bg-card/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -36,10 +43,7 @@ export function Footer() {
           <div className="grid gap-8 lg:grid-cols-6">
             <div className="lg:col-span-2">
               <div className="flex items-center gap-2 mb-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                  <MessageSquare className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <span className="text-xl font-bold text-foreground">Savit Chat</span>
+                <AppLogoAndName variant="footer" />
               </div>
               <p className="text-sm text-muted-foreground max-w-xs mb-6">
                 Automate your WhatsApp business communication with AI-powered chatbots and order management.
@@ -82,7 +86,7 @@ export function Footer() {
 
         <div className="border-t border-border py-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Savit Chat. All rights reserved.
+            © {new Date().getFullYear()} {appName}. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

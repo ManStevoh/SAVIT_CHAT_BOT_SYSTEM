@@ -2,7 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { logout } from "@/lib/api-actions"
+import { clearAuthCookie } from "@/lib/auth-cookie"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +19,9 @@ import { Search, Bell, Moon, Sun, User, Settings, LogOut } from "lucide-react"
 
 export function DashboardNavbar() {
   const [isDark, setIsDark] = useState(true)
+  const [loggingOut, setLoggingOut] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
   const isAdmin = pathname?.startsWith("/admin") ?? false
   const profileHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
   const settingsHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
@@ -98,11 +102,25 @@ export function DashboardNavbar() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/login" className="flex items-center gap-2 text-destructive">
-                <LogOut className="h-4 w-4" />
-                Log out
-              </Link>
+            <DropdownMenuItem
+              className="flex items-center gap-2 text-destructive"
+              disabled={loggingOut}
+              onClick={async () => {
+                setLoggingOut(true)
+                try {
+                  await logout()
+                } finally {
+                  clearAuthCookie()
+                  localStorage.removeItem('auth_token')
+                  localStorage.removeItem('auth_user')
+                  sessionStorage.removeItem('auth_token')
+                  sessionStorage.removeItem('auth_user')
+                  router.push('/login')
+                }
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              {loggingOut ? 'Logging out…' : 'Log out'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

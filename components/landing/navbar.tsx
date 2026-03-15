@@ -3,7 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, MessageSquare } from "lucide-react"
+import { Menu, X } from "lucide-react"
+import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
 export function LandingNavbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -13,10 +14,7 @@ export function LandingNavbar() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <MessageSquare className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">Savit Chat</span>
+            <AppLogoAndName variant="navbar" />
           </div>
 
           <div className="hidden md:flex md:items-center md:gap-8">

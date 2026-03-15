@@ -48,6 +48,7 @@ import {
   adminImpersonateCompany,
   type UpdateAdminCompanyData,
 } from "@/lib/api-actions"
+import { setAuthCookie } from "@/lib/auth-cookie"
 import type { Company } from "@/lib/mock-data"
 
 const PLAN_OPTIONS: Company["plan"][] = ["starter", "professional", "enterprise"]
@@ -171,6 +172,7 @@ export default function AdminCompaniesPage() {
         localStorage.removeItem("auth_user")
         sessionStorage.setItem("auth_token", res.token)
         sessionStorage.setItem("auth_user", JSON.stringify(res.user))
+        setAuthCookie(res.user.role, false)
         router.push("/dashboard")
       }
     },

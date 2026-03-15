@@ -139,8 +139,10 @@ export interface Plan {
   cta?: string
   sortOrder?: number
   stripePriceId?: string
-  /** When true, user can start Stripe Checkout for this plan */
+  /** When true, user can start checkout for this plan (Stripe and/or M-Pesa) */
   checkoutAvailable?: boolean
+  /** Which payment methods are available: { stripe?: boolean, mpesa?: boolean } */
+  paymentMethods?: { stripe?: boolean; mpesa?: boolean }
   /** Plan is free (no payment required) */
   isFree?: boolean
   /** Paid plan offers a trial period */

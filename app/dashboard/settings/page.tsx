@@ -27,7 +27,7 @@ import {
 import { Building2, MessageSquare, Bot, Users, Bell, Plus, Trash2, Check } from "lucide-react"
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
 import { useCompanySettings } from "@/lib/api-hooks"
-import { updateSettings } from "@/lib/api-actions"
+import { updateSettings, connectWhatsApp, getWhatsAppStatus, disconnectWhatsApp, type WhatsAppStatus } from "@/lib/api-actions"
 
 // Team members: API GET /api/company/team — replace with useCompanyTeam() when available
 const teamMembersPlaceholder = [
@@ -37,11 +37,6 @@ const teamMembersPlaceholder = [
   { id: 4, name: "Alice Brown", email: "alice@company.com", role: "Viewer", status: "pending" },
 ]
 
-// WhatsApp numbers: API GET /api/company/whatsapp/numbers — replace with hook when available
-const whatsappNumbersPlaceholder = [
-  { id: 1, number: "+1 555-0123", name: "Main Business", status: "connected" },
-  { id: 2, number: "+1 555-0124", name: "Support Line", status: "connected" },
-]
 
 export default function SettingsPage() {
   const { data: settings } = useCompanySettings()
@@ -53,6 +48,53 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("contact@quickbite.com")
   const [phone, setPhone] = useState("+1 555-0100")
   const [address, setAddress] = useState("123 Main Street, New York, NY 10001")
+
+  const [waStatus, setWaStatus] = useState<WhatsAppStatus | null>(null)
+  const [waLoading, setWaLoading] = useState(false)
+  const [waConnectLoading, setWaConnectLoading] = useState(false)
+  const [waPhoneNumberId, setWaPhoneNumberId] = useState("")
+  const [waAccessToken, setWaAccessToken] = useState("")
+  const [waDisplayNumber, setWaDisplayNumber] = useState("")
+  const [waMessage, setWaMessage] = useState<string | null>(null)
+
+  const loadWhatsAppStatus = async () => {
+    setWaLoading(true)
+    try {
+      const s = await getWhatsAppStatus()
+      setWaStatus(s)
+    } finally {
+      setWaLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "whatsapp") loadWhatsAppStatus()
+  }, [activeTab])
+
+  const handleWhatsAppConnect = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setWaMessage(null)
+    setWaConnectLoading(true)
+    const result = await connectWhatsApp({
+      phoneNumberId: waPhoneNumberId.trim(),
+      accessToken: waAccessToken.trim(),
+      displayPhoneNumber: waDisplayNumber.trim() || undefined,
+    })
+    setWaConnectLoading(false)
+    setWaMessage(result.message ?? (result.success ? "Connected." : "Failed."))
+    if (result.success) {
+      setWaAccessToken("")
+      loadWhatsAppStatus()
+    }
+  }
+
+  const handleWhatsAppDisconnect = async () => {
+    setWaMessage(null)
+    setWaLoading(true)
+    const result = await disconnectWhatsApp()
+    setWaMessage(result.message ?? (result.success ? "Disconnected." : "Failed."))
+    loadWhatsAppStatus()
+  }
 
   // Load initial values from GET /api/company/settings when available
   useEffect(() => {
@@ -176,44 +218,75 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* WhatsApp Setup */}
+        {/* WhatsApp Setup — Meta Cloud API */}
         <TabsContent value="whatsapp">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>WhatsApp Numbers</CardTitle>
-                <CardDescription>Manage your connected WhatsApp Business numbers</CardDescription>
-              </div>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Number
-              </Button>
+            <CardHeader>
+              <CardTitle>WhatsApp Business (Meta Cloud API)</CardTitle>
+              <CardDescription>Connect your WhatsApp Business number to receive and send messages. Get Phone Number ID and Access Token from Meta for Developers.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {whatsappNumbersPlaceholder.map((wa) => (
-                  <div key={wa.id} className="flex items-center justify-between rounded-lg border border-border p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                        <MessageSquare className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{wa.name}</p>
-                        <p className="text-sm text-muted-foreground">{wa.number}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Badge variant="default" className="gap-1">
-                        <Check className="h-3 w-3" />
-                        {wa.status}
-                      </Badge>
-                      <Button variant="ghost" size="icon">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+            <CardContent className="space-y-6">
+              {waLoading && !waStatus ? (
+                <p className="text-sm text-muted-foreground">Loading status…</p>
+              ) : waStatus?.connected ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="gap-1">
+                      <Check className="h-3 w-3" />
+                      Connected
+                    </Badge>
+                    {waStatus.displayPhoneNumber && (
+                      <span className="text-sm text-muted-foreground">{waStatus.displayPhoneNumber}</span>
+                    )}
+                    {waStatus.phoneNumberId && (
+                      <span className="text-xs text-muted-foreground">ID: {waStatus.phoneNumberId}</span>
+                    )}
                   </div>
-                ))}
-              </div>
+                  <p className="text-sm text-muted-foreground">
+                    Webhook URL (set in Meta App → WhatsApp → Configuration):{" "}
+                    <code className="rounded bg-muted px-1">
+                      {process.env.NEXT_PUBLIC_API_URL ?? "https://your-backend.com"}/api/whatsapp/webhook
+                    </code>
+                  </p>
+                  <Button variant="outline" onClick={handleWhatsAppDisconnect} disabled={waLoading}>
+                    Disconnect WhatsApp
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleWhatsAppConnect} className="space-y-4">
+                  <Field>
+                    <FieldLabel>Phone Number ID</FieldLabel>
+                    <Input
+                      placeholder="From Meta App → WhatsApp → API Setup"
+                      value={waPhoneNumberId}
+                      onChange={(e) => setWaPhoneNumberId(e.target.value)}
+                      required
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Access Token</FieldLabel>
+                    <Input
+                      type="password"
+                      placeholder="Permanent token from Meta"
+                      value={waAccessToken}
+                      onChange={(e) => setWaAccessToken(e.target.value)}
+                      required
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Display phone (optional)</FieldLabel>
+                    <Input
+                      placeholder="e.g. +201234567890"
+                      value={waDisplayNumber}
+                      onChange={(e) => setWaDisplayNumber(e.target.value)}
+                    />
+                  </Field>
+                  {waMessage && <p className="text-sm text-muted-foreground">{waMessage}</p>}
+                  <Button type="submit" disabled={waConnectLoading}>
+                    {waConnectLoading ? "Connecting…" : "Connect WhatsApp"}
+                  </Button>
+                </form>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

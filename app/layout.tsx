@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { AppBrandingProvider } from '@/components/providers/AppBrandingProvider'
 import './globals.css'
 
 const inter = Inter({ 
@@ -33,8 +34,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
-        {children}
-        <Analytics />
+        <AppBrandingProvider>
+          {children}
+          <Analytics />
+        </AppBrandingProvider>
       </body>
     </html>
   )

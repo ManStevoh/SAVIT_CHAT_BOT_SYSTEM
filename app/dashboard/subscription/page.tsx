@@ -14,9 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Check, CreditCard, Download, MessageSquare, Users, Zap } from "lucide-react"
+import { Check, CreditCard, Download, MessageSquare, Smartphone, Users, Zap } from "lucide-react"
 import { useSubscription, useSubscriptionInvoices, usePlans, type BillingInvoice } from "@/lib/api-hooks"
-import { createCheckoutSession, createBillingPortalSession } from "@/lib/api-actions"
+import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout } from "@/lib/api-actions"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export default function SubscriptionPage() {
   const searchParams = useSearchParams()
@@ -26,6 +28,10 @@ export default function SubscriptionPage() {
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<"success" | "cancelled" | null>(null)
+  const [mpesaPlanId, setMpesaPlanId] = useState<string | null>(null)
+  const [mpesaPhone, setMpesaPhone] = useState("")
+  const [mpesaWaiting, setMpesaWaiting] = useState<string | null>(null)
+  const [mpesaError, setMpesaError] = useState<string | null>(null)
 
   useEffect(() => {
     const q = searchParams.get("checkout")
@@ -35,6 +41,29 @@ export default function SubscriptionPage() {
       if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
     }
   }, [searchParams, mutate])
+
+  // Poll subscription when M-Pesa payment is pending
+  useEffect(() => {
+    if (!mpesaWaiting || !subscription) return
+    const planSlug = plans.find((p) => p.id === mpesaWaiting)?.slug
+    if (subscription.plan === planSlug && subscription.status === "active") {
+      setMpesaWaiting(null)
+      setCheckoutMessage("success")
+      mutate()
+    }
+  }, [mpesaWaiting, subscription, plans, mutate])
+
+  useEffect(() => {
+    if (!mpesaWaiting) return
+    const interval = setInterval(() => mutate(), 3000)
+    const timeout = setTimeout(() => {
+      setMpesaWaiting(null)
+    }, 120000)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [mpesaWaiting, mutate])
 
   if (isLoading && !subscription) {
     return (
@@ -94,6 +123,23 @@ export default function SubscriptionPage() {
     else alert(result.message ?? "Could not start checkout.")
   }
 
+  const handleMpesaSubmit = async (planId: string) => {
+    const phone = mpesaPhone.trim().replace(/\s/g, "")
+    if (!phone) {
+      setMpesaError("Enter your M-Pesa phone number (e.g. 254712345678 or 0712345678)")
+      return
+    }
+    setMpesaError(null)
+    const result = await createMpesaCheckout(planId, phone)
+    if (!result.success) {
+      setMpesaError(result.message ?? "Failed to send M-Pesa prompt")
+      return
+    }
+    setMpesaPlanId(null)
+    setMpesaPhone("")
+    setMpesaWaiting(planId)
+  }
+
   const handleBillingPortal = async () => {
     setPortalLoading(true)
     const result = await createBillingPortalSession()
@@ -110,11 +156,25 @@ export default function SubscriptionPage() {
     features: p.features ?? [],
     current: p.slug === planSlug,
     checkoutAvailable: p.checkoutAvailable ?? false,
+    paymentMethods: p.paymentMethods ?? {},
   }))
+  const formatInvoiceDate = (d: string) => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return new Date(d + "Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    }
+    return d
+  }
   const billingList = billingHistory.length > 0 ? billingHistory : [
     { id: "INV-001", date: "Mar 14, 2024", amount: planPrice + ".00", status: "paid" },
     { id: "INV-002", date: "Feb 14, 2024", amount: planPrice + ".00", status: "paid" },
   ] as BillingInvoice[]
+  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    const s = status.toLowerCase()
+    if (s === "paid") return "default"
+    if (s === "open" || s === "uncollectible" || s === "unpaid") return "destructive"
+    if (s === "draft" || s === "void") return "secondary"
+    return "outline"
+  }
 
   return (
     <div className="space-y-6">
@@ -228,20 +288,72 @@ export default function SubscriptionPage() {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  className="w-full"
-                  variant={plan.current ? "secondary" : "default"}
-                  disabled={plan.current || (checkoutPlanId !== null && checkoutPlanId !== plan.id)}
-                  onClick={() => plan.checkoutAvailable && !plan.current && handleSubscribe(plan.id)}
-                >
-                  {plan.current
-                    ? "Current Plan"
-                    : plan.price === "Custom" || !plan.checkoutAvailable
-                      ? "Contact Sales"
-                      : checkoutPlanId === plan.id
-                        ? "Redirecting…"
-                        : "Subscribe"}
-                </Button>
+                <div className="space-y-2">
+                  {plan.current ? (
+                    <Button className="w-full" variant="secondary" disabled>
+                      Current Plan
+                    </Button>
+                  ) : plan.price === "Custom" || !plan.checkoutAvailable ? (
+                    <Button className="w-full" variant="secondary" disabled>
+                      Contact Sales
+                    </Button>
+                  ) : (
+                    <>
+                      {(plan.paymentMethods?.stripe ?? plan.checkoutAvailable) && (
+                        <Button
+                          className="w-full"
+                          variant="default"
+                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
+                          onClick={() => handleSubscribe(plan.id)}
+                        >
+                          {checkoutPlanId === plan.id ? "Redirecting…" : plan.paymentMethods?.mpesa ? "Subscribe with Card" : "Subscribe"}
+                        </Button>
+                      )}
+                      {plan.paymentMethods?.mpesa && (
+                        <>
+                          {mpesaPlanId !== plan.id && !mpesaWaiting ? (
+                            <Button
+                              className="w-full mt-2"
+                              variant="outline"
+                              disabled={!!checkoutPlanId}
+                              onClick={() => setMpesaPlanId(mpesaPlanId === plan.id ? null : plan.id)}
+                            >
+                              <Smartphone className="h-4 w-4 mr-2" />
+                              Pay with M-Pesa
+                            </Button>
+                          ) : mpesaWaiting === plan.id ? (
+                            <p className="text-sm text-center text-muted-foreground py-2">
+                              Check your phone and enter PIN. We&apos;ll update when payment is received…
+                            </p>
+                          ) : null}
+                          {mpesaPlanId === plan.id && !mpesaWaiting && (
+                            <div className="mt-3 space-y-2 rounded-lg border p-3 bg-muted/30">
+                              <Label htmlFor={`mpesa-phone-${plan.id}`}>M-Pesa phone number</Label>
+                              <Input
+                                id={`mpesa-phone-${plan.id}`}
+                                placeholder="254712345678 or 0712345678"
+                                value={mpesaPhone}
+                                onChange={(e) => setMpesaPhone(e.target.value)}
+                                className="bg-background"
+                              />
+                              {mpesaError && (
+                                <p className="text-sm text-destructive">{mpesaError}</p>
+                              )}
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => handleMpesaSubmit(plan.id)}>
+                                  Send M-Pesa prompt
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => { setMpesaPlanId(null); setMpesaError(null) }}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -275,15 +387,23 @@ export default function SubscriptionPage() {
               {billingList.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium text-foreground">{invoice.id}</TableCell>
-                  <TableCell className="text-muted-foreground">{invoice.date}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatInvoiceDate(invoice.date)}</TableCell>
                   <TableCell className="text-foreground">{invoice.amount}</TableCell>
                   <TableCell>
-                    <Badge variant="default">{invoice.status}</Badge>
+                    <Badge variant={getStatusVariant(invoice.status)}>{invoice.status}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon">
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    {invoice.invoicePdf ? (
+                      <Button variant="ghost" size="icon" asChild>
+                        <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer" title="Download invoice">
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="icon" disabled title="No invoice link">
+                        <Download className="h-4 w-4 opacity-50" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

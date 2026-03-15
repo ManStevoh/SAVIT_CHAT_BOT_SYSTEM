@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { login, type LoginCredentials } from '@/lib/api-actions'
+import { setAuthCookie } from '@/lib/auth-cookie'
 import { Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 const SAFE_REDIRECT_PREFIXES = ['/admin', '/dashboard']
@@ -87,6 +88,7 @@ export default function LoginPage() {
             sessionStorage.setItem('auth_token', result.token)
             sessionStorage.setItem('auth_user', JSON.stringify(result.user))
           }
+          setAuthCookie(result.user.role, formData.rememberMe)
         }
         // Redirect to requested page or by role
         const target =
