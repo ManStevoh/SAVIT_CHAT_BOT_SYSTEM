@@ -104,6 +104,17 @@ export default function RegisterPage() {
             </Field>
 
             <Field>
+              <FieldLabel htmlFor="phone">Phone</FieldLabel>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                placeholder="+1 555-0100"
+                required
+              />
+            </Field>
+
+            <Field>
               <FieldLabel htmlFor="password">Password</FieldLabel>
               <div className="relative">
                 <Input

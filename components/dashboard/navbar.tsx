@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +17,10 @@ import { Search, Bell, Moon, Sun, User, Settings, LogOut } from "lucide-react"
 
 export function DashboardNavbar() {
   const [isDark, setIsDark] = useState(true)
+  const pathname = usePathname()
+  const isAdmin = pathname?.startsWith("/admin") ?? false
+  const profileHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
+  const settingsHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6">
@@ -81,13 +86,13 @@ export function DashboardNavbar() {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings" className="flex items-center gap-2">
+              <Link href={profileHref} className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings" className="flex items-center gap-2">
+              <Link href={settingsHref} className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 Settings
               </Link>

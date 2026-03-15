@@ -5,6 +5,7 @@ import type {
   Order,
   Product,
   FAQ,
+  Plan,
   Company,
   User,
 } from './mock-data'
@@ -460,6 +461,80 @@ export async function connectWhatsApp(phoneNumber: string): Promise<{ success: b
 // ============================================
 // SUPER ADMIN ACTIONS
 // ============================================
+
+export interface CreatePlanData {
+  name: string
+  slug: string
+  priceDisplay: string
+  priceAmount?: number | null
+  description?: string
+  features?: string[]
+  popular?: boolean
+  cta?: string
+  sortOrder?: number
+}
+
+export interface UpdatePlanData {
+  name?: string
+  slug?: string
+  priceDisplay?: string
+  priceAmount?: number | null
+  description?: string
+  features?: string[]
+  popular?: boolean
+  cta?: string
+  sortOrder?: number
+}
+
+/**
+ * Create plan (admin only)
+ * Laravel: POST /api/admin/plans
+ */
+export async function createPlan(data: CreatePlanData): Promise<{ success: boolean; plan?: Plan; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true, plan: { id: String(Date.now()), name: data.name, slug: data.slug, priceDisplay: data.priceDisplay, priceAmount: data.priceAmount ?? null, description: data.description ?? '', features: data.features ?? [], popular: data.popular ?? false, cta: data.cta ?? 'Start Free Trial', sortOrder: data.sortOrder ?? 0 } as Plan }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; plan: Plan }>('/api/admin/plans', { method: 'POST', body: data })
+    return res
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+/**
+ * Update plan (admin only)
+ * Laravel: PUT /api/admin/plans/:planId
+ */
+export async function updatePlan(planId: string, data: UpdatePlanData): Promise<{ success: boolean; plan?: Plan; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; plan: Plan }>(`/api/admin/plans/${planId}`, { method: 'PUT', body: data })
+    return res
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+/**
+ * Delete plan (admin only)
+ * Laravel: DELETE /api/admin/plans/:planId
+ */
+export async function deletePlan(planId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/admin/plans/${planId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
 
 /**
  * Update company status (admin only)

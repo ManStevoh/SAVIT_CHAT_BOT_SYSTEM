@@ -110,6 +110,20 @@ export interface Subscription {
   billingCycle: 'monthly' | 'yearly'
 }
 
+export interface Plan {
+  id: string
+  name: string
+  slug: string
+  price?: string
+  priceDisplay?: string
+  priceAmount?: number | null
+  description?: string
+  features: string[]
+  popular: boolean
+  cta?: string
+  sortOrder?: number
+}
+
 export interface Company {
   id: string
   name: string
