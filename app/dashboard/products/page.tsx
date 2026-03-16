@@ -544,7 +544,6 @@ export default function ProductsPage() {
           </p>
         )}
         </div>
-      {/* Stats Grid - API Ready */}
       <StatsGrid columns={4}>
         <StatsCard
           title="Total Products"
