@@ -244,6 +244,10 @@ export default function ProductsPage() {
     }
   }
 
+  const handleExportFormatChange = (value: string) => {
+    setExportFormat(value === 'json' ? 'json' : 'csv')
+  }
+
   const handleImportProducts = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -473,7 +477,7 @@ export default function ProductsPage() {
                   <PopoverContent className="w-64" align="end">
                     <div className="space-y-3">
                       <p className="text-sm font-medium">Export products</p>
-                      <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'csv' | 'json')}>
+                      <Select value={exportFormat} onValueChange={handleExportFormatChange}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="csv">CSV (Excel)</SelectItem>
