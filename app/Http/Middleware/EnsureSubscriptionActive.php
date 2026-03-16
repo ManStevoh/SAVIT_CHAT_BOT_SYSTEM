@@ -44,7 +44,7 @@ class EnsureSubscriptionActive
         }
 
         $hasActiveSubscription = Subscription::where('company_id', $user->company_id)
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'trial'])
             ->where('end_date', '>=', now()->toDateString())
             ->exists();
 

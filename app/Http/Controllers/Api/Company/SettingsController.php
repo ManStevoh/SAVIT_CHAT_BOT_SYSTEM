@@ -153,7 +153,10 @@ class SettingsController extends Controller
         }
         if (array_key_exists('orderPaymentMpesaConfig', $companyValidated)) {
             $v = $companyValidated['orderPaymentMpesaConfig'];
-            if (is_array($v) && ! empty(trim((string) ($v['shortcode'] ?? ''))) && ! empty(trim((string) ($v['passkey'] ?? ''))) {
+            if (is_array($v)
+                && ! empty(trim((string) ($v['shortcode'] ?? '')))
+                && ! empty(trim((string) ($v['passkey'] ?? '')))
+            ) {
                 $settings->order_payment_mpesa_config = [
                     'type' => in_array($v['type'] ?? null, ['paybill', 'till'], true) ? $v['type'] : 'paybill',
                     'shortcode' => trim((string) $v['shortcode']),
@@ -168,7 +171,7 @@ class SettingsController extends Controller
         }
         if (array_key_exists('orderPaymentStripeConfig', $companyValidated)) {
             $v = $companyValidated['orderPaymentStripeConfig'];
-            if (is_array($v) && ! empty(trim((string) ($v['secret'] ?? ''))) {
+            if (is_array($v) && ! empty(trim((string) ($v['secret'] ?? '')))) {
                 $settings->order_payment_stripe_config = [
                     'secret' => trim((string) $v['secret']),
                     'currency' => isset($v['currency']) ? trim((string) $v['currency']) : 'usd',
