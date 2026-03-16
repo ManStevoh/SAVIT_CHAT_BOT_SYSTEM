@@ -111,15 +111,15 @@ function LoginPageContent() {
       if (result.success && result.user) {
         setEmailNotVerified(false)
 
-        // Store token in storage only if backend returned one
-        if (result.token) {
-          if (formData.rememberMe) {
-            localStorage.setItem('auth_token', result.token)
-            localStorage.setItem('auth_user', JSON.stringify(result.user))
-          } else {
-            sessionStorage.setItem('auth_token', result.token)
-            sessionStorage.setItem('auth_user', JSON.stringify(result.user))
-          }
+        // Always have some token value for client-side guards, even if backend doesn't return one
+        const token = result.token ?? '1'
+
+        if (formData.rememberMe) {
+          localStorage.setItem('auth_token', token)
+          localStorage.setItem('auth_user', JSON.stringify(result.user))
+        } else {
+          sessionStorage.setItem('auth_token', token)
+          sessionStorage.setItem('auth_user', JSON.stringify(result.user))
         }
 
         // Always set auth cookies so middleware can detect logged-in state
