@@ -35,6 +35,19 @@ export default function SubscriptionPage() {
   const [mpesaError, setMpesaError] = useState<string | null>(null)
   const [autoSubscribeDone, setAutoSubscribeDone] = useState(false)
 
+  const planSlug = subscription?.plan ?? "starter"
+
+  const plans = plansData.map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    price: p.price ?? p.priceDisplay ?? "—",
+    features: p.features ?? [],
+    current: p.slug === planSlug,
+    checkoutAvailable: p.checkoutAvailable ?? false,
+    paymentMethods: p.paymentMethods ?? {},
+  }))
+
   useEffect(() => {
     const q = searchParams.get("checkout")
     if (q === "success" || q === "cancelled") {
@@ -119,7 +132,6 @@ export default function SubscriptionPage() {
     )
   }
 
-  const planSlug = subscription?.plan ?? "starter"
   const planName = subscription?.plan === "professional" ? "Growth" : subscription?.plan === "starter" ? "Starter" : subscription?.plan === "enterprise" ? "Enterprise" : "Growth"
   const planPrice = subscription?.amount ? `$${Number(subscription.amount)}` : "$99"
   const renewalDate = subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"
