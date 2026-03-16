@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ import { Eye, EyeOff } from "lucide-react"
 // API: POST /api/auth/register — register new company (api-actions.register)
 import { register as registerApi, type RegisterData } from "@/lib/api-actions"
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const planId = searchParams.get("plan")
@@ -183,5 +183,21 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-md">
+          <div className="rounded-2xl border border-border bg-card p-8 shadow-xl flex items-center justify-center">
+            <Spinner className="h-6 w-6" />
+          </div>
+        </div>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   )
 }

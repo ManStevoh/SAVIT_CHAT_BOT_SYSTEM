@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +11,7 @@ import { CheckCircle, XCircle } from 'lucide-react'
  * Shown after Stripe Checkout for an order: success_url or cancel_url redirects here.
  * Query: ?session_id=... (success) or ?cancelled=1 (cancelled).
  */
-export default function OrderPaidPage() {
+function OrderPaidPageContent() {
   const searchParams = useSearchParams()
   const cancelled = searchParams.get('cancelled') === '1'
   const sessionId = searchParams.get('session_id')
@@ -55,5 +56,13 @@ export default function OrderPaidPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function OrderPaidPage() {
+  return (
+    <Suspense>
+      <OrderPaidPageContent />
+    </Suspense>
   )
 }

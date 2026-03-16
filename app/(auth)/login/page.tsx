@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { Suspense, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import { Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 const SAFE_REDIRECT_PREFIXES = ['/admin', '/dashboard']
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = useMemo(() => {
@@ -118,7 +118,7 @@ export default function LoginPage() {
             sessionStorage.setItem('auth_token', result.token)
             sessionStorage.setItem('auth_user', JSON.stringify(result.user))
           }
-          setAuthCookie(result.user.role, formData.rememberMe)
+          setAuthCookie(result.user.role, !!formData.rememberMe)
         }
         const target =
           redirectTo ||
@@ -284,5 +284,21 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-md">
+          <div className="rounded-2xl border border-border/50 bg-card p-8 shadow-xl flex items-center justify-center">
+            <Spinner className="h-6 w-6" />
+          </div>
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   )
 }
