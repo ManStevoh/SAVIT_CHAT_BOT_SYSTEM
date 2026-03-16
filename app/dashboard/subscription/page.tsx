@@ -177,17 +177,6 @@ export default function SubscriptionPage() {
     if (result.success && result.url) window.location.href = result.url
     else alert(result.message ?? "Could not open billing portal.")
   }
-
-  const plans = plansData.map((p) => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    price: p.price ?? p.priceDisplay ?? "—",
-    features: p.features ?? [],
-    current: p.slug === planSlug,
-    checkoutAvailable: p.checkoutAvailable ?? false,
-    paymentMethods: p.paymentMethods ?? {},
-  }))
   const formatInvoiceDate = (d: string) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
       return new Date(d + "Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
