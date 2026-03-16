@@ -2,6 +2,9 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Play, MessageSquare, Bot, ShoppingCart } from "lucide-react"
 
+/** Static demo order for hero chat preview; replace with API data when endpoint is available. */
+const DEMO_ORDER = { orderNumber: "1234", lines: [{ name: "Margherita", qty: 1, price: "12.99" }, { name: "Pepperoni", qty: 1, price: "14.99" }], total: "27.98" }
+
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-32">
@@ -105,20 +108,18 @@ export function HeroSection() {
                       <div className="rounded-xl border border-border bg-card p-3">
                         <div className="flex items-center gap-2 text-xs font-medium text-foreground mb-2">
                           <ShoppingCart className="h-3.5 w-3.5 text-primary" />
-                          Order #1234
+                          Order #{DEMO_ORDER.orderNumber}
                         </div>
                         <div className="space-y-1 text-xs text-muted-foreground">
-                          <div className="flex justify-between">
-                            <span>1x Margherita</span>
-                            <span>$12.99</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>1x Pepperoni</span>
-                            <span>$14.99</span>
-                          </div>
+                          {DEMO_ORDER.lines.map((line) => (
+                            <div key={line.name} className="flex justify-between">
+                              <span>{line.qty}x {line.name}</span>
+                              <span>${line.price}</span>
+                            </div>
+                          ))}
                           <div className="border-t border-border pt-1 mt-2 flex justify-between font-medium text-foreground">
                             <span>Total</span>
-                            <span>$27.98</span>
+                            <span>${DEMO_ORDER.total}</span>
                           </div>
                         </div>
                       </div>

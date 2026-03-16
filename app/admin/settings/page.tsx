@@ -270,10 +270,13 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Platform Settings</h1>
         <p className="text-muted-foreground">Configure platform-wide settings</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          APIs (WhatsApp, OpenAI): use the <strong>Integrations</strong> tab below. Payment providers (Stripe, M-Pesa): go to <strong>Payment Gateways</strong> in the left sidebar.
+        </p>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-2">
           <TabsTrigger value="general" className="gap-2">
             <Settings className="h-4 w-4" />
             General

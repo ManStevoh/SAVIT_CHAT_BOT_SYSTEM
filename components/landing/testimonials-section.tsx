@@ -3,6 +3,7 @@
 import { Star } from "lucide-react"
 import { useLanding } from "@/lib/api-hooks"
 
+/** Used only when GET /api/landing returns no testimonials; real API data always takes precedence. */
 const FALLBACK_TESTIMONIALS = [
   { id: "1", name: "Sarah Johnson", role: "Owner, QuickBite Restaurant", content: "Savit Chat transformed our order management. We now handle 3x more orders with the same team. The AI chatbot understands our menu perfectly and customers love the instant responses.", rating: 5 },
   { id: "2", name: "Michael Chen", role: "CEO, TechStore", content: "The ROI has been incredible. We reduced response time from hours to seconds and our customer satisfaction scores increased by 45%. Best investment we made this year.", rating: 5 },

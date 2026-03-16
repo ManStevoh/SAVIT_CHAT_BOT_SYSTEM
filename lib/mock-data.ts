@@ -1,5 +1,6 @@
 // Mock data for API-ready components
-// Replace these with actual API calls in production
+// Used only when useMockApi() is true (no API URL or NEXT_PUBLIC_USE_MOCK_API=true).
+// When real API is available, all hooks/actions use backend data; this file provides types and mock fallbacks.
 //
 // ========== EXAMPLE MOCK JSON FOR API INTEGRATION ==========
 // Use these shapes when implementing backend endpoints. Each list endpoint
@@ -20,6 +21,7 @@
 // Subscriptions (admin): GET /api/admin/subscriptions -> Subscription[]
 // Logs (admin): GET /api/admin/logs        -> SystemLog[]
 // Overview (admin): GET /api/admin/overview -> { totalCompanies, activeCompanies, totalUsers, totalRevenue, ... }
+// Notifications: GET /api/company/notifications -> { items: { id, title, body?, type?, read?, createdAt? }[], unreadCount }
 // ==========================================================
 
 export interface Chat {

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/accordion"
 import { useLanding } from "@/lib/api-hooks"
 
+/** Used only when GET /api/landing returns no faqs; real API data always takes precedence. */
 const FALLBACK_FAQS = [
   { id: "1", question: "How does the WhatsApp integration work?", answer: "We use the official WhatsApp Business API to connect your business number. The setup process takes about 10 minutes and requires your business to be verified on Facebook Business Manager. Once connected, all messages are routed through our platform." },
   { id: "2", question: "Can I train the AI with my own data?", answer: "Absolutely! You can upload FAQs, product catalogs, pricing information, and business policies. Our AI learns from this data to provide accurate, contextual responses. You can also fine-tune responses based on customer interactions." },

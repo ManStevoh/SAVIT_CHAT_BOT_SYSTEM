@@ -1,5 +1,5 @@
 // API Actions for form submissions and mutations
-// Uses mock data when NEXT_PUBLIC_USE_MOCK_API is true; calls Laravel when false (set NEXT_PUBLIC_API_URL).
+// When real API is available (NEXT_PUBLIC_API_URL set and NEXT_PUBLIC_USE_MOCK_API not 'true'), all functions call Laravel; mock branches are skipped.
 
 import type {
   Order,
@@ -64,18 +64,22 @@ export async function login(credentials: LoginCredentials): Promise<{ success: b
     if (!credentials.email || !credentials.password) {
       return { success: false, message: 'Email and password are required' }
     }
+    // Mock only: when real API is used, backend returns actual user.
+    const email = credentials.email
+    const nameFromEmail = email.split('@')[0]
+    const displayName = nameFromEmail ? nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1) : 'Demo User'
     return {
       success: true,
       user: {
         id: '1',
-        name: 'Test User',
-        email: credentials.email,
+        name: displayName,
+        email,
         role: 'company_owner',
         companyId: '1',
-        companyName: 'Tech Store Egypt',
+        companyName: 'Demo Company',
         status: 'active',
         lastLogin: new Date().toISOString(),
-        createdAt: '2023-06-15',
+        createdAt: new Date().toISOString().slice(0, 10),
       },
     }
   }
@@ -902,8 +906,8 @@ export async function getAdminCompany(companyId: string): Promise<{ success: boo
       success: true,
       company: {
         id: companyId,
-        name: 'Sample Company',
-        email: 'contact@sample.com',
+        name: 'Demo Company',
+        email: 'contact@demo.com',
         phone: '+1 555-0100',
         plan: 'starter',
         status: 'active',
@@ -1037,11 +1041,11 @@ export async function adminImpersonateUser(userId: string): Promise<{
       token: 'mock-impersonation-token',
       user: {
         id: userId,
-        name: 'Impersonated User',
-        email: 'user@company.com',
+        name: 'Demo Impersonated User',
+        email: 'impersonated@demo.com',
         role: 'company_owner',
         companyId: '1',
-        companyName: 'Test Company',
+        companyName: 'Demo Company',
         status: 'active',
         lastLogin: new Date().toISOString(),
         createdAt: new Date().toISOString().slice(0, 10),
@@ -1076,11 +1080,11 @@ export async function adminImpersonateCompany(companyId: string): Promise<{
       token: 'mock-impersonation-token',
       user: {
         id: '1',
-        name: 'Company User',
-        email: 'owner@company.com',
+        name: 'Demo Company User',
+        email: 'owner@demo.com',
         role: 'company_owner',
         companyId,
-        companyName: 'Test Company',
+        companyName: 'Demo Company',
         status: 'active',
         lastLogin: new Date().toISOString(),
         createdAt: new Date().toISOString().slice(0, 10),

@@ -20,8 +20,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts"
+import { ChartLegend } from "@/components/ui/chart"
 // API: GET /api/admin/revenue?period=6m — stats and chart data (useAdminRevenue)
 import { useAdminRevenue } from "@/lib/api-hooks"
 
@@ -143,7 +143,7 @@ export default function AdminRevenuePage() {
                     <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => `$${value / 1000}k`} />
                     <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(value: number) => [`$${value.toLocaleString()}`, ""]} />
-                    <Legend />
+                    <ChartLegend />
                     <Line type="monotone" dataKey="mrr" stroke="hsl(var(--chart-1))" strokeWidth={2} name="MRR" />
                   </LineChart>
                 </ResponsiveContainer>

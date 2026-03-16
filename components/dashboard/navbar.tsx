@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { logout } from "@/lib/api-actions"
 import { clearAuthCookie } from "@/lib/auth-cookie"
+import { useNotifications } from "@/lib/api-hooks"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,14 +18,43 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Search, Bell, Moon, Sun, User, Settings, LogOut } from "lucide-react"
 
+type StoredUser = { name?: string; email?: string }
+
+function getStoredUser(): StoredUser | null {
+  if (typeof window === "undefined") return null
+  const raw = localStorage.getItem("auth_user") ?? sessionStorage.getItem("auth_user")
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as StoredUser
+  } catch {
+    return null
+  }
+}
+
+function getInitials(user: StoredUser | null): string {
+  if (!user?.name) return "?"
+  const parts = user.name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase().slice(0, 2)
+  return user.name.slice(0, 2).toUpperCase()
+}
+
 export function DashboardNavbar() {
   const [isDark, setIsDark] = useState(true)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [user, setUser] = useState<StoredUser | null>(null)
   const pathname = usePathname()
   const router = useRouter()
   const isAdmin = pathname?.startsWith("/admin") ?? false
   const profileHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
   const settingsHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
+
+  useEffect(() => {
+    setUser(getStoredUser())
+  }, [])
+
+  const { data: notificationsData } = useNotifications()
+  const notifications = notificationsData?.items ?? []
+  const unreadCount = notificationsData?.unreadCount ?? 0
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6">
@@ -52,26 +82,30 @@ export function DashboardNavbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
               <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel>Notifications</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="font-medium text-foreground">New order received</span>
-              <span className="text-xs text-muted-foreground">Order #1234 from John Doe - $49.99</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="font-medium text-foreground">AI handoff requested</span>
-              <span className="text-xs text-muted-foreground">Customer needs human assistance</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="font-medium text-foreground">Weekly report ready</span>
-              <span className="text-xs text-muted-foreground">Your analytics report is available</span>
-            </DropdownMenuItem>
+            {notifications.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                No new notifications
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-3">
+                  <span className="font-medium text-foreground">{n.title}</span>
+                  {n.body != null && n.body !== "" && (
+                    <span className="text-xs text-muted-foreground">{n.body}</span>
+                  )}
+                </DropdownMenuItem>
+              ))
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -79,10 +113,10 @@ export function DashboardNavbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-                JD
+                {getInitials(user)}
               </div>
               <span className="hidden text-sm font-medium text-foreground sm:inline">
-                John Doe
+                {user?.name ?? user?.email ?? "Account"}
               </span>
             </Button>
           </DropdownMenuTrigger>

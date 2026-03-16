@@ -430,6 +430,7 @@ export interface CompanySettings {
 /**
  * Fetch company settings for the current user
  * API Endpoint: GET /api/company/settings
+ * When real API is used, backend data is returned; mock is used only when useMockApi() is true.
  */
 export function useCompanySettings() {
   return useSWR<CompanySettings>(
@@ -440,10 +441,10 @@ export function useCompanySettings() {
       }
       await delay(400)
       return {
-        companyName: 'QuickBite Restaurant',
-        email: 'contact@quickbite.com',
-        phone: '+1 555-0100',
-        address: '123 Main Street, New York, NY 10001',
+        companyName: 'Demo Company',
+        email: 'contact@demo.com',
+        phone: '',
+        address: '',
       }
     },
     { revalidateOnFocus: false }
@@ -462,6 +463,7 @@ export interface TeamMember {
 /**
  * Fetch team members for the current company
  * API Endpoint: GET /api/company/team
+ * When mock: returns placeholder list; when real API is used, backend data is shown.
  */
 export function useCompanyTeam() {
   return useSWR<TeamMember[]>(
@@ -472,12 +474,51 @@ export function useCompanyTeam() {
       }
       await delay(400)
       return [
-        { id: '1', name: 'John Doe', email: 'john@company.com', role: 'Admin', status: 'active' },
-        { id: '2', name: 'Jane Smith', email: 'jane@company.com', role: 'Agent', status: 'active' },
-        { id: '3', name: 'Bob Wilson', email: 'bob@company.com', role: 'Agent', status: 'active' },
+        { id: '1', name: 'Team Member 1', email: 'user1@company.com', role: 'Admin', status: 'active' },
+        { id: '2', name: 'Team Member 2', email: 'user2@company.com', role: 'Agent', status: 'active' },
+        { id: '3', name: 'Team Member 3', email: 'user3@company.com', role: 'Agent', status: 'active' },
       ]
     },
     { revalidateOnFocus: false }
+  )
+}
+
+/** Notification item — API: GET /api/company/notifications (when implemented) */
+export interface NotificationItem {
+  id: string
+  title: string
+  body?: string
+  type?: 'order' | 'handoff' | 'report' | 'info'
+  read?: boolean
+  createdAt?: string
+}
+
+export interface NotificationsData {
+  items: NotificationItem[]
+  unreadCount: number
+}
+
+/**
+ * Fetch notifications for the current user (dashboard navbar).
+ * API Endpoint: GET /api/company/notifications (optional; returns { items, unreadCount }).
+ * When endpoint is not implemented or returns error, yields empty list so UI is ready for real API.
+ */
+export function useNotifications() {
+  return useSWR<NotificationsData>(
+    'company-notifications',
+    async () => {
+      if (!useMockApi()) {
+        try {
+          const data = await apiRequest<NotificationsData>('/api/company/notifications')
+          return { items: data?.items ?? [], unreadCount: data?.unreadCount ?? 0 }
+        } catch {
+          return { items: [], unreadCount: 0 }
+        }
+      }
+      await delay(200)
+      return { items: [], unreadCount: 0 }
+    },
+    { revalidateOnFocus: true }
   )
 }
 

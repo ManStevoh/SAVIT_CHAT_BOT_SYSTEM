@@ -20,27 +20,33 @@ import {
 } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
-const navigation = [
+const navigationMain = [
   { name: "Platform Overview", href: "/admin", icon: LayoutDashboard },
   { name: "Companies", href: "/admin/companies", icon: Building2 },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Plans", href: "/admin/plans", icon: Layers },
-  { name: "Testimonials", href: "/admin/testimonials", icon: Quote },
-  { name: "Landing FAQ", href: "/admin/landing-faqs", icon: HelpCircle },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
-  { name: "Payment Gateways", href: "/admin/payment-gateways", icon: Wallet },
+]
+
+const navigationConfig = [
+  { name: "Settings", href: "/admin/settings", icon: Settings, subtitle: "APIs, email, security" },
+  { name: "Payment Gateways", href: "/admin/payment-gateways", icon: Wallet, subtitle: "Stripe, M-Pesa" },
+]
+
+const navigationOther = [
+  { name: "Testimonials", href: "/admin/testimonials", icon: Quote },
+  { name: "Landing FAQ", href: "/admin/landing-faqs", icon: HelpCircle },
   { name: "AI Usage", href: "/admin/ai-usage", icon: Bot },
   { name: "System Logs", href: "/admin/logs", icon: FileText },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
 ]
 
 export function AdminSidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
-      <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-4">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-border bg-sidebar">
+      <div className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border px-4">
         <AppLogoAndName
           variant="admin"
           showAdminBadge
@@ -48,8 +54,55 @@ export function AdminSidebar() {
         />
       </div>
 
-      <nav className="flex flex-col gap-1 p-2">
-        {navigation.map((item) => {
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+        {navigationMain.map((item) => {
+          const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+              )}
+            >
+              <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
+              <span>{item.name}</span>
+            </Link>
+          )
+        })}
+        <div className="mt-2 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Configuration
+        </div>
+        {navigationConfig.map((item) => {
+          const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+              )}
+            >
+              <span className="flex items-center gap-3">
+                <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
+                {item.name}
+              </span>
+              {"subtitle" in item && item.subtitle && (
+                <span className="ml-8 text-xs font-normal text-muted-foreground">{item.subtitle}</span>
+              )}
+            </Link>
+          )
+        })}
+        <div className="mt-2 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Content &amp; logs
+        </div>
+        {navigationOther.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
           return (
             <Link
