@@ -32,7 +32,7 @@ class MpesaCheckoutController extends Controller
 
         $validated = $request->validate([
             'planId' => 'required|string',
-            'phone' => 'required|string|min=9',
+            'phone' => 'required|string|min:9',
         ]);
 
         $plan = Plan::find($validated['planId']);
