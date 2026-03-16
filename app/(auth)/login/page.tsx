@@ -110,6 +110,8 @@ function LoginPageContent() {
 
       if (result.success && result.user) {
         setEmailNotVerified(false)
+
+        // Store token in storage only if backend returned one
         if (result.token) {
           if (formData.rememberMe) {
             localStorage.setItem('auth_token', result.token)
@@ -118,8 +120,10 @@ function LoginPageContent() {
             sessionStorage.setItem('auth_token', result.token)
             sessionStorage.setItem('auth_user', JSON.stringify(result.user))
           }
-          setAuthCookie(result.user.role, !!formData.rememberMe)
         }
+
+        // Always set auth cookies so middleware can detect logged-in state
+        setAuthCookie(result.user.role, !!formData.rememberMe)
         const target =
           redirectTo ||
           subscribeRedirect ||
