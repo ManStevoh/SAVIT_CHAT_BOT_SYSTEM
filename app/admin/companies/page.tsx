@@ -319,7 +319,7 @@ export default function AdminCompaniesPage() {
       </Card>
 
       <Dialog open={!!editingCompany} onOpenChange={(open) => !open && setEditingCompany(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Company</DialogTitle>
             <DialogDescription>Update company details. Changes take effect immediately.</DialogDescription>
