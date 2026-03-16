@@ -540,8 +540,6 @@ export default function ProductsPage() {
           </p>
         )}
         </div>
-      </div>
-
       {/* Stats Grid - API Ready */}
       <StatsGrid columns={4}>
         <StatsCard
