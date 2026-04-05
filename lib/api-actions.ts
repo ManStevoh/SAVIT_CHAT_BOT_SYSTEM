@@ -9,7 +9,9 @@ import type {
   PaymentGateway,
   Company,
   User,
+  Subscription,
 } from './mock-data'
+import { mockSubscriptions } from './mock-data'
 import { useMockApi, apiRequest } from './api-client'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -691,6 +693,50 @@ export async function deletePlan(planId: string): Promise<{ success: boolean; me
     return await apiRequest<{ success: boolean }>(`/api/admin/plans/${planId}`, { method: 'DELETE' })
   } catch (e) {
     return handleApiError(e)
+  }
+}
+
+export interface AdminUpdateSubscriptionPayload {
+  status: 'active' | 'trial' | 'cancelled' | 'expired'
+  plan?: string
+  billingCycle?: 'monthly' | 'yearly'
+}
+
+/**
+ * Update a company subscription (admin only): assign plan, trial/active, cancel, or expire.
+ * Laravel: PATCH /api/admin/subscriptions/:subscriptionId
+ */
+export async function adminUpdateSubscription(
+  subscriptionId: string,
+  payload: AdminUpdateSubscriptionPayload
+): Promise<{ success: boolean; subscription?: Subscription; message?: string }> {
+  if (useMockApi()) {
+    await delay(500)
+    const idx = mockSubscriptions.findIndex((s) => s.id === subscriptionId)
+    if (idx === -1) {
+      return { success: false, message: 'Subscription not found.' }
+    }
+    const cur = mockSubscriptions[idx]
+    if (payload.status === 'cancelled' || payload.status === 'expired') {
+      mockSubscriptions[idx] = { ...cur, status: payload.status === 'expired' ? 'expired' : 'cancelled' }
+    } else if (payload.plan) {
+      mockSubscriptions[idx] = {
+        ...cur,
+        plan: payload.plan as Subscription['plan'],
+        status: payload.status,
+        billingCycle: payload.billingCycle ?? cur.billingCycle,
+        amount: payload.status === 'trial' ? 0 : cur.amount,
+      }
+    }
+    return { success: true, message: 'Subscription updated.', subscription: mockSubscriptions[idx] }
+  }
+  try {
+    return await apiRequest<{ success: boolean; subscription: Subscription; message?: string }>(
+      `/api/admin/subscriptions/${subscriptionId}`,
+      { method: 'PATCH', body: payload }
+    )
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
   }
 }
 
