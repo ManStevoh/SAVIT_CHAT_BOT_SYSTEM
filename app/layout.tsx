@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppBrandingProvider } from '@/components/providers/AppBrandingProvider'
+import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -33,13 +34,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
-        <AppBrandingProvider>
-          {children}
-          <Toaster />
-          <Analytics />
-        </AppBrandingProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="savit-theme">
+          <AppBrandingProvider>
+            {children}
+            <Toaster />
+            <Analytics />
+          </AppBrandingProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

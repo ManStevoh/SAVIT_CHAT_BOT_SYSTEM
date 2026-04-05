@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Search, Bell, Moon, Sun, User, Settings, LogOut } from "lucide-react"
+import { useTheme } from "next-themes"
 
 type StoredUser = { name?: string; email?: string }
 
@@ -39,7 +40,7 @@ function getInitials(user: StoredUser | null): string {
 }
 
 export function DashboardNavbar() {
-  const [isDark, setIsDark] = useState(true)
+  const { resolvedTheme, setTheme } = useTheme()
   const [loggingOut, setLoggingOut] = useState(false)
   const [user, setUser] = useState<StoredUser | null>(null)
   const pathname = usePathname()
@@ -72,10 +73,18 @@ export function DashboardNavbar() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsDark(!isDark)}
+          onClick={() => {
+            const current = resolvedTheme ?? "dark"
+            setTheme(current === "dark" ? "light" : "dark")
+          }}
           className="text-muted-foreground hover:text-foreground"
+          aria-label="Toggle color theme"
         >
-          {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {(resolvedTheme ?? "dark") === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
         </Button>
 
         <DropdownMenu>
