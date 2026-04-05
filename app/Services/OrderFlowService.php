@@ -691,6 +691,9 @@ class OrderFlowService
 
     protected function wantsCatalogOrPrices(string $lower): bool
     {
+        if ($lower === '1') {
+            return true;
+        }
         if (str_contains($lower, 'price') || str_contains($lower, 'how much')) {
             return true;
         }

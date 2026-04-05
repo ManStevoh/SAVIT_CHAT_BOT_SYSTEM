@@ -66,7 +66,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
             return;
         }
 
-        if ($this->wantsHumanEscalation()) {
+        if ($this->wantsHumanEscalation($chat)) {
             $this->notifyCompanyNewMessage($company, $mailService, true);
             return;
         }
@@ -118,15 +118,22 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
         $this->sendReplyAndSave($waSender, $company, $chat, $replyText);
     }
 
-    protected function wantsHumanEscalation(): bool
+    /**
+     * Quick menu "3. Talk to agent" (only when not in an order step where "3" means e.g. product or payment option).
+     */
+    protected function wantsHumanEscalation(Chat $chat): bool
     {
-        $lower = mb_strtolower($this->messageText);
+        $lower = mb_strtolower(trim($this->messageText));
+        if ($lower === '3') {
+            return ! filled($chat->conversation_step);
+        }
         $keywords = ['agent', 'human', 'representative', 'talk to someone', 'real person', 'support', 'speak to'];
         foreach ($keywords as $kw) {
             if (str_contains($lower, $kw)) {
                 return true;
             }
         }
+
         return false;
     }
 

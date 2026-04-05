@@ -149,7 +149,7 @@ class AIReplyService
 
     protected function matchKeywordReply(Company $company, string $lower): ?string
     {
-        if (str_contains($lower, 'price') || str_contains($lower, 'prices') || str_contains($lower, 'how much')) {
+        if ($lower === '1' || str_contains($lower, 'price') || str_contains($lower, 'prices') || str_contains($lower, 'how much')) {
             return $this->formatProductList($company);
         }
         if (str_contains($lower, 'catalog') || str_contains($lower, 'menu') || str_contains($lower, 'products') || str_contains($lower, 'list')) {
