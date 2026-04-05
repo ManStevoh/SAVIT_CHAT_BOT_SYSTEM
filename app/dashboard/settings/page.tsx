@@ -106,6 +106,17 @@ export default function SettingsPage() {
   const [stripeSecret, setStripeSecret] = useState('')
   const [stripeCurrency, setStripeCurrency] = useState('usd')
 
+  /** AI tab — persisted via PUT /api/company/settings (aiGreeting, aiTone, booleans). Model is platform-wide, not saved here. */
+  const [aiGreeting, setAiGreeting] = useState(
+    'You are a friendly and helpful customer service assistant for a restaurant. Be polite, professional, and helpful.'
+  )
+  const [aiTone, setAiTone] = useState('balanced')
+  const [autoReplyEnabled, setAutoReplyEnabled] = useState(false)
+  const [learnFromConversations, setLearnFromConversations] = useState(true)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [aiSaving, setAiSaving] = useState(false)
+  const [aiMessage, setAiMessage] = useState<string | null>(null)
+
   // Load initial values from GET /api/company/settings when available
   useEffect(() => {
     if (settings) {
@@ -117,8 +128,32 @@ export default function SettingsPage() {
       if (settings.orderPaymentManualInstructions != null) setOrderPaymentManualInstructions(settings.orderPaymentManualInstructions)
       if (settings.ordersAcceptMpesa != null) setOrdersAcceptMpesa(settings.ordersAcceptMpesa)
       if (settings.ordersAcceptStripe != null) setOrdersAcceptStripe(settings.ordersAcceptStripe)
+      if (settings.aiGreeting != null && settings.aiGreeting.trim() !== '') setAiGreeting(settings.aiGreeting)
+      if (settings.aiTone != null && settings.aiTone.trim() !== '') {
+        const t = settings.aiTone.trim().toLowerCase()
+        if (t === 'formal' || t === 'balanced' || t === 'casual') setAiTone(t)
+      }
+      if (settings.autoReplyEnabled != null) setAutoReplyEnabled(settings.autoReplyEnabled)
+      if (settings.learnFromConversations != null) setLearnFromConversations(settings.learnFromConversations)
+      if (settings.notificationsEnabled != null) setNotificationsEnabled(settings.notificationsEnabled)
     }
   }, [settings])
+
+  const handleAiSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setAiMessage(null)
+    setAiSaving(true)
+    const result = await updateSettings({
+      aiGreeting: aiGreeting.trim(),
+      aiTone: aiTone.trim(),
+      autoReplyEnabled,
+      learnFromConversations,
+      notificationsEnabled,
+    })
+    setAiSaving(false)
+    setAiMessage(result.success ? 'AI settings saved.' : (result.message ?? 'Failed to save.'))
+    if (result.success) mutate('company-settings')
+  }
 
   const handleProfileSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -380,78 +415,92 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* AI Settings */}
+        {/* AI Settings — PUT /api/company/settings */}
         <TabsContent value="ai">
           <Card>
             <CardHeader>
               <CardTitle>AI Configuration</CardTitle>
               <CardDescription>Configure your AI assistant behavior</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <Field>
-                <FieldLabel htmlFor="aiModel">AI Model</FieldLabel>
-                <Select defaultValue="gpt-4">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select AI model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gpt-4">GPT-4 (Recommended)</SelectItem>
-                    <SelectItem value="gpt-3.5">GPT-3.5 Turbo</SelectItem>
-                    <SelectItem value="claude">Claude 3</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
+            <CardContent>
+              <form className="space-y-6" onSubmit={handleAiSubmit}>
+                {aiMessage && (
+                  <p className={`text-sm ${aiMessage.startsWith('AI settings saved') ? 'text-primary' : 'text-destructive'}`}>
+                    {aiMessage}
+                  </p>
+                )}
+                <Field>
+                  <FieldLabel htmlFor="aiModel">AI Model</FieldLabel>
+                  <Select value="platform" disabled>
+                    <SelectTrigger id="aiModel">
+                      <SelectValue placeholder="Platform default" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="platform">Platform default (OpenAI)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The chat model is set in platform admin settings, not per company.
+                  </p>
+                </Field>
 
-              <Field>
-                <FieldLabel htmlFor="personality">AI Personality</FieldLabel>
-                <Textarea
-                  id="personality"
-                  defaultValue="You are a friendly and helpful customer service assistant for a restaurant. Be polite, professional, and helpful."
-                  rows={3}
-                />
-              </Field>
+                <Field>
+                  <FieldLabel htmlFor="personality">AI Personality</FieldLabel>
+                  <Textarea
+                    id="personality"
+                    value={aiGreeting}
+                    onChange={(e) => setAiGreeting(e.target.value)}
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Used for greeting-style messages and context. Tone for all replies is set below.
+                  </p>
+                </Field>
 
-              <Field>
-                <FieldLabel htmlFor="responseStyle">Response Style</FieldLabel>
-                <Select defaultValue="balanced">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select style" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="formal">Formal</SelectItem>
-                    <SelectItem value="balanced">Balanced</SelectItem>
-                    <SelectItem value="casual">Casual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
+                <Field>
+                  <FieldLabel htmlFor="responseStyle">Response Style</FieldLabel>
+                  <Select value={aiTone} onValueChange={setAiTone}>
+                    <SelectTrigger id="responseStyle">
+                      <SelectValue placeholder="Select style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="formal">Formal</SelectItem>
+                      <SelectItem value="balanced">Balanced</SelectItem>
+                      <SelectItem value="casual">Casual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
 
-              <div className="space-y-4 pt-4 border-t border-border">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Auto-suggest replies</p>
-                    <p className="text-sm text-muted-foreground">AI suggests responses for human agents</p>
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">Auto-reply</p>
+                      <p className="text-sm text-muted-foreground">Enable automated AI replies where configured</p>
+                    </div>
+                    <Switch checked={autoReplyEnabled} onCheckedChange={setAutoReplyEnabled} />
                   </div>
-                  <Switch defaultChecked />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">Learn from conversations</p>
+                      <p className="text-sm text-muted-foreground">Use past chats to improve consistency</p>
+                    </div>
+                    <Switch checked={learnFromConversations} onCheckedChange={setLearnFromConversations} />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">Notifications</p>
+                      <p className="text-sm text-muted-foreground">In-app / email notifications for your team</p>
+                    </div>
+                    <Switch checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled} />
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Sentiment analysis</p>
-                    <p className="text-sm text-muted-foreground">Detect customer emotions</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Multi-language support</p>
-                    <p className="text-sm text-muted-foreground">Respond in customer&apos;s language</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </div>
-
-              <Button>Save AI Settings</Button>
+                <Button type="submit" disabled={aiSaving}>
+                  {aiSaving ? 'Saving…' : 'Save AI Settings'}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
