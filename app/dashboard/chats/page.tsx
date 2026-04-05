@@ -111,9 +111,9 @@ export default function ChatsPage() {
   const isAgentHandling = selectedChat?.agentHandlingAt != null
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-4">
-      {/* Conversations List */}
-      <div className="w-80 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-card flex flex-col">
+    <div className="flex h-[calc(100vh-7rem)] min-h-0 gap-4">
+      {/* Conversations List — min-h-0 lets flex-1 ScrollArea shrink and scroll */}
+      <div className="flex h-full min-h-0 w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card">
         <div className="border-b border-border/50 p-4">
           <h2 className="mb-3 font-semibold text-foreground">Conversations</h2>
           <div className="relative">
@@ -143,7 +143,7 @@ export default function ChatsPage() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="p-2">
             {/* Loading State */}
             {chatsLoading && (
@@ -245,11 +245,11 @@ export default function ChatsPage() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex flex-1 overflow-hidden rounded-xl border border-border/50 bg-card flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card">
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="flex items-center justify-between border-b border-border/50 px-6 py-4">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-sm font-medium text-secondary-foreground">
@@ -305,7 +305,7 @@ export default function ChatsPage() {
             </div>
 
             {/* Messages Area */}
-            <ScrollArea className="flex-1 p-6">
+            <ScrollArea className="min-h-0 flex-1 p-6">
               {/* Loading State */}
               {messagesLoading && (
                 <div className="space-y-4">
@@ -378,7 +378,7 @@ export default function ChatsPage() {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="border-t border-border/50 p-4">
+            <div className="shrink-0 border-t border-border/50 p-4">
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon">
                   <Paperclip className="h-4 w-4" />
@@ -419,10 +419,10 @@ export default function ChatsPage() {
       </div>
 
       {/* Customer Details Panel */}
-      <div className="w-80 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-card">
+      <div className="flex h-full min-h-0 w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card">
         {selectedChat ? (
           <>
-            <div className="border-b border-border/50 p-6 text-center">
+            <div className="shrink-0 border-b border-border/50 p-6 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-xl font-medium text-secondary-foreground">
                 {selectedChat.customerName.charAt(0)}
               </div>
@@ -435,7 +435,8 @@ export default function ChatsPage() {
               <StatusBadge status={selectedChat.status} className="mt-2" />
             </div>
 
-            <div className="space-y-4 p-4">
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="space-y-4 p-4">
               {/* Tags Section */}
               <div>
                 <h4 className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -496,6 +497,7 @@ export default function ChatsPage() {
                 </div>
               </div>
             </div>
+            </ScrollArea>
           </>
         ) : (
           <div className="flex h-full flex-col items-center justify-center p-4 text-center">
