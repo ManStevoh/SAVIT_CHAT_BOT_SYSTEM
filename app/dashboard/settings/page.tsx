@@ -25,6 +25,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Building2, MessageSquare, Bot, Users, Bell, Plus, Trash2, Check, CreditCard } from "lucide-react"
+
+function isMasked(val: unknown): boolean {
+  return typeof val === "string" && val.startsWith("••••")
+}
+
+function mpesaSecretKey(field: "passkey" | "consumer_secret") {
+  return `mpesa:${field}`
+}
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
 import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers } from "@/lib/api-hooks"
 import { useSWRConfig } from "swr"
@@ -105,6 +113,9 @@ export default function SettingsPage() {
   const [mpesaEnv, setMpesaEnv] = useState<'sandbox' | 'production'>('sandbox')
   const [stripeSecret, setStripeSecret] = useState('')
   const [stripeCurrency, setStripeCurrency] = useState('usd')
+  /** User clicked Replace on a masked M-Pesa / Stripe secret field */
+  const [replacingMpesaSecret, setReplacingMpesaSecret] = useState<Record<string, boolean>>({})
+  const [replacingStripeSecret, setReplacingStripeSecret] = useState(false)
 
   /** AI tab — persisted via PUT /api/company/settings (aiGreeting, aiTone, booleans). Model is platform-wide, not saved here. */
   const [aiGreeting, setAiGreeting] = useState(
@@ -136,6 +147,32 @@ export default function SettingsPage() {
       if (settings.autoReplyEnabled != null) setAutoReplyEnabled(settings.autoReplyEnabled)
       if (settings.learnFromConversations != null) setLearnFromConversations(settings.learnFromConversations)
       if (settings.notificationsEnabled != null) setNotificationsEnabled(settings.notificationsEnabled)
+      const mpc = settings.orderPaymentMpesaConfig
+      if (mpc) {
+        if (mpc.type === "till" || mpc.type === "paybill") setMpesaType(mpc.type)
+        if (mpc.shortcode != null && mpc.shortcode !== "") setMpesaShortcode(mpc.shortcode)
+        if (mpc.passkey != null && mpc.passkey !== "") setMpesaPasskey(mpc.passkey)
+        setMpesaConsumerKey(mpc.consumer_key != null && mpc.consumer_key !== "" ? mpc.consumer_key : "")
+        setMpesaConsumerSecret(
+          mpc.consumer_secret != null && mpc.consumer_secret !== "" ? mpc.consumer_secret : ""
+        )
+        if (mpc.env === "production" || mpc.env === "sandbox") setMpesaEnv(mpc.env)
+      } else if (settings.orderPaymentMpesaConfigured === false) {
+        setMpesaShortcode("")
+        setMpesaPasskey("")
+        setMpesaConsumerKey("")
+        setMpesaConsumerSecret("")
+        setMpesaType("paybill")
+        setMpesaEnv("sandbox")
+      }
+      const st = settings.orderPaymentStripeConfig
+      if (st) {
+        if (st.secret != null && st.secret !== "") setStripeSecret(st.secret)
+        if (st.currency != null && st.currency !== "") setStripeCurrency(st.currency)
+      } else if (settings.orderPaymentStripeConfigured === false) {
+        setStripeSecret("")
+        setStripeCurrency("usd")
+      }
     }
   }, [settings])
 
@@ -184,7 +221,7 @@ export default function SettingsPage() {
       ordersAcceptMpesa,
       ordersAcceptStripe,
     }
-    if (mpesaShortcode.trim() && mpesaPasskey.trim()) {
+    if (mpesaShortcode.trim()) {
       payload.orderPaymentMpesaConfig = {
         type: mpesaType,
         shortcode: mpesaShortcode.trim(),
@@ -194,20 +231,19 @@ export default function SettingsPage() {
         env: mpesaEnv,
       }
     }
-    if (stripeSecret.trim()) {
-      payload.orderPaymentStripeConfig = { secret: stripeSecret.trim(), currency: stripeCurrency.trim() || 'usd' }
+    if (stripeSecret.trim() || settings?.orderPaymentStripeConfigured) {
+      payload.orderPaymentStripeConfig = {
+        secret: stripeSecret.trim(),
+        currency: stripeCurrency.trim() || "usd",
+      }
     }
     const result = await updateSettings(payload)
     setOrderPaymentsSaving(false)
     setOrderPaymentsMessage(result.success ? 'Saved. Customers can now choose these payment methods when placing orders.' : (result.message ?? 'Failed to save.'))
     if (result.success) {
-      setMpesaType('paybill')
-      setMpesaShortcode('')
-      setMpesaPasskey('')
-      setMpesaConsumerKey('')
-      setMpesaConsumerSecret('')
-      setStripeSecret('')
-      mutate('company-settings')
+      setReplacingMpesaSecret({})
+      setReplacingStripeSecret(false)
+      mutate("company-settings")
     }
   }
 
@@ -216,11 +252,12 @@ export default function SettingsPage() {
     const result = await updateSettings({ orderPaymentMpesaConfig: null })
     setOrderPaymentsMessage(result.success ? 'M-Pesa config cleared. Platform default will be used.' : (result.message ?? 'Failed.'))
     if (result.success) {
-      setMpesaShortcode('')
-      setMpesaPasskey('')
-      setMpesaConsumerKey('')
-      setMpesaConsumerSecret('')
-      mutate('company-settings')
+      setMpesaShortcode("")
+      setMpesaPasskey("")
+      setMpesaConsumerKey("")
+      setMpesaConsumerSecret("")
+      setReplacingMpesaSecret({})
+      mutate("company-settings")
     }
   }
 
@@ -229,8 +266,9 @@ export default function SettingsPage() {
     const result = await updateSettings({ orderPaymentStripeConfig: null })
     setOrderPaymentsMessage(result.success ? 'Stripe config cleared. Platform default will be used.' : (result.message ?? 'Failed.'))
     if (result.success) {
-      setStripeSecret('')
-      mutate('company-settings')
+      setStripeSecret("")
+      setReplacingStripeSecret(false)
+      mutate("company-settings")
     }
   }
 
@@ -732,7 +770,55 @@ export default function SettingsPage() {
                       </Field>
                       <Field>
                         <FieldLabel>Passkey</FieldLabel>
-                        <Input type="password" placeholder="Lipa Na M-Pesa passkey" value={mpesaPasskey} onChange={(e) => setMpesaPasskey(e.target.value)} />
+                        {isMasked(mpesaPasskey) && !replacingMpesaSecret[mpesaSecretKey("passkey")] ? (
+                          <div className="space-y-1.5">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <Input type="text" readOnly className="font-mono text-sm" value={mpesaPasskey} />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                onClick={() => {
+                                  setReplacingMpesaSecret((p) => ({ ...p, [mpesaSecretKey("passkey")]: true }))
+                                  setMpesaPasskey("")
+                                }}
+                              >
+                                Replace
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Stored passkey (masked). Use Replace to enter a new value.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <Input
+                              type="password"
+                              placeholder="Lipa Na M-Pesa passkey"
+                              value={mpesaPasskey}
+                              onChange={(e) => setMpesaPasskey(e.target.value)}
+                            />
+                            {replacingMpesaSecret[mpesaSecretKey("passkey")] && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() => {
+                                  setReplacingMpesaSecret((p) => {
+                                    const n = { ...p }
+                                    delete n[mpesaSecretKey("passkey")]
+                                    return n
+                                  })
+                                  mutate("company-settings")
+                                }}
+                              >
+                                Cancel replace
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </Field>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
@@ -742,7 +828,55 @@ export default function SettingsPage() {
                       </Field>
                       <Field>
                         <FieldLabel>Consumer secret (optional)</FieldLabel>
-                        <Input type="password" placeholder="Daraja app consumer secret" value={mpesaConsumerSecret} onChange={(e) => setMpesaConsumerSecret(e.target.value)} />
+                        {isMasked(mpesaConsumerSecret) && !replacingMpesaSecret[mpesaSecretKey("consumer_secret")] ? (
+                          <div className="space-y-1.5">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <Input type="text" readOnly className="font-mono text-sm" value={mpesaConsumerSecret} />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                onClick={() => {
+                                  setReplacingMpesaSecret((p) => ({ ...p, [mpesaSecretKey("consumer_secret")]: true }))
+                                  setMpesaConsumerSecret("")
+                                }}
+                              >
+                                Replace
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Stored consumer secret (masked). Use Replace to enter a new value.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <Input
+                              type="password"
+                              placeholder="Daraja app consumer secret"
+                              value={mpesaConsumerSecret}
+                              onChange={(e) => setMpesaConsumerSecret(e.target.value)}
+                            />
+                            {replacingMpesaSecret[mpesaSecretKey("consumer_secret")] && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() => {
+                                  setReplacingMpesaSecret((p) => {
+                                    const n = { ...p }
+                                    delete n[mpesaSecretKey("consumer_secret")]
+                                    return n
+                                  })
+                                  mutate("company-settings")
+                                }}
+                              >
+                                Cancel replace
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </Field>
                     </div>
                     <Field>
@@ -773,7 +907,51 @@ export default function SettingsPage() {
                     <div className="grid gap-4 md:grid-cols-2">
                       <Field>
                         <FieldLabel>Secret key</FieldLabel>
-                        <Input type="password" placeholder="sk_live_... or sk_test_..." value={stripeSecret} onChange={(e) => setStripeSecret(e.target.value)} />
+                        {isMasked(stripeSecret) && !replacingStripeSecret ? (
+                          <div className="space-y-1.5">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <Input type="text" readOnly className="font-mono text-sm" value={stripeSecret} />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                onClick={() => {
+                                  setReplacingStripeSecret(true)
+                                  setStripeSecret("")
+                                }}
+                              >
+                                Replace
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Stored Stripe secret (masked). Use Replace to enter a new key.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <Input
+                              type="password"
+                              placeholder="sk_live_... or sk_test_..."
+                              value={stripeSecret}
+                              onChange={(e) => setStripeSecret(e.target.value)}
+                            />
+                            {replacingStripeSecret && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() => {
+                                  setReplacingStripeSecret(false)
+                                  mutate("company-settings")
+                                }}
+                              >
+                                Cancel replace
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </Field>
                       <Field>
                         <FieldLabel>Currency</FieldLabel>

@@ -425,6 +425,17 @@ export interface CompanySettings {
   orderPaymentManualInstructions?: string
   orderPaymentMpesaConfigured?: boolean
   orderPaymentStripeConfigured?: boolean
+  /** Masked passkey/consumer_secret from GET /api/company/settings */
+  orderPaymentMpesaConfig?: {
+    type?: 'paybill' | 'till'
+    shortcode?: string
+    passkey?: string
+    consumer_key?: string | null
+    consumer_secret?: string | null
+    env?: 'sandbox' | 'production'
+  } | null
+  /** Masked secret from GET /api/company/settings */
+  orderPaymentStripeConfig?: { secret?: string; currency?: string } | null
 }
 
 /**
