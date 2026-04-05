@@ -39,13 +39,13 @@ export function LandingNavbar() {
               variant="ghost"
               size="icon"
               onClick={() => {
-                const current = resolvedTheme ?? "dark"
+                const current = resolvedTheme ?? "light"
                 setTheme(current === "dark" ? "light" : "dark")
               }}
               className="text-muted-foreground hover:text-foreground shrink-0"
               aria-label="Toggle color theme"
             >
-              {(resolvedTheme ?? "dark") === "dark" ? (
+              {(resolvedTheme ?? "light") === "dark" ? (
                 <Sun className="h-5 w-5" />
               ) : (
                 <Moon className="h-5 w-5" />

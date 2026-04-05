@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#f8fafc',
   width: 'device-width',
   initialScale: 1,
 }
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="savit-theme">
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="savit-theme">
           <AppBrandingProvider>
             {children}
             <Toaster />
