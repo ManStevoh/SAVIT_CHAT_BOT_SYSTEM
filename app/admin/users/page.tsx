@@ -78,44 +78,6 @@ export default function AdminUsersPage() {
     role: roleFilter !== "all" ? roleFilter : undefined,
   })
 
-  if (isLoading && !users) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Users</h1>
-          <p className="text-muted-foreground">Manage all users across the platform</p>
-        </div>
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex items-center justify-center gap-2 text-muted-foreground">
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              Loading users...
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Users</h1>
-          <p className="text-muted-foreground">Manage all users across the platform</p>
-        </div>
-        <Card className="border-destructive/50">
-          <CardContent className="p-6">
-            <p className="text-destructive">Failed to load users. Please try again.</p>
-            <Button variant="outline" className="mt-2" onClick={() => mutate()}>Retry</Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const list = users ?? []
-
   const saveResetPassword = useCallback(async () => {
     if (!resetPasswordUser) return
     if (newPassword.length < 8) {
@@ -163,6 +125,44 @@ export default function AdminUsersPage() {
     },
     [router]
   )
+
+  if (isLoading && !users) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Users</h1>
+          <p className="text-muted-foreground">Manage all users across the platform</p>
+        </div>
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Loading users...
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Users</h1>
+          <p className="text-muted-foreground">Manage all users across the platform</p>
+        </div>
+        <Card className="border-destructive/50">
+          <CardContent className="p-6">
+            <p className="text-destructive">Failed to load users. Please try again.</p>
+            <Button variant="outline" className="mt-2" onClick={() => mutate()}>Retry</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const list = users ?? []
 
   const stats = [
     { name: "Total Users", value: list.length.toLocaleString(), icon: Users },
