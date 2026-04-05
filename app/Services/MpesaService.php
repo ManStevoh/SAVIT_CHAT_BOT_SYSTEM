@@ -118,7 +118,7 @@ class MpesaService
             : 'CustomerPayBillOnline';
 
         $payload = [
-            'BusinessShortcode' => (int) $shortcode,
+            'BusinessShortCode' => (int) $shortcode,
             'Password' => $password,
             'Timestamp' => $timestamp,
             'TransactionType' => $transactionType,

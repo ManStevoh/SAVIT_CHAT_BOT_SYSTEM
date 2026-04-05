@@ -78,7 +78,7 @@ class CustomerController extends Controller
         $totalPages = (int) ceil($total / $limit);
         $slice = $rows->slice(($page - 1) * $limit, $limit);
 
-        $customers = $slice->values()->map(function ($row, $index) {
+        $customers = $slice->values()->map(function ($row, $index) use ($page, $limit) {
             return [
                 'id' => (string) (($page - 1) * $limit + $index + 1),
                 'name' => $row->name,

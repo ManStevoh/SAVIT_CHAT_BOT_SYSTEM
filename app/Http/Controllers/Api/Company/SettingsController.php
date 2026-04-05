@@ -41,6 +41,8 @@ class SettingsController extends Controller
             'orderPaymentManualInstructions' => $settings?->order_payment_manual_instructions ?? '',
             'orderPaymentMpesaConfigured' => $settings?->hasOrderPaymentMpesaConfig() ?? false,
             'orderPaymentStripeConfigured' => $settings?->hasOrderPaymentStripeConfig() ?? false,
+            'orderPaymentMpesaConfig' => $settings ? $this->maskOrderPaymentMpesaConfig($settings->order_payment_mpesa_config) : null,
+            'orderPaymentStripeConfig' => $settings ? $this->maskOrderPaymentStripeConfig($settings->order_payment_stripe_config) : null,
         ]);
     }
 
@@ -83,13 +85,13 @@ class SettingsController extends Controller
             'orderPaymentManualInstructions' => 'sometimes|nullable|string|max:2000',
             'orderPaymentMpesaConfig' => 'sometimes|nullable|array',
             'orderPaymentMpesaConfig.type' => 'nullable|string|in:paybill,till',
-            'orderPaymentMpesaConfig.shortcode' => 'required_with:orderPaymentMpesaConfig|nullable|string|max:20',
-            'orderPaymentMpesaConfig.passkey' => 'required_with:orderPaymentMpesaConfig|nullable|string|max:255',
+            'orderPaymentMpesaConfig.shortcode' => 'nullable|string|max:20',
+            'orderPaymentMpesaConfig.passkey' => 'nullable|string|max:255',
             'orderPaymentMpesaConfig.consumer_key' => 'nullable|string|max:255',
             'orderPaymentMpesaConfig.consumer_secret' => 'nullable|string|max:255',
             'orderPaymentMpesaConfig.env' => 'nullable|string|in:sandbox,production',
             'orderPaymentStripeConfig' => 'sometimes|nullable|array',
-            'orderPaymentStripeConfig.secret' => 'required_with:orderPaymentStripeConfig|nullable|string|max:255',
+            'orderPaymentStripeConfig.secret' => 'nullable|string|max:255',
             'orderPaymentStripeConfig.currency' => 'nullable|string|max:10',
         ]);
 
@@ -153,31 +155,89 @@ class SettingsController extends Controller
         }
         if (array_key_exists('orderPaymentMpesaConfig', $companyValidated)) {
             $v = $companyValidated['orderPaymentMpesaConfig'];
-            if (is_array($v)
-                && ! empty(trim((string) ($v['shortcode'] ?? '')))
-                && ! empty(trim((string) ($v['passkey'] ?? '')))
-            ) {
-                $settings->order_payment_mpesa_config = [
-                    'type' => in_array($v['type'] ?? null, ['paybill', 'till'], true) ? $v['type'] : 'paybill',
-                    'shortcode' => trim((string) $v['shortcode']),
-                    'passkey' => trim((string) $v['passkey']),
-                    'consumer_key' => isset($v['consumer_key']) ? trim((string) $v['consumer_key']) : null,
-                    'consumer_secret' => isset($v['consumer_secret']) ? trim((string) $v['consumer_secret']) : null,
-                    'env' => in_array($v['env'] ?? null, ['sandbox', 'production'], true) ? $v['env'] : 'sandbox',
-                ];
-            } else {
+            if ($v === null) {
                 $settings->order_payment_mpesa_config = null;
+            } elseif (is_array($v)) {
+                $existing = $settings->order_payment_mpesa_config ?? [];
+                if (array_key_exists('shortcode', $v)) {
+                    $shortcode = trim((string) $v['shortcode']);
+                    if ($shortcode === '') {
+                        $shortcode = (string) ($existing['shortcode'] ?? '');
+                    }
+                } else {
+                    $shortcode = (string) ($existing['shortcode'] ?? '');
+                }
+                if (array_key_exists('passkey', $v)) {
+                    $passkey = trim((string) $v['passkey']);
+                    if ($passkey === '' || $this->isMaskedSecretInput($passkey)) {
+                        $passkey = (string) ($existing['passkey'] ?? '');
+                    }
+                } else {
+                    $passkey = (string) ($existing['passkey'] ?? '');
+                }
+                if (array_key_exists('consumer_secret', $v)) {
+                    $consumerSecret = trim((string) $v['consumer_secret']);
+                    if ($consumerSecret === '' || $this->isMaskedSecretInput($consumerSecret)) {
+                        $consumerSecret = isset($existing['consumer_secret']) ? (string) $existing['consumer_secret'] : '';
+                    }
+                } else {
+                    $consumerSecret = isset($existing['consumer_secret']) ? (string) $existing['consumer_secret'] : '';
+                }
+                if (array_key_exists('consumer_key', $v)) {
+                    $consumerKey = trim((string) $v['consumer_key']);
+                    if ($this->isMaskedSecretInput($consumerKey)) {
+                        $consumerKey = isset($existing['consumer_key']) ? (string) $existing['consumer_key'] : '';
+                    }
+                } else {
+                    $consumerKey = isset($existing['consumer_key']) ? (string) $existing['consumer_key'] : '';
+                }
+                $type = in_array($v['type'] ?? null, ['paybill', 'till'], true)
+                    ? $v['type']
+                    : ($existing['type'] ?? 'paybill');
+                $env = in_array($v['env'] ?? null, ['sandbox', 'production'], true)
+                    ? $v['env']
+                    : ($existing['env'] ?? 'sandbox');
+
+                if ($shortcode !== '' && $passkey !== '') {
+                    $settings->order_payment_mpesa_config = [
+                        'type' => $type,
+                        'shortcode' => $shortcode,
+                        'passkey' => $passkey,
+                        'consumer_key' => $consumerKey !== '' ? $consumerKey : null,
+                        'consumer_secret' => $consumerSecret !== '' ? $consumerSecret : null,
+                        'env' => $env,
+                    ];
+                } else {
+                    $settings->order_payment_mpesa_config = null;
+                }
             }
         }
         if (array_key_exists('orderPaymentStripeConfig', $companyValidated)) {
             $v = $companyValidated['orderPaymentStripeConfig'];
-            if (is_array($v) && ! empty(trim((string) ($v['secret'] ?? '')))) {
-                $settings->order_payment_stripe_config = [
-                    'secret' => trim((string) $v['secret']),
-                    'currency' => isset($v['currency']) ? trim((string) $v['currency']) : 'usd',
-                ];
-            } else {
+            if ($v === null) {
                 $settings->order_payment_stripe_config = null;
+            } elseif (is_array($v)) {
+                $existing = $settings->order_payment_stripe_config ?? [];
+                if (array_key_exists('secret', $v)) {
+                    $secret = trim((string) $v['secret']);
+                    if ($secret === '' || $this->isMaskedSecretInput($secret)) {
+                        $secret = (string) ($existing['secret'] ?? '');
+                    }
+                } else {
+                    $secret = (string) ($existing['secret'] ?? '');
+                }
+                if ($secret !== '') {
+                    $currency = isset($v['currency']) ? trim((string) $v['currency']) : '';
+                    if ($currency === '') {
+                        $currency = (string) ($existing['currency'] ?? 'usd');
+                    }
+                    $settings->order_payment_stripe_config = [
+                        'secret' => $secret,
+                        'currency' => $currency !== '' ? $currency : 'usd',
+                    ];
+                } else {
+                    $settings->order_payment_stripe_config = null;
+                }
             }
         }
         $settings->save();
@@ -186,5 +246,55 @@ class SettingsController extends Controller
             'success' => true,
             'message' => 'Settings updated successfully',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $config
+     * @return array<string, mixed>|null
+     */
+    protected function maskOrderPaymentMpesaConfig(?array $config): ?array
+    {
+        if ($config === null || $config === []) {
+            return null;
+        }
+        $out = $config;
+        foreach (['passkey', 'consumer_secret'] as $key) {
+            if (! empty($out[$key]) && is_string($out[$key])) {
+                $out[$key] = $this->maskSecretString($out[$key]);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $config
+     * @return array<string, mixed>|null
+     */
+    protected function maskOrderPaymentStripeConfig(?array $config): ?array
+    {
+        if ($config === null || $config === []) {
+            return null;
+        }
+        $out = $config;
+        if (! empty($out['secret']) && is_string($out['secret'])) {
+            $out['secret'] = $this->maskSecretString($out['secret']);
+        }
+
+        return $out;
+    }
+
+    protected function maskSecretString(string $value): string
+    {
+        if (strlen($value) > 4) {
+            return '••••••••'.substr($value, -4);
+        }
+
+        return '••••••••'.$value;
+    }
+
+    protected function isMaskedSecretInput(string $value): bool
+    {
+        return str_starts_with($value, '••••') || $value === '';
     }
 }
