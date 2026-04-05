@@ -39,11 +39,17 @@ function isMasked(val: unknown): boolean {
   return typeof val === "string" && val.startsWith("••••")
 }
 
+function secretReplaceKey(slug: string, fieldKey: string) {
+  return `${slug}:${fieldKey}`
+}
+
 export default function AdminPaymentGatewaysPage() {
   const { data: gateways, error, isLoading, mutate } = useAdminPaymentGateways()
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null)
   const [savingSlug, setSavingSlug] = useState<string | null>(null)
   const [form, setForm] = useState<Record<string, Record<string, string | number>>>({})
+  /** User clicked "Replace" on a masked secret — show empty password field for a new value. */
+  const [replacingSecret, setReplacingSecret] = useState<Record<string, boolean>>({})
 
   const updateForm = (slug: string, key: string, value: string | number) => {
     setForm((prev) => ({
@@ -78,6 +84,7 @@ export default function AdminPaymentGatewaysPage() {
         delete next[g.slug]
         return next
       })
+      setReplacingSecret({})
       mutate()
     }
   }
@@ -167,40 +174,109 @@ export default function AdminPaymentGatewaysPage() {
               {expanded && (
                 <CardContent className="border-t border-border pt-6">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    {fields.map((field) => (
-                      <div key={field.key} className="space-y-2">
-                        <Label htmlFor={`${gateway.slug}-${field.key}`}>{field.label}</Label>
-                        {field.type === "select" ? (
-                          <Select
-                            value={String(displayConfig[field.key] ?? field.options?.[0] ?? "")}
-                            onValueChange={(v) => updateForm(gateway.slug, field.key, v)}
-                          >
-                            <SelectTrigger id={`${gateway.slug}-${field.key}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(field.options ?? []).map((opt) => (
-                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input
-                            id={`${gateway.slug}-${field.key}`}
-                            type={field.type}
-                            placeholder={field.placeholder}
-                            value={isMasked(displayConfig[field.key]) ? "" : String(displayConfig[field.key] ?? "")}
-                            onChange={(e) =>
-                              updateForm(
-                                gateway.slug,
-                                field.key,
-                                field.type === "number" ? parseInt(e.target.value, 10) || 0 : e.target.value
-                              )
-                            }
-                          />
-                        )}
-                      </div>
-                    ))}
+                    {fields.map((field) => {
+                      const rk = secretReplaceKey(gateway.slug, field.key)
+                      const raw = displayConfig[field.key]
+                      const masked = isMasked(raw)
+                      const showReplaceSecret =
+                        field.type === "password" && masked && !replacingSecret[rk]
+
+                      return (
+                        <div key={field.key} className="space-y-2">
+                          <Label htmlFor={`${gateway.slug}-${field.key}`}>{field.label}</Label>
+                          {field.type === "select" ? (
+                            <Select
+                              value={String(displayConfig[field.key] ?? field.options?.[0] ?? "")}
+                              onValueChange={(v) => updateForm(gateway.slug, field.key, v)}
+                            >
+                              <SelectTrigger id={`${gateway.slug}-${field.key}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(field.options ?? []).map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : showReplaceSecret ? (
+                            <div className="space-y-1.5">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input
+                                  id={`${gateway.slug}-${field.key}`}
+                                  type="text"
+                                  readOnly
+                                  className="font-mono text-sm"
+                                  value={String(raw ?? "")}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => {
+                                    setReplacingSecret((p) => ({ ...p, [rk]: true }))
+                                    updateForm(gateway.slug, field.key, "")
+                                  }}
+                                >
+                                  Replace
+                                </Button>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Stored secret (masked). Only the last 4 characters are shown after the dots. Use Replace to
+                                enter a new value.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <Input
+                                id={`${gateway.slug}-${field.key}`}
+                                type={field.type}
+                                placeholder={field.placeholder}
+                                value={String(displayConfig[field.key] ?? "")}
+                                onChange={(e) =>
+                                  updateForm(
+                                    gateway.slug,
+                                    field.key,
+                                    field.type === "number" ? parseInt(e.target.value, 10) || 0 : e.target.value
+                                  )
+                                }
+                              />
+                              {field.type === "password" && replacingSecret[rk] && (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs"
+                                    onClick={() => {
+                                      setReplacingSecret((p) => {
+                                        const next = { ...p }
+                                        delete next[rk]
+                                        return next
+                                      })
+                                      setForm((prev) => {
+                                        const g = prev[gateway.slug]
+                                        if (!g) return prev
+                                        const { [field.key]: _, ...rest } = g
+                                        if (Object.keys(rest).length === 0) {
+                                          const { [gateway.slug]: __, ...r } = prev
+                                          return r
+                                        }
+                                        return { ...prev, [gateway.slug]: rest }
+                                      })
+                                    }}
+                                  >
+                                    Cancel replace
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                   <Button
                     className="mt-4"
