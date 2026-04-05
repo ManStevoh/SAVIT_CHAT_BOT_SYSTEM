@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useImperativeHandle, forwardRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -219,23 +220,51 @@ interface TagInputFieldProps extends BaseFieldProps {
   disabled?: boolean
 }
 
-export function TagInputField({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder = 'Type and press Enter',
-  error,
-  required,
-  description,
-  disabled,
-  className,
-}: TagInputFieldProps) {
+export type TagInputFieldHandle = {
+  /** Adds any typed text as a tag and returns the full keyword list (for submit validation). */
+  commitPending: () => string[]
+}
+
+export const TagInputField = forwardRef<TagInputFieldHandle, TagInputFieldProps>(function TagInputField(
+  {
+    label,
+    name,
+    value,
+    onChange,
+    placeholder = 'Type and press Enter',
+    error,
+    required,
+    description,
+    disabled,
+    className,
+  },
+  ref
+) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const commitPending = (): string[] => {
+    const input = inputRef.current
+    const raw = (input?.value ?? '').replace(/,/g, ' ').trim()
+    let next = [...value]
+    if (raw) {
+      for (const p of raw.split(/\s+/).filter(Boolean)) {
+        if (!next.includes(p)) next = [...next, p]
+      }
+    }
+    if (input) input.value = ''
+    if (raw) {
+      onChange(next)
+    }
+    return next
+  }
+
+  useImperativeHandle(ref, () => ({ commitPending }), [value, onChange])
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault()
       const input = e.currentTarget
-      const newTag = input.value.trim()
+      const newTag = input.value.replace(/,/g, '').trim()
       if (newTag && !value.includes(newTag)) {
         onChange([...value, newTag])
         input.value = ''
@@ -276,6 +305,7 @@ export function TagInputField({
           </span>
         ))}
         <input
+          ref={inputRef}
           id={name}
           type="text"
           placeholder={value.length === 0 ? placeholder : ''}
@@ -290,4 +320,4 @@ export function TagInputField({
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
-}
+})

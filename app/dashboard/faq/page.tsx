@@ -10,7 +10,7 @@ import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { DataTable, type Column, type Filter } from '@/components/shared/data-table'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
-import { InputField, TextareaField, SelectField, SwitchField, TagInputField } from '@/components/shared/form-field'
+import { InputField, TextareaField, SelectField, SwitchField, TagInputField, type TagInputFieldHandle } from '@/components/shared/form-field'
 import { useFAQs, useCompanySettings } from '@/lib/api-hooks'
 import { createFAQ, updateFAQ, deleteFAQ, updateSettings, companyExportData, importFaqs } from '@/lib/api-actions'
 import { downloadFile } from '@/lib/api-client'
@@ -102,6 +102,7 @@ export default function FAQAutomationPage() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{ created: number; errors?: { row: number; errors: string[] }[] } | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const faqKeywordsRef = useRef<TagInputFieldHandle>(null)
 
   const { data: companySettings } = useCompanySettings()
 
@@ -133,10 +134,11 @@ export default function FAQAutomationPage() {
     totalHits: faqs?.reduce((acc, f) => acc + f.usageCount, 0) || 0,
   }
 
-  // Validate form
-  const validateForm = (): boolean => {
+  // Validate form (pass merged keywords when the tag input still has uncommitted text)
+  const validateForm = (keywordsOverride?: string[]): boolean => {
     const errors: Record<string, string> = {}
-    
+    const keywords = keywordsOverride ?? formData.keywords
+
     if (!formData.question.trim()) {
       errors.question = 'Question is required'
     }
@@ -146,10 +148,10 @@ export default function FAQAutomationPage() {
     if (!formData.category) {
       errors.category = 'Category is required'
     }
-    if (formData.keywords.length === 0) {
+    if (keywords.length === 0) {
       errors.keywords = 'At least one keyword is required'
     }
-    
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -169,7 +171,8 @@ export default function FAQAutomationPage() {
 
   // Handle create FAQ — api-actions.createFAQ → POST /api/company/faqs
   const handleCreateFAQ = useCallback(async () => {
-    if (!validateForm()) return
+    const keywords = faqKeywordsRef.current?.commitPending() ?? formData.keywords
+    if (!validateForm(keywords)) return
 
     setIsSubmitting(true)
     try {
@@ -177,7 +180,7 @@ export default function FAQAutomationPage() {
         question: formData.question,
         answer: formData.answer,
         category: formData.category,
-        keywords: formData.keywords,
+        keywords,
       })
 
       if (result.success) {
@@ -194,7 +197,9 @@ export default function FAQAutomationPage() {
 
   // Handle edit FAQ — api-actions.updateFAQ → PUT /api/company/faqs/:faqId
   const handleEditFAQ = useCallback(async () => {
-    if (!selectedFAQ || !validateForm()) return
+    if (!selectedFAQ) return
+    const keywords = faqKeywordsRef.current?.commitPending() ?? formData.keywords
+    if (!validateForm(keywords)) return
 
     setIsSubmitting(true)
     try {
@@ -202,7 +207,7 @@ export default function FAQAutomationPage() {
         question: formData.question,
         answer: formData.answer,
         category: formData.category,
-        keywords: formData.keywords,
+        keywords,
       })
 
       if (result.success) {
@@ -438,11 +443,12 @@ export default function FAQAutomationPage() {
       />
 
       <TagInputField
+        ref={faqKeywordsRef}
         label="Keywords"
         name="keywords"
         value={formData.keywords}
         onChange={(value) => handleFieldChange('keywords', value)}
-        placeholder="Type keyword and press Enter"
+        placeholder="Type a keyword, press Enter — or save (adds automatically)"
         description="Keywords help AI match this FAQ to customer questions"
         error={formErrors.keywords}
         required
