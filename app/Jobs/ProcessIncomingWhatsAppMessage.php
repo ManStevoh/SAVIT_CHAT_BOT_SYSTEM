@@ -99,6 +99,14 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
             return;
         }
 
+        if ($this->isFirstCustomerMessageInChat($this->chatId)) {
+            app(OrderFlowService::class)->resetOrderState($chat);
+            $chat->refresh();
+            $replyText = $aiReply->getGreetingOpening($company, $this->customerName);
+            $this->sendReplyAndSave($waSender, $company, $chat, $replyText);
+            return;
+        }
+
         $orderFlow = app(OrderFlowService::class);
         $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
         if ($orderReply !== null) {
@@ -128,6 +136,13 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
             ->where('status', 'active')
             ->where('end_date', '>=', now()->toDateString())
             ->exists();
+    }
+
+    protected function isFirstCustomerMessageInChat(int $chatId): bool
+    {
+        return Message::where('chat_id', $chatId)
+            ->where('sender', 'customer')
+            ->count() === 1;
     }
 
     protected function alreadyRepliedToThisMessage(): bool

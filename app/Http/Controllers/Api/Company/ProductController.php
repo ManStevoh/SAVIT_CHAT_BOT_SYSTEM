@@ -14,7 +14,7 @@ class ProductController extends Controller
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
-        if (!$companyId) {
+        if (! $companyId) {
             return response()->json(['message' => 'No company.'], 403);
         }
 
@@ -27,7 +27,7 @@ class ProductController extends Controller
             $query->where('status', $request->status);
         }
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%');
         }
 
         $products = $query->with(['variants' => fn ($q) => $q->orderBy('sort_order')->orderBy('id')])->orderBy('name')->get();
@@ -39,7 +39,7 @@ class ProductController extends Controller
     public function store(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
-        if (!$companyId) {
+        if (! $companyId) {
             return response()->json(['success' => false, 'message' => 'No company.'], 403);
         }
 
@@ -52,7 +52,7 @@ class ProductController extends Controller
                 'stock' => 'required|integer|min:0',
                 'image' => 'image|max:5120',
             ]);
-            $path = $request->file('image')->store('products/' . $companyId, 'public');
+            $path = $request->file('image')->store('products/'.$companyId, 'public');
             $validated['image'] = $path;
             $validated['company_id'] = $companyId;
             $product = Product::create($validated);
@@ -68,11 +68,99 @@ class ProductController extends Controller
             $product = Product::create($validated);
         }
 
+        $product->load(['variants' => fn ($q) => $q->orderBy('sort_order')->orderBy('id')]);
+
         return response()->json([
             'success' => true,
             'product' => $this->productToArray($product),
             'message' => 'Product created successfully',
         ]);
+    }
+
+    public function storeVariant(Request $request, Product $product): JsonResponse
+    {
+        if ($product->company_id !== $request->user()->company_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $validated = $request->validate([
+            'label' => 'required|string|max:500',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'sometimes|integer|min:0',
+            'status' => 'sometimes|in:active,inactive',
+            'attributes' => 'nullable|array',
+            'sortOrder' => 'sometimes|integer|min:0',
+        ]);
+
+        $variant = $product->variants()->create([
+            'label' => $validated['label'],
+            'price' => $validated['price'],
+            'stock' => (int) ($validated['stock'] ?? 0),
+            'status' => $validated['status'] ?? 'active',
+            'attributes' => $validated['attributes'] ?? null,
+            'sort_order' => (int) ($validated['sortOrder'] ?? 0),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'variant' => $this->variantToArray($variant),
+            'message' => 'Variant created',
+        ], 201);
+    }
+
+    public function updateVariant(Request $request, ProductVariant $productVariant): JsonResponse
+    {
+        $product = $productVariant->product;
+        if (! $product || $product->company_id !== $request->user()->company_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $validated = $request->validate([
+            'label' => 'sometimes|string|max:500',
+            'price' => 'sometimes|numeric|min:0',
+            'stock' => 'sometimes|integer|min:0',
+            'status' => 'sometimes|in:active,inactive',
+            'attributes' => 'nullable|array',
+            'sortOrder' => 'sometimes|integer|min:0',
+        ]);
+
+        $updates = [];
+        if (array_key_exists('label', $validated)) {
+            $updates['label'] = $validated['label'];
+        }
+        if (array_key_exists('price', $validated)) {
+            $updates['price'] = $validated['price'];
+        }
+        if (array_key_exists('stock', $validated)) {
+            $updates['stock'] = $validated['stock'];
+        }
+        if (array_key_exists('status', $validated)) {
+            $updates['status'] = $validated['status'];
+        }
+        if (array_key_exists('attributes', $validated)) {
+            $updates['attributes'] = $validated['attributes'];
+        }
+        if (array_key_exists('sortOrder', $validated)) {
+            $updates['sort_order'] = $validated['sortOrder'];
+        }
+        $productVariant->update($updates);
+
+        return response()->json([
+            'success' => true,
+            'variant' => $this->variantToArray($productVariant->fresh()),
+            'message' => 'Variant updated',
+        ]);
+    }
+
+    public function destroyVariant(Request $request, ProductVariant $productVariant): JsonResponse
+    {
+        $product = $productVariant->product;
+        if (! $product || $product->company_id !== $request->user()->company_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+        $productVariant->delete();
+
+        return response()->json(['success' => true, 'message' => 'Variant deleted']);
     }
 
     public function update(Request $request, Product $product): JsonResponse
@@ -114,6 +202,10 @@ class ProductController extends Controller
 
     private function productToArray(Product $product): array
     {
+        if (! $product->relationLoaded('variants')) {
+            $product->load(['variants' => fn ($q) => $q->orderBy('sort_order')->orderBy('id')]);
+        }
+
         return [
             'id' => (string) $product->id,
             'name' => $product->name,
@@ -124,6 +216,20 @@ class ProductController extends Controller
             'stock' => $product->stock,
             'status' => $product->status,
             'createdAt' => $product->created_at->format('Y-m-d'),
+            'variants' => $product->variants->map(fn (ProductVariant $v) => $this->variantToArray($v))->values()->all(),
+        ];
+    }
+
+    private function variantToArray(ProductVariant $v): array
+    {
+        return [
+            'id' => (string) $v->id,
+            'label' => $v->label,
+            'price' => (float) $v->price,
+            'stock' => (int) $v->stock,
+            'status' => $v->status,
+            'attributes' => $v->attributes ?? [],
+            'sortOrder' => (int) $v->sort_order,
         ];
     }
 }

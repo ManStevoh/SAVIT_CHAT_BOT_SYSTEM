@@ -60,6 +60,7 @@ class SystemPromptBuilder
     {
         $products = Product::where('company_id', $company->id)
             ->where('status', 'active')
+            ->with(['variants' => fn ($q) => $q->where('status', 'active')->orderBy('sort_order')->orderBy('id')])
             ->orderBy('name')
             ->limit(self::MAX_PRODUCTS_IN_PROMPT)
             ->get();
@@ -68,9 +69,17 @@ class SystemPromptBuilder
             return;
         }
 
-        $parts[] = "\nProducts (do not invent; refer to catalog if they ask):";
+        $parts[] = "\nProducts (do not invent; refer to catalog if they ask). Customers can order by number in WhatsApp:";
         foreach ($products as $p) {
-            $parts[] = "- {$p->name}: {$p->price}";
+            if ($p->variants->where('status', 'active')->isNotEmpty()) {
+                $min = (float) $p->variants->where('status', 'active')->min('price');
+                $parts[] = "- {$p->name} (options; from {$min}):";
+                foreach ($p->variants->where('status', 'active')->take(8) as $v) {
+                    $parts[] = "  • {$v->label}: {$v->price}";
+                }
+            } else {
+                $parts[] = "- {$p->name}: {$p->price}";
+            }
         }
     }
 
