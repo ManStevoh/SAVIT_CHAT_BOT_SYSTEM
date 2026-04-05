@@ -29,7 +29,8 @@ import {
   Legend,
 } from "recharts"
 // API: GET /api/company/analytics?period=7d — stats and chart data (useAnalytics in api-hooks)
-import { useAnalytics } from "@/lib/api-hooks"
+import { useAnalytics, useCompanySettings } from "@/lib/api-hooks"
+import { formatCurrencyAmount, normalizeCurrencyCode } from "@/lib/format-currency"
 
 const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"]
 
@@ -45,6 +46,8 @@ export default function AnalyticsPage() {
   const [chartPeriod, setChartPeriod] = useState("7d")
 
   const { data: analytics, error, isLoading } = useAnalytics(chartPeriod)
+  const { data: companySettings } = useCompanySettings()
+  const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
 
   // Map API messagesPerDay to area chart (AI vs Human if API provides; else single series)
   const messagesChartData = analytics?.messagesPerDay?.map((d) => ({
@@ -118,7 +121,7 @@ export default function AnalyticsPage() {
     { name: "Total Messages", value: analytics?.totalMessages?.toLocaleString() ?? "—", change: `${analytics?.messagesChange ?? 0}%`, icon: MessageSquare },
     { name: "Total Orders", value: analytics?.totalOrders?.toLocaleString() ?? "—", change: `${analytics?.ordersChange ?? 0}%`, icon: ShoppingCart },
     { name: "New Customers", value: analytics?.totalCustomers?.toLocaleString() ?? "—", change: `${analytics?.customersChange ?? 0}%`, icon: Users },
-    { name: "Revenue", value: analytics?.totalRevenue != null ? `$${(analytics.totalRevenue / 1000).toFixed(0)}k` : "—", change: `${analytics?.revenueChange ?? 0}%`, icon: TrendingUp },
+    { name: "Revenue", value: analytics?.totalRevenue != null ? formatCurrencyAmount(analytics.totalRevenue, catalogCurrency) : "—", change: `${analytics?.revenueChange ?? 0}%`, icon: TrendingUp },
   ]
 
   return (
@@ -249,7 +252,7 @@ export default function AnalyticsPage() {
                       <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
                       <Legend />
                       <Bar yAxisId="left" dataKey="orders" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} name="Orders" />
-                      <Bar yAxisId="right" dataKey="revenue" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name="Revenue ($)" />
+                      <Bar yAxisId="right" dataKey="revenue" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name={`Revenue (${catalogCurrency})`} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

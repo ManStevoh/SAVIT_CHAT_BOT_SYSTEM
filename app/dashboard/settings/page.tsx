@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -35,6 +35,7 @@ function mpesaSecretKey(field: "passkey" | "consumer_secret") {
 }
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
 import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers } from "@/lib/api-hooks"
+import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode } from "@/lib/format-currency"
 import { useSWRConfig } from "swr"
 import { updateSettings, connectWhatsApp, getWhatsAppStatus, disconnectWhatsApp, type WhatsAppStatus } from "@/lib/api-actions"
 
@@ -51,6 +52,14 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("contact@quickbite.com")
   const [phone, setPhone] = useState("+1 555-0100")
   const [address, setAddress] = useState("123 Main Street, New York, NY 10001")
+  const [displayCurrency, setDisplayCurrency] = useState("USD")
+  const catalogCurrencySelectOptions = useMemo(() => {
+    const base = [...CATALOG_CURRENCY_OPTIONS]
+    if (displayCurrency && !base.some((o) => o.code === displayCurrency)) {
+      return [{ code: displayCurrency, label: `${displayCurrency} (current)` }, ...base]
+    }
+    return base
+  }, [displayCurrency])
 
   const [waStatus, setWaStatus] = useState<WhatsAppStatus | null>(null)
   const [waLoading, setWaLoading] = useState(false)
@@ -135,6 +144,9 @@ export default function SettingsPage() {
       if (settings.email != null) setEmail(settings.email)
       if (settings.phone != null) setPhone(settings.phone)
       if (settings.address != null) setAddress(settings.address)
+      if (settings.displayCurrency != null && settings.displayCurrency !== "") {
+        setDisplayCurrency(normalizeCurrencyCode(settings.displayCurrency))
+      }
       if (settings.ordersCollectPaymentEnabled != null) setOrdersCollectPaymentEnabled(settings.ordersCollectPaymentEnabled)
       if (settings.orderPaymentManualInstructions != null) setOrderPaymentManualInstructions(settings.orderPaymentManualInstructions)
       if (settings.ordersAcceptMpesa != null) setOrdersAcceptMpesa(settings.ordersAcceptMpesa)
@@ -202,6 +214,7 @@ export default function SettingsPage() {
       email,
       phone,
       address,
+      displayCurrency: normalizeCurrencyCode(displayCurrency),
     })
     setProfileSaving(false)
     if (!result.success) {
@@ -346,6 +359,25 @@ export default function SettingsPage() {
                   <Field>
                     <FieldLabel htmlFor="address">Address</FieldLabel>
                     <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="displayCurrency">Catalog currency</FieldLabel>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Prices and totals use this currency in the dashboard, WhatsApp catalog, and AI replies (ISO 4217 code).
+                    </p>
+                    <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
+                      <SelectTrigger id="displayCurrency">
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[280px]">
+                        {catalogCurrencySelectOptions.map((o) => (
+                          <SelectItem key={o.code} value={o.code}>
+                            {o.code} — {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </Field>
 
                   <Field>

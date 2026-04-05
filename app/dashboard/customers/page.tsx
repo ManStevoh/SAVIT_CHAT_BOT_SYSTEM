@@ -41,13 +41,9 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip"
 // API: GET /api/company/customers — list customers (useCustomers in api-hooks)
-import { useCustomers, useCustomerStats } from "@/lib/api-hooks"
+import { useCustomers, useCustomerStats, useCompanySettings } from "@/lib/api-hooks"
+import { formatCurrencyAmount, normalizeCurrencyCode } from "@/lib/format-currency"
 import type { Customer } from "@/lib/mock-data"
-
-function formatCurrency(value: number): string {
-  // API may return amount in cents or whole units; adjust per backend
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(value)
-}
 function formatDate(dateStr: string): string {
   try {
     return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -78,6 +74,9 @@ export default function CustomersPage() {
 
   // API call: GET /api/company/customers?search=&page=1&limit=10
   const { data, error, isLoading, mutate } = useCustomers({ search: searchQuery || undefined, page, limit })
+  const { data: companySettings } = useCompanySettings()
+  const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
+  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
 
   const handleExportCustomers = async () => {
     setExporting(true)

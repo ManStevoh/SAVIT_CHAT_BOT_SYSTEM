@@ -10,7 +10,8 @@ import { DataTable, type Column, type Filter } from '@/components/shared/data-ta
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { SelectField } from '@/components/shared/form-field'
-import { useOrders } from '@/lib/api-hooks'
+import { useOrders, useCompanySettings } from '@/lib/api-hooks'
+import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
 import { updateOrderStatus } from '@/lib/api-actions'
 import type { Order } from '@/lib/mock-data'
 import {
@@ -49,6 +50,8 @@ import {
 import { useSWRConfig } from 'swr'
 
 export default function OrdersPage() {
+  const { data: companySettings } = useCompanySettings()
+  const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
   const { mutate } = useSWRConfig()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -77,14 +80,7 @@ export default function OrdersPage() {
     completed: data?.orders?.filter((o) => o.status === 'delivered').length || 0,
   }
 
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EGP',
-      minimumFractionDigits: 0,
-    }).format(value)
-  }
+  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
 
   // Format date
   const formatDate = (dateString: string) => {

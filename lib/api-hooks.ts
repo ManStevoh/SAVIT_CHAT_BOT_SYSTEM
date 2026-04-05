@@ -436,6 +436,8 @@ export interface CompanySettings {
   } | null
   /** Masked secret from GET /api/company/settings */
   orderPaymentStripeConfig?: { secret?: string; currency?: string } | null
+  /** ISO 4217 — catalog & chat price display (e.g. USD, KES) */
+  displayCurrency?: string
 }
 
 /**
@@ -456,6 +458,7 @@ export function useCompanySettings() {
         email: 'contact@demo.com',
         phone: '',
         address: '',
+        displayCurrency: 'USD',
       }
     },
     { revalidateOnFocus: false }

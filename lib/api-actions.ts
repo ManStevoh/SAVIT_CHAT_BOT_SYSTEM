@@ -615,6 +615,8 @@ export interface UpdateSettingsData {
     secret?: string
     currency?: string
   } | null
+  /** ISO 4217 (3 letters), e.g. USD, KES — shown in dashboard and WhatsApp */
+  displayCurrency?: string
 }
 
 /**

@@ -8,7 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { ChartCard } from '@/components/shared/chart-card'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useAnalytics, useOrders, useChats } from '@/lib/api-hooks'
+import { useAnalytics, useOrders, useChats, useCompanySettings } from '@/lib/api-hooks'
+import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
 import { MessageSquare, ShoppingCart, Users, Bot, ArrowRight } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -18,15 +19,10 @@ export default function DashboardPage() {
   const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useAnalytics(chartPeriod)
   const { data: ordersData, isLoading: ordersLoading } = useOrders({ limit: 5 })
   const { data: chats, isLoading: chatsLoading } = useChats({ limit: 5 })
+  const { data: companySettings } = useCompanySettings()
+  const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
 
-  // Format currency helper
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EGP',
-      minimumFractionDigits: 0,
-    }).format(value)
-  }
+  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
 
   return (
     <div className="space-y-6">

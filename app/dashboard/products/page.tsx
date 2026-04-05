@@ -9,7 +9,8 @@ import { DataTable, type Column, type Filter } from '@/components/shared/data-ta
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField } from '@/components/shared/form-field'
-import { useProducts } from '@/lib/api-hooks'
+import { useProducts, useCompanySettings } from '@/lib/api-hooks'
+import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
 import { createProduct, updateProduct, deleteProduct, companyExportData, importProducts, createProductVariant, deleteProductVariant } from '@/lib/api-actions'
 import { downloadFile } from '@/lib/api-client'
 import type { Product } from '@/lib/mock-data'
@@ -102,6 +103,9 @@ export default function ProductsPage() {
   const [variantStock, setVariantStock] = useState('0')
   const [variantSaving, setVariantSaving] = useState(false)
 
+  const { data: companySettings } = useCompanySettings()
+  const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
+
   // API: GET /api/company/products (useProducts)
   const { data: products, isLoading, error } = useProducts({
     category: categoryFilter,
@@ -117,14 +121,7 @@ export default function ProductsPage() {
     outOfStock: products?.filter((p) => p.stock === 0).length || 0,
   }
 
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EGP',
-      minimumFractionDigits: 0,
-    }).format(value)
-  }
+  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
 
   // Validate form
   const validateForm = (): boolean => {
