@@ -5,6 +5,7 @@ namespace App\Services\AI;
 use App\Models\Company;
 use App\Models\Faq;
 use App\Models\Product;
+use App\Support\MoneyFormatter;
 
 /**
  * Builds the system prompt for the AI assistant from company context.
@@ -69,16 +70,18 @@ class SystemPromptBuilder
             return;
         }
 
-        $parts[] = "\nProducts (do not invent; refer to catalog if they ask). Customers can order by number in WhatsApp:";
+        $company->loadMissing('settings');
+        $ccy = $company->settings?->displayCurrencyCode() ?? 'USD';
+        $parts[] = "\nProducts (do not invent; refer to catalog if they ask). All prices are in {$ccy}. Customers can order by number in WhatsApp:";
         foreach ($products as $p) {
             if ($p->variants->where('status', 'active')->isNotEmpty()) {
                 $min = (float) $p->variants->where('status', 'active')->min('price');
-                $parts[] = "- {$p->name} (options; from {$min}):";
+                $parts[] = '- '.$p->name.' (options; from '.MoneyFormatter::format($min, $ccy).'):';
                 foreach ($p->variants->where('status', 'active')->take(8) as $v) {
-                    $parts[] = "  • {$v->label}: {$v->price}";
+                    $parts[] = '  • '.$v->label.': '.MoneyFormatter::format((float) $v->price, $ccy);
                 }
             } else {
-                $parts[] = "- {$p->name}: {$p->price}";
+                $parts[] = '- '.$p->name.': '.MoneyFormatter::format((float) $p->price, $ccy);
             }
         }
     }

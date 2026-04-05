@@ -43,6 +43,7 @@ class SettingsController extends Controller
             'orderPaymentStripeConfigured' => $settings?->hasOrderPaymentStripeConfig() ?? false,
             'orderPaymentMpesaConfig' => $settings ? $this->maskOrderPaymentMpesaConfig($settings->order_payment_mpesa_config) : null,
             'orderPaymentStripeConfig' => $settings ? $this->maskOrderPaymentStripeConfig($settings->order_payment_stripe_config) : null,
+            'displayCurrency' => $settings?->displayCurrencyCode() ?? 'USD',
         ]);
     }
 
@@ -93,6 +94,7 @@ class SettingsController extends Controller
             'orderPaymentStripeConfig' => 'sometimes|nullable|array',
             'orderPaymentStripeConfig.secret' => 'nullable|string|max:255',
             'orderPaymentStripeConfig.currency' => 'nullable|string|max:10',
+            'displayCurrency' => 'sometimes|nullable|string|size:3',
         ]);
 
         if (isset($companyValidated['companyName'])) {
@@ -211,6 +213,11 @@ class SettingsController extends Controller
                     $settings->order_payment_mpesa_config = null;
                 }
             }
+        }
+        if (array_key_exists('displayCurrency', $companyValidated)) {
+            $raw = $companyValidated['displayCurrency'] ?? null;
+            $code = is_string($raw) ? strtoupper(preg_replace('/[^A-Za-z]/', '', $raw) ?? '') : '';
+            $settings->display_currency = strlen($code) === 3 ? $code : 'USD';
         }
         if (array_key_exists('orderPaymentStripeConfig', $companyValidated)) {
             $v = $companyValidated['orderPaymentStripeConfig'];

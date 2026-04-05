@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MoneyFormatter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -9,6 +10,7 @@ class CompanySetting extends Model
 {
     protected $fillable = [
         'company_id',
+        'display_currency',
         'whatsapp_number',
         'ai_greeting',
         'ai_tone',
@@ -63,5 +65,11 @@ class CompanySetting extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /** ISO 4217 code for catalog and chat price display (e.g. USD, KES, EGP). */
+    public function displayCurrencyCode(): string
+    {
+        return MoneyFormatter::normalizeCurrencyCode($this->display_currency);
     }
 }
