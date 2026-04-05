@@ -2,12 +2,14 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
+import { Menu, Moon, Sun, X } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
 export function LandingNavbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -32,26 +34,46 @@ export function LandingNavbar() {
             </Link>
           </div>
 
-          <div className="hidden md:flex md:items-center md:gap-4">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Sign In</Link>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                const current = resolvedTheme ?? "dark"
+                setTheme(current === "dark" ? "light" : "dark")
+              }}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+              aria-label="Toggle color theme"
+            >
+              {(resolvedTheme ?? "dark") === "dark" ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
             </Button>
-            <Button asChild>
-              <Link href="/register">Start Free Trial</Link>
-            </Button>
-          </div>
 
-          <button
-            className="md:hidden"
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label="Toggle menu"
-          >
-            {isOpen ? (
-              <X className="h-6 w-6 text-foreground" />
-            ) : (
-              <Menu className="h-6 w-6 text-foreground" />
-            )}
-          </button>
+            <div className="hidden md:flex md:items-center md:gap-4">
+              <Button variant="ghost" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">Start Free Trial</Link>
+              </Button>
+            </div>
+
+            <button
+              className="md:hidden shrink-0"
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label="Toggle menu"
+            >
+              {isOpen ? (
+                <X className="h-6 w-6 text-foreground" />
+              ) : (
+                <Menu className="h-6 w-6 text-foreground" />
+              )}
+            </button>
+          </div>
         </div>
 
         {isOpen && (
