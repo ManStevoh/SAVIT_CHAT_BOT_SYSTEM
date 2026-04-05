@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,7 +30,7 @@ class ProductController extends Controller
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        $products = $query->orderBy('name')->get();
+        $products = $query->with(['variants' => fn ($q) => $q->orderBy('sort_order')->orderBy('id')])->orderBy('name')->get();
         $data = $products->map(fn (Product $p) => $this->productToArray($p));
 
         return response()->json($data->values()->all());

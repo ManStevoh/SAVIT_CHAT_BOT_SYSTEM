@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Message;
 use App\Models\Order;
 use App\Models\PaymentGateway;
 use Illuminate\Support\Facades\Cache;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 class OrderPaymentService
 {
     public const CACHE_KEY_ORDER_PREFIX = 'mpesa_pending_order:';
+
     public const CACHE_TTL_MINUTES = 30;
 
     public function __construct(
@@ -58,7 +60,7 @@ class OrderPaymentService
             $phone,
             $amount,
             $order->order_number,
-            'Order ' . $order->order_number,
+            'Order '.$order->order_number,
             $callbackUrl,
             $configOverride
         );
@@ -72,7 +74,7 @@ class OrderPaymentService
             return ['success' => false, 'error' => $result['ResponseDescription'] ?? 'STK push failed'];
         }
 
-        Cache::put(self::CACHE_KEY_ORDER_PREFIX . $checkoutRequestId, [
+        Cache::put(self::CACHE_KEY_ORDER_PREFIX.$checkoutRequestId, [
             'order_id' => $order->id,
         ], now()->addMinutes(self::CACHE_TTL_MINUTES));
 
@@ -132,10 +134,11 @@ class OrderPaymentService
         $account = $company?->whatsappAccount;
         if (! $account || ! $account->isActive()) {
             Log::warning('OrderPaymentService: cannot send WhatsApp, no active account', ['order_id' => $order->id]);
+
             return;
         }
 
-        $message = "Payment received. Your order #{$order->order_number} is confirmed. Thank you!";
+        $message = "Payment received. Your order #{$order->order_number} is confirmed. Thank you!\n\nView invoice / receipt:\n".$order->publicReceiptUrl();
         $to = $order->customer_phone ?: $chat->customer_phone;
         if (! $to) {
             return;
@@ -143,7 +146,7 @@ class OrderPaymentService
 
         $result = $this->waSender->sendText($account, $to, $message);
         if ($result['success']) {
-            \App\Models\Message::create([
+            Message::create([
                 'chat_id' => $chat->id,
                 'content' => $message,
                 'sender' => 'bot',

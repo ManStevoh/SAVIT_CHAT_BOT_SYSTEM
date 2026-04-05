@@ -28,7 +28,7 @@ class SystemPromptBuilder
         $parts = [
             "You are a helpful customer service assistant for the business: {$name}.",
             "Reply in a {$tone} tone. Keep replies concise (1-3 short paragraphs).",
-            "Do not invent prices or product names. If the customer asks about prices or products, say they can type 'prices' or 'catalog'.",
+            "Do not invent prices or product names. Use the product list from context when relevant. If the customer names products and quantities to buy, acknowledge the order intent; do not only redirect them to type 'prices' or 'catalog'.",
         ];
 
         $this->appendKnowledgeBase($company, $parts);

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
 class Order extends Model
 {
@@ -40,6 +41,14 @@ class Order extends Model
         return $this->hasMany(OrderProduct::class);
     }
 
+    /**
+     * Signed URL to a print-friendly receipt page (shared in WhatsApp).
+     */
+    public function publicReceiptUrl(): string
+    {
+        return URL::signedRoute('orders.receipt', ['order' => $this->id], now()->addYears(10));
+    }
+
     protected static function booted(): void
     {
         static::created(function (Order $order) {
@@ -52,7 +61,7 @@ class Order extends Model
                 return;
             }
             try {
-                $ordersUrl = rtrim(config('app.frontend_url', config('app.url')), '/') . '/dashboard/orders';
+                $ordersUrl = rtrim(config('app.frontend_url', config('app.url')), '/').'/dashboard/orders';
                 app(MailService::class)->sendNewOrderNotification(
                     $company->email,
                     $order->order_number,

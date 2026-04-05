@@ -7,18 +7,22 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderProduct;
 use App\Models\Product;
-use App\Services\MpesaService;
-use App\Services\StripeService;
 use Illuminate\Support\Str;
 
 class OrderFlowService
 {
     public const STEP_NONE = null;
+
     public const STEP_PRODUCT = 'product';
+
     public const STEP_QUANTITY = 'quantity';
+
     public const STEP_ADDRESS = 'address';
+
     public const STEP_CONFIRM = 'confirm';
+
     public const STEP_PAYMENT_METHOD = 'payment_method';
+
     public const STEP_MPESA_PHONE = 'mpesa_phone';
 
     public function __construct(
@@ -37,13 +41,32 @@ class OrderFlowService
 
         if ($this->wantsCancel($lower)) {
             $this->clearState($chat);
+
             return 'Order cancelled. Reply with "order" or "2" when you\'re ready to place a new order.';
         }
 
         if ($this->wantsStartOrder($lower) && ! $step) {
             $productList = $this->formatProductList($company);
             $this->setStep($chat, self::STEP_PRODUCT, []);
-            return $productList . "\n\nReply with the product name and quantity (e.g. \"2 x Coffee\"), or \"done\" when you've added all items.";
+
+            return $productList."\n\nReply with the product name and quantity (e.g. \"2 x Coffee\"), or \"done\" when you've added all items.";
+        }
+
+        if (! $step && $this->wantsCatalogOrPrices($lower)) {
+            $this->setStep($chat, self::STEP_PRODUCT, []);
+
+            return $this->formatProductList($company)."\n\nReply with the product name and quantity (e.g. \"2 x Coffee\"), or \"done\" when you've added all items.";
+        }
+
+        if (! $step) {
+            $parsed = $this->parseProductLine($company, $messageText);
+            if ($parsed) {
+                $draft = ['items' => [$parsed]];
+                $this->setStep($chat, self::STEP_PRODUCT, $draft);
+                $summary = $this->formatDraftSummary($draft);
+
+                return "Added: {$parsed['name']} x {$parsed['quantity']}.\n\n{$summary}\n\nAdd more items (e.g. \"1 x Tea\") or reply \"done\" to proceed to delivery address.";
+            }
         }
 
         if ($step === self::STEP_PRODUCT) {
@@ -52,6 +75,7 @@ class OrderFlowService
                     return 'You haven\'t added any items yet. Tell me the product name and quantity (e.g. "2 x Coffee"), or "cancel" to cancel.';
                 }
                 $this->setStep($chat, self::STEP_ADDRESS, $draft);
+
                 return 'What is your delivery address?';
             }
             $parsed = $this->parseProductLine($company, $messageText);
@@ -60,6 +84,7 @@ class OrderFlowService
                 $draft['items'][] = $parsed;
                 $this->setStep($chat, self::STEP_PRODUCT, $draft);
                 $summary = $this->formatDraftSummary($draft);
+
                 return "Added: {$parsed['name']} x {$parsed['quantity']}.\n\n{$summary}\n\nAdd more items (e.g. \"1 x Tea\") or reply \"done\" to proceed to delivery address.";
             }
         }
@@ -72,6 +97,7 @@ class OrderFlowService
             $draft['delivery_address'] = $address;
             $this->setStep($chat, self::STEP_CONFIRM, $draft);
             $summary = $this->formatDraftSummary($draft);
+
             return "Delivery address: {$address}\n\n{$summary}\n\nReply \"confirm\" to place the order, or \"cancel\" to cancel.";
         }
 
@@ -82,7 +108,8 @@ class OrderFlowService
                 $collectEnabled = $settings && $settings->orders_collect_payment_enabled !== false;
                 if (! $collectEnabled) {
                     $this->clearState($chat);
-                    return "Order confirmed! Your order number is: {$order->order_number}. Total: " . number_format((float) $order->total, 2) . ". We'll prepare it and contact you for delivery.";
+
+                    return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".number_format((float) $order->total, 2).". We'll prepare it and contact you for delivery.");
                 }
                 $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
                 $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
@@ -90,14 +117,17 @@ class OrderFlowService
                 if ($acceptMpesa || $acceptStripe) {
                     $draft['order_id'] = $order->id;
                     $this->setStep($chat, self::STEP_PAYMENT_METHOD, $draft);
+
                     return $this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual);
                 }
                 if ($acceptManual) {
                     $this->clearState($chat);
+
                     return $this->formatOrderWithManualPaymentInstructions($order);
                 }
                 $this->clearState($chat);
-                return "Order confirmed! Your order number is: {$order->order_number}. Total: " . number_format((float) $order->total, 2) . ". We'll prepare it and contact you for delivery.";
+
+                return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".number_format((float) $order->total, 2).". We'll prepare it and contact you for delivery.");
             }
         }
 
@@ -105,6 +135,7 @@ class OrderFlowService
             $order = isset($draft['order_id']) ? Order::find($draft['order_id']) : null;
             if (! $order) {
                 $this->clearState($chat);
+
                 return 'Something went wrong. Please start over with "order" or "2".';
             }
             $settings = $company->settings;
@@ -113,22 +144,26 @@ class OrderFlowService
             $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
             if ($this->wantsManual($lower)) {
                 $this->clearState($chat);
+
                 return $this->formatOrderWithManualPaymentInstructions($order);
             }
             if ($this->wantsMpesa($lower)) {
                 $draft['payment_method'] = 'mpesa';
                 $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
                 $displayPhone = $this->formatPhoneForDisplay($customerPhone);
+
                 return "We'll send an M-Pesa payment request to your phone. Use this number ({$displayPhone}) or reply with a different number to receive the prompt.";
             }
             if ($this->wantsStripe($lower)) {
                 $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
                 $this->clearState($chat);
                 if ($result['success'] && ! empty($result['url'])) {
-                    return "Order #{$order->order_number} – Pay by card here: {$result['url']}\n\nReply once you've completed payment. Thank you!";
+                    return $this->withReceipt($order, "Order #{$order->order_number} – Pay by card here: {$result['url']}\n\nReply once you've completed payment. Thank you!");
                 }
-                return "Order confirmed! Your order number is: {$order->order_number}. Total: " . number_format((float) $order->total, 2) . ". We'll prepare it and contact you for delivery. (" . ($result['error'] ?? 'Payment link unavailable.') . ")";
+
+                return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".number_format((float) $order->total, 2).". We'll prepare it and contact you for delivery. (".($result['error'] ?? 'Payment link unavailable.').')');
             }
+
             return $this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual, true);
         }
 
@@ -136,6 +171,7 @@ class OrderFlowService
             $order = isset($draft['order_id']) ? Order::find($draft['order_id']) : null;
             if (! $order) {
                 $this->clearState($chat);
+
                 return 'Something went wrong. Please start over with "order" or "2".';
             }
             $phone = $this->resolveMpesaPhone(trim($messageText), $customerPhone);
@@ -145,9 +181,10 @@ class OrderFlowService
             $result = $this->orderPayment->sendStkPushForOrder($order, $phone);
             $this->clearState($chat);
             if ($result['success']) {
-                return "We've sent an M-Pesa payment request to your phone. Enter your M-Pesa PIN to complete payment. You'll get a confirmation here once payment is received.";
+                return $this->withReceipt($order, "We've sent an M-Pesa payment request to your phone. Enter your M-Pesa PIN to complete payment. You'll get a confirmation here once payment is received.");
             }
-            return "Order #{$order->order_number} confirmed. Total: " . number_format((float) $order->total, 2) . ". We couldn't send M-Pesa right now (" . ($result['error'] ?? 'please try again later') . "). We'll contact you for payment.";
+
+            return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".number_format((float) $order->total, 2).". We couldn't send M-Pesa right now (".($result['error'] ?? 'please try again later')."). We'll contact you for payment.");
         }
 
         return null;
@@ -155,7 +192,7 @@ class OrderFlowService
 
     protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptManual = false, bool $invalid = false): string
     {
-        $line = "Order #{$order->order_number} – Total: " . number_format((float) $order->total, 2) . ".\n\nHow would you like to pay?";
+        $line = "Order #{$order->order_number} – Total: ".number_format((float) $order->total, 2).".\n\nHow would you like to pay?";
         $opts = [];
         if ($acceptMpesa) {
             $opts[] = '1. M-Pesa (pay on your phone)';
@@ -166,11 +203,12 @@ class OrderFlowService
         if ($acceptManual) {
             $opts[] = '3. Pay manually (bank / other details)';
         }
-        $line .= "\n" . implode("\n", $opts);
+        $line .= "\n".implode("\n", $opts);
         if ($invalid) {
             $line .= "\n\nPlease reply with 1, 2 or 3 (or M-Pesa / Card / Manual).";
         }
-        return $line;
+
+        return $this->withReceipt($order, $line);
     }
 
     protected function formatOrderWithManualPaymentInstructions(Order $order): string
@@ -181,7 +219,13 @@ class OrderFlowService
             : '';
         $total = number_format((float) $order->total, 2);
         $line = "Order #{$order->order_number} confirmed. Total: {$total}.\n\nTo complete payment, please use the following details:\n\n{$instructions}\n\nReply once you have made the payment. Thank you!";
-        return $line;
+
+        return $this->withReceipt($order, $line);
+    }
+
+    protected function withReceipt(Order $order, string $message): string
+    {
+        return rtrim($message)."\n\nView invoice / receipt:\n".$order->publicReceiptUrl();
     }
 
     protected function wantsManual(string $lower): bool
@@ -206,11 +250,12 @@ class OrderFlowService
     {
         $digits = preg_replace('/\D/', '', $customerPhone);
         if (strlen($digits) === 9 && str_starts_with($digits, '7')) {
-            return '254' . $digits;
+            return '254'.$digits;
         }
         if (strlen($digits) === 10 && str_starts_with($digits, '0')) {
-            return '254' . substr($digits, 1);
+            return '254'.substr($digits, 1);
         }
+
         return $customerPhone ?: '—';
     }
 
@@ -227,16 +272,18 @@ class OrderFlowService
         $digits = preg_replace('/\D/', '', $message);
         if (strlen($digits) >= 9) {
             if (strlen($digits) === 9 && str_starts_with($digits, '7')) {
-                return '254' . $digits;
+                return '254'.$digits;
             }
             if (strlen($digits) === 10 && str_starts_with($digits, '0')) {
-                return '254' . substr($digits, 1);
+                return '254'.substr($digits, 1);
             }
             if (strlen($digits) >= 12) {
                 return $digits;
             }
-            return '254' . $digits;
+
+            return '254'.$digits;
         }
+
         return null;
     }
 
@@ -250,6 +297,21 @@ class OrderFlowService
     {
         return $lower === '2' || $lower === 'order' || $lower === 'place order'
             || str_contains($lower, 'i want to order') || str_contains($lower, 'place an order');
+    }
+
+    /**
+     * Same intent as AIReplyService keyword catalog/prices so viewing the list enters the order flow.
+     */
+    protected function wantsCatalogOrPrices(string $lower): bool
+    {
+        if (str_contains($lower, 'price') || str_contains($lower, 'how much')) {
+            return true;
+        }
+        if (str_contains($lower, 'catalog') || str_contains($lower, 'menu') || str_contains($lower, 'products') || str_contains($lower, 'list')) {
+            return true;
+        }
+
+        return false;
     }
 
     protected function wantsDone(string $lower): bool
@@ -269,6 +331,7 @@ class OrderFlowService
             return ['items' => []];
         }
         $raw['items'] = $raw['items'] ?? [];
+
         return $raw;
     }
 
@@ -327,6 +390,23 @@ class OrderFlowService
             }
         }
 
+        if (preg_match('/^(.+?)\s+(?:quantity|qty|quatity)\s*(\d+)\s*$/iu', $text, $m)) {
+            $namePart = trim($m[1]);
+            $qty = (int) $m[2];
+            if ($qty < 1) {
+                return null;
+            }
+            $product = $this->matchProduct($products, $namePart);
+            if ($product) {
+                return [
+                    'product_id' => $product->id,
+                    'name' => $product->name,
+                    'price' => (float) $product->price,
+                    'quantity' => $qty,
+                ];
+            }
+        }
+
         $product = $this->matchProduct($products, $text);
         if ($product) {
             return [
@@ -353,6 +433,7 @@ class OrderFlowService
                 return $p;
             }
         }
+
         return null;
     }
 
@@ -362,12 +443,13 @@ class OrderFlowService
         if ($products->isEmpty()) {
             return 'We don\'t have any products in the catalog right now. Please contact us for availability.';
         }
-        $lines = ["Here are our products:\n"];
+        $lines = ["Here are our products and prices:\n"];
         foreach ($products->take(30) as $p) {
             $price = is_numeric($p->price) ? number_format((float) $p->price, 2) : $p->price;
             $lines[] = "• {$p->name}: {$price}";
         }
-        $lines[] = "\nReply with product name and quantity (e.g. \"2 x Coffee\").";
+        $lines[] = "\nReply with the product name and quantity to order.";
+
         return implode("\n", $lines);
     }
 
@@ -382,9 +464,10 @@ class OrderFlowService
         foreach ($items as $item) {
             $sub = ($item['price'] ?? 0) * ($item['quantity'] ?? 0);
             $total += $sub;
-            $lines[] = "• {$item['name']} x {$item['quantity']} = " . number_format($sub, 2);
+            $lines[] = "• {$item['name']} x {$item['quantity']} = ".number_format($sub, 2);
         }
-        $lines[] = 'Total: ' . number_format($total, 2);
+        $lines[] = 'Total: '.number_format($total, 2);
+
         return implode("\n", $lines);
     }
 
@@ -396,9 +479,9 @@ class OrderFlowService
             $total += ($item['price'] ?? 0) * ($item['quantity'] ?? 0);
         }
 
-        $orderNumber = 'ORD-' . strtoupper(Str::random(8));
+        $orderNumber = 'ORD-'.strtoupper(Str::random(8));
         while (Order::where('order_number', $orderNumber)->exists()) {
-            $orderNumber = 'ORD-' . strtoupper(Str::random(8));
+            $orderNumber = 'ORD-'.strtoupper(Str::random(8));
         }
 
         $order = Order::create([
