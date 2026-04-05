@@ -4,6 +4,7 @@
 import type {
   Order,
   Product,
+  ProductVariant,
   FAQ,
   Plan,
   PaymentGateway,
@@ -400,6 +401,102 @@ export async function deleteProduct(productId: string): Promise<{ success: boole
   }
   try {
     return await apiRequest<{ success: boolean; message?: string }>(`/api/company/products/${productId}`, {
+      method: 'DELETE',
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface CreateProductVariantData {
+  label: string
+  price: number
+  stock?: number
+  status?: 'active' | 'inactive'
+  sortOrder?: number
+  attributes?: Record<string, string>
+}
+
+/**
+ * Laravel: POST /api/company/products/:productId/variants
+ */
+export async function createProductVariant(
+  productId: string,
+  data: CreateProductVariantData
+): Promise<{ success: boolean; variant?: ProductVariant; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return {
+      success: true,
+      variant: {
+        id: Math.random().toString(36).slice(2),
+        label: data.label,
+        price: data.price,
+        stock: data.stock ?? 0,
+        status: data.status ?? 'active',
+        attributes: data.attributes ?? {},
+        sortOrder: data.sortOrder ?? 0,
+      },
+    }
+  }
+  try {
+    return await apiRequest<{ success: boolean; variant: ProductVariant; message?: string }>(
+      `/api/company/products/${productId}/variants`,
+      {
+        method: 'POST',
+        body: {
+          label: data.label,
+          price: data.price,
+          stock: data.stock ?? 0,
+          status: data.status ?? 'active',
+          sortOrder: data.sortOrder ?? 0,
+          attributes: data.attributes ?? {},
+        },
+      }
+    )
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+/**
+ * Laravel: PUT /api/company/product-variants/:variantId
+ */
+export async function updateProductVariant(
+  variantId: string,
+  data: Partial<CreateProductVariantData>
+): Promise<{ success: boolean; variant?: ProductVariant; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    const body: Record<string, unknown> = {}
+    if (data.label !== undefined) body.label = data.label
+    if (data.price !== undefined) body.price = data.price
+    if (data.stock !== undefined) body.stock = data.stock
+    if (data.status !== undefined) body.status = data.status
+    if (data.sortOrder !== undefined) body.sortOrder = data.sortOrder
+    if (data.attributes !== undefined) body.attributes = data.attributes
+    return await apiRequest<{ success: boolean; variant: ProductVariant; message?: string }>(
+      `/api/company/product-variants/${variantId}`,
+      { method: 'PUT', body }
+    )
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+/**
+ * Laravel: DELETE /api/company/product-variants/:variantId
+ */
+export async function deleteProductVariant(variantId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/company/product-variants/${variantId}`, {
       method: 'DELETE',
     })
   } catch (e) {

@@ -10,7 +10,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField } from '@/components/shared/form-field'
 import { useProducts } from '@/lib/api-hooks'
-import { createProduct, updateProduct, deleteProduct, companyExportData, importProducts } from '@/lib/api-actions'
+import { createProduct, updateProduct, deleteProduct, companyExportData, importProducts, createProductVariant, deleteProductVariant } from '@/lib/api-actions'
 import { downloadFile } from '@/lib/api-client'
 import type { Product } from '@/lib/mock-data'
 import {
@@ -25,6 +25,7 @@ import {
   Download,
   Upload,
   Loader2,
+  Layers,
 } from 'lucide-react'
 import {
   Popover,
@@ -51,6 +52,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useSWRConfig } from 'swr'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 
 interface ProductFormData {
   name: string
@@ -88,6 +96,11 @@ export default function ProductsPage() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{ created: number; errors?: { row: number; errors: string[] }[] } | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const [variantsSheetProduct, setVariantsSheetProduct] = useState<Product | null>(null)
+  const [variantLabel, setVariantLabel] = useState('')
+  const [variantPrice, setVariantPrice] = useState('')
+  const [variantStock, setVariantStock] = useState('0')
+  const [variantSaving, setVariantSaving] = useState(false)
 
   // API: GET /api/company/products (useProducts)
   const { data: products, isLoading, error } = useProducts({
@@ -120,8 +133,8 @@ export default function ProductsPage() {
     if (!formData.name.trim()) {
       errors.name = 'Product name is required'
     }
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      errors.price = 'Valid price is required'
+    if (formData.price === '' || Number.isNaN(parseFloat(formData.price)) || parseFloat(formData.price) < 0) {
+      errors.price = 'Enter a valid price (0 or more; use 0 if only variants have prices)'
     }
     if (!formData.category) {
       errors.category = 'Category is required'
@@ -248,6 +261,48 @@ export default function ProductsPage() {
     setExportFormat(value === 'json' ? 'json' : 'csv')
   }
 
+  const handleAddVariant = useCallback(async () => {
+    if (!variantsSheetProduct || !variantLabel.trim() || variantPrice === '') return
+    const price = parseFloat(variantPrice)
+    if (Number.isNaN(price) || price < 0) return
+    setVariantSaving(true)
+    try {
+      const res = await createProductVariant(variantsSheetProduct.id, {
+        label: variantLabel.trim(),
+        price,
+        stock: parseInt(variantStock, 10) || 0,
+      })
+      if (res.success) {
+        setVariantLabel('')
+        setVariantPrice('')
+        setVariantStock('0')
+        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        if (res.variant) {
+          setVariantsSheetProduct((prev) =>
+            prev
+              ? { ...prev, variants: [...(prev.variants ?? []), res.variant!] }
+              : null
+          )
+        }
+      }
+    } finally {
+      setVariantSaving(false)
+    }
+  }, [variantsSheetProduct, variantLabel, variantPrice, variantStock, mutate, categoryFilter, statusFilter, searchQuery])
+
+  const handleDeleteVariant = useCallback(
+    async (variantId: string) => {
+      const res = await deleteProductVariant(variantId)
+      if (res.success) {
+        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        setVariantsSheetProduct((prev) =>
+          prev ? { ...prev, variants: (prev.variants ?? []).filter((v) => v.id !== variantId) } : null
+        )
+      }
+    },
+    [mutate, categoryFilter, statusFilter, searchQuery]
+  )
+
   const handleImportProducts = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -310,9 +365,16 @@ export default function ProductsPage() {
       key: 'price',
       header: 'Price',
       cell: (product) => (
-        <span className="font-medium text-foreground">
-          {formatCurrency(product.price)}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-medium text-foreground">
+            {product.variants && product.variants.length > 0
+              ? `From ${formatCurrency(Math.min(...product.variants.map((v) => v.price)))}`
+              : formatCurrency(product.price)}
+          </span>
+          {product.variants && product.variants.length > 0 && (
+            <span className="text-xs text-muted-foreground">{product.variants.length} option(s)</span>
+          )}
+        </div>
       ),
     },
     {
@@ -346,6 +408,17 @@ export default function ProductsPage() {
             <DropdownMenuItem onClick={() => openEditModal(product)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Product
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setVariantsSheetProduct(product)
+                setVariantLabel('')
+                setVariantPrice('')
+                setVariantStock('0')
+              }}
+            >
+              <Layers className="mr-2 h-4 w-4" />
+              Options / variants
             </DropdownMenuItem>
             <DropdownMenuItem>
               <BarChart3 className="mr-2 h-4 w-4" />
@@ -607,7 +680,13 @@ export default function ProductsPage() {
         onSubmit={handleCreateProduct}
         submitLabel="Add Product"
         isLoading={isSubmitting}
-        isValid={formData.name.trim() !== '' && formData.price !== '' && formData.category !== ''}
+        isValid={
+          formData.name.trim() !== '' &&
+          formData.price !== '' &&
+          parseFloat(formData.price) >= 0 &&
+          !Number.isNaN(parseFloat(formData.price)) &&
+          formData.category !== ''
+        }
       >
         {renderProductForm()}
       </FormModal>
@@ -627,10 +706,71 @@ export default function ProductsPage() {
         onSubmit={handleEditProduct}
         submitLabel="Save Changes"
         isLoading={isSubmitting}
-        isValid={formData.name.trim() !== '' && formData.price !== '' && formData.category !== ''}
+        isValid={
+          formData.name.trim() !== '' &&
+          formData.price !== '' &&
+          parseFloat(formData.price) >= 0 &&
+          !Number.isNaN(parseFloat(formData.price)) &&
+          formData.category !== ''
+        }
       >
         {renderProductForm()}
       </FormModal>
+
+      <Sheet
+        open={variantsSheetProduct !== null}
+        onOpenChange={(open) => {
+          if (!open) setVariantsSheetProduct(null)
+        }}
+      >
+        <SheetContent className="overflow-y-auto sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Product options</SheetTitle>
+            <SheetDescription>
+              Add sizes, colors, brands, etc. Customers pick a number for the product, then a number for the option, then quantity in WhatsApp.
+            </SheetDescription>
+          </SheetHeader>
+          {variantsSheetProduct && (
+            <div className="mt-6 space-y-6">
+              <p className="text-sm font-medium text-foreground">{variantsSheetProduct.name}</p>
+              <ul className="space-y-2">
+                {(variantsSheetProduct.variants ?? []).map((v) => (
+                  <li
+                    key={v.id}
+                    className="flex items-center justify-between gap-2 rounded-md border border-border/60 px-3 py-2 text-sm"
+                  >
+                    <span>
+                      {v.label} — {formatCurrency(v.price)} (stock {v.stock})
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => handleDeleteVariant(v.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+                {(variantsSheetProduct.variants ?? []).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No options yet. Add one below.</p>
+                )}
+              </ul>
+              <div className="space-y-3 border-t border-border pt-4">
+                <InputField label="Option label" name="vlabel" value={variantLabel} onChange={setVariantLabel} placeholder="e.g. Blue / L / Brand X" />
+                <div className="grid grid-cols-2 gap-3">
+                  <InputField label="Price" name="vprice" type="number" value={variantPrice} onChange={setVariantPrice} placeholder="0" />
+                  <InputField label="Stock" name="vstock" type="number" value={variantStock} onChange={setVariantStock} placeholder="0" />
+                </div>
+                <Button type="button" onClick={handleAddVariant} disabled={variantSaving || !variantLabel.trim() || variantPrice === ''}>
+                  {variantSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add option'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

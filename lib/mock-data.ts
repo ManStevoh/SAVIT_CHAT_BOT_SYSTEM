@@ -79,6 +79,16 @@ export interface Customer {
   createdAt: string
 }
 
+export interface ProductVariant {
+  id: string
+  label: string
+  price: number
+  stock: number
+  status: 'active' | 'inactive'
+  attributes: Record<string, string>
+  sortOrder: number
+}
+
 export interface Product {
   id: string
   name: string
@@ -89,6 +99,7 @@ export interface Product {
   stock: number
   status: 'active' | 'inactive'
   createdAt: string
+  variants?: ProductVariant[]
 }
 
 export interface FAQ {
