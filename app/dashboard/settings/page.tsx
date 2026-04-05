@@ -20,7 +20,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -38,6 +40,7 @@ import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers } from "@/lib/ap
 import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode } from "@/lib/format-currency"
 import { useSWRConfig } from "swr"
 import { updateSettings, connectWhatsApp, getWhatsAppStatus, disconnectWhatsApp, type WhatsAppStatus } from "@/lib/api-actions"
+import { getTimezoneGroups, getTimezoneOptions } from "@/lib/timezones"
 
 export default function SettingsPage() {
   const { mutate } = useSWRConfig()
@@ -53,6 +56,23 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState("+1 555-0100")
   const [address, setAddress] = useState("123 Main Street, New York, NY 10001")
   const [displayCurrency, setDisplayCurrency] = useState("USD")
+  const [timezone, setTimezone] = useState("UTC")
+
+  const timezoneGroupsForSelect = useMemo(() => {
+    const groups = getTimezoneGroups()
+    const valid = new Set(getTimezoneOptions().map((o) => o.value))
+    if (timezone && !valid.has(timezone)) {
+      return [
+        {
+          label: "Saved timezone",
+          options: [{ value: timezone, label: timezone.replace(/_/g, " "), region: "Other" }],
+        },
+        ...groups,
+      ]
+    }
+    return groups
+  }, [timezone])
+
   const catalogCurrencySelectOptions = useMemo(() => {
     const base = [...CATALOG_CURRENCY_OPTIONS]
     if (displayCurrency && !base.some((o) => o.code === displayCurrency)) {
@@ -147,6 +167,9 @@ export default function SettingsPage() {
       if (settings.displayCurrency != null && settings.displayCurrency !== "") {
         setDisplayCurrency(normalizeCurrencyCode(settings.displayCurrency))
       }
+      if (settings.timezone != null && String(settings.timezone).trim() !== "") {
+        setTimezone(String(settings.timezone).trim())
+      }
       if (settings.ordersCollectPaymentEnabled != null) setOrdersCollectPaymentEnabled(settings.ordersCollectPaymentEnabled)
       if (settings.orderPaymentManualInstructions != null) setOrderPaymentManualInstructions(settings.orderPaymentManualInstructions)
       if (settings.ordersAcceptMpesa != null) setOrdersAcceptMpesa(settings.ordersAcceptMpesa)
@@ -215,6 +238,7 @@ export default function SettingsPage() {
       phone,
       address,
       displayCurrency: normalizeCurrencyCode(displayCurrency),
+      timezone,
     })
     setProfileSaving(false)
     if (!result.success) {
@@ -222,6 +246,7 @@ export default function SettingsPage() {
       return
     }
     setProfileSuccess(true)
+    mutate("company-settings")
   }
 
   const handleOrderPaymentsSubmit = async (e: React.FormEvent) => {
@@ -382,15 +407,24 @@ export default function SettingsPage() {
 
                   <Field>
                     <FieldLabel htmlFor="timezone">Timezone</FieldLabel>
-                    <Select defaultValue="america-new-york">
-                      <SelectTrigger>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Used for business hours, away messages, and timestamps. Pick your region (e.g. Nairobi for East Africa Time, EAT).
+                    </p>
+                    <Select value={timezone} onValueChange={setTimezone}>
+                      <SelectTrigger id="timezone" className="w-full max-w-md">
                         <SelectValue placeholder="Select timezone" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="america-new-york">America/New York (EST)</SelectItem>
-                        <SelectItem value="america-los-angeles">America/Los Angeles (PST)</SelectItem>
-                        <SelectItem value="europe-london">Europe/London (GMT)</SelectItem>
-                        <SelectItem value="asia-tokyo">Asia/Tokyo (JST)</SelectItem>
+                      <SelectContent className="max-h-[min(360px,70vh)]">
+                        {timezoneGroupsForSelect.map((group) => (
+                          <SelectGroup key={group.label}>
+                            <SelectLabel>{group.label}</SelectLabel>
+                            {group.options.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))}
                       </SelectContent>
                     </Select>
                   </Field>
