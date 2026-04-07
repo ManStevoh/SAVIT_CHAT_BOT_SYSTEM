@@ -4,9 +4,10 @@ namespace App\Services;
 
 use App\Models\Company;
 use App\Models\ConversationLearningSample;
-use App\Models\Faq;
 use App\Models\PlatformSetting;
 use App\Services\AI\OpenAIConversationBuilder;
+use App\Services\Conversation\ConversationRoutingLogger;
+use App\Services\Conversation\FaqMatchingService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -23,7 +24,9 @@ class AIReplyService
         protected WhatsAppMessageSenderService $whatsAppSender,
         protected OpenAIConversationBuilder $conversationBuilder,
         protected ConversationLearningService $learningService,
-        protected OrderFlowService $orderFlow
+        protected OrderFlowService $orderFlow,
+        protected FaqMatchingService $faqMatchingService,
+        protected ConversationRoutingLogger $routingLogger
     ) {}
 
     /**
@@ -31,16 +34,19 @@ class AIReplyService
      *
      * @param  int|null  $chatId  For conversation history (OpenAI) and context
      */
-    public function getReplyForMessage(Company $company, string $customerMessage, ?string $customerName = null, ?int $chatId = null): string
+    public function getReplyForMessage(Company $company, string $customerMessage, ?string $customerName = null, ?int $chatId = null, ?string $orderFlowContext = null): string
     {
         $message = trim($customerMessage);
         if ($message === '') {
+            $this->routingLogger->log($company->id, $chatId, 'empty_message');
+
             return $this->fallbackReply($company);
         }
 
         $lower = mb_strtolower($message);
 
         if ($this->isOutsideWorkingHours($company)) {
+            $this->routingLogger->log($company->id, $chatId, 'away_hours');
             $away = $company->settings?->away_message;
             if ($away) {
                 return $away;
@@ -50,17 +56,19 @@ class AIReplyService
         }
 
         if ($this->looksLikeGreeting($lower)) {
+            $this->routingLogger->log($company->id, $chatId, 'greeting_menu');
+
             return $this->greetingWithQuickMenu($company, $customerName);
         }
 
-        return $this->resolveReplyContent($company, $message, $lower, $customerName, $chatId);
+        return $this->resolveReplyContent($company, $message, $lower, $customerName, $chatId, $orderFlowContext);
     }
 
     /**
      * Second bubble after opening greeting: FAQ / keywords / AI / fallback.
      * Returns null when a second message would duplicate the opening (away hours, pure greeting only).
      */
-    public function getReplyAfterOpeningGreeting(Company $company, string $customerMessage, ?string $customerName = null, ?int $chatId = null): ?string
+    public function getReplyAfterOpeningGreeting(Company $company, string $customerMessage, ?string $customerName = null, ?int $chatId = null, ?string $orderFlowContext = null): ?string
     {
         $message = trim($customerMessage);
         if ($message === '') {
@@ -77,30 +85,63 @@ class AIReplyService
             return null;
         }
 
-        return $this->resolveReplyContent($company, $message, $lower, $customerName, $chatId);
+        return $this->resolveReplyContent($company, $message, $lower, $customerName, $chatId, $orderFlowContext);
     }
 
     /**
-     * Keyword → FAQ → OpenAI → fallback (shared by normal replies and post-greeting follow-up).
+     * Catalog shortcuts → scored FAQ → keyword heuristics → OpenAI → fallback.
      */
-    protected function resolveReplyContent(Company $company, string $message, string $lower, ?string $customerName, ?int $chatId): string
+    protected function resolveReplyContent(Company $company, string $message, string $lower, ?string $customerName, ?int $chatId, ?string $orderFlowContext = null): string
     {
+        $catalogReply = $this->matchCatalogQuickReply($company, $lower);
+        if ($catalogReply !== null) {
+            $this->routingLogger->log($company->id, $chatId, 'catalog_quick');
+
+            return $catalogReply;
+        }
+
+        $faqMatch = $this->faqMatchingService->matchBest($company, $message, $lower);
+        if ($faqMatch !== null) {
+            $this->routingLogger->log($company->id, $chatId, 'faq', [
+                'faq_id' => $faqMatch['faq_id'],
+                'score' => $faqMatch['score'],
+            ]);
+
+            return $faqMatch['answer'];
+        }
+
         $keywordReply = $this->matchKeywordReply($company, $lower);
         if ($keywordReply !== null) {
+            $this->routingLogger->log($company->id, $chatId, 'keyword');
+
             return $keywordReply;
         }
 
-        $faqReply = $this->matchFaq($company, $message, $lower);
-        if ($faqReply !== null) {
-            return $faqReply;
-        }
-
-        $openAiReply = $this->getOpenAiReply($company, $message, $customerName, $chatId);
+        $openAiReply = $this->getOpenAiReply($company, $message, $customerName, $chatId, $orderFlowContext);
         if ($openAiReply !== null) {
+            $this->routingLogger->log($company->id, $chatId, 'openai');
+
             return $openAiReply;
         }
 
+        $this->routingLogger->log($company->id, $chatId, 'fallback');
+
         return $this->fallbackReply($company);
+    }
+
+    /**
+     * High-confidence shortcuts that must stay data-accurate (prices / product list).
+     */
+    protected function matchCatalogQuickReply(Company $company, string $lower): ?string
+    {
+        if ($lower === '1' || str_contains($lower, 'price') || str_contains($lower, 'prices') || str_contains($lower, 'how much')) {
+            return $this->formatProductList($company);
+        }
+        if (str_contains($lower, 'catalog') || str_contains($lower, 'menu') || str_contains($lower, 'products') || str_contains($lower, 'product list') || ($lower === 'list' || str_contains($lower, 'price list'))) {
+            return $this->formatProductList($company);
+        }
+
+        return null;
     }
 
     /**
@@ -184,19 +225,20 @@ class AIReplyService
 
     protected function matchKeywordReply(Company $company, string $lower): ?string
     {
-        if ($lower === '1' || str_contains($lower, 'price') || str_contains($lower, 'prices') || str_contains($lower, 'how much')) {
-            return $this->formatProductList($company);
-        }
-        if (str_contains($lower, 'catalog') || str_contains($lower, 'menu') || str_contains($lower, 'products') || str_contains($lower, 'list')) {
-            return $this->formatProductList($company);
-        }
         if (str_contains($lower, 'order') || str_contains($lower, 'place order')) {
             return 'You can place an order by typing "order" or "2", then reply with product numbers from the list and quantity when asked. You can also use text like "2 x Product Name".';
         }
-        if (str_contains($lower, 'location') || str_contains($lower, 'address') || str_contains($lower, 'where')) {
+
+        if ($this->looksLikeOrderStatusQuestion($lower)) {
+            return null;
+        }
+
+        if (str_contains($lower, 'location')
+            || str_contains($lower, 'address')
+            || $this->looksLikeShopLocationQuestion($lower)) {
             $addr = $company->address ?? null;
             if ($addr) {
-                return "We're located at: ".$addr;
+                return "We're located at: {$addr}";
             }
 
             return 'Please contact us for our address.';
@@ -217,10 +259,39 @@ class AIReplyService
             return 'Please contact us for our opening hours.';
         }
         if (str_contains($lower, 'delivery') || str_contains($lower, 'shipping')) {
-            return "We offer delivery. For details and delivery areas, please type 'order' to place an order or ask us a specific question.";
+            return "We offer delivery. For details and delivery areas, type \"order\" to start an order or ask a specific question and we'll answer from our business info.";
         }
 
         return null;
+    }
+
+    protected function looksLikeOrderStatusQuestion(string $lower): bool
+    {
+        if (! str_contains($lower, 'order')) {
+            return false;
+        }
+
+        return str_contains($lower, 'where is')
+            || str_contains($lower, 'where\'s')
+            || str_contains($lower, 'wheres')
+            || str_contains($lower, 'status')
+            || str_contains($lower, 'track')
+            || str_contains($lower, 'tracking')
+            || str_contains($lower, 'my order')
+            || str_contains($lower, 'order number');
+    }
+
+    /** @see OrderFlowService::looksLikeLocationOrShopInfoQuestion() */
+    protected function looksLikeShopLocationQuestion(string $lower): bool
+    {
+        if (str_contains($lower, 'where') && (str_contains($lower, 'shop') || str_contains($lower, 'store') || str_contains($lower, 'located') || str_contains($lower, 'find you') || str_contains($lower, 'your address'))) {
+            return true;
+        }
+        if (str_contains($lower, 'where are you') || str_contains($lower, 'where is the')) {
+            return true;
+        }
+
+        return false;
     }
 
     protected function formatProductList(Company $company): string
@@ -228,46 +299,7 @@ class AIReplyService
         return $this->orderFlow->formatCatalogForDisplay($company);
     }
 
-    protected function matchFaq(Company $company, string $message, string $lower): ?string
-    {
-        $faqs = Faq::where('company_id', $company->id)->where('is_active', true)->get();
-        $messageWords = $this->tokenize($lower);
-        foreach ($faqs as $faq) {
-            $question = mb_strtolower($faq->question);
-            if (str_contains($lower, $question) || str_contains($question, $lower)) {
-                $faq->increment('usage_count');
-
-                return $faq->answer;
-            }
-            $questionWords = $this->tokenize($question);
-            if (count(array_intersect($messageWords, $questionWords)) >= min(2, count($questionWords))) {
-                $faq->increment('usage_count');
-
-                return $faq->answer;
-            }
-            $keywords = $faq->keywords;
-            if (is_array($keywords)) {
-                foreach ($keywords as $kw) {
-                    if (str_contains($lower, mb_strtolower((string) $kw))) {
-                        $faq->increment('usage_count');
-
-                        return $faq->answer;
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
-
-    protected function tokenize(string $text): array
-    {
-        $words = preg_split('/\s+/', trim(preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text)), -1, PREG_SPLIT_NO_EMPTY);
-
-        return array_unique(array_map('mb_strtolower', $words ?: []));
-    }
-
-    protected function getOpenAiReply(Company $company, string $message, ?string $customerName, ?int $chatId): ?string
+    protected function getOpenAiReply(Company $company, string $message, ?string $customerName, ?int $chatId, ?string $orderFlowContext = null): ?string
     {
         $platform = Cache::remember('platform_settings_openai', self::PLATFORM_SETTINGS_CACHE_TTL, fn () => PlatformSetting::first());
         $apiKey = $platform?->openai_api_key ?? config('openai.api_key');
@@ -278,7 +310,7 @@ class AIReplyService
         $model = $platform?->openai_model ?? config('openai.model', 'gpt-4o-mini');
         $maxTokens = $platform?->openai_max_tokens ?? config('openai.max_tokens', 512);
 
-        $messages = $this->conversationBuilder->build($company, $message, $customerName, $chatId);
+        $messages = $this->conversationBuilder->build($company, $message, $customerName, $chatId, $orderFlowContext);
 
         try {
             $response = Http::withToken($apiKey)
@@ -330,9 +362,11 @@ class AIReplyService
         $settings = $company->settings;
         $fallback = $settings?->fallback_message;
         if ($fallback && trim($fallback) !== '') {
-            return trim($fallback);
+            return trim($fallback)."\n\n".'Quick options: reply "prices" for our list, "order" to buy, or ask any question and we will answer from our business details.';
         }
 
-        return "Thanks for your message. Our team will get back to you shortly. Reply with 'prices' for our product list or 'order' to place an order.";
+        return "Thanks for your message — we're on it.\n\n"
+            ."Quick options: reply \"prices\" for our product list, \"order\" to place an order, or type your question (hours, delivery, etc.) and we'll answer from our business info.\n\n"
+            .self::QUICK_MENU_SUFFIX;
     }
 }

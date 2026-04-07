@@ -15,30 +15,70 @@ use Illuminate\Support\Facades\Storage;
  */
 class SystemPromptBuilder
 {
-    private const MAX_FAQS_IN_PROMPT = 15;
+    private const MAX_FAQS_IN_PROMPT = 25;
 
     private const MAX_PRODUCTS_IN_PROMPT = 20;
 
     /**
      * @param  array<int, array{question: string, answer: string}>  $learningSamples  Optional past Q&A to improve consistency
      */
-    public function build(Company $company, array $learningSamples = []): string
+    public function build(Company $company, array $learningSamples = [], ?string $orderFlowContext = null): string
     {
         $settings = $company->settings;
-        $tone = $settings?->ai_tone ?? 'friendly and professional';
+        $tone = $settings?->ai_tone ?? 'friendly, professional, and clear';
         $name = $company->name;
 
         $parts = [
-            "You are a helpful customer service assistant for the business: {$name}.",
-            "Reply in a {$tone} tone. Keep replies concise (1-3 short paragraphs).",
-            "Do not invent prices or product names. Use the product list from context when relevant. If the customer names products and quantities to buy, acknowledge the order intent; do not only redirect them to type 'prices' or 'catalog'.",
+            "You represent {$name} in WhatsApp. Write as the owner would: warm, direct, and trustworthy. Sound human, not robotic.",
+            "Tone: {$tone}. Use short paragraphs or bullet lines when listing facts. Plain text only (no markdown, no **bold**).",
+            'Ground every factual claim in the sections below (business profile, knowledge base, products). If something is not covered, say you will confirm with the team instead of guessing.',
+            "Do not invent prices, fees, delivery areas, or product names. Use the product list when relevant. If the customer states what they want to buy, acknowledge it helpfully; do not only tell them to type 'prices' or 'catalog'.",
         ];
 
+        $this->appendBusinessProfile($company, $parts);
         $this->appendKnowledgeBase($company, $parts);
         $this->appendProducts($company, $parts);
         $this->appendLearningSamples($learningSamples, $parts);
 
+        if ($orderFlowContext !== null && trim($orderFlowContext) !== '') {
+            $parts[] = "\nCurrent situation (honor this; do not contradict numbered checkout instructions unless they ask to cancel or change topic):\n".trim($orderFlowContext);
+        }
+
         return implode("\n", $parts);
+    }
+
+    private function appendBusinessProfile(Company $company, array &$parts): void
+    {
+        $company->loadMissing('settings');
+        $settings = $company->settings;
+
+        $lines = [];
+        $lines[] = 'Business profile (authoritative):';
+        $lines[] = '- Name: '.$company->name;
+        if ($company->phone) {
+            $lines[] = '- Phone: '.$company->phone;
+        }
+        if ($company->email) {
+            $lines[] = '- Email: '.$company->email;
+        }
+        if ($company->address) {
+            $lines[] = '- Address: '.$company->address;
+        }
+        if ($settings?->timezone) {
+            $lines[] = '- Timezone: '.$settings->timezone;
+        }
+
+        $wh = $settings?->working_hours;
+        if ($wh && is_array($wh)) {
+            $lines[] = '- Hours:';
+            foreach ($wh as $day => $hours) {
+                if ($hours && is_string($hours)) {
+                    $lines[] = '  • '.ucfirst((string) $day).': '.$hours;
+                }
+            }
+        }
+
+        $parts[] = "\n".implode("\n", $lines);
     }
 
     private function appendKnowledgeBase(Company $company, array &$parts): void

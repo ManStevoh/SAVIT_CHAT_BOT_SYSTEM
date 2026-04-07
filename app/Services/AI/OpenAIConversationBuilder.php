@@ -4,6 +4,7 @@ namespace App\Services\AI;
 
 use App\Models\Company;
 use App\Models\Message;
+use App\Services\Conversation\CustomerMessageClassifier;
 use App\Services\ConversationLearningService;
 
 /**
@@ -14,7 +15,8 @@ class OpenAIConversationBuilder
 {
     public function __construct(
         private SystemPromptBuilder $systemPromptBuilder,
-        private ConversationLearningService $learningService
+        private ConversationLearningService $learningService,
+        private CustomerMessageClassifier $messageClassifier
     ) {}
 
     /** Maximum number of history messages to send. */
@@ -29,23 +31,28 @@ class OpenAIConversationBuilder
         Company $company,
         string $currentUserMessage,
         ?string $customerName,
-        ?int $chatId
+        ?int $chatId,
+        ?string $orderFlowContext = null
     ): array {
         $learningSamples = [];
         if ($this->shouldUseLearningSamples($company)) {
             $learningSamples = $this->learningService->getRecentSamplesForPrompt($company);
         }
 
-        $systemContent = $this->systemPromptBuilder->build($company, $learningSamples);
+        $systemContent = $this->systemPromptBuilder->build($company, $learningSamples, $orderFlowContext);
         $messages = [['role' => 'system', 'content' => $systemContent]];
 
         if ($chatId !== null) {
             $this->appendHistory($chatId, $messages);
         }
 
-        $userContent = $customerName !== null && $customerName !== ''
+        $hint = $this->messageClassifier->buildOpenAiHint($currentUserMessage);
+        $body = $customerName !== null && $customerName !== ''
             ? "[Customer: {$customerName}]\n\n{$currentUserMessage}"
             : $currentUserMessage;
+        $userContent = $hint !== null
+            ? "[Guidance]\n{$hint}\n\n[Message]\n{$body}"
+            : $body;
         $messages[] = ['role' => 'user', 'content' => $userContent];
 
         return $messages;
@@ -54,6 +61,7 @@ class OpenAIConversationBuilder
     private function shouldUseLearningSamples(Company $company): bool
     {
         $settings = $company->settings;
+
         return $settings && ($settings->learn_from_conversations ?? true);
     }
 
