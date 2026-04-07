@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -65,7 +66,9 @@ function getStatusLabel(customer: Customer): string {
 }
 
 export default function CustomersPage() {
-  const [searchQuery, setSearchQuery] = useState("")
+  const searchParams = useSearchParams()
+  const initialSearch = searchParams.get("search") ?? ""
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [page, setPage] = useState(1)
   const limit = 10
   const [exportOpen, setExportOpen] = useState(false)

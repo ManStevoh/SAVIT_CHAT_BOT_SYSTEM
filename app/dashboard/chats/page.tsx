@@ -28,10 +28,12 @@ import {
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
+import { useRouter } from 'next/navigation'
 
 export default function ChatsPage() {
   const { toast } = useToast()
   const { mutate } = useSWRConfig()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
@@ -121,6 +123,16 @@ export default function ChatsPage() {
   }
 
   const isAgentHandling = selectedChat?.agentHandlingAt != null
+
+  const handleCreateOrder = useCallback(() => {
+    if (!selectedChat) return
+    router.push(`/dashboard/orders?search=${encodeURIComponent(selectedChat.customerPhone)}`)
+  }, [router, selectedChat])
+
+  const handleViewCustomerProfile = useCallback(() => {
+    if (!selectedChat) return
+    router.push(`/dashboard/customers?search=${encodeURIComponent(selectedChat.customerPhone)}`)
+  }, [router, selectedChat])
 
   return (
     <div className="flex h-[calc(100dvh-7rem)] min-h-0 gap-4 lg:h-[calc(100vh-7rem)]">
@@ -492,11 +504,19 @@ export default function ChatsPage() {
                   Quick Actions
                 </h4>
                 <div className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start border-border/50">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-border/50"
+                    onClick={handleCreateOrder}
+                  >
                     <ShoppingCart className="mr-2 h-4 w-4" />
                     Create Order
                   </Button>
-                  <Button variant="outline" className="w-full justify-start border-border/50">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-border/50"
+                    onClick={handleViewCustomerProfile}
+                  >
                     <User className="mr-2 h-4 w-4" />
                     View Customer Profile
                   </Button>

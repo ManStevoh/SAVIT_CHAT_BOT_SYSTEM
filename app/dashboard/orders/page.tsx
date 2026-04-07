@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -50,10 +51,12 @@ import {
 import { useSWRConfig } from 'swr'
 
 export default function OrdersPage() {
+  const searchParams = useSearchParams()
+  const initialSearch = searchParams.get('search') ?? ''
   const { data: companySettings } = useCompanySettings()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
   const { mutate } = useSWRConfig()
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
