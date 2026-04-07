@@ -8,6 +8,7 @@ import { clearAuthCookie } from "@/lib/auth-cookie"
 import { useNotifications } from "@/lib/api-hooks"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from "@/components/ui/drawer"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,8 +17,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Search, Bell, Moon, Sun, User, Settings, LogOut } from "lucide-react"
+import { Search, Bell, Moon, Sun, User, Settings, LogOut, Menu } from "lucide-react"
 import { useTheme } from "next-themes"
+import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
+import { DashboardNavLinks } from "@/components/dashboard/sidebar"
 
 type StoredUser = { name?: string; email?: string }
 
@@ -43,6 +46,7 @@ export function DashboardNavbar() {
   const { resolvedTheme, setTheme } = useTheme()
   const [loggingOut, setLoggingOut] = useState(false)
   const [user, setUser] = useState<StoredUser | null>(null)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const isAdmin = pathname?.startsWith("/admin") ?? false
@@ -60,6 +64,34 @@ export function DashboardNavbar() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6">
       <div className="flex items-center gap-4 flex-1">
+        {!isAdmin && (
+          <Drawer open={mobileNavOpen} onOpenChange={setMobileNavOpen} direction="left">
+            <DrawerTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-muted-foreground hover:text-foreground"
+                aria-label="Open navigation"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent className="p-0">
+              <div className="flex h-16 items-center border-b border-border px-4">
+                <AppLogoAndName variant="sidebar" />
+              </div>
+              <DashboardNavLinks onNavigate={() => setMobileNavOpen(false)} />
+              <div className="p-2">
+                <DrawerClose asChild>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+                    Close
+                  </Button>
+                </DrawerClose>
+              </div>
+            </DrawerContent>
+          </Drawer>
+        )}
+
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
