@@ -32,6 +32,12 @@ import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { FormModal } from '@/components/shared/modal'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -406,9 +412,26 @@ export default function ChatsPage() {
                 <Button variant="ghost" size="icon" className="hidden md:inline-flex">
                   <Video className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Open chat actions">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleCreateOrder}>
+                      Create Order
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleViewCustomerProfile}>
+                      View Customer Profile
+                    </DropdownMenuItem>
+                    {isAgentHandling && (
+                      <DropdownMenuItem onClick={handleHandBackToBot} disabled={isHandingBack}>
+                        {isHandingBack ? 'Handing back…' : 'Hand back to bot'}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
