@@ -390,7 +390,9 @@ export default function ChatsPage() {
                             Agent
                           </div>
                         )}
-                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                        <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere] break-all">
+                          {msg.content}
+                        </p>
                         <span
                           className={`mt-1 block text-[10px] ${
                             msg.sender === 'customer'
