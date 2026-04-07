@@ -52,6 +52,7 @@ export default function ChatsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialSearch = searchParams.get('search') ?? ''
+  const chatIdFromUrl = searchParams.get('chat')
   const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
@@ -90,10 +91,21 @@ export default function ChatsPage() {
   }, [])
 
   useEffect(() => {
-    if (!isMobile && !selectedChatId && chats && chats.length > 0) {
+    if (!chats?.length) return
+
+    if (chatIdFromUrl) {
+      const match = chats.find((c) => c.id === chatIdFromUrl)
+      if (match) {
+        setSelectedChatId(chatIdFromUrl)
+        router.replace('/dashboard/chats', { scroll: false })
+      }
+      return
+    }
+
+    if (!isMobile && !selectedChatId) {
       setSelectedChatId(chats[0].id)
     }
-  }, [chats, selectedChatId, isMobile])
+  }, [chats, selectedChatId, isMobile, chatIdFromUrl, router])
 
   const handleSendMessage = useCallback(async () => {
     if ((!messageInput.trim() && !selectedAttachment) || !selectedChatId) return

@@ -292,6 +292,38 @@ export async function handBackToBot(chatId: string): Promise<{ success: boolean;
   }
 }
 
+/** Laravel: POST /api/company/notifications/:id/read */
+export async function markNotificationRead(
+  notificationId: string
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(150)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/company/notifications/${notificationId}/read`, {
+      method: 'POST',
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/** Laravel: POST /api/company/notifications/read-all */
+export async function markAllNotificationsRead(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(150)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>('/api/company/notifications/read-all', {
+      method: 'POST',
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 /**
  * Update order status and/or payment status
  * Laravel: PATCH /api/company/orders/:orderId  body: { status?, paymentStatus? }

@@ -209,6 +209,27 @@ export function useMessages(chatId: string | null) {
  * Fetch all orders for the current company
  * API Endpoint: GET /api/company/orders
  */
+/**
+ * Single order for deep links (e.g. notifications). API: GET /api/company/orders/:id
+ */
+export function useOrder(orderId: string | null) {
+  return useSWR<{ order: Order }>(
+    orderId ? ['order', orderId] : null,
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<{ order: Order }>(`/api/company/orders/${orderId}`)
+      }
+      await delay(200)
+      const o = mockOrders.find((x) => x.id === orderId)
+      if (!o) {
+        throw new Error('Order not found')
+      }
+      return { order: o }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
 export function useOrders(filters?: { status?: string; search?: string; page?: number; limit?: number }) {
   return useSWR<{ orders: Order[]; total: number; page: number; totalPages: number }>(
     ['orders', filters],
@@ -497,7 +518,7 @@ export function useCompanyTeam() {
   )
 }
 
-/** Notification item — API: GET /api/company/notifications (when implemented) */
+/** Notification item — API: GET /api/company/notifications */
 export interface NotificationItem {
   id: string
   title: string
@@ -505,6 +526,10 @@ export interface NotificationItem {
   type?: 'order' | 'handoff' | 'report' | 'info'
   read?: boolean
   createdAt?: string
+  /** Deep link to Orders detail when present */
+  orderId?: string | null
+  /** Deep link to Chats when present */
+  chatId?: string | null
 }
 
 export interface NotificationsData {

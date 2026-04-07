@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useCallback, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,7 +11,7 @@ import { DataTable, type Column, type Filter } from '@/components/shared/data-ta
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { SelectField } from '@/components/shared/form-field'
-import { useOrders, useCompanySettings } from '@/lib/api-hooks'
+import { useOrders, useOrder, useCompanySettings } from '@/lib/api-hooks'
 import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
 import { updateOrderStatus } from '@/lib/api-actions'
 import type { Order } from '@/lib/mock-data'
@@ -52,8 +52,10 @@ import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
 
 export default function OrdersPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const initialSearch = searchParams.get('search') ?? ''
+  const orderIdFromNotif = searchParams.get('orderId')
   const { data: companySettings } = useCompanySettings()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
   const { mutate } = useSWRConfig()
@@ -76,6 +78,17 @@ export default function OrdersPage() {
     page,
     limit: 10,
   })
+
+  const { data: singleOrderPayload } = useOrder(orderIdFromNotif)
+
+  useEffect(() => {
+    if (!orderIdFromNotif || !singleOrderPayload?.order) return
+    const o = singleOrderPayload.order
+    setSelectedOrder(o)
+    setNewStatus(o.status)
+    setNewPaymentStatus(o.paymentStatus)
+    router.replace('/dashboard/orders', { scroll: false })
+  }, [orderIdFromNotif, singleOrderPayload, router])
 
   // Calculate stats from data
   const stats = {
