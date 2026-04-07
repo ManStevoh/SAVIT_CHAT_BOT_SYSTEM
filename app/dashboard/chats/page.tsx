@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -64,7 +64,6 @@ export default function ChatsPage() {
   const [orderQuantity, setOrderQuantity] = useState('1')
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' })
 
   const {
@@ -147,10 +146,6 @@ export default function ChatsPage() {
       e.preventDefault()
       handleSendMessage()
     }
-  }
-
-  const handlePickAttachment = () => {
-    fileInputRef.current?.click()
   }
 
   const handleAttachmentSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -545,14 +540,16 @@ export default function ChatsPage() {
             {/* Message Input */}
             <div className="shrink-0 border-t border-border/50 p-4">
               <input
-                ref={fileInputRef}
+                id="chat-attachment-input"
                 type="file"
-                className="hidden"
+                className="sr-only"
                 onChange={handleAttachmentSelected}
               />
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={handlePickAttachment} aria-label="Attach a file">
-                  <Paperclip className="h-4 w-4" />
+                <Button asChild variant="ghost" size="icon">
+                  <label htmlFor="chat-attachment-input" aria-label="Attach a file" className="cursor-pointer">
+                    <Paperclip className="h-4 w-4" />
+                  </label>
                 </Button>
                 <Input
                   placeholder="Type a message..."
