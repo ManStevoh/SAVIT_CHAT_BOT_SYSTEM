@@ -88,20 +88,47 @@ const initialFormData: ProductFormData = {
   stock: '',
 }
 
-function productPrimaryDisplayImage(product: Product): string | null {
-  const fromField = resolveBackendMediaUrl(product.image ?? null)
-  if (fromField) return fromField
-  const imgs = product.images ?? []
-  const primary = imgs.find((i) => i.isPrimary) ?? imgs[0]
-  return resolveBackendMediaUrl(primary?.url ?? null)
-}
-
 function variantDisplayImage(variant: ProductVariant): string | null {
   const fromField = resolveBackendMediaUrl(variant.image ?? null)
   if (fromField) return fromField
   const imgs = variant.images ?? []
   const primary = imgs.find((i) => i.isPrimary) ?? imgs[0]
   return resolveBackendMediaUrl(primary?.url ?? null)
+}
+
+function productPrimaryDisplayImage(product: Product): string | null {
+  const r = (u: string | null | undefined) => resolveBackendMediaUrl(u ?? null)
+  const direct = r(product.image)
+  if (direct) return direct
+  const imgs = product.images ?? []
+  const primary = imgs.find((i) => i.isPrimary) ?? imgs[0]
+  const fromGallery = r(primary?.url)
+  if (fromGallery) return fromGallery
+  for (const v of product.variants ?? []) {
+    const vImg = variantDisplayImage(v)
+    if (vImg) return vImg
+  }
+  return null
+}
+
+function ProductThumbImg({
+  src,
+  alt,
+  className = 'h-full w-full rounded-lg object-cover',
+}: {
+  src: string
+  alt: string
+  className?: string
+}) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Package className="h-5 w-5 shrink-0 text-primary" />
+      </div>
+    )
+  }
+  return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} />
 }
 
 export default function ProductsPage() {
@@ -417,11 +444,7 @@ export default function ProductsPage() {
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               {thumb ? (
-                <img
-                  src={thumb}
-                  alt={product.name}
-                  className="h-full w-full rounded-lg object-cover"
-                />
+                <ProductThumbImg src={thumb} alt={product.name} />
               ) : (
                 <Package className="h-5 w-5 text-primary" />
               )}
@@ -617,11 +640,13 @@ export default function ProductsPage() {
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Main product image</label>
         {selectedProduct && productPrimaryDisplayImage(selectedProduct) && !productImageFile && (
-          <img
-            src={productPrimaryDisplayImage(selectedProduct)!}
-            alt={selectedProduct.name}
-            className="h-20 w-20 rounded-md border border-border object-cover"
-          />
+          <div className="h-20 w-20 overflow-hidden rounded-md border border-border">
+            <ProductThumbImg
+              src={productPrimaryDisplayImage(selectedProduct)!}
+              alt={selectedProduct.name}
+              className="h-full w-full object-cover"
+            />
+          </div>
         )}
         {productImageFile && (
           <p className="text-xs text-muted-foreground">Selected: {productImageFile.name}</p>
@@ -881,7 +906,13 @@ export default function ProductsPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
                         {vThumb ? (
-                          <img src={vThumb} alt={v.label} className="h-10 w-10 rounded-md object-cover" />
+                          <div className="h-10 w-10 overflow-hidden rounded-md">
+                            <ProductThumbImg
+                              src={vThumb}
+                              alt={v.label}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
                         ) : (
                           <div className="h-10 w-10 rounded-md bg-muted" />
                         )}

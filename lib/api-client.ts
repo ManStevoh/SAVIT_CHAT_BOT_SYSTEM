@@ -26,23 +26,57 @@ export function apiUrl(path: string): string {
 }
 
 /**
- * Laravel Storage::url() often returns a path like `/storage/...`. The dashboard is on another
- * origin (e.g. Vercel) so `<img src="/storage/...">` loads from the wrong host. Prefix the API origin.
+ * Normalize Laravel public-disk URLs so `<img>` loads from NEXT_PUBLIC_API_URL.
+ * Only rewrites paths under `/storage` (wrong host from APP_URL e.g. localhost is fixed).
+ * Other absolute URLs (CDN, etc.) are left unchanged.
  */
 export function resolveBackendMediaUrl(url: string | null | undefined): string | null {
   if (url == null || String(url).trim() === '') return null
-  const u = String(url).trim()
-  if (u.startsWith('http://') || u.startsWith('https://')) return u
-  if (u.startsWith('//')) {
-    if (typeof window !== 'undefined' && window.location?.protocol) {
-      return `${window.location.protocol}${u}`
-    }
-    return `https:${u}`
-  }
+  const raw = String(url).trim()
   const base = getBaseUrl().replace(/\/$/, '')
-  if (!base) return u
-  const path = u.startsWith('/') ? u : `/${u}`
-  return `${base}${path}`
+
+  let pathnameWithQuery: string
+  try {
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      const p = new URL(raw)
+      pathnameWithQuery = `${p.pathname}${p.search}`
+    } else if (raw.startsWith('//')) {
+      const p = new URL(`https:${raw}`)
+      pathnameWithQuery = `${p.pathname}${p.search}`
+    } else {
+      pathnameWithQuery = raw.startsWith('/') ? raw : `/${raw}`
+    }
+  } catch {
+    return null
+  }
+
+  const storageIdx = pathnameWithQuery.indexOf('/storage/')
+  const storagePath =
+    storageIdx !== -1
+      ? pathnameWithQuery.slice(storageIdx)
+      : pathnameWithQuery.startsWith('/storage')
+        ? pathnameWithQuery
+        : null
+
+  if (storagePath) {
+    if (!base) return storagePath
+    return `${base}${storagePath.startsWith('/') ? storagePath : `/${storagePath}`}`
+  }
+
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return raw
+  }
+  if (raw.startsWith('//')) {
+    if (typeof window !== 'undefined' && window.location?.protocol) {
+      return `${window.location.protocol}${raw}`
+    }
+    return `https:${raw}`
+  }
+
+  if (!base) {
+    return pathnameWithQuery
+  }
+  return `${base}${pathnameWithQuery.startsWith('/') ? pathnameWithQuery : `/${pathnameWithQuery}`}`
 }
 
 /** Get auth token for Laravel Sanctum (Bearer). Override if you store token elsewhere. */
