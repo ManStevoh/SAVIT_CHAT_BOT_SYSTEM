@@ -225,7 +225,7 @@ export default function SubscriptionPage() {
           <CardDescription>Your subscription details</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
                 <Zap className="h-8 w-8 text-primary" />
@@ -240,8 +240,8 @@ export default function SubscriptionPage() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
+            <div className="flex w-full gap-2 sm:w-auto">
+              <Button className="w-full sm:w-auto" variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
                 {portalLoading ? "Opening…" : "Manage billing"}
               </Button>
             </div>
