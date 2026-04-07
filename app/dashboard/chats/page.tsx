@@ -335,7 +335,7 @@ export default function ChatsPage() {
             </div>
 
             {/* Messages Area */}
-            <ScrollArea className="min-h-0 flex-1 p-6">
+            <ScrollArea className="min-h-0 flex-1 p-6 overflow-x-auto">
               {/* Loading State */}
               {messagesLoading && (
                 <div className="space-y-4">
@@ -372,7 +372,7 @@ export default function ChatsPage() {
                       }`}
                     >
                       <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-2 sm:max-w-[70%] ${
+                        className={`w-fit max-w-full rounded-2xl px-4 py-2 sm:max-w-[85%] lg:max-w-[70%] ${
                           msg.sender === 'customer'
                             ? 'rounded-br-md bg-primary text-primary-foreground'
                             : 'rounded-bl-md bg-secondary text-secondary-foreground'
@@ -390,7 +390,7 @@ export default function ChatsPage() {
                             Agent
                           </div>
                         )}
-                        <p className="text-sm">{msg.content}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                         <span
                           className={`mt-1 block text-[10px] ${
                             msg.sender === 'customer'
