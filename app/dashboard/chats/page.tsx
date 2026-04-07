@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -26,6 +26,7 @@ import {
   MessageSquare,
   User,
   AlertCircle,
+  X,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
@@ -62,6 +63,8 @@ export default function ChatsPage() {
   const [selectedProductId, setSelectedProductId] = useState('')
   const [orderQuantity, setOrderQuantity] = useState('1')
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
+  const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' })
 
   const {
@@ -94,17 +97,19 @@ export default function ChatsPage() {
   }, [chats, selectedChatId, isMobile])
 
   const handleSendMessage = useCallback(async () => {
-    if (!messageInput.trim() || !selectedChatId) return
+    if ((!messageInput.trim() && !selectedAttachment) || !selectedChatId) return
 
     setIsSending(true)
     try {
       const result = await sendMessage({
         chatId: selectedChatId,
         content: messageInput,
+        attachment: selectedAttachment ?? undefined,
       })
 
       if (result.success) {
         setMessageInput('')
+        setSelectedAttachment(null)
         mutate(['messages', selectedChatId])
         if (result.whatsappSent === false && result.whatsappError) {
           toast({
@@ -119,7 +124,7 @@ export default function ChatsPage() {
     } finally {
       setIsSending(false)
     }
-  }, [messageInput, selectedChatId, mutate])
+  }, [messageInput, selectedAttachment, selectedChatId, mutate, toast])
 
   const handleHandBackToBot = useCallback(async () => {
     if (!selectedChatId) return
@@ -142,6 +147,21 @@ export default function ChatsPage() {
       e.preventDefault()
       handleSendMessage()
     }
+  }
+
+  const handlePickAttachment = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleAttachmentSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSelectedAttachment(file)
+    toast({
+      title: 'Attachment ready',
+      description: `Selected "${file.name}". Send now to share it with this customer.`,
+    })
+    e.target.value = ''
   }
 
   const isAgentHandling = selectedChat?.agentHandlingAt != null
@@ -483,6 +503,29 @@ export default function ChatsPage() {
                         <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere] break-all">
                           {msg.content}
                         </p>
+                        {msg.attachmentUrl && (
+                          <div className="mt-2">
+                            {msg.messageType === 'image' ? (
+                              <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={msg.attachmentUrl}
+                                  alt={msg.attachmentName ?? 'Attachment'}
+                                  className="max-h-52 max-w-full rounded-lg border border-border/50 object-contain"
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={msg.attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center rounded-md border border-border/50 px-2 py-1 text-xs hover:bg-background/40"
+                              >
+                                <Paperclip className="mr-1 h-3 w-3" />
+                                {msg.attachmentName ?? 'Download attachment'}
+                              </a>
+                            )}
+                          </div>
+                        )}
                         <span
                           className={`mt-1 block text-[10px] ${
                             msg.sender === 'customer'
@@ -501,8 +544,14 @@ export default function ChatsPage() {
 
             {/* Message Input */}
             <div className="shrink-0 border-t border-border/50 p-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleAttachmentSelected}
+              />
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" onClick={handlePickAttachment} aria-label="Attach a file">
                   <Paperclip className="h-4 w-4" />
                 </Button>
                 <Input
@@ -516,11 +565,28 @@ export default function ChatsPage() {
                 <Button
                   size="icon"
                   onClick={handleSendMessage}
-                  disabled={!messageInput.trim() || isSending}
+                  disabled={(!messageInput.trim() && !selectedAttachment) || isSending}
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
+              {selectedAttachment && (
+                <div className="mt-2 flex items-center justify-between rounded-md border border-border/60 bg-secondary/30 px-2 py-1 text-xs">
+                  <span className="truncate text-foreground">
+                    Attachment: {selectedAttachment.name}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setSelectedAttachment(null)}
+                    aria-label="Remove attachment"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
               <p className="mt-2 text-xs text-muted-foreground">
                 Press Enter to send, Shift+Enter for new line
               </p>

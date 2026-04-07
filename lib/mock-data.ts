@@ -42,6 +42,11 @@ export interface Message {
   id: string
   chatId: string
   content: string
+  messageType?: 'text' | 'image' | 'file'
+  attachmentUrl?: string | null
+  attachmentName?: string | null
+  attachmentMime?: string | null
+  attachmentSize?: number | null
   sender: 'customer' | 'bot' | 'agent'
   timestamp: string
   status: 'sent' | 'delivered' | 'read'

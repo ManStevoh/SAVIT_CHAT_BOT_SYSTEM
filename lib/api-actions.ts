@@ -214,7 +214,8 @@ export async function logout(): Promise<{ success: boolean }> {
 
 export interface SendMessageData {
   chatId: string
-  content: string
+  content?: string
+  attachment?: File
 }
 
 export interface CreateOrderFromChatData {
@@ -242,6 +243,21 @@ export async function sendMessage(data: SendMessageData): Promise<{
     return { success: true, whatsappSent: true }
   }
   try {
+    const trimmedContent = (data.content ?? '').trim()
+    const hasAttachment = data.attachment != null
+    if (!hasAttachment && trimmedContent === '') {
+      return { success: false, message: 'Message text or attachment is required' }
+    }
+
+    const body: { content: string } | FormData = hasAttachment
+      ? (() => {
+          const formData = new FormData()
+          formData.append('content', trimmedContent)
+          formData.append('attachment', data.attachment as File)
+          return formData
+        })()
+      : { content: trimmedContent }
+
     return await apiRequest<{
       success: boolean
       message?: string
@@ -249,7 +265,7 @@ export async function sendMessage(data: SendMessageData): Promise<{
       whatsappError?: string | null
     }>(`/api/company/chats/${data.chatId}/messages`, {
       method: 'POST',
-      body: { content: data.content },
+      body,
     })
   } catch (e) {
     return handleApiError(e)
