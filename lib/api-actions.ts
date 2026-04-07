@@ -4,6 +4,7 @@
 import type {
   Order,
   Product,
+  ProductImage,
   ProductVariant,
   FAQ,
   Plan,
@@ -444,11 +445,24 @@ export async function updateProduct(
     return { success: true, message: 'Product updated successfully' }
   }
   try {
-    const body = { ...data }
-    if (body.image !== undefined) delete (body as Record<string, unknown>).image
+    if (data.image) {
+      const formData = new FormData()
+      Object.entries(data).forEach(([key, value]) => {
+        if (value === undefined || value === null) return
+        if (key === 'image' && value instanceof File) {
+          formData.append('image', value)
+        } else {
+          formData.append(key, String(value))
+        }
+      })
+      return await apiRequest<{ success: boolean; message?: string }>(`/api/company/products/${productId}`, {
+        method: 'PUT',
+        body: formData,
+      })
+    }
     return await apiRequest<{ success: boolean; message?: string }>(`/api/company/products/${productId}`, {
       method: 'PUT',
-      body: body as Record<string, unknown>,
+      body: data as Record<string, unknown>,
     })
   } catch (e) {
     return handleApiError(e)
@@ -480,6 +494,7 @@ export interface CreateProductVariantData {
   status?: 'active' | 'inactive'
   sortOrder?: number
   attributes?: Record<string, string>
+  image?: File
 }
 
 /**
@@ -505,6 +520,23 @@ export async function createProductVariant(
     }
   }
   try {
+    if (data.image) {
+      const formData = new FormData()
+      formData.append('label', data.label)
+      formData.append('price', String(data.price))
+      formData.append('stock', String(data.stock ?? 0))
+      formData.append('status', data.status ?? 'active')
+      formData.append('sortOrder', String(data.sortOrder ?? 0))
+      formData.append('attributes', JSON.stringify(data.attributes ?? {}))
+      formData.append('image', data.image)
+      return await apiRequest<{ success: boolean; variant: ProductVariant; message?: string }>(
+        `/api/company/products/${productId}/variants`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
+    }
     return await apiRequest<{ success: boolean; variant: ProductVariant; message?: string }>(
       `/api/company/products/${productId}/variants`,
       {
@@ -521,6 +553,59 @@ export async function createProductVariant(
     )
   } catch (e) {
     return { ...handleApiError(e), success: false }
+  }
+}
+
+export interface UploadProductImageData {
+  image: File
+  isPrimary?: boolean
+  sortOrder?: number
+  altText?: string
+}
+
+export async function uploadProductImage(
+  productId: string,
+  data: UploadProductImageData
+): Promise<{ success: boolean; image?: ProductImage; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    const formData = new FormData()
+    formData.append('image', data.image)
+    if (data.isPrimary !== undefined) formData.append('isPrimary', data.isPrimary ? '1' : '0')
+    if (data.sortOrder !== undefined) formData.append('sortOrder', String(data.sortOrder))
+    if (data.altText !== undefined) formData.append('altText', data.altText)
+    return await apiRequest<{ success: boolean; image?: ProductImage; message?: string }>(
+      `/api/company/products/${productId}/images`,
+      { method: 'POST', body: formData }
+    )
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function uploadVariantImage(
+  variantId: string,
+  data: UploadProductImageData
+): Promise<{ success: boolean; image?: ProductImage; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    const formData = new FormData()
+    formData.append('image', data.image)
+    if (data.isPrimary !== undefined) formData.append('isPrimary', data.isPrimary ? '1' : '0')
+    if (data.sortOrder !== undefined) formData.append('sortOrder', String(data.sortOrder))
+    if (data.altText !== undefined) formData.append('altText', data.altText)
+    return await apiRequest<{ success: boolean; image?: ProductImage; message?: string }>(
+      `/api/company/product-variants/${variantId}/images`,
+      { method: 'POST', body: formData }
+    )
+  } catch (e) {
+    return handleApiError(e)
   }
 }
 

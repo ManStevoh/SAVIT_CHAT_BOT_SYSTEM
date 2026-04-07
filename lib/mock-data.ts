@@ -92,6 +92,19 @@ export interface ProductVariant {
   status: 'active' | 'inactive'
   attributes: Record<string, string>
   sortOrder: number
+  image?: string | null
+  images?: ProductImage[]
+}
+
+export interface ProductImage {
+  id: string
+  productId: string
+  productVariantId?: string | null
+  url: string
+  path?: string
+  altText?: string | null
+  isPrimary: boolean
+  sortOrder: number
 }
 
 export interface Product {
@@ -104,6 +117,7 @@ export interface Product {
   stock: number
   status: 'active' | 'inactive'
   createdAt: string
+  images?: ProductImage[]
   variants?: ProductVariant[]
 }
 

@@ -12,7 +12,17 @@ import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField } from '@/components/shared/form-field'
 import { useProducts, useCompanySettings } from '@/lib/api-hooks'
 import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
-import { createProduct, updateProduct, deleteProduct, companyExportData, importProducts, createProductVariant, deleteProductVariant } from '@/lib/api-actions'
+import {
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  companyExportData,
+  importProducts,
+  createProductVariant,
+  deleteProductVariant,
+  uploadProductImage,
+  uploadVariantImage,
+} from '@/lib/api-actions'
 import { downloadFile } from '@/lib/api-client'
 import type { Product } from '@/lib/mock-data'
 import {
@@ -91,6 +101,7 @@ export default function ProductsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState<ProductFormData>(initialFormData)
+  const [productImageFile, setProductImageFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [exportOpen, setExportOpen] = useState(false)
@@ -103,7 +114,10 @@ export default function ProductsPage() {
   const [variantLabel, setVariantLabel] = useState('')
   const [variantPrice, setVariantPrice] = useState('')
   const [variantStock, setVariantStock] = useState('0')
+  const [variantImageFile, setVariantImageFile] = useState<File | null>(null)
   const [variantSaving, setVariantSaving] = useState(false)
+  const [variantImageUploadingId, setVariantImageUploadingId] = useState<string | null>(null)
+  const [productExtraImageUploading, setProductExtraImageUploading] = useState(false)
 
   const { data: companySettings } = useCompanySettings()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
@@ -167,6 +181,7 @@ export default function ProductsPage() {
         price: parseFloat(formData.price),
         category: formData.category,
         stock: parseInt(formData.stock),
+        image: productImageFile ?? undefined,
       })
 
       if (result.success) {
@@ -174,13 +189,14 @@ export default function ProductsPage() {
         mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         setIsAddModalOpen(false)
         setFormData(initialFormData)
+        setProductImageFile(null)
       }
     } catch (error) {
       console.error('Failed to create product:', error)
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, mutate, categoryFilter, statusFilter, searchQuery])
+  }, [formData, mutate, categoryFilter, statusFilter, searchQuery, productImageFile])
 
   // Handle edit product — api-actions.updateProduct → PUT /api/company/products/:productId
   const handleEditProduct = useCallback(async () => {
@@ -194,6 +210,7 @@ export default function ProductsPage() {
         price: parseFloat(formData.price),
         category: formData.category,
         stock: parseInt(formData.stock),
+        image: productImageFile ?? undefined,
       })
 
       if (result.success) {
@@ -201,13 +218,14 @@ export default function ProductsPage() {
         setIsEditModalOpen(false)
         setSelectedProduct(null)
         setFormData(initialFormData)
+        setProductImageFile(null)
       }
     } catch (error) {
       console.error('Failed to update product:', error)
     } finally {
       setIsSubmitting(false)
     }
-  }, [selectedProduct, formData, mutate, categoryFilter, statusFilter, searchQuery])
+  }, [selectedProduct, formData, mutate, categoryFilter, statusFilter, searchQuery, productImageFile])
 
   // Handle delete product — api-actions.deleteProduct → DELETE /api/company/products/:productId
   const handleDeleteProduct = useCallback(async () => {
@@ -232,6 +250,7 @@ export default function ProductsPage() {
   // Open edit modal with product data
   const openEditModal = (product: Product) => {
     setSelectedProduct(product)
+    setProductImageFile(null)
     setFormData({
       name: product.name,
       description: product.description,
@@ -270,11 +289,13 @@ export default function ProductsPage() {
         label: variantLabel.trim(),
         price,
         stock: parseInt(variantStock, 10) || 0,
+        image: variantImageFile ?? undefined,
       })
       if (res.success) {
         setVariantLabel('')
         setVariantPrice('')
         setVariantStock('0')
+        setVariantImageFile(null)
         mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         if (res.variant) {
           setVariantsSheetProduct((prev) =>
@@ -287,7 +308,7 @@ export default function ProductsPage() {
     } finally {
       setVariantSaving(false)
     }
-  }, [variantsSheetProduct, variantLabel, variantPrice, variantStock, mutate, categoryFilter, statusFilter, searchQuery])
+  }, [variantsSheetProduct, variantLabel, variantPrice, variantStock, mutate, categoryFilter, statusFilter, searchQuery, variantImageFile])
 
   const handleDeleteVariant = useCallback(
     async (variantId: string) => {
@@ -300,6 +321,37 @@ export default function ProductsPage() {
       }
     },
     [mutate, categoryFilter, statusFilter, searchQuery]
+  )
+
+  const handleUploadVariantImage = useCallback(
+    async (variantId: string, file: File) => {
+      setVariantImageUploadingId(variantId)
+      try {
+        const res = await uploadVariantImage(variantId, { image: file, isPrimary: true })
+        if (res.success) {
+          mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        }
+      } finally {
+        setVariantImageUploadingId(null)
+      }
+    },
+    [mutate, categoryFilter, statusFilter, searchQuery]
+  )
+
+  const handleUploadExtraProductImage = useCallback(
+    async (file: File) => {
+      if (!selectedProduct) return
+      setProductExtraImageUploading(true)
+      try {
+        const res = await uploadProductImage(selectedProduct.id, { image: file })
+        if (res.success) {
+          mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        }
+      } finally {
+        setProductExtraImageUploading(false)
+      }
+    },
+    [selectedProduct, mutate, categoryFilter, statusFilter, searchQuery]
   )
 
   const handleImportProducts = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -414,6 +466,7 @@ export default function ProductsPage() {
                 setVariantLabel('')
                 setVariantPrice('')
                 setVariantStock('0')
+                    setVariantImageFile(null)
               }}
             >
               <Layers className="mr-2 h-4 w-4" />
@@ -529,6 +582,46 @@ export default function ProductsPage() {
         placeholder="Enter product description"
         description="This will be shown to customers and used by AI for responses"
       />
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">Main product image</label>
+        {selectedProduct?.image && !productImageFile && (
+          <img
+            src={selectedProduct.image}
+            alt={selectedProduct.name}
+            className="h-20 w-20 rounded-md border border-border object-cover"
+          />
+        )}
+        {productImageFile && (
+          <p className="text-xs text-muted-foreground">Selected: {productImageFile.name}</p>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setProductImageFile(e.target.files?.[0] ?? null)}
+          className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium"
+        />
+      </div>
+
+      {selectedProduct && (
+        <div className="space-y-2 rounded-md border border-border/70 p-3">
+          <p className="text-sm font-medium text-foreground">Add extra image variation</p>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handleUploadExtraProductImage(file)
+              e.currentTarget.value = ''
+            }}
+            disabled={productExtraImageUploading}
+            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium disabled:opacity-60"
+          />
+          <p className="text-xs text-muted-foreground">
+            Upload multiple image variations for this product.
+          </p>
+        </div>
+      )}
     </div>
   )
 
@@ -608,6 +701,7 @@ export default function ProductsPage() {
           <Button onClick={() => {
             setFormData(initialFormData)
             setFormErrors({})
+            setProductImageFile(null)
             setIsAddModalOpen(true)
           }}>
             <Plus className="mr-2 h-4 w-4" />
@@ -679,7 +773,10 @@ export default function ProductsPage() {
       {/* Add Product Modal */}
       <FormModal
         open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
+        onOpenChange={(open) => {
+          if (!open) setProductImageFile(null)
+          setIsAddModalOpen(open)
+        }}
         title="Add New Product"
         description="Add a new product to your catalog"
         onSubmit={handleCreateProduct}
@@ -703,6 +800,7 @@ export default function ProductsPage() {
           if (!open) {
             setSelectedProduct(null)
             setFormData(initialFormData)
+            setProductImageFile(null)
           }
           setIsEditModalOpen(open)
         }}
@@ -725,7 +823,10 @@ export default function ProductsPage() {
       <Sheet
         open={variantsSheetProduct !== null}
         onOpenChange={(open) => {
-          if (!open) setVariantsSheetProduct(null)
+          if (!open) {
+            setVariantsSheetProduct(null)
+            setVariantImageFile(null)
+          }
         }}
       >
         <SheetContent className="overflow-y-auto sm:max-w-md">
@@ -742,20 +843,42 @@ export default function ProductsPage() {
                 {(variantsSheetProduct.variants ?? []).map((v) => (
                   <li
                     key={v.id}
-                    className="flex items-center justify-between gap-2 rounded-md border border-border/60 px-3 py-2 text-sm"
+                    className="rounded-md border border-border/60 px-3 py-2 text-sm"
                   >
-                    <span>
-                      {v.label} — {formatCurrency(v.price)} (stock {v.stock})
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      onClick={() => handleDeleteVariant(v.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        {v.image ? (
+                          <img src={v.image} alt={v.label} className="h-10 w-10 rounded-md object-cover" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-md bg-muted" />
+                        )}
+                        <span>
+                          {v.label} — {formatCurrency(v.price)} (stock {v.stock})
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => handleDeleteVariant(v.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="mt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleUploadVariantImage(v.id, file)
+                          e.currentTarget.value = ''
+                        }}
+                        disabled={variantImageUploadingId === v.id}
+                        className="block w-full text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-secondary file:px-2 file:py-1 file:text-xs file:font-medium disabled:opacity-60"
+                      />
+                    </div>
                   </li>
                 ))}
                 {(variantsSheetProduct.variants ?? []).length === 0 && (
@@ -767,6 +890,18 @@ export default function ProductsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <InputField label="Price" name="vprice" type="number" value={variantPrice} onChange={setVariantPrice} placeholder="0" />
                   <InputField label="Stock" name="vstock" type="number" value={variantStock} onChange={setVariantStock} placeholder="0" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-foreground">Option image (optional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setVariantImageFile(e.target.files?.[0] ?? null)}
+                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium"
+                  />
+                  {variantImageFile && (
+                    <p className="text-xs text-muted-foreground">Selected: {variantImageFile.name}</p>
+                  )}
                 </div>
                 <Button type="button" onClick={handleAddVariant} disabled={variantSaving || !variantLabel.trim() || variantPrice === ''}>
                   {variantSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add option'}
