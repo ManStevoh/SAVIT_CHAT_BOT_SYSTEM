@@ -29,6 +29,15 @@ class OrderFlowService
 
     public const STEP_MPESA_PHONE = 'mpesa_phone';
 
+    /**
+     * Dashboard-created order continuation.
+     */
+    public const STEP_EXISTING_ORDER_ADDRESS = 'existing_order_address';
+
+    public const STEP_EXISTING_ORDER_PAYMENT_METHOD = 'existing_order_payment_method';
+
+    public const STEP_EXISTING_ORDER_PROMPT = 'existing_order_prompt';
+
     public function __construct(
         protected OrderPaymentService $orderPayment
     ) {}
@@ -86,10 +95,98 @@ class OrderFlowService
             $draft = $this->getDraft($chat);
         }
 
+        if ($step === self::STEP_EXISTING_ORDER_PROMPT) {
+            $order = isset($draft['order_id']) ? Order::find((int) $draft['order_id']) : null;
+            if (! $order) {
+                $this->clearState($chat);
+
+                return 'Something went wrong. Please ask us to resend your invoice or start a new order.';
+            }
+            if (in_array($lower, ['2', 'cancel', 'no'], true)) {
+                $order->update(['status' => 'cancelled']);
+                $this->clearState($chat);
+
+                return 'Order cancelled. If you change your mind, reply "order" or "2" to start a new order.';
+            }
+            if (in_array($lower, ['1', 'continue', 'pay', 'yes', 'proceed'], true)) {
+                $this->setStep($chat, self::STEP_EXISTING_ORDER_ADDRESS, ['order_id' => $order->id]);
+
+                return 'Great — please reply with your delivery address to continue.';
+            }
+
+            return "Reply with:\n1 - Continue and pay\n2 - Cancel";
+        }
+
         if ($this->wantsCancel($lower)) {
             $this->clearState($chat);
 
             return 'Order cancelled. Reply with "order" or "2" when you\'re ready to place a new order.';
+        }
+
+        if ($step === self::STEP_EXISTING_ORDER_ADDRESS) {
+            $order = isset($draft['order_id']) ? Order::find((int) $draft['order_id']) : null;
+            if (! $order) {
+                $this->clearState($chat);
+
+                return 'Something went wrong. Please ask us to resend your invoice or start a new order.';
+            }
+            if ($this->shouldDelegateOrderStepToAssistant($lower, $trimmed)) {
+                return null;
+            }
+            $address = trim($messageText);
+            if (strlen($address) < 3) {
+                return 'Please provide a valid delivery address (at least a few characters).';
+            }
+            $order->update(['delivery_address' => $address]);
+            $draft['order_id'] = $order->id;
+            $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, $draft);
+
+            $settings = $company->settings;
+            $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
+            $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
+            $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
+
+            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual);
+        }
+
+        if ($step === self::STEP_EXISTING_ORDER_PAYMENT_METHOD) {
+            $order = isset($draft['order_id']) ? Order::find((int) $draft['order_id']) : null;
+            if (! $order) {
+                $this->clearState($chat);
+
+                return 'Something went wrong. Please ask us to resend your invoice or start a new order.';
+            }
+            $settings = $company->settings;
+            $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
+            $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
+            $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
+
+            if ($this->wantsManual($lower)) {
+                $this->clearState($chat);
+
+                return $this->formatOrderWithManualPaymentInstructions($order);
+            }
+            if ($this->wantsMpesa($lower)) {
+                $draft['payment_method'] = 'mpesa';
+                $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
+                $displayPhone = $this->formatPhoneForDisplay($customerPhone);
+
+                return "We'll send an M-Pesa payment request to your phone.\n\nReply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
+            }
+            if ($this->wantsStripe($lower)) {
+                $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
+                $this->clearState($chat);
+                if ($result['success'] && ! empty($result['url'])) {
+                    return $this->withReceipt($order, "Order #{$order->order_number} – Pay by card here: {$result['url']}\n\nReply once you've completed payment. Thank you!");
+                }
+
+                return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". (".($result['error'] ?? 'Payment link unavailable.').')');
+            }
+            if ($this->shouldDelegateOrderStepToAssistant($lower, $trimmed)) {
+                return null;
+            }
+
+            return $this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual, true);
         }
 
         if ($this->wantsStartOrder($lower) && ! $step) {
@@ -234,7 +331,7 @@ class OrderFlowService
                 $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
                 $displayPhone = $this->formatPhoneForDisplay($customerPhone);
 
-                return "We'll send an M-Pesa payment request to your phone. Use this number ({$displayPhone}) or reply with a different number to receive the prompt.";
+                return "We'll send an M-Pesa payment request to your phone.\n\nReply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
             }
             if ($this->wantsStripe($lower)) {
                 $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
@@ -262,10 +359,43 @@ class OrderFlowService
             if (! preg_match('/\d/', $trimmed) && $this->shouldDelegateOrderStepToAssistant($lower, $trimmed)) {
                 return null;
             }
+
+            // Two-step choice:
+            // 1) Reply "1" to use current WhatsApp number
+            // 2) Reply "2" to provide a different M-Pesa number (then send it)
+            $awaiting = (bool) ($draft['mpesa_awaiting_phone'] ?? false);
+
+            if (! $awaiting) {
+                if (in_array($lower, ['1', 'yes', 'ok', 'same', 'this one', 'use this', 'current'], true)) {
+                    $phone = $this->resolveMpesaPhone('yes', $customerPhone);
+                    if (! $phone) {
+                        $displayPhone = $this->formatPhoneForDisplay($customerPhone);
+                        return "I don't have a valid phone number for this chat.\n\nReply with your M-Pesa number (e.g. 254712345678) to receive the prompt.\nCurrent: {$displayPhone}";
+                    }
+                    $result = $this->orderPayment->sendStkPushForOrder($order, $phone);
+                    $this->clearState($chat);
+                    if ($result['success']) {
+                        return $this->withReceipt($order, "We've sent an M-Pesa payment request to your phone. Enter your M-Pesa PIN to complete payment. You'll get a confirmation here once payment is received.");
+                    }
+
+                    return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We couldn't send M-Pesa right now (".($result['error'] ?? 'please try again later')."). We'll contact you for payment.");
+                }
+
+                if (in_array($lower, ['2', 'different', 'another', 'other'], true)) {
+                    $draft['mpesa_awaiting_phone'] = true;
+                    $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
+
+                    return 'Okay — reply with the M-Pesa phone number to receive the prompt (e.g. 254712345678).';
+                }
+            }
+
+            // If they picked "2" previously, or they just typed a phone directly, parse it.
             $phone = $this->resolveMpesaPhone(trim($messageText), $customerPhone);
             if (! $phone) {
-                return 'Please reply with "yes" to use this chat number, or send the phone number to receive the M-Pesa prompt (e.g. 254712345678).';
+                $displayPhone = $this->formatPhoneForDisplay($customerPhone);
+                return "Reply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
             }
+
             $result = $this->orderPayment->sendStkPushForOrder($order, $phone);
             $this->clearState($chat);
             if ($result['success']) {
@@ -576,7 +706,7 @@ class OrderFlowService
 
     protected function afterAddItemInstructions(): string
     {
-        return 'Add more items (number or "2 x Name"), or reply 0 / "done" to enter your delivery address.';
+        return "Want anything else?\n- Reply with a product number to add another item\n- Or type e.g. \"2 x Name\"\n- When you're ready, reply 0 or \"done\" for your delivery address";
     }
 
     protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptManual = false, bool $invalid = false): string
@@ -987,14 +1117,14 @@ class OrderFlowService
     {
         $items = $draft['items'] ?? [];
         if (empty($items)) {
-            return 'No items in cart.';
+            return 'Your cart is empty for now.';
         }
-        $lines = ['Your order:'];
+        $lines = ['Here’s your cart so far:'];
         $total = 0.0;
         foreach ($items as $item) {
             $sub = ($item['price'] ?? 0) * ($item['quantity'] ?? 0);
             $total += $sub;
-            $lines[] = '• '.$item['name'].' x '.$item['quantity'].' = '.$this->formatMoney($company, (float) $sub);
+            $lines[] = '• '.$item['name'].' x '.$item['quantity'].' — '.$this->formatMoney($company, (float) $sub);
         }
         $lines[] = 'Total: '.$this->formatMoney($company, (float) $total);
 
@@ -1040,5 +1170,15 @@ class OrderFlowService
     protected function numberedOrderInstructions(): string
     {
         return 'Reply with a product number to add it (quantity comes next). You can also type e.g. "2 x ProductName" or "2*ProductName". Products with options will ask you to pick a variant first. When your cart is ready, reply 0 or "done" for delivery address.';
+    }
+
+    public function beginExistingOrderCheckout(Chat $chat, Order $order): string
+    {
+        $draft = [
+            'order_id' => $order->id,
+        ];
+        $this->setStep($chat, self::STEP_EXISTING_ORDER_PROMPT, $draft);
+
+        return "Reply with:\n1 - Continue and pay\n2 - Cancel";
     }
 }

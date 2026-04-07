@@ -69,6 +69,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->g
     Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
     Route::get('orders', [OrderController::class, 'index']);
+    Route::post('orders', [OrderController::class, 'store']);
     Route::patch('orders/{order}', [OrderController::class, 'updateStatus']);
     Route::get('customers/stats', [CustomerController::class, 'stats']);
     Route::get('customers', [CustomerController::class, 'index']);
@@ -87,6 +88,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->g
     Route::get('settings', [SettingsController::class, 'show']);
     Route::put('settings', [SettingsController::class, 'update']);
     Route::post('whatsapp/connect', [WhatsAppController::class, 'connect']);
+    Route::get('whatsapp/embedded/config', [WhatsAppController::class, 'embeddedConfig']);
+    Route::post('whatsapp/embedded/complete', [WhatsAppController::class, 'completeEmbeddedSignup']);
     Route::post('whatsapp/disconnect', [WhatsAppController::class, 'disconnect']);
     Route::get('whatsapp/status', [WhatsAppController::class, 'status']);
     Route::get('whatsapp/numbers', [WhatsAppController::class, 'numbers']);
