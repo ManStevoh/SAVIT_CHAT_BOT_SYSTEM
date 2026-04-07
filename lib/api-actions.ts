@@ -283,15 +283,15 @@ export async function updateOrderStatus(
   orderId: string,
   status: Order['status'],
   paymentStatus?: 'pending' | 'paid' | 'refunded'
-): Promise<{ success: boolean; message?: string }> {
+): Promise<{ success: boolean; message?: string; whatsappSent?: boolean; whatsappError?: string | null }> {
   if (useMockApi()) {
     await delay(800)
-    return { success: true, message: 'Order updated successfully' }
+    return { success: true, message: 'Order updated successfully', whatsappSent: true, whatsappError: null }
   }
   try {
     const body: { status: Order['status']; paymentStatus?: string } = { status }
     if (paymentStatus !== undefined) body.paymentStatus = paymentStatus
-    return await apiRequest<{ success: boolean; message?: string }>(`/api/company/orders/${orderId}`, {
+    return await apiRequest<{ success: boolean; message?: string; whatsappSent?: boolean; whatsappError?: string | null }>(`/api/company/orders/${orderId}`, {
       method: 'PATCH',
       body,
     })
