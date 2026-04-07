@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -78,6 +79,7 @@ const initialFormData: ProductFormData = {
 }
 
 export default function ProductsPage() {
+  const router = useRouter()
   const { mutate } = useSWRConfig()
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -417,7 +419,13 @@ export default function ProductsPage() {
               <Layers className="mr-2 h-4 w-4" />
               Options / variants
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                router.push(
+                  `/dashboard/analytics?tab=products&product=${encodeURIComponent(product.name)}`
+                )
+              }
+            >
               <BarChart3 className="mr-2 h-4 w-4" />
               View Analytics
             </DropdownMenuItem>
