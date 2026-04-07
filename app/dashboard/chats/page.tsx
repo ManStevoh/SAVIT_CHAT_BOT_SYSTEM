@@ -395,17 +395,6 @@ export default function ChatsPage() {
                 </div>
               </div>
               <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
-                {isAgentHandling && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleHandBackToBot}
-                    disabled={isHandingBack}
-                    className="hidden shrink-0 whitespace-nowrap xl:inline-flex"
-                  >
-                    {isHandingBack ? '…' : 'Hand back to bot'}
-                  </Button>
-                )}
                 <Button variant="ghost" size="icon" className="hidden md:inline-flex">
                   <Phone className="h-4 w-4" />
                 </Button>
