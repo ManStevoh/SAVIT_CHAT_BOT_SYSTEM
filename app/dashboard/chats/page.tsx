@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useChats, useMessages } from '@/lib/api-hooks'
+import { useChats, useMessages, useProducts } from '@/lib/api-hooks'
 import { sendMessage, handBackToBot, createOrderFromChat } from '@/lib/api-actions'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
 import {
@@ -30,6 +30,13 @@ import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { FormModal } from '@/components/shared/modal'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function ChatsPage() {
   const { toast } = useToast()
@@ -43,10 +50,10 @@ export default function ChatsPage() {
   const [isHandingBack, setIsHandingBack] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [createOrderOpen, setCreateOrderOpen] = useState(false)
-  const [orderItemName, setOrderItemName] = useState('')
+  const [selectedProductId, setSelectedProductId] = useState('')
   const [orderQuantity, setOrderQuantity] = useState('1')
-  const [orderUnitPrice, setOrderUnitPrice] = useState('')
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
+  const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' })
 
   const {
     data: chats,
@@ -132,11 +139,10 @@ export default function ChatsPage() {
 
   const handleCreateOrder = useCallback(() => {
     if (!selectedChat) return
-    setOrderItemName('')
+    setSelectedProductId('')
     setOrderQuantity('1')
-    setOrderUnitPrice('')
     setCreateOrderOpen(true)
-  }, [router, selectedChat])
+  }, [selectedChat])
 
   const handleViewCustomerProfile = useCallback(() => {
     if (!selectedChat) return
@@ -145,12 +151,12 @@ export default function ChatsPage() {
 
   const handleSubmitCreateOrder = useCallback(async () => {
     if (!selectedChatId) return
+    const selectedProduct = products.find((p) => p.id === selectedProductId)
     const qty = Number.parseInt(orderQuantity, 10)
-    const unitPrice = Number.parseFloat(orderUnitPrice)
-    if (!orderItemName.trim() || !Number.isFinite(qty) || qty < 1 || !Number.isFinite(unitPrice) || unitPrice < 0) {
+    if (!selectedProduct || !Number.isFinite(qty) || qty < 1) {
       toast({
         title: 'Invalid order details',
-        description: 'Please enter item name, quantity and unit price.',
+        description: 'Please select a product and quantity.',
         variant: 'destructive',
       })
       return
@@ -160,7 +166,7 @@ export default function ChatsPage() {
     try {
       const result = await createOrderFromChat({
         chatId: selectedChatId,
-        items: [{ name: orderItemName.trim(), quantity: qty, price: unitPrice }],
+        items: [{ name: selectedProduct.name, quantity: qty, price: Number(selectedProduct.price) || 0 }],
         sendWhatsApp: true,
       })
       if (result.success) {
@@ -189,7 +195,7 @@ export default function ChatsPage() {
     } finally {
       setIsCreatingOrder(false)
     }
-  }, [selectedChatId, orderQuantity, orderUnitPrice, orderItemName, toast, mutate, statusFilter, searchQuery])
+  }, [selectedChatId, products, selectedProductId, orderQuantity, toast, mutate, statusFilter, searchQuery])
 
   return (
     <div className="flex h-[calc(100dvh-7rem)] min-h-0 gap-4 lg:h-[calc(100vh-7rem)]">
@@ -626,7 +632,7 @@ export default function ChatsPage() {
         onSubmit={handleSubmitCreateOrder}
         submitLabel="Create & Send Invoice"
         isLoading={isCreatingOrder}
-        isValid={orderItemName.trim().length > 0 && Number.parseInt(orderQuantity, 10) > 0 && Number.parseFloat(orderUnitPrice) >= 0}
+        isValid={selectedProductId.length > 0 && Number.parseInt(orderQuantity, 10) > 0 && products.length > 0}
       >
         <div className="space-y-3">
           <div>
@@ -634,11 +640,21 @@ export default function ChatsPage() {
             <p className="text-sm font-medium text-foreground">{selectedChat?.customerName}</p>
             <p className="text-xs text-muted-foreground">{selectedChat?.customerPhone}</p>
           </div>
-          <Input
-            placeholder="Item name"
-            value={orderItemName}
-            onChange={(e) => setOrderItemName(e.target.value)}
-          />
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">Product</p>
+            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+              <SelectTrigger>
+                <SelectValue placeholder={productsLoading ? 'Loading products...' : 'Select product'} />
+              </SelectTrigger>
+              <SelectContent>
+                {products.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <Input
               type="number"
@@ -653,8 +669,11 @@ export default function ChatsPage() {
               min={0}
               step="0.01"
               placeholder="Unit price"
-              value={orderUnitPrice}
-              onChange={(e) => setOrderUnitPrice(e.target.value)}
+              value={(() => {
+                const selected = products.find((p) => p.id === selectedProductId)
+                return selected ? String(selected.price) : ''
+              })()}
+              readOnly
             />
           </div>
           <div className="rounded-md bg-secondary/40 p-3 text-sm">
@@ -662,12 +681,18 @@ export default function ChatsPage() {
             <span className="font-semibold text-foreground">
               {(() => {
                 const qty = Number.parseInt(orderQuantity, 10)
-                const price = Number.parseFloat(orderUnitPrice)
+                const selected = products.find((p) => p.id === selectedProductId)
+                const price = Number(selected?.price ?? 0)
                 if (!Number.isFinite(qty) || !Number.isFinite(price) || qty < 1 || price < 0) return '0.00'
                 return (qty * price).toFixed(2)
               })()}
             </span>
           </div>
+          {!productsLoading && products.length === 0 && (
+            <p className="text-xs text-destructive">
+              No active products found. Add products first, then create order.
+            </p>
+          )}
         </div>
       </FormModal>
     </div>
