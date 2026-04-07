@@ -204,9 +204,7 @@ class OrderFlowService
                     $draft = ['items' => [$parsed]];
                     $draft = $this->withCatalogIds($company, $draft);
                     $this->setStep($chat, self::STEP_PRODUCT, $draft);
-                    $summary = $this->formatDraftSummary($company, $draft);
-
-                    return "Added: {$parsed['name']} x {$parsed['quantity']}.\n\n{$summary}\n\n".$this->afterAddItemInstructions();
+                    return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft);
                 }
             }
         }
@@ -251,9 +249,7 @@ class OrderFlowService
                 $draft['items'][] = $parsed;
                 $draft = $this->withCatalogIds($company, $draft);
                 $this->setStep($chat, self::STEP_PRODUCT, $draft);
-                $summary = $this->formatDraftSummary($company, $draft);
-
-                return "Added: {$parsed['name']} x {$parsed['quantity']}.\n\n{$summary}\n\n".$this->afterAddItemInstructions();
+                return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft);
             }
 
             return $this->productStepUnrecognizedReply();
@@ -272,7 +268,7 @@ class OrderFlowService
             $this->setStep($chat, self::STEP_CONFIRM, $draft);
             $summary = $this->formatDraftSummary($company, $draft);
 
-            return "Delivery address: {$address}\n\n{$summary}\n\nReply 1 or \"confirm\" to place the order, or 2 or \"cancel\" to cancel.";
+            return "📍 Delivery address:\n{$address}\n\n{$summary}\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
         }
 
         if ($step === self::STEP_CONFIRM) {
@@ -442,7 +438,7 @@ class OrderFlowService
         unset($draft['pending_variant_id'], $draft['variant_ids']);
         $this->setStep($chat, self::STEP_PRODUCT_QTY, $draft);
 
-        return 'You selected: '.$product->name.' ('.$this->formatMoney($company, (float) $product->price).").\nHow many do you want? (reply with a number, e.g. 2)\nReply \"back\" to return to the product list.";
+        return "✅ Selected:\n{$product->name}\nPrice: ".$this->formatMoney($company, (float) $product->price)."\n\nHow many would you like?\nReply with a number (e.g. 2)\n\nReply \"back\" to return to the product list.";
     }
 
     /**
@@ -501,7 +497,7 @@ class OrderFlowService
         $draft['pending_variant_id'] = $variant->id;
         $this->setStep($chat, self::STEP_PRODUCT_QTY, $draft);
 
-        return 'Selected: '.$product->name.' — '.$variant->label.' ('.$this->formatMoney($company, (float) $variant->price).").\nHow many? (reply with a number)\nReply \"back\" to change option.";
+        return "✅ Selected:\n{$product->name} — {$variant->label}\nPrice: ".$this->formatMoney($company, (float) $variant->price)."\n\nHow many would you like?\nReply with a number (e.g. 2)\n\nReply \"back\" to change the option.";
     }
 
     /**
@@ -600,9 +596,7 @@ class OrderFlowService
         unset($draft['pending_product_id'], $draft['pending_variant_id'], $draft['variant_ids']);
         $draft = $this->withCatalogIds($company, $draft);
         $this->setStep($chat, self::STEP_PRODUCT, $draft);
-        $summary = $this->formatDraftSummary($company, $draft);
-
-        return "Added: {$line['name']} x {$qty}.\n\n{$summary}\n\n".$this->afterAddItemInstructions();
+        return $this->formatAddedToCartMessage($company, (string) $line['name'], (int) $qty, $draft);
     }
 
     protected function beginProductStep(Chat $chat, Company $company, array $draft): string
@@ -672,7 +666,7 @@ class OrderFlowService
         if ($products->isEmpty()) {
             return 'We don\'t have any products in the catalog right now. Please contact us for availability.';
         }
-        $lines = ["Our products (reply with a number to add to your order):\n"];
+        $lines = ["🛍️ Product list\n(Reply with a number to add an item)\n"];
         $i = 1;
         foreach ($products as $p) {
             if ($this->productHasActiveVariants($p)) {
@@ -706,7 +700,19 @@ class OrderFlowService
 
     protected function afterAddItemInstructions(): string
     {
-        return "Want anything else?\n- Reply with a product number to add another item\n- Or type e.g. \"2 x Name\"\n- When you're ready, reply 0 or \"done\" for your delivery address";
+        return "Next steps:\n1 - Add another item (reply with a product number)\n2 - Add with quantity (example: 2 x Sugar)\n0 - Done (enter delivery address)";
+    }
+
+    /**
+     * Standard WhatsApp-friendly "added to cart" template.
+     *
+     * @param  array<string, mixed>  $draft
+     */
+    protected function formatAddedToCartMessage(Company $company, string $name, int $quantity, array $draft): string
+    {
+        $summary = $this->formatDraftSummary($company, $draft);
+
+        return "✅ Added to cart\n{$name} x {$quantity}\n\n{$summary}\n\n".$this->afterAddItemInstructions();
     }
 
     protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptManual = false, bool $invalid = false): string
@@ -1169,7 +1175,7 @@ class OrderFlowService
 
     protected function numberedOrderInstructions(): string
     {
-        return 'Reply with a product number to add it (quantity comes next). You can also type e.g. "2 x ProductName" or "2*ProductName". Products with options will ask you to pick a variant first. When your cart is ready, reply 0 or "done" for delivery address.';
+        return "How to order:\n1) Reply with a product number (we’ll ask for quantity)\n2) Or type: 2 x ProductName\n0) Done (enter delivery address)\n\nTip: Reply \"back\" anytime to return to the list.";
     }
 
     public function beginExistingOrderCheckout(Chat $chat, Order $order): string
