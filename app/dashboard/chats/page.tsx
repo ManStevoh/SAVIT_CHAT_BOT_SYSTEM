@@ -14,6 +14,7 @@ import {
   Search,
   Send,
   Paperclip,
+  ArrowLeft,
   MoreVertical,
   Phone,
   Video,
@@ -37,6 +38,7 @@ export default function ChatsPage() {
   const [messageInput, setMessageInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [isHandingBack, setIsHandingBack] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   const {
     data: chats,
@@ -49,13 +51,23 @@ export default function ChatsPage() {
     isLoading: messagesLoading,
   } = useMessages(selectedChatId)
 
-  const selectedChat = chats?.find((c) => c.id === selectedChatId) || (chats?.[0] ?? null)
+  const selectedChat =
+    chats?.find((c) => c.id === selectedChatId) || (!isMobile ? (chats?.[0] ?? null) : null)
 
   useEffect(() => {
-    if (!selectedChatId && chats && chats.length > 0) {
+    if (typeof window === 'undefined') return
+    const media = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobile(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (!isMobile && !selectedChatId && chats && chats.length > 0) {
       setSelectedChatId(chats[0].id)
     }
-  }, [chats, selectedChatId])
+  }, [chats, selectedChatId, isMobile])
 
   const handleSendMessage = useCallback(async () => {
     if (!messageInput.trim() || !selectedChatId) return
@@ -111,9 +123,13 @@ export default function ChatsPage() {
   const isAgentHandling = selectedChat?.agentHandlingAt != null
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-0 gap-4">
+    <div className="flex h-[calc(100dvh-7rem)] min-h-0 gap-4 lg:h-[calc(100vh-7rem)]">
       {/* Conversations List — min-h-0 lets flex-1 ScrollArea shrink and scroll */}
-      <div className="flex h-full min-h-0 w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card">
+      <div
+        className={`${
+          isMobile && selectedChat ? 'hidden' : 'flex'
+        } h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card md:w-80`}
+      >
         <div className="border-b border-border/50 p-4">
           <h2 className="mb-3 font-semibold text-foreground">Conversations</h2>
           <div className="relative">
@@ -126,7 +142,7 @@ export default function ChatsPage() {
             />
           </div>
           {/* Status Filter Tabs */}
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {['all', 'active', 'pending', 'resolved'].map((status) => (
               <button
                 key={status}
@@ -228,7 +244,7 @@ export default function ChatsPage() {
                       {chat.aiHandled && (
                         <Bot className="h-3 w-3 text-primary shrink-0" />
                       )}
-                      <p className="truncate text-sm text-muted-foreground">
+                      <p className="truncate text-sm text-foreground/80">
                         {chat.lastMessage}
                       </p>
                     </div>
@@ -245,12 +261,26 @@ export default function ChatsPage() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card">
+      <div
+        className={`${
+          isMobile && !selectedChat ? 'hidden' : 'flex'
+        } min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card`}
+      >
         {selectedChat ? (
           <>
             {/* Chat Header */}
             <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-6 py-4">
               <div className="flex items-center gap-3">
+                {isMobile && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                    onClick={() => setSelectedChatId(null)}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
                 <div className="relative">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-sm font-medium text-secondary-foreground">
                     {selectedChat.customerName.charAt(0)}
@@ -342,7 +372,7 @@ export default function ChatsPage() {
                       }`}
                     >
                       <div
-                        className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                        className={`max-w-[85%] rounded-2xl px-4 py-2 sm:max-w-[70%] ${
                           msg.sender === 'customer'
                             ? 'rounded-br-md bg-primary text-primary-foreground'
                             : 'rounded-bl-md bg-secondary text-secondary-foreground'
@@ -419,7 +449,7 @@ export default function ChatsPage() {
       </div>
 
       {/* Customer Details Panel */}
-      <div className="flex h-full min-h-0 w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card">
+      <div className="hidden h-full min-h-0 w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card xl:flex">
         {selectedChat ? (
           <>
             <div className="shrink-0 border-b border-border/50 p-6 text-center">
