@@ -49,6 +49,7 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip'
 import { useSWRConfig } from 'swr'
+import { useToast } from '@/hooks/use-toast'
 
 export default function OrdersPage() {
   const searchParams = useSearchParams()
@@ -56,6 +57,7 @@ export default function OrdersPage() {
   const { data: companySettings } = useCompanySettings()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
   const { mutate } = useSWRConfig()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
@@ -109,6 +111,13 @@ export default function OrdersPage() {
       )
       if (result.success) {
         mutate(['orders', { status: statusFilter, search: searchQuery, page, limit: 10 }])
+        if (result.whatsappSent === false && result.whatsappError) {
+          toast({
+            title: result.message ?? 'Order updated but message not delivered',
+            description: result.whatsappError,
+            variant: 'destructive',
+          })
+        }
         setSelectedOrder(null)
         setNewStatus('')
         setNewPaymentStatus('pending')
@@ -118,7 +127,7 @@ export default function OrdersPage() {
     } finally {
       setIsUpdating(false)
     }
-  }, [selectedOrder, newStatus, newPaymentStatus, mutate, statusFilter, searchQuery, page])
+  }, [selectedOrder, newStatus, newPaymentStatus, mutate, statusFilter, searchQuery, page, toast])
 
   const handleExportOrders = async () => {
     setExporting(true)
