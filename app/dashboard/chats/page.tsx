@@ -281,8 +281,8 @@ export default function ChatsPage() {
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-6 py-4">
-              <div className="flex items-center gap-3">
+            <div className="flex shrink-0 flex-col gap-3 border-b border-border/50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
                 {isMobile && (
                   <Button
                     variant="ghost"
@@ -301,11 +301,11 @@ export default function ChatsPage() {
                     <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-primary" />
                   )}
                 </div>
-                <div>
-                  <div className="font-medium text-foreground">
+                <div className="min-w-0">
+                  <div className="truncate font-medium text-foreground">
                     {selectedChat.customerName}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {selectedChat.aiHandled && (
                       <div className="flex items-center gap-1 text-xs text-primary">
                         <Bot className="h-3 w-3" />
@@ -322,7 +322,7 @@ export default function ChatsPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                 {isAgentHandling && (
                   <Button
                     variant="outline"
@@ -334,10 +334,10 @@ export default function ChatsPage() {
                     {isHandingBack ? '…' : 'Hand back to bot'}
                   </Button>
                 )}
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="hidden md:inline-flex">
                   <Phone className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="hidden md:inline-flex">
                   <Video className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon">
