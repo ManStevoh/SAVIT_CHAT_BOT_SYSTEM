@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { logout } from "@/lib/api-actions"
 import { clearAuthCookie } from "@/lib/auth-cookie"
 import { useNotifications } from "@/lib/api-hooks"
@@ -47,8 +47,10 @@ export function DashboardNavbar() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [user, setUser] = useState<StoredUser | null>(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [topSearch, setTopSearch] = useState("")
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const isAdmin = pathname?.startsWith("/admin") ?? false
   const profileHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
   const settingsHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
@@ -56,6 +58,12 @@ export function DashboardNavbar() {
   useEffect(() => {
     setUser(getStoredUser())
   }, [])
+
+  useEffect(() => {
+    const initial = searchParams?.get("search") ?? ""
+    setTopSearch(initial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   const { data: notificationsData } = useNotifications()
   const notifications = notificationsData?.items ?? []
@@ -92,13 +100,30 @@ export function DashboardNavbar() {
           </Drawer>
         )}
 
-        <div className="relative w-full max-w-md">
+        <form
+          className="relative w-full max-w-md"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const q = topSearch.trim()
+            const target = isAdmin
+              ? "/admin/companies"
+              : pathname?.startsWith("/dashboard/orders")
+                ? "/dashboard/orders"
+                : pathname?.startsWith("/dashboard/customers")
+                  ? "/dashboard/customers"
+                  : "/dashboard/chats"
+
+            router.push(q ? `${target}?search=${encodeURIComponent(q)}` : target)
+          }}
+        >
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search conversations, orders..."
+            placeholder={isAdmin ? "Search companies..." : "Search conversations, orders..."}
             className="pl-10"
+            value={topSearch}
+            onChange={(e) => setTopSearch(e.target.value)}
           />
-        </div>
+        </form>
       </div>
 
       <div className="flex items-center gap-2">

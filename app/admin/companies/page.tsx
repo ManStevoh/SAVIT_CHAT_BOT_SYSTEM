@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -56,7 +56,9 @@ const STATUS_OPTIONS: Company["status"][] = ["active", "suspended", "pending"]
 
 export default function AdminCompaniesPage() {
   const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState("")
+  const searchParams = useSearchParams()
+  const initialSearch = searchParams.get("search") ?? ""
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [statusFilter, setStatusFilter] = useState("all")
   const [editingCompany, setEditingCompany] = useState<Company | null>(null)
   const [editForm, setEditForm] = useState<UpdateAdminCompanyData & { name: string; email: string; phone: string }>({
