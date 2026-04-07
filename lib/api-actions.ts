@@ -455,10 +455,11 @@ export async function updateProduct(
           formData.append(key, String(value))
         }
       })
-      return await apiRequest<{ success: boolean; message?: string }>(`/api/company/products/${productId}`, {
-        method: 'PUT',
-        body: formData,
-      })
+      // Multipart file uploads must use POST: PHP does not populate uploaded files for PUT.
+      return await apiRequest<{ success: boolean; message?: string; product?: Product }>(
+        `/api/company/products/${productId}`,
+        { method: 'POST', body: formData }
+      )
     }
     return await apiRequest<{ success: boolean; message?: string }>(`/api/company/products/${productId}`, {
       method: 'PUT',

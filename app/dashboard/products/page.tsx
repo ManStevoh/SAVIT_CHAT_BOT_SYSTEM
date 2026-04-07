@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,8 +23,8 @@ import {
   uploadProductImage,
   uploadVariantImage,
 } from '@/lib/api-actions'
-import { downloadFile } from '@/lib/api-client'
-import type { Product } from '@/lib/mock-data'
+import { downloadFile, resolveBackendMediaUrl } from '@/lib/api-client'
+import type { Product, ProductVariant } from '@/lib/mock-data'
 import {
   Plus,
   MoreVertical,
@@ -88,6 +88,22 @@ const initialFormData: ProductFormData = {
   stock: '',
 }
 
+function productPrimaryDisplayImage(product: Product): string | null {
+  const fromField = resolveBackendMediaUrl(product.image ?? null)
+  if (fromField) return fromField
+  const imgs = product.images ?? []
+  const primary = imgs.find((i) => i.isPrimary) ?? imgs[0]
+  return resolveBackendMediaUrl(primary?.url ?? null)
+}
+
+function variantDisplayImage(variant: ProductVariant): string | null {
+  const fromField = resolveBackendMediaUrl(variant.image ?? null)
+  if (fromField) return fromField
+  const imgs = variant.images ?? []
+  const primary = imgs.find((i) => i.isPrimary) ?? imgs[0]
+  return resolveBackendMediaUrl(primary?.url ?? null)
+}
+
 export default function ProductsPage() {
   const router = useRouter()
   const { mutate } = useSWRConfig()
@@ -128,6 +144,18 @@ export default function ProductsPage() {
     status: statusFilter,
     search: searchQuery,
   })
+
+  useEffect(() => {
+    if (!isEditModalOpen || !selectedProduct || !products) return
+    const next = products.find((p) => p.id === selectedProduct.id)
+    if (next) setSelectedProduct(next)
+  }, [products, isEditModalOpen, selectedProduct?.id])
+
+  useEffect(() => {
+    if (!variantsSheetProduct || !products) return
+    const next = products.find((p) => p.id === variantsSheetProduct.id)
+    if (next) setVariantsSheetProduct(next)
+  }, [products, variantsSheetProduct?.id])
 
   // Calculate stats from data
   const stats = {
@@ -214,7 +242,7 @@ export default function ProductsPage() {
       })
 
       if (result.success) {
-        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        await mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         setIsEditModalOpen(false)
         setSelectedProduct(null)
         setFormData(initialFormData)
@@ -383,27 +411,30 @@ export default function ProductsPage() {
     {
       key: 'name',
       header: 'Product',
-      cell: (product) => (
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            {product.image ? (
-              <img
-                src={product.image}
-                alt={product.name}
-                className="h-full w-full rounded-lg object-cover"
-              />
-            ) : (
-              <Package className="h-5 w-5 text-primary" />
-            )}
+      cell: (product) => {
+        const thumb = productPrimaryDisplayImage(product)
+        return (
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              {thumb ? (
+                <img
+                  src={thumb}
+                  alt={product.name}
+                  className="h-full w-full rounded-lg object-cover"
+                />
+              ) : (
+                <Package className="h-5 w-5 text-primary" />
+              )}
+            </div>
+            <div>
+              <span className="font-medium text-foreground">{product.name}</span>
+              <p className="text-xs text-muted-foreground line-clamp-1">
+                {product.description}
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="font-medium text-foreground">{product.name}</span>
-            <p className="text-xs text-muted-foreground line-clamp-1">
-              {product.description}
-            </p>
-          </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       key: 'category',
@@ -585,9 +616,9 @@ export default function ProductsPage() {
 
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Main product image</label>
-        {selectedProduct?.image && !productImageFile && (
+        {selectedProduct && productPrimaryDisplayImage(selectedProduct) && !productImageFile && (
           <img
-            src={selectedProduct.image}
+            src={productPrimaryDisplayImage(selectedProduct)!}
             alt={selectedProduct.name}
             className="h-20 w-20 rounded-md border border-border object-cover"
           />
@@ -840,15 +871,17 @@ export default function ProductsPage() {
             <div className="mt-6 space-y-6">
               <p className="text-sm font-medium text-foreground">{variantsSheetProduct.name}</p>
               <ul className="space-y-2">
-                {(variantsSheetProduct.variants ?? []).map((v) => (
+                {(variantsSheetProduct.variants ?? []).map((v) => {
+                  const vThumb = variantDisplayImage(v)
+                  return (
                   <li
                     key={v.id}
                     className="rounded-md border border-border/60 px-3 py-2 text-sm"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
-                        {v.image ? (
-                          <img src={v.image} alt={v.label} className="h-10 w-10 rounded-md object-cover" />
+                        {vThumb ? (
+                          <img src={vThumb} alt={v.label} className="h-10 w-10 rounded-md object-cover" />
                         ) : (
                           <div className="h-10 w-10 rounded-md bg-muted" />
                         )}
@@ -880,7 +913,8 @@ export default function ProductsPage() {
                       />
                     </div>
                   </li>
-                ))}
+                  )
+                })}
                 {(variantsSheetProduct.variants ?? []).length === 0 && (
                   <p className="text-sm text-muted-foreground">No options yet. Add one below.</p>
                 )}

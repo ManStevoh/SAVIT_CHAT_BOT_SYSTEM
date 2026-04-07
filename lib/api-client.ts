@@ -25,6 +25,26 @@ export function apiUrl(path: string): string {
   return base ? `${base}${p}` : p
 }
 
+/**
+ * Laravel Storage::url() often returns a path like `/storage/...`. The dashboard is on another
+ * origin (e.g. Vercel) so `<img src="/storage/...">` loads from the wrong host. Prefix the API origin.
+ */
+export function resolveBackendMediaUrl(url: string | null | undefined): string | null {
+  if (url == null || String(url).trim() === '') return null
+  const u = String(url).trim()
+  if (u.startsWith('http://') || u.startsWith('https://')) return u
+  if (u.startsWith('//')) {
+    if (typeof window !== 'undefined' && window.location?.protocol) {
+      return `${window.location.protocol}${u}`
+    }
+    return `https:${u}`
+  }
+  const base = getBaseUrl().replace(/\/$/, '')
+  if (!base) return u
+  const path = u.startsWith('/') ? u : `/${u}`
+  return `${base}${path}`
+}
+
 /** Get auth token for Laravel Sanctum (Bearer). Override if you store token elsewhere. */
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null
