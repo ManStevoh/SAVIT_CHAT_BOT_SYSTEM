@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -43,7 +44,14 @@ const responseTimePlaceholder = [
 ]
 
 export default function AnalyticsPage() {
+  const searchParams = useSearchParams()
+  const requestedTab = searchParams.get("tab") ?? "messages"
+  const initialTab = ["messages", "orders", "customers", "products"].includes(requestedTab)
+    ? requestedTab
+    : "messages"
+  const selectedProduct = searchParams.get("product")?.trim() ?? ""
   const [chartPeriod, setChartPeriod] = useState("7d")
+  const [activeTab, setActiveTab] = useState(initialTab)
 
   const { data: analytics, error, isLoading } = useAnalytics(chartPeriod)
   const { data: companySettings } = useCompanySettings()
@@ -68,6 +76,9 @@ export default function AnalyticsPage() {
     sales: p.sales,
     revenue: p.revenue,
   })) ?? []
+  const filteredTopProductsData = selectedProduct
+    ? topProductsData.filter((p) => p.name.toLowerCase().includes(selectedProduct.toLowerCase()))
+    : topProductsData
 
   const customerGrowthData = analytics?.customerGrowth ?? []
 
@@ -164,7 +175,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      <Tabs defaultValue="messages" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="messages">Messages</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
@@ -288,6 +299,11 @@ export default function AnalyticsPage() {
         </TabsContent>
 
         <TabsContent value="products" className="space-y-6">
+          {selectedProduct !== "" && (
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+              Showing product analytics for: <span className="font-medium text-foreground">{selectedProduct}</span>
+            </div>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>Top Products</CardTitle>
@@ -295,11 +311,11 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="h-[400px]">
-                {topProductsData.length === 0 ? (
+                {filteredTopProductsData.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-muted-foreground">No data for this period</div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topProductsData} layout="vertical">
+                    <BarChart data={filteredTopProductsData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                       <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={120} />
