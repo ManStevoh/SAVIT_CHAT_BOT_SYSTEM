@@ -10,9 +10,14 @@ class Message extends Model
     protected $fillable = [
         'chat_id',
         'content',
+        'message_type',
         'sender',
         'status',
         'whatsapp_message_id',
+        'attachment_url',
+        'attachment_name',
+        'attachment_mime',
+        'attachment_size',
     ];
 
     public function chat(): BelongsTo

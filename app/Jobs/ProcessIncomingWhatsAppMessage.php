@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Message;
 use App\Models\Subscription;
 use App\Services\AIReplyService;
+use App\Services\CompanyInAppNotificationService;
 use App\Services\MailService;
 use App\Services\OrderFlowService;
 use App\Services\PlanLimitService;
@@ -62,12 +63,12 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
         }
 
         if ($chat->isAgentHandling(30)) {
-            $this->notifyCompanyNewMessage($company, $mailService, true);
+            $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
             return;
         }
 
         if ($this->wantsHumanEscalation($chat)) {
-            $this->notifyCompanyNewMessage($company, $mailService, true);
+            $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
             app(OrderFlowService::class)->resetOrderState($chat);
             $chat->refresh();
             $chat->update(['agent_handling_at' => now()]);
@@ -89,13 +90,13 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
 
         if (! PlanLimitService::isWithinMessageLimit($company)) {
             Log::info('ProcessIncomingWhatsAppMessage: message limit reached, skipping auto-reply', ['company_id' => $company->id]);
-            $this->notifyCompanyNewMessage($company, $mailService, false);
+            $this->notifyCompanyNewMessage($company, $mailService, 'message');
             return;
         }
 
         $settings = $company->settings;
         if (! $settings || ! $settings->auto_reply_enabled) {
-            $this->notifyCompanyNewMessage($company, $mailService, false);
+            $this->notifyCompanyNewMessage($company, $mailService, 'message');
             return;
         }
 
@@ -117,8 +118,11 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
 
             $chat->refresh();
             $orderFlow = app(OrderFlowService::class);
+            $stepBefore = $chat->conversation_step;
             $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
             if ($orderReply !== null && trim($orderReply) !== '') {
+                $chat->refresh();
+                $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
                 $this->sendReplyAndSave($waSender, $company, $chat, $orderReply);
 
                 return;
@@ -133,8 +137,11 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
         }
 
         $orderFlow = app(OrderFlowService::class);
+        $stepBefore = $chat->conversation_step;
         $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
         if ($orderReply !== null) {
+            $chat->refresh();
+            $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
             $this->sendReplyAndSave($waSender, $company, $chat, $orderReply);
             return;
         }
@@ -234,19 +241,78 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
         }
     }
 
-    protected function notifyCompanyNewMessage(Company $company, MailService $mailService, bool $escalation): void
+    protected function maybeSendOrderSelectionImage(
+        WhatsAppMessageSenderService $waSender,
+        Company $company,
+        Chat $chat,
+        OrderFlowService $orderFlow,
+        ?string $stepBefore
+    ): void {
+        $stepNow = $chat->conversation_step;
+        $shouldSend =
+            ($stepBefore === OrderFlowService::STEP_PRODUCT && in_array($stepNow, [OrderFlowService::STEP_VARIANT, OrderFlowService::STEP_PRODUCT_QTY], true))
+            || ($stepBefore === OrderFlowService::STEP_VARIANT && $stepNow === OrderFlowService::STEP_PRODUCT_QTY);
+
+        if (! $shouldSend) {
+            return;
+        }
+
+        $preview = $orderFlow->resolveCurrentSelectionImage($chat, $company);
+        if (! $preview || empty($preview['url'])) {
+            return;
+        }
+
+        $account = $company->whatsappAccount;
+        if (! $account || ! $account->isActive()) {
+            return;
+        }
+
+        $result = $waSender->sendImage($account, $this->customerPhone, $preview['url'], $preview['caption'] ?? null);
+        Message::create([
+            'chat_id' => $chat->id,
+            'content' => $preview['caption'] ?? '',
+            'message_type' => 'image',
+            'attachment_url' => $preview['url'],
+            'attachment_name' => null,
+            'attachment_mime' => 'image/jpeg',
+            'attachment_size' => null,
+            'sender' => 'bot',
+            'status' => $result['success'] ? 'sent' : 'failed',
+            'whatsapp_message_id' => $result['message_id'] ?? null,
+        ]);
+
+        if (! $result['success']) {
+            Log::warning('ProcessIncomingWhatsAppMessage: selection image send failed', ['error' => $result['error'] ?? 'unknown']);
+        }
+    }
+
+    /**
+     * @param  'handoff'|'agent_active'|'message'  $kind
+     */
+    protected function notifyCompanyNewMessage(Company $company, MailService $mailService, string $kind): void
     {
         $settings = $company->settings;
         if (! $settings || ! $settings->notifications_enabled) {
             return;
         }
+
+        $customerLabel = $this->customerName ?: $this->customerPhone;
+        app(CompanyInAppNotificationService::class)->recordWhatsAppCustomerAlert(
+            $company,
+            $this->chatId,
+            $customerLabel,
+            $this->messageText,
+            $kind
+        );
+
         $to = $company->email;
         if (! $to) {
             return;
         }
         $appName = MailService::applicationName();
         $chatsUrl = rtrim(config('app.frontend_url', config('app.url')), '/') . '/dashboard/chats';
-        $subject = $escalation
+        $isHandoff = $kind === 'handoff';
+        $subject = $isHandoff
             ? "[{$appName}] Customer requested human – " . ($this->customerName ?: $this->customerPhone)
             : "[{$appName}] New message from " . ($this->customerName ?: $this->customerPhone);
         $preview = mb_substr($this->messageText, 0, 200);

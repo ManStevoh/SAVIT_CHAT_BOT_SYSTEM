@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CompanyInAppNotificationService;
 use App\Services\MailService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -54,24 +55,29 @@ class Order extends Model
     {
         static::created(function (Order $order) {
             $company = $order->company;
-            if (! $company?->email) {
+            if (! $company) {
                 return;
             }
             $settings = $company->settings;
-            if (! $settings || ! $settings->notifications_enabled) {
-                return;
+            $notificationsOn = $settings && $settings->notifications_enabled;
+
+            if ($notificationsOn && $company->email) {
+                try {
+                    $ordersUrl = rtrim(config('app.frontend_url', config('app.url')), '/').'/dashboard/orders';
+                    app(MailService::class)->sendNewOrderNotification(
+                        $company->email,
+                        $order->order_number,
+                        $order->customer_name ?? 'Customer',
+                        (float) $order->total,
+                        $ordersUrl
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to send new order notification', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+                }
             }
-            try {
-                $ordersUrl = rtrim(config('app.frontend_url', config('app.url')), '/').'/dashboard/orders';
-                app(MailService::class)->sendNewOrderNotification(
-                    $company->email,
-                    $order->order_number,
-                    $order->customer_name ?? 'Customer',
-                    (float) $order->total,
-                    $ordersUrl
-                );
-            } catch (\Throwable $e) {
-                Log::warning('Failed to send new order notification', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+
+            if ($notificationsOn) {
+                app(CompanyInAppNotificationService::class)->recordNewOrder($order);
             }
         });
     }

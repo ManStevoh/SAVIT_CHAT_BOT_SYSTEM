@@ -54,6 +54,11 @@ class Company extends Model
         return $this->hasOne(WhatsAppAccount::class);
     }
 
+    public function dashboardNotifications(): HasMany
+    {
+        return $this->hasMany(CompanyNotification::class);
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);

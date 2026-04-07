@@ -11,7 +11,10 @@ use App\Models\WhatsAppAccount;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class WhatsAppWebhookController extends Controller
 {
@@ -122,15 +125,17 @@ class WhatsAppWebhookController extends Controller
         $customerName = isset($contacts[0]['profile']['name']) ? $contacts[0]['profile']['name'] : null;
 
         foreach ($value['messages'] ?? [] as $msg) {
-            $this->processMessage($msg, $companyId, $phoneNumberId, $customerName);
+            $this->processMessage($msg, $account, $customerName);
         }
     }
 
-    protected function processMessage(array $msg, int $companyId, string $phoneNumberId, ?string $customerName): void
+    protected function processMessage(array $msg, WhatsAppAccount $account, ?string $customerName): void
     {
         $type = $msg['type'] ?? '';
         $from = (string) ($msg['from'] ?? '');
         $waMessageId = $msg['id'] ?? null;
+        $companyId = (int) $account->company_id;
+        $phoneNumberId = (string) $account->phone_number_id;
 
         if ($type === 'reaction') {
             return;
@@ -145,7 +150,22 @@ class WhatsAppWebhookController extends Controller
         if (in_array($type, ['image', 'audio', 'document', 'video'])) {
             $caption = $msg[$type]['caption'] ?? '';
             $text = $caption !== '' ? $caption : "[{$type} received]";
-            $this->saveIncomingAndDispatchReply($companyId, $phoneNumberId, $from, $customerName, $text, $waMessageId);
+            $mediaMeta = $this->downloadIncomingMedia(
+                $account,
+                $type,
+                $msg[$type]['id'] ?? null,
+                $msg[$type]['mime_type'] ?? null,
+                $msg[$type]['filename'] ?? null
+            );
+            $this->saveIncomingAndDispatchReply(
+                $companyId,
+                $phoneNumberId,
+                $from,
+                $customerName,
+                $text,
+                $waMessageId,
+                $mediaMeta
+            );
         }
     }
 
@@ -167,7 +187,8 @@ class WhatsAppWebhookController extends Controller
         string $customerPhone,
         ?string $customerName,
         string $text,
-        ?string $waMessageId
+        ?string $waMessageId,
+        ?array $mediaMeta = null
     ): void {
         $chat = Chat::firstOrCreate(
             [
@@ -206,6 +227,11 @@ class WhatsAppWebhookController extends Controller
         Message::create([
             'chat_id' => $chat->id,
             'content' => $text,
+            'message_type' => $mediaMeta['message_type'] ?? 'text',
+            'attachment_url' => $mediaMeta['attachment_url'] ?? null,
+            'attachment_name' => $mediaMeta['attachment_name'] ?? null,
+            'attachment_mime' => $mediaMeta['attachment_mime'] ?? null,
+            'attachment_size' => $mediaMeta['attachment_size'] ?? null,
             'sender' => 'customer',
             'status' => 'received',
             'whatsapp_message_id' => $waMessageId,
@@ -220,5 +246,78 @@ class WhatsAppWebhookController extends Controller
             $customerName,
             $waMessageId
         );
+    }
+
+    /**
+     * Download media from WhatsApp by media ID and store locally.
+     *
+     * @return array{message_type: string, attachment_url: string, attachment_name: string, attachment_mime: string, attachment_size: int}|null
+     */
+    protected function downloadIncomingMedia(
+        WhatsAppAccount $account,
+        string $type,
+        ?string $mediaId,
+        ?string $mimeType,
+        ?string $filename
+    ): ?array {
+        if (! $mediaId) {
+            return null;
+        }
+
+        $graphUrl = rtrim(config('whatsapp.graph_url', 'https://graph.facebook.com/v21.0'), '/');
+
+        try {
+            $metaResponse = Http::withToken($account->access_token)
+                ->timeout(20)
+                ->get("{$graphUrl}/{$mediaId}");
+
+            if (! $metaResponse->successful()) {
+                Log::warning('WhatsApp media meta fetch failed', [
+                    'media_id' => $mediaId,
+                    'status' => $metaResponse->status(),
+                    'body' => $metaResponse->body(),
+                ]);
+                return null;
+            }
+
+            $mediaUrl = $metaResponse->json('url');
+            if (! $mediaUrl) {
+                return null;
+            }
+
+            $binaryResponse = Http::withToken($account->access_token)
+                ->timeout(40)
+                ->get($mediaUrl);
+
+            if (! $binaryResponse->successful()) {
+                Log::warning('WhatsApp media binary fetch failed', [
+                    'media_id' => $mediaId,
+                    'status' => $binaryResponse->status(),
+                ]);
+                return null;
+            }
+
+            $effectiveMime = $mimeType ?: ($binaryResponse->header('Content-Type') ?: 'application/octet-stream');
+            $ext = explode('/', $effectiveMime)[1] ?? 'bin';
+            $safeExt = preg_replace('/[^a-zA-Z0-9]/', '', $ext) ?: 'bin';
+            $safeName = $filename ?: ("wa-{$mediaId}." . $safeExt);
+            $path = 'chat-attachments/incoming/' . date('Y/m') . '/' . Str::uuid() . '-' . $safeName;
+
+            Storage::disk('public')->put($path, $binaryResponse->body());
+
+            return [
+                'message_type' => $type === 'image' ? 'image' : 'file',
+                'attachment_url' => Storage::disk('public')->url($path),
+                'attachment_name' => $safeName,
+                'attachment_mime' => $effectiveMime,
+                'attachment_size' => strlen($binaryResponse->body()),
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp media download failed', [
+                'media_id' => $mediaId,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 }

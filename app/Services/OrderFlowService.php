@@ -7,8 +7,11 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderProduct;
 use App\Models\Product;
+use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Support\MoneyFormatter;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class OrderFlowService
@@ -624,7 +627,14 @@ class OrderFlowService
         return Product::query()
             ->where('company_id', $company->id)
             ->where('status', 'active')
-            ->with(['variants' => fn ($q) => $q->where('status', 'active')->orderBy('sort_order')->orderBy('id')])
+            ->with([
+                'images' => fn ($q) => $q->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id'),
+                'variants' => fn ($q) => $q
+                    ->where('status', 'active')
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->with(['images' => fn ($iq) => $iq->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id')]),
+            ])
             ->orderBy('name')
             ->limit(30)
             ->get();
@@ -636,7 +646,14 @@ class OrderFlowService
             ->where('company_id', $company->id)
             ->where('status', 'active')
             ->whereKey($id)
-            ->with(['variants' => fn ($q) => $q->where('status', 'active')->orderBy('sort_order')->orderBy('id')])
+            ->with([
+                'images' => fn ($q) => $q->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id'),
+                'variants' => fn ($q) => $q
+                    ->where('status', 'active')
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->with(['images' => fn ($iq) => $iq->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id')]),
+            ])
             ->first();
 
         return $p;
@@ -1009,7 +1026,11 @@ class OrderFlowService
 
     protected function parseProductLine(Company $company, string $text): ?array
     {
-        $products = Product::with('variants')
+        $products = Product::query()
+            ->with([
+                'images' => fn ($q) => $q->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id'),
+                'variants' => fn ($q) => $q->with(['images' => fn ($iq) => $iq->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id')]),
+            ])
             ->where('company_id', $company->id)
             ->where('status', 'active')
             ->get();
@@ -1186,5 +1207,72 @@ class OrderFlowService
         $this->setStep($chat, self::STEP_EXISTING_ORDER_PROMPT, $draft);
 
         return "Reply with:\n1 - Continue and pay\n2 - Cancel";
+    }
+
+    /**
+     * Resolve currently selected catalog item image for preview.
+     *
+     * @return array{url: string, caption: string}|null
+     */
+    public function resolveCurrentSelectionImage(Chat $chat, Company $company): ?array
+    {
+        $draft = $this->getDraft($chat);
+        $productId = isset($draft['pending_product_id']) ? (int) $draft['pending_product_id'] : null;
+        if (! $productId) {
+            return null;
+        }
+
+        $product = $this->getCatalogProductById($company, $productId);
+        if (! $product) {
+            return null;
+        }
+
+        $variant = null;
+        $variantId = isset($draft['pending_variant_id']) ? (int) $draft['pending_variant_id'] : null;
+        if ($variantId) {
+            $variant = $product->variants->firstWhere('id', $variantId);
+        }
+
+        $imageUrl = $this->resolveImageUrlForSelection($product, $variant);
+        if (! $imageUrl) {
+            return null;
+        }
+
+        $caption = $variant
+            ? $product->name.' - '.$variant->label
+            : $product->name;
+
+        return [
+            'url' => $imageUrl,
+            'caption' => $caption,
+        ];
+    }
+
+    private function resolveImageUrlForSelection(Product $product, ?ProductVariant $variant): ?string
+    {
+        $path = null;
+        if ($variant) {
+            $path = $this->resolvePrimaryImagePath($variant->images);
+        }
+        if (! $path) {
+            $path = $this->resolvePrimaryImagePath($product->images);
+        }
+        if (! $path && $product->image) {
+            $path = $product->image;
+        }
+
+        return $path ? Storage::url($path) : null;
+    }
+
+    private function resolvePrimaryImagePath(Collection $images): ?string
+    {
+        if ($images->isEmpty()) {
+            return null;
+        }
+
+        /** @var ProductImage|null $image */
+        $image = $images->firstWhere('is_primary', true) ?? $images->first();
+
+        return $image?->path;
     }
 }

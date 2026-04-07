@@ -37,4 +37,14 @@ class Product extends Model
     {
         return $this->variants()->where('status', 'active')->orderBy('sort_order')->orderBy('id');
     }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function primaryImage(): ?ProductImage
+    {
+        return $this->images()->where('is_primary', true)->first();
+    }
 }

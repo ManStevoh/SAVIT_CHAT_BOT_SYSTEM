@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Company\ExportController;
 use App\Http\Controllers\Api\Company\FaqController;
 use App\Http\Controllers\Api\Company\ImportController;
 use App\Http\Controllers\Api\Company\MpesaCheckoutController;
+use App\Http\Controllers\Api\Company\NotificationController;
 use App\Http\Controllers\Api\Company\OrderController;
 use App\Http\Controllers\Api\Company\ProductController;
 use App\Http\Controllers\Api\Company\SettingsController;
@@ -69,6 +70,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->g
     Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
     Route::get('orders', [OrderController::class, 'index']);
+    Route::get('orders/{order}', [OrderController::class, 'show']);
     Route::post('orders', [OrderController::class, 'store']);
     Route::patch('orders/{order}', [OrderController::class, 'updateStatus']);
     Route::get('customers/stats', [CustomerController::class, 'stats']);
@@ -77,6 +79,12 @@ Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->g
     Route::post('products/{product}/variants', [ProductController::class, 'storeVariant']);
     Route::put('product-variants/{productVariant}', [ProductController::class, 'updateVariant']);
     Route::delete('product-variants/{productVariant}', [ProductController::class, 'destroyVariant']);
+    Route::post('products/{product}/images', [ProductController::class, 'storeProductImage']);
+    Route::post('product-variants/{productVariant}/images', [ProductController::class, 'storeVariantImage']);
+    Route::put('product-images/{productImage}', [ProductController::class, 'updateImage']);
+    Route::delete('product-images/{productImage}', [ProductController::class, 'destroyImage']);
+    // POST alias for update: PHP does not populate $_FILES on multipart PUT; browsers send file uploads as POST.
+    Route::post('products/{product}', [ProductController::class, 'update']);
     Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);
     Route::get('faqs', [FaqController::class, 'index']);
     Route::apiResource('faqs', FaqController::class)->only(['store', 'update', 'destroy']);
@@ -85,6 +93,9 @@ Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->g
     Route::get('subscription/invoices', [SubscriptionController::class, 'invoices']);
     Route::get('subscription/usage', [SubscriptionController::class, 'usage']);
     Route::get('team', [TeamController::class, 'index']);
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::get('settings', [SettingsController::class, 'show']);
     Route::put('settings', [SettingsController::class, 'update']);
     Route::post('whatsapp/connect', [WhatsAppController::class, 'connect']);

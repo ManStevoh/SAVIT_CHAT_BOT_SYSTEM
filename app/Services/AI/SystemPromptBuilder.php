@@ -5,7 +5,9 @@ namespace App\Services\AI;
 use App\Models\Company;
 use App\Models\Faq;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Support\MoneyFormatter;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Builds the system prompt for the AI assistant from company context.
@@ -61,7 +63,14 @@ class SystemPromptBuilder
     {
         $products = Product::where('company_id', $company->id)
             ->where('status', 'active')
-            ->with(['variants' => fn ($q) => $q->where('status', 'active')->orderBy('sort_order')->orderBy('id')])
+            ->with([
+                'images' => fn ($q) => $q->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id'),
+                'variants' => fn ($q) => $q
+                    ->where('status', 'active')
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->with(['images' => fn ($iq) => $iq->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id')]),
+            ])
             ->orderBy('name')
             ->limit(self::MAX_PRODUCTS_IN_PROMPT)
             ->get();
@@ -76,14 +85,32 @@ class SystemPromptBuilder
         foreach ($products as $p) {
             if ($p->variants->where('status', 'active')->isNotEmpty()) {
                 $min = (float) $p->variants->where('status', 'active')->min('price');
-                $parts[] = '- '.$p->name.' (options; from '.MoneyFormatter::format($min, $ccy).'):';
+                $productImage = $this->resolvePrimaryImageUrl($p->images);
+                $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
+                $parts[] = '- '.$p->name.' (options; from '.MoneyFormatter::format($min, $ccy)."){$productImageSuffix}:";
                 foreach ($p->variants->where('status', 'active')->take(8) as $v) {
-                    $parts[] = '  • '.$v->label.': '.MoneyFormatter::format((float) $v->price, $ccy);
+                    $variantImage = $this->resolvePrimaryImageUrl($v->images) ?? $productImage;
+                    $variantImageSuffix = $variantImage ? " [image: {$variantImage}]" : '';
+                    $parts[] = '  • '.$v->label.': '.MoneyFormatter::format((float) $v->price, $ccy).$variantImageSuffix;
                 }
             } else {
-                $parts[] = '- '.$p->name.': '.MoneyFormatter::format((float) $p->price, $ccy);
+                $productImage = $this->resolvePrimaryImageUrl($p->images);
+                $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
+                $parts[] = '- '.$p->name.': '.MoneyFormatter::format((float) $p->price, $ccy).$productImageSuffix;
             }
         }
+    }
+
+    private function resolvePrimaryImageUrl($images): ?string
+    {
+        if (! $images || $images->isEmpty()) {
+            return null;
+        }
+
+        /** @var ProductImage|null $image */
+        $image = $images->firstWhere('is_primary', true) ?? $images->first();
+
+        return $image ? Storage::url($image->path) : null;
     }
 
     /**

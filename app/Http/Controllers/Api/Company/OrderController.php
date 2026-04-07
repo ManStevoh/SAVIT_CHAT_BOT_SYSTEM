@@ -154,6 +154,36 @@ class OrderController extends Controller
         ]);
     }
 
+    public function show(Request $request, Order $order): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId || (int) $order->company_id !== (int) $companyId) {
+            return response()->json(['message' => 'Order not found.'], 404);
+        }
+
+        $order->load('orderProducts');
+
+        return response()->json([
+            'order' => [
+                'id' => (string) $order->id,
+                'orderNumber' => $order->order_number,
+                'customerName' => $order->customer_name,
+                'customerPhone' => $order->customer_phone,
+                'products' => $order->orderProducts->map(fn ($p) => [
+                    'id' => (string) $p->id,
+                    'name' => $p->name,
+                    'quantity' => (int) $p->quantity,
+                    'price' => (float) $p->price,
+                ])->values()->all(),
+                'total' => (float) $order->total,
+                'status' => $order->status,
+                'paymentStatus' => $order->payment_status,
+                'createdAt' => $order->created_at->toIso8601String(),
+                'updatedAt' => $order->updated_at->toIso8601String(),
+            ],
+        ]);
+    }
+
     public function store(
         Request $request,
         WhatsAppMessageSenderService $waSender,
