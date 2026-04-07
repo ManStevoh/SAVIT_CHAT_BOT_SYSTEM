@@ -15,6 +15,93 @@ use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
+    protected function formatOrderStatusLabel(?string $status): string
+    {
+        return match ($status) {
+            'pending' => 'Pending',
+            'confirmed' => 'Confirmed',
+            'shipped' => 'Shipped',
+            'delivered' => 'Delivered',
+            'cancelled' => 'Cancelled',
+            default => ucfirst((string) $status),
+        };
+    }
+
+    protected function buildOrderUpdateWhatsAppMessage(Order $order, ?string $oldStatus, ?string $oldPaymentStatus): string
+    {
+        $companyName = $order->company?->name ?: 'Savit Chat';
+        $customerName = $order->customer_name ?: 'Customer';
+        $settings = $order->company?->settings;
+
+        $lines = [];
+        $lines[] = "Hi {$customerName},";
+        $lines[] = "Update on your order #{$order->order_number}:";
+
+        if ($oldStatus !== $order->status) {
+            $lines[] = "• Status: ".$this->formatOrderStatusLabel($order->status);
+            $lines[] = match ($order->status) {
+                'confirmed' => "We’ve confirmed your order and we’re preparing it.",
+                'shipped' => "Your order has been shipped and is on the way.",
+                'delivered' => "Your order has been delivered. Thank you for shopping with us!",
+                'cancelled' => "Your order has been cancelled. Reply to this message if you’d like help.",
+                default => "We’ll keep you updated as it progresses.",
+            };
+        }
+
+        if ($oldPaymentStatus !== $order->payment_status) {
+            $paymentLabel = match ($order->payment_status) {
+                'paid' => 'Paid',
+                'pending' => 'Pending',
+                'refunded' => 'Refunded',
+                default => ucfirst((string) $order->payment_status),
+            };
+            $lines[] = "• Payment: {$paymentLabel}";
+        }
+
+        $shouldIncludePaymentHelp = ($order->payment_status !== 'paid')
+            && (bool) ($settings?->orders_collect_payment_enabled ?? true)
+            && (
+                (bool) ($settings?->orders_accept_stripe ?? false)
+                || (bool) ($settings?->orders_accept_mpesa ?? false)
+                || (is_string($settings?->order_payment_manual_instructions ?? null) && trim((string) $settings?->order_payment_manual_instructions) !== '')
+            );
+
+        if ($shouldIncludePaymentHelp) {
+            $lines[] = '';
+            $lines[] = 'How to pay:';
+
+            // If the order is linked to a chat, customer can reply "1" and the bot will guide payment.
+            if (! empty($order->chat_id)) {
+                $lines[] = "Reply with:\n1 - Continue and pay\n2 - Cancel";
+            }
+
+            if ((bool) ($settings?->orders_accept_stripe ?? false)) {
+                $stripe = app(OrderPaymentService::class)->createStripePaymentLinkForOrder($order);
+                if (! empty($stripe['success']) && ! empty($stripe['url'])) {
+                    $lines[] = "Pay online now: {$stripe['url']}";
+                }
+            }
+
+            if ((bool) ($settings?->orders_accept_mpesa ?? false)) {
+                $lines[] = 'M-Pesa: If you prefer M-Pesa, reply "1" to proceed and we’ll prompt payment on your phone.';
+            }
+
+            $manual = $settings?->order_payment_manual_instructions ?? null;
+            if (is_string($manual) && trim($manual) !== '') {
+                $lines[] = "Manual payment instructions:\n".trim($manual);
+            }
+        }
+
+        if (! empty($order->delivery_address)) {
+            $lines[] = "Delivery address: {$order->delivery_address}";
+        }
+
+        $lines[] = "Receipt: {$order->publicReceiptUrl()}";
+        $lines[] = "— {$companyName}";
+
+        return implode("\n", $lines);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
@@ -191,6 +278,9 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
+        $oldStatus = $order->status;
+        $oldPaymentStatus = $order->payment_status;
+
         $updates = [];
         if ($request->has('status')) {
             $updates['status'] = $request->status;
@@ -202,9 +292,59 @@ class OrderController extends Controller
             $order->update($updates);
         }
 
+        $whatsappSent = false;
+        $whatsappError = null;
+
+        $shouldNotify = ($oldStatus !== $order->status) || ($oldPaymentStatus !== $order->payment_status);
+        if ($shouldNotify) {
+            $company = $order->company;
+            $account = $company?->whatsappAccount;
+            $to = $order->customer_phone;
+
+            if (! $account || ! $account->isActive()) {
+                $whatsappError = 'No active WhatsApp connection';
+            } elseif (empty($to)) {
+                $whatsappError = 'No customer phone number';
+            } else {
+                $content = $this->buildOrderUpdateWhatsAppMessage($order, $oldStatus, $oldPaymentStatus);
+                $result = app(WhatsAppMessageSenderService::class)->sendText($account, $to, $content);
+                $whatsappSent = (bool) ($result['success'] ?? false);
+                $whatsappError = $result['error'] ?? null;
+
+                // If this order is linked to a chat, persist the outbound message in chat history.
+                if (! empty($order->chat_id)) {
+                    Message::create([
+                        'chat_id' => $order->chat_id,
+                        'content' => $content,
+                        'sender' => 'agent',
+                        'status' => $whatsappSent ? 'sent' : 'failed',
+                        'whatsapp_message_id' => $result['message_id'] ?? null,
+                    ]);
+
+                    $chat = Chat::find($order->chat_id);
+                    if ($chat) {
+                        // Ensure customer replies like "1" are interpreted as a payment choice for this order.
+                        if (($order->payment_status ?? null) !== 'paid') {
+                            $chat->update([
+                                'conversation_step' => \App\Services\OrderFlowService::STEP_EXISTING_ORDER_PROMPT,
+                                'order_draft' => ['order_id' => $order->id],
+                            ]);
+                        }
+                        $chat->update([
+                            'last_message' => $content,
+                            'last_message_at' => now(),
+                            'agent_handling_at' => null,
+                        ]);
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Order updated successfully',
+            'message' => $whatsappSent ? 'Order updated and customer notified via WhatsApp.' : 'Order updated successfully',
+            'whatsappSent' => $whatsappSent,
+            'whatsappError' => $whatsappError,
         ]);
     }
 }
