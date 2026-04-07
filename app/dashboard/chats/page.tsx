@@ -401,7 +401,7 @@ export default function ChatsPage() {
                     size="sm"
                     onClick={handleHandBackToBot}
                     disabled={isHandingBack}
-                    className="shrink-0"
+                    className="hidden shrink-0 whitespace-nowrap xl:inline-flex"
                   >
                     {isHandingBack ? '…' : 'Hand back to bot'}
                   </Button>
