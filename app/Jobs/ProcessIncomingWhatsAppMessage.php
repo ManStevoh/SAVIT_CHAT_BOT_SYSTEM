@@ -68,6 +68,16 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
 
         if ($this->wantsHumanEscalation($chat)) {
             $this->notifyCompanyNewMessage($company, $mailService, true);
+            app(OrderFlowService::class)->resetOrderState($chat);
+            $chat->refresh();
+            $chat->update(['agent_handling_at' => now()]);
+            $account = $company->whatsappAccount;
+            if ($account && $account->isActive()) {
+                $this->sendReplyAndSave($waSender, $company, $chat, $this->humanHandoffCustomerMessage());
+            } else {
+                Log::warning('ProcessIncomingWhatsAppMessage: human escalation but no active WhatsApp account', ['company_id' => $this->companyId]);
+            }
+
             return;
         }
 
@@ -102,8 +112,23 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
         if ($this->isFirstCustomerMessageInChat($this->chatId)) {
             app(OrderFlowService::class)->resetOrderState($chat);
             $chat->refresh();
-            $replyText = $aiReply->getGreetingOpening($company, $this->customerName);
-            $this->sendReplyAndSave($waSender, $company, $chat, $replyText);
+            $greeting = $aiReply->getGreetingOpening($company, $this->customerName);
+            $this->sendReplyAndSave($waSender, $company, $chat, $greeting);
+
+            $chat->refresh();
+            $orderFlow = app(OrderFlowService::class);
+            $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
+            if ($orderReply !== null && trim($orderReply) !== '') {
+                $this->sendReplyAndSave($waSender, $company, $chat, $orderReply);
+
+                return;
+            }
+
+            $followUp = $aiReply->getReplyAfterOpeningGreeting($company, $this->messageText, $this->customerName, $this->chatId);
+            if ($followUp !== null && trim($followUp) !== '') {
+                $this->sendReplyAndSave($waSender, $company, $chat, $followUp);
+            }
+
             return;
         }
 
@@ -135,6 +160,13 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue, ShouldBeUnique
         }
 
         return false;
+    }
+
+    protected function humanHandoffCustomerMessage(): string
+    {
+        return "You've been handed over to our team. A human agent will assist you and we'll contact you soon.\n\n"
+            ."Thank you for your patience."
+            .AIReplyService::QUICK_MENU_SUFFIX;
     }
 
     protected function companyHasActiveSubscription(Company $company): bool

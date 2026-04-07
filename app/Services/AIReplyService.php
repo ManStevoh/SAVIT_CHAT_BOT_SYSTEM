@@ -16,6 +16,9 @@ class AIReplyService
 {
     private const PLATFORM_SETTINGS_CACHE_TTL = 300;
 
+    /** Numbered quick menu (greetings, handoff, etc.). */
+    public const QUICK_MENU_SUFFIX = "\n\nReply with: 1. Prices  2. Order  3. Talk to agent";
+
     public function __construct(
         protected WhatsAppMessageSenderService $whatsAppSender,
         protected OpenAIConversationBuilder $conversationBuilder,
@@ -50,6 +53,38 @@ class AIReplyService
             return $this->greetingWithQuickMenu($company, $customerName);
         }
 
+        return $this->resolveReplyContent($company, $message, $lower, $customerName, $chatId);
+    }
+
+    /**
+     * Second bubble after opening greeting: FAQ / keywords / AI / fallback.
+     * Returns null when a second message would duplicate the opening (away hours, pure greeting only).
+     */
+    public function getReplyAfterOpeningGreeting(Company $company, string $customerMessage, ?string $customerName = null, ?int $chatId = null): ?string
+    {
+        $message = trim($customerMessage);
+        if ($message === '') {
+            return null;
+        }
+
+        $lower = mb_strtolower($message);
+
+        if ($this->isOutsideWorkingHours($company)) {
+            return null;
+        }
+
+        if ($this->looksLikeGreeting($lower)) {
+            return null;
+        }
+
+        return $this->resolveReplyContent($company, $message, $lower, $customerName, $chatId);
+    }
+
+    /**
+     * Keyword → FAQ → OpenAI → fallback (shared by normal replies and post-greeting follow-up).
+     */
+    protected function resolveReplyContent(Company $company, string $message, string $lower, ?string $customerName, ?int $chatId): string
+    {
         $keywordReply = $this->matchKeywordReply($company, $lower);
         if ($keywordReply !== null) {
             return $keywordReply;
@@ -99,7 +134,7 @@ class AIReplyService
 
     protected function appendQuickMenu(string $text): string
     {
-        $menu = "\n\nReply with: 1. Prices  2. Order  3. Talk to agent";
+        $menu = self::QUICK_MENU_SUFFIX;
         if (str_contains($text, $menu)) {
             return $text;
         }
