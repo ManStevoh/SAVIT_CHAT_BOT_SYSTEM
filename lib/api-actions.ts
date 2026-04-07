@@ -217,6 +217,16 @@ export interface SendMessageData {
   content: string
 }
 
+export interface CreateOrderFromChatData {
+  chatId: string
+  items: Array<{
+    name: string
+    quantity: number
+    price: number
+  }>
+  sendWhatsApp?: boolean
+}
+
 /**
  * Send message in chat
  * Laravel: POST /api/company/chats/:chatId/messages
@@ -306,6 +316,45 @@ export async function updateOrderPaymentStatus(
     return await apiRequest<{ success: boolean; message?: string }>(`/api/company/orders/${orderId}`, {
       method: 'PATCH',
       body: { paymentStatus },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Create an order for a chat customer and optionally send WhatsApp invoice.
+ * Laravel: POST /api/company/orders
+ */
+export async function createOrderFromChat(
+  data: CreateOrderFromChatData
+): Promise<{
+  success: boolean
+  message?: string
+  order?: { id: string; orderNumber: string }
+  whatsappSent?: boolean
+  whatsappError?: string | null
+}> {
+  if (useMockApi()) {
+    await delay(600)
+    return {
+      success: true,
+      message: 'Order created and invoice sent.',
+      order: { id: String(Date.now()), orderNumber: `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}` },
+      whatsappSent: true,
+      whatsappError: null,
+    }
+  }
+  try {
+    return await apiRequest<{
+      success: boolean
+      message?: string
+      order?: { id: string; orderNumber: string }
+      whatsappSent?: boolean
+      whatsappError?: string | null
+    }>('/api/company/orders', {
+      method: 'POST',
+      body: data,
     })
   } catch (e) {
     return handleApiError(e)

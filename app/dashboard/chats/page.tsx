@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { useChats, useMessages } from '@/lib/api-hooks'
-import { sendMessage, handBackToBot } from '@/lib/api-actions'
+import { sendMessage, handBackToBot, createOrderFromChat } from '@/lib/api-actions'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
 import {
   Search,
@@ -29,6 +29,7 @@ import {
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
+import { FormModal } from '@/components/shared/modal'
 
 export default function ChatsPage() {
   const { toast } = useToast()
@@ -41,6 +42,11 @@ export default function ChatsPage() {
   const [isSending, setIsSending] = useState(false)
   const [isHandingBack, setIsHandingBack] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [createOrderOpen, setCreateOrderOpen] = useState(false)
+  const [orderItemName, setOrderItemName] = useState('')
+  const [orderQuantity, setOrderQuantity] = useState('1')
+  const [orderUnitPrice, setOrderUnitPrice] = useState('')
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false)
 
   const {
     data: chats,
@@ -126,13 +132,64 @@ export default function ChatsPage() {
 
   const handleCreateOrder = useCallback(() => {
     if (!selectedChat) return
-    router.push(`/dashboard/orders?search=${encodeURIComponent(selectedChat.customerPhone)}`)
+    setOrderItemName('')
+    setOrderQuantity('1')
+    setOrderUnitPrice('')
+    setCreateOrderOpen(true)
   }, [router, selectedChat])
 
   const handleViewCustomerProfile = useCallback(() => {
     if (!selectedChat) return
     router.push(`/dashboard/customers?search=${encodeURIComponent(selectedChat.customerPhone)}`)
   }, [router, selectedChat])
+
+  const handleSubmitCreateOrder = useCallback(async () => {
+    if (!selectedChatId) return
+    const qty = Number.parseInt(orderQuantity, 10)
+    const unitPrice = Number.parseFloat(orderUnitPrice)
+    if (!orderItemName.trim() || !Number.isFinite(qty) || qty < 1 || !Number.isFinite(unitPrice) || unitPrice < 0) {
+      toast({
+        title: 'Invalid order details',
+        description: 'Please enter item name, quantity and unit price.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsCreatingOrder(true)
+    try {
+      const result = await createOrderFromChat({
+        chatId: selectedChatId,
+        items: [{ name: orderItemName.trim(), quantity: qty, price: unitPrice }],
+        sendWhatsApp: true,
+      })
+      if (result.success) {
+        setCreateOrderOpen(false)
+        toast({
+          title: result.message ?? 'Order created',
+          description: result.whatsappSent === false ? (result.whatsappError ?? 'WhatsApp delivery failed.') : 'Customer received invoice and payment prompt on WhatsApp.',
+          variant: result.whatsappSent === false ? 'destructive' : 'default',
+        })
+        mutate(['orders', { status: 'all', search: '', page: 1, limit: 10 }])
+        mutate(['messages', selectedChatId])
+        mutate(['chats', { status: statusFilter, search: searchQuery }])
+      } else {
+        toast({
+          title: 'Failed to create order',
+          description: result.message ?? 'Please try again.',
+          variant: 'destructive',
+        })
+      }
+    } catch (e) {
+      toast({
+        title: 'Failed to create order',
+        description: 'Unexpected error while creating the order.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCreatingOrder(false)
+    }
+  }, [selectedChatId, orderQuantity, orderUnitPrice, orderItemName, toast, mutate, statusFilter, searchQuery])
 
   return (
     <div className="flex h-[calc(100dvh-7rem)] min-h-0 gap-4 lg:h-[calc(100vh-7rem)]">
@@ -561,6 +618,58 @@ export default function ChatsPage() {
           </div>
         )}
       </div>
+      <FormModal
+        open={createOrderOpen}
+        onOpenChange={setCreateOrderOpen}
+        title="Create Order"
+        description={selectedChat ? `Create order for ${selectedChat.customerName}. Invoice is sent immediately on WhatsApp.` : 'Create order'}
+        onSubmit={handleSubmitCreateOrder}
+        submitLabel="Create & Send Invoice"
+        isLoading={isCreatingOrder}
+        isValid={orderItemName.trim().length > 0 && Number.parseInt(orderQuantity, 10) > 0 && Number.parseFloat(orderUnitPrice) >= 0}
+      >
+        <div className="space-y-3">
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">Customer</p>
+            <p className="text-sm font-medium text-foreground">{selectedChat?.customerName}</p>
+            <p className="text-xs text-muted-foreground">{selectedChat?.customerPhone}</p>
+          </div>
+          <Input
+            placeholder="Item name"
+            value={orderItemName}
+            onChange={(e) => setOrderItemName(e.target.value)}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              placeholder="Quantity"
+              value={orderQuantity}
+              onChange={(e) => setOrderQuantity(e.target.value)}
+            />
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="Unit price"
+              value={orderUnitPrice}
+              onChange={(e) => setOrderUnitPrice(e.target.value)}
+            />
+          </div>
+          <div className="rounded-md bg-secondary/40 p-3 text-sm">
+            Total:{' '}
+            <span className="font-semibold text-foreground">
+              {(() => {
+                const qty = Number.parseInt(orderQuantity, 10)
+                const price = Number.parseFloat(orderUnitPrice)
+                if (!Number.isFinite(qty) || !Number.isFinite(price) || qty < 1 || price < 0) return '0.00'
+                return (qty * price).toFixed(2)
+              })()}
+            </span>
+          </div>
+        </div>
+      </FormModal>
     </div>
   )
 }
