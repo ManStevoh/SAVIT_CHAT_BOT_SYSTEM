@@ -514,8 +514,8 @@ export interface NotificationsData {
 
 /**
  * Fetch notifications for the current user (dashboard navbar).
- * API Endpoint: GET /api/company/notifications (optional; returns { items, unreadCount }).
- * When endpoint is not implemented or returns error, yields empty list so UI is ready for real API.
+ * API: GET /api/company/notifications → { items, unreadCount }.
+ * On error, yields an empty list.
  */
 export function useNotifications() {
   return useSWR<NotificationsData>(
