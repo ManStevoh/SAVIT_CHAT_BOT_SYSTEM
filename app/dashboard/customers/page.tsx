@@ -78,6 +78,7 @@ export default function CustomersPage() {
   // API call: GET /api/company/customers?search=&page=1&limit=10
   const { data, error, isLoading, mutate } = useCustomers({ search: searchQuery || undefined, page, limit })
   const { data: companySettings } = useCompanySettings()
+  const { data: statsData } = useCustomerStats()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
   const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
 
@@ -147,7 +148,6 @@ export default function CustomersPage() {
   const total = data?.total ?? 0
   const totalPages = data?.totalPages ?? 1
 
-  const { data: statsData } = useCustomerStats()
   const stats = [
     { name: "Total Customers", value: statsData?.totalCustomers?.toLocaleString() ?? total.toLocaleString(), icon: Users, change: "—" },
     { name: "New This Month", value: statsData?.newThisMonth?.toLocaleString() ?? "—", icon: UserPlus, change: "—" },
