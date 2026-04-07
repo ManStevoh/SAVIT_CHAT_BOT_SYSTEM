@@ -39,8 +39,28 @@ function mpesaSecretKey(field: "passkey" | "consumer_secret") {
 import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers } from "@/lib/api-hooks"
 import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode } from "@/lib/format-currency"
 import { useSWRConfig } from "swr"
-import { updateSettings, connectWhatsApp, getWhatsAppStatus, disconnectWhatsApp, type WhatsAppStatus } from "@/lib/api-actions"
+import {
+  updateSettings,
+  connectWhatsApp,
+  getWhatsAppStatus,
+  disconnectWhatsApp,
+  getWhatsAppEmbeddedConfig,
+  completeWhatsAppEmbeddedSignup,
+  type WhatsAppStatus,
+} from "@/lib/api-actions"
 import { getTimezoneGroups, getTimezoneOptions } from "@/lib/timezones"
+
+declare global {
+  interface Window {
+    FB?: {
+      init: (params: { appId: string; cookie?: boolean; xfbml?: boolean; version: string }) => void
+      login: (
+        callback: (response: { status?: string; authResponse?: { code?: string } }) => void,
+        options?: Record<string, unknown>
+      ) => void
+    }
+  }
+}
 
 export default function SettingsPage() {
   const { mutate } = useSWRConfig()
@@ -88,6 +108,7 @@ export default function SettingsPage() {
   const [waAccessToken, setWaAccessToken] = useState("")
   const [waDisplayNumber, setWaDisplayNumber] = useState("")
   const [waMessage, setWaMessage] = useState<string | null>(null)
+  const [waEmbeddedLoading, setWaEmbeddedLoading] = useState(false)
 
   const loadWhatsAppStatus = async () => {
     setWaLoading(true)
@@ -97,6 +118,66 @@ export default function SettingsPage() {
     } finally {
       setWaLoading(false)
     }
+  }
+
+  const loadFacebookSdk = async (): Promise<void> => {
+    if (typeof window === "undefined") return
+    if (window.FB) return
+    await new Promise<void>((resolve, reject) => {
+      const existing = document.getElementById("facebook-jssdk") as HTMLScriptElement | null
+      if (existing) {
+        existing.addEventListener("load", () => resolve(), { once: true })
+        existing.addEventListener("error", () => reject(new Error("Failed to load Facebook SDK")), { once: true })
+        return
+      }
+      const script = document.createElement("script")
+      script.id = "facebook-jssdk"
+      script.src = "https://connect.facebook.net/en_US/sdk.js"
+      script.async = true
+      script.defer = true
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error("Failed to load Facebook SDK"))
+      document.body.appendChild(script)
+    })
+  }
+
+  const waitForEmbeddedSignupFinish = async (): Promise<{
+    phoneNumberId?: string
+    whatsappBusinessAccountId?: string
+  } | null> => {
+    if (typeof window === "undefined") return null
+    return await new Promise((resolve) => {
+      const timeout = window.setTimeout(() => {
+        cleanup()
+        resolve(null)
+      }, 120000)
+      const cleanup = () => {
+        window.clearTimeout(timeout)
+        window.removeEventListener("message", onMessage)
+      }
+      const onMessage = (event: MessageEvent) => {
+        if (typeof event.origin !== "string" || !event.origin.includes("facebook.com")) return
+        let payload: unknown = event.data
+        if (typeof payload === "string") {
+          try {
+            payload = JSON.parse(payload)
+          } catch {
+            return
+          }
+        }
+        if (!payload || typeof payload !== "object") return
+        const obj = payload as Record<string, unknown>
+        if (obj.type !== "WA_EMBEDDED_SIGNUP") return
+        const data = (obj.data ?? {}) as Record<string, unknown>
+        if (data.event !== "FINISH") return
+        cleanup()
+        resolve({
+          phoneNumberId: typeof data.phone_number_id === "string" ? data.phone_number_id : undefined,
+          whatsappBusinessAccountId: typeof data.waba_id === "string" ? data.waba_id : undefined,
+        })
+      }
+      window.addEventListener("message", onMessage)
+    })
   }
 
   useEffect(() => {
@@ -126,6 +207,66 @@ export default function SettingsPage() {
     const result = await disconnectWhatsApp()
     setWaMessage(result.message ?? (result.success ? "Disconnected." : "Failed."))
     loadWhatsAppStatus()
+  }
+
+  const handleEmbeddedSignup = async () => {
+    setWaMessage(null)
+    setWaEmbeddedLoading(true)
+    try {
+      const cfg = await getWhatsAppEmbeddedConfig()
+      if (!cfg.enabled || !cfg.appId || !cfg.configId) {
+        setWaMessage("Embedded signup is not enabled yet. Ask admin to configure Meta App ID and Config ID.")
+        return
+      }
+
+      await loadFacebookSdk()
+      if (!window.FB) {
+        setWaMessage("Facebook SDK is unavailable. Refresh and try again.")
+        return
+      }
+
+      window.FB.init({
+        appId: cfg.appId,
+        cookie: true,
+        xfbml: false,
+        version: cfg.graphVersion || "v21.0",
+      })
+
+      const finishPromise = waitForEmbeddedSignupFinish()
+      const code = await new Promise<string | null>((resolve) => {
+        window.FB?.login(
+          (response) => {
+            resolve(response?.authResponse?.code ?? null)
+          },
+          {
+            config_id: cfg.configId,
+            response_type: "code",
+            override_default_response_type: true,
+            extras: { setup: {} },
+          }
+        )
+      })
+      const finishData = await finishPromise
+
+      if (!code && !finishData?.phoneNumberId) {
+        setWaMessage("Signup was cancelled or no data was returned.")
+        return
+      }
+
+      const result = await completeWhatsAppEmbeddedSignup({
+        code: code ?? undefined,
+        phoneNumberId: finishData?.phoneNumberId,
+        whatsappBusinessAccountId: finishData?.whatsappBusinessAccountId,
+      })
+      setWaMessage(result.message ?? (result.success ? "WhatsApp connected via embedded signup." : "Failed to connect."))
+      if (result.success) {
+        await loadWhatsAppStatus()
+      }
+    } catch (e) {
+      setWaMessage(e instanceof Error ? e.message : "Embedded signup failed.")
+    } finally {
+      setWaEmbeddedLoading(false)
+    }
   }
 
   const [ordersCollectPaymentEnabled, setOrdersCollectPaymentEnabled] = useState(true)
@@ -481,40 +622,66 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               ) : (
-                <form onSubmit={handleWhatsAppConnect} className="space-y-4">
-                  <Field>
-                    <FieldLabel>Phone Number ID</FieldLabel>
-                    <Input
-                      placeholder="From Meta App → WhatsApp → API Setup"
-                      value={waPhoneNumberId}
-                      onChange={(e) => setWaPhoneNumberId(e.target.value)}
-                      required
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel>Access Token</FieldLabel>
-                    <Input
-                      type="password"
-                      placeholder="Permanent token from Meta"
-                      value={waAccessToken}
-                      onChange={(e) => setWaAccessToken(e.target.value)}
-                      required
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel>Display phone (optional)</FieldLabel>
-                    <Input
-                      placeholder="e.g. +201234567890"
-                      value={waDisplayNumber}
-                      onChange={(e) => setWaDisplayNumber(e.target.value)}
-                    />
-                  </Field>
-                  {waMessage && <p className="text-sm text-muted-foreground">{waMessage}</p>}
-                  <Button type="submit" disabled={waConnectLoading}>
-                    {waConnectLoading ? "Connecting…" : "Connect WhatsApp"}
-                  </Button>
-                </form>
+                <div className="space-y-5">
+                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                    <p className="text-sm font-medium text-foreground">Recommended: One-click Meta signup (OTP inside Meta)</p>
+                    <p className="text-sm text-muted-foreground">
+                      Click connect, sign into Facebook, select/create your WhatsApp Business account, then verify your number by OTP.
+                      Once Meta confirms, your number is linked here automatically.
+                    </p>
+                    <Button type="button" onClick={handleEmbeddedSignup} disabled={waEmbeddedLoading}>
+                      {waEmbeddedLoading ? "Opening Meta signup…" : "Connect with Facebook"}
+                    </Button>
+                  </div>
+
+                  <div className="rounded-lg border border-border p-4 space-y-2">
+                    <p className="text-sm font-medium text-foreground">Need help? Quick checklist</p>
+                    <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                      <li>Use a phone number that can receive SMS/voice OTP.</li>
+                      <li>Do not use a number already connected to another WhatsApp API provider.</li>
+                      <li>Finish all Meta popup steps without closing the window.</li>
+                      <li>If popup blocks, allow popups for this site and retry.</li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-1">
+                    <p className="text-sm font-medium text-foreground mb-3">Fallback: Manual connect</p>
+                    <form onSubmit={handleWhatsAppConnect} className="space-y-4">
+                      <Field>
+                        <FieldLabel>Phone Number ID</FieldLabel>
+                        <Input
+                          placeholder="From Meta App → WhatsApp → API Setup"
+                          value={waPhoneNumberId}
+                          onChange={(e) => setWaPhoneNumberId(e.target.value)}
+                          required
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Access Token</FieldLabel>
+                        <Input
+                          type="password"
+                          placeholder="Permanent token from Meta"
+                          value={waAccessToken}
+                          onChange={(e) => setWaAccessToken(e.target.value)}
+                          required
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Display phone (optional)</FieldLabel>
+                        <Input
+                          placeholder="e.g. +201234567890"
+                          value={waDisplayNumber}
+                          onChange={(e) => setWaDisplayNumber(e.target.value)}
+                        />
+                      </Field>
+                      <Button type="submit" disabled={waConnectLoading}>
+                        {waConnectLoading ? "Connecting…" : "Connect manually"}
+                      </Button>
+                    </form>
+                  </div>
+                </div>
               )}
+              {waMessage && <p className="text-sm text-muted-foreground">{waMessage}</p>}
             </CardContent>
           </Card>
         </TabsContent>

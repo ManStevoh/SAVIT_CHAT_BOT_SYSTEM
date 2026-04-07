@@ -686,6 +686,21 @@ export interface WhatsAppStatus {
   displayPhoneNumber: string | null
 }
 
+export interface WhatsAppEmbeddedConfig {
+  enabled: boolean
+  appId: string | null
+  configId: string | null
+  graphVersion: string
+}
+
+export interface CompleteEmbeddedSignupPayload {
+  code?: string
+  phoneNumberId?: string
+  whatsappBusinessAccountId?: string
+  displayPhoneNumber?: string
+  accessToken?: string
+}
+
 export async function getWhatsAppStatus(): Promise<WhatsAppStatus> {
   if (useMockApi()) {
     await delay(300)
@@ -702,6 +717,31 @@ export async function disconnectWhatsApp(): Promise<{ success: boolean; message?
   }
   try {
     return await apiRequest<{ success: boolean; message?: string }>('/api/company/whatsapp/disconnect', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function getWhatsAppEmbeddedConfig(): Promise<WhatsAppEmbeddedConfig> {
+  if (useMockApi()) {
+    await delay(200)
+    return { enabled: false, appId: null, configId: null, graphVersion: 'v21.0' }
+  }
+  return apiRequest<WhatsAppEmbeddedConfig>('/api/company/whatsapp/embedded/config', { method: 'GET' })
+}
+
+export async function completeWhatsAppEmbeddedSignup(
+  payload: CompleteEmbeddedSignupPayload
+): Promise<{ success: boolean; message?: string; phoneNumberId?: string | null }> {
+  if (useMockApi()) {
+    await delay(1500)
+    return { success: true, message: 'WhatsApp connected via embedded signup.', phoneNumberId: payload.phoneNumberId ?? null }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string; phoneNumberId?: string | null }>(
+      '/api/company/whatsapp/embedded/complete',
+      { method: 'POST', body: payload }
+    )
   } catch (e) {
     return handleApiError(e)
   }
