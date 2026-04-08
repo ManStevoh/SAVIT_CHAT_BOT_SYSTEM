@@ -53,13 +53,17 @@ class CompanyInAppNotificationService
         }
 
         $total = number_format((float) $order->total, 2);
+        $currency = method_exists($settings, 'displayCurrencyCode')
+            ? $settings->displayCurrencyCode()
+            : 'KES';
+
         CompanyNotification::create([
             'company_id' => $company->id,
             'chat_id' => $order->chat_id,
             'order_id' => $order->id,
             'type' => 'order',
             'title' => 'New order '.$order->order_number,
-            'body' => ($order->customer_name ?: 'Customer').' · '.$total,
+            'body' => ($order->customer_name ?: 'Customer').' - '.$currency.' '.$total,
         ]);
     }
 }
