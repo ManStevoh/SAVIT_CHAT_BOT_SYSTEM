@@ -11,7 +11,6 @@ interface StatsCardProps {
   change?: number
   changeLabel?: string
   icon?: LucideIcon
-  iconColor?: string
   isLoading?: boolean
   formatter?: (value: number) => string
 }
@@ -22,61 +21,59 @@ export function StatsCard({
   change,
   changeLabel = 'vs last period',
   icon: Icon,
-  iconColor = 'text-primary',
   isLoading,
   formatter,
 }: StatsCardProps) {
-  const formattedValue = typeof value === 'number' && formatter 
-    ? formatter(value) 
-    : value
+  const formattedValue =
+    typeof value === 'number' && formatter ? formatter(value) : value
 
   if (isLoading) {
     return (
-      <Card className="bg-card border-border/50">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-3 w-20" />
-            </div>
-            <Skeleton className="h-12 w-12 rounded-lg" />
-          </div>
+      <Card className="border-border/60 bg-card shadow-sm">
+        <CardContent className="p-5">
+          <Skeleton className="mb-3 h-3 w-20" />
+          <Skeleton className="h-8 w-28" />
+          <Skeleton className="mt-2 h-3 w-16" />
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="bg-card border-border/50 hover:border-border transition-colors">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold text-foreground">{formattedValue}</p>
+    <Card className="border-border/60 bg-card shadow-sm transition-shadow hover:shadow-premium">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {title}
+            </p>
+            <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+              {formattedValue}
+            </p>
             {change !== undefined && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 pt-0.5">
                 {change >= 0 ? (
-                  <TrendingUp className="h-3 w-3 text-green-500" />
+                  <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                 ) : (
                   <TrendingDown className="h-3 w-3 text-red-500" />
                 )}
                 <span
                   className={cn(
-                    'text-xs font-medium',
-                    change >= 0 ? 'text-green-500' : 'text-red-500'
+                    'text-xs font-medium tabular-nums',
+                    change >= 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-red-500'
                   )}
                 >
-                  {change >= 0 ? '+' : ''}{change.toFixed(1)}%
+                  {change >= 0 ? '+' : ''}
+                  {change.toFixed(1)}%
                 </span>
                 <span className="text-xs text-muted-foreground">{changeLabel}</span>
               </div>
             )}
           </div>
           {Icon && (
-            <div className={cn('p-3 rounded-lg bg-primary/10', iconColor)}>
-              <Icon className="h-6 w-6" />
-            </div>
+            <Icon className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={1.5} />
           )}
         </div>
       </CardContent>
@@ -96,9 +93,5 @@ export function StatsGrid({ children, columns = 4 }: StatsGridProps) {
     4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
   }
 
-  return (
-    <div className={cn('grid gap-4', gridCols[columns])}>
-      {children}
-    </div>
-  )
+  return <div className={cn('grid gap-4', gridCols[columns])}>{children}</div>
 }

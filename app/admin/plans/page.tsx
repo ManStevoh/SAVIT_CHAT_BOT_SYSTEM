@@ -126,7 +126,7 @@ export default function AdminPlansPage() {
       name: form.name.trim(),
       slug: form.slug.trim() || slugify(form.name),
       priceDisplay: form.priceDisplay.trim(),
-      priceAmount: form.priceAmount != null && form.priceAmount !== "" ? Number(form.priceAmount) : null,
+      priceAmount: form.priceAmount != null ? Number(form.priceAmount) : null,
       description: form.description?.trim() || undefined,
       features,
       popular: form.popular,

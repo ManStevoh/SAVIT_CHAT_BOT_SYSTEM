@@ -26,6 +26,7 @@ import {
   Pie,
   Cell,
 } from 'recharts'
+import { CHART_PALETTE, CHART_PRIMARY } from '@/lib/chart-colors'
 
 export interface ChartDataPoint {
   date: string
@@ -47,65 +48,60 @@ interface ChartCardProps {
   height?: number
 }
 
-const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
-
 export function ChartCard({
   title,
   data,
   isLoading,
   error,
   type = 'line',
-  color = '#22c55e',
+  color = CHART_PRIMARY,
   showPeriodSelector,
   period = '7d',
   onPeriodChange,
   valueFormatter = (v) => v.toLocaleString(),
-  height = 300,
+  height = 280,
 }: ChartCardProps) {
-  // Loading State
   if (isLoading) {
     return (
-      <Card className="bg-card border-border/50">
+      <Card className="border-border/60 bg-card shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <Skeleton className="h-5 w-32" />
-          {showPeriodSelector && <Skeleton className="h-9 w-28" />}
+          <Skeleton className="h-4 w-32" />
+          {showPeriodSelector && <Skeleton className="h-8 w-28" />}
         </CardHeader>
         <CardContent>
-          <Skeleton className="w-full" style={{ height }} />
+          <Skeleton className="w-full rounded-lg" style={{ height }} />
         </CardContent>
       </Card>
     )
   }
 
-  // Error State
   if (error) {
     return (
-      <Card className="bg-card border-border/50">
+      <Card className="border-border/60 bg-card shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base font-medium">{title}</CardTitle>
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <div
             className="flex flex-col items-center justify-center text-center"
             style={{ height }}
           >
-            <p className="text-destructive text-sm">Failed to load chart data</p>
-            <p className="text-muted-foreground text-xs mt-1">{error.message}</p>
+            <p className="text-sm text-destructive">Failed to load chart data</p>
+            <p className="mt-1 text-xs text-muted-foreground">{error.message}</p>
           </div>
         </CardContent>
       </Card>
     )
   }
 
-  // Empty State
   if (!data || data.length === 0) {
     return (
-      <Card className="bg-card border-border/50">
+      <Card className="border-border/60 bg-card shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base font-medium">{title}</CardTitle>
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
           {showPeriodSelector && (
             <Select value={period} onValueChange={onPeriodChange}>
-              <SelectTrigger className="w-28 bg-card border-border/50">
+              <SelectTrigger className="h-8 w-28 border-border/60 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -121,8 +117,8 @@ export function ChartCard({
             className="flex flex-col items-center justify-center text-center"
             style={{ height }}
           >
-            <p className="text-muted-foreground text-sm">No data available</p>
-            <p className="text-muted-foreground/70 text-xs mt-1">
+            <p className="text-sm text-muted-foreground">No data available</p>
+            <p className="mt-1 text-xs text-muted-foreground/70">
               Data will appear here once available
             </p>
           </div>
@@ -138,18 +134,26 @@ export function ChartCard({
     }
 
     const axisProps = {
-      stroke: '#6b7280',
-      fontSize: 12,
+      stroke: 'var(--muted-foreground)',
+      fontSize: 11,
       tickLine: false,
       axisLine: false,
     }
 
-    const CustomTooltip = ({ active, payload, label }: { active?: boolean, payload?: { value: number }[], label?: string }) => {
+    const CustomTooltip = ({
+      active,
+      payload,
+      label,
+    }: {
+      active?: boolean
+      payload?: { value: number }[]
+      label?: string
+    }) => {
       if (active && payload && payload.length) {
         return (
-          <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
-            <p className="text-muted-foreground text-xs">{label}</p>
-            <p className="text-foreground font-medium">
+          <div className="rounded-lg border border-border bg-popover p-2.5 shadow-premium">
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-sm font-medium tabular-nums text-foreground">
               {valueFormatter(payload[0].value)}
             </p>
           </div>
@@ -163,11 +167,11 @@ export function ChartCard({
         return (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart {...commonProps}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" vertical={false} />
               <XAxis dataKey="date" {...axisProps} />
               <YAxis {...axisProps} tickFormatter={valueFormatter} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" fill={color} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )
@@ -178,11 +182,11 @@ export function ChartCard({
             <AreaChart {...commonProps}>
               <defs>
                 <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                  <stop offset="5%" stopColor={color} stopOpacity={0.2} />
                   <stop offset="95%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" vertical={false} />
               <XAxis dataKey="date" {...axisProps} />
               <YAxis {...axisProps} tickFormatter={valueFormatter} />
               <Tooltip content={<CustomTooltip />} />
@@ -213,7 +217,7 @@ export function ChartCard({
                 label={({ date, value }) => `${date}: ${valueFormatter(value)}`}
               >
                 {data.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
@@ -222,11 +226,11 @@ export function ChartCard({
           </ResponsiveContainer>
         )
 
-      default: // line
+      default:
         return (
           <ResponsiveContainer width="100%" height={height}>
             <LineChart {...commonProps}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" vertical={false} />
               <XAxis dataKey="date" {...axisProps} />
               <YAxis {...axisProps} tickFormatter={valueFormatter} />
               <Tooltip content={<CustomTooltip />} />
@@ -245,12 +249,12 @@ export function ChartCard({
   }
 
   return (
-    <Card className="bg-card border-border/50">
+    <Card className="border-border/60 bg-card shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base font-medium">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {showPeriodSelector && (
           <Select value={period} onValueChange={onPeriodChange}>
-            <SelectTrigger className="w-28 bg-card border-border/50">
+            <SelectTrigger className="h-8 w-28 border-border/60 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

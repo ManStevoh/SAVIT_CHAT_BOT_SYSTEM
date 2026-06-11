@@ -72,6 +72,7 @@ export default function SettingsPage() {
   const [profileError, setProfileError] = useState<string | null>(null)
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [businessName, setBusinessName] = useState("QuickBite Restaurant")
+  const [industry, setIndustry] = useState<'retail' | 'restaurant' | 'services' | 'other'>('other')
   const [email, setEmail] = useState("contact@quickbite.com")
   const [phone, setPhone] = useState("+1 555-0100")
   const [address, setAddress] = useState("123 Main Street, New York, NY 10001")
@@ -273,6 +274,8 @@ export default function SettingsPage() {
   const [orderPaymentManualInstructions, setOrderPaymentManualInstructions] = useState('')
   const [ordersAcceptMpesa, setOrdersAcceptMpesa] = useState(false)
   const [ordersAcceptStripe, setOrdersAcceptStripe] = useState(false)
+  const [ordersAcceptPaystack, setOrdersAcceptPaystack] = useState(false)
+  const [attributionRetentionDays, setAttributionRetentionDays] = useState<string>("")
   const [orderPaymentsSaving, setOrderPaymentsSaving] = useState(false)
   const [orderPaymentsMessage, setOrderPaymentsMessage] = useState<string | null>(null)
   const [mpesaType, setMpesaType] = useState<'paybill' | 'till'>('paybill')
@@ -302,6 +305,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (settings) {
       if (settings.companyName != null) setBusinessName(settings.companyName)
+      if (settings.industry) setIndustry(settings.industry)
       if (settings.email != null) setEmail(settings.email)
       if (settings.phone != null) setPhone(settings.phone)
       if (settings.address != null) setAddress(settings.address)
@@ -315,6 +319,12 @@ export default function SettingsPage() {
       if (settings.orderPaymentManualInstructions != null) setOrderPaymentManualInstructions(settings.orderPaymentManualInstructions)
       if (settings.ordersAcceptMpesa != null) setOrdersAcceptMpesa(settings.ordersAcceptMpesa)
       if (settings.ordersAcceptStripe != null) setOrdersAcceptStripe(settings.ordersAcceptStripe)
+      if (settings.ordersAcceptPaystack != null) setOrdersAcceptPaystack(settings.ordersAcceptPaystack)
+      if (settings.attributionRetentionDays != null) {
+        setAttributionRetentionDays(String(settings.attributionRetentionDays))
+      } else {
+        setAttributionRetentionDays("")
+      }
       if (settings.aiGreeting != null && settings.aiGreeting.trim() !== '') setAiGreeting(settings.aiGreeting)
       if (settings.aiTone != null && settings.aiTone.trim() !== '') {
         const t = settings.aiTone.trim().toLowerCase()
@@ -380,6 +390,10 @@ export default function SettingsPage() {
       address,
       displayCurrency: normalizeCurrencyCode(displayCurrency),
       timezone,
+      industry,
+      attributionRetentionDays: attributionRetentionDays.trim()
+        ? Math.min(730, Math.max(30, parseInt(attributionRetentionDays, 10) || 365))
+        : null,
     })
     setProfileSaving(false)
     if (!result.success) {
@@ -399,6 +413,7 @@ export default function SettingsPage() {
       orderPaymentManualInstructions: orderPaymentManualInstructions.trim() || null,
       ordersAcceptMpesa,
       ordersAcceptStripe,
+      ordersAcceptPaystack,
     }
     if (mpesaShortcode.trim()) {
       payload.orderPaymentMpesaConfig = {
@@ -525,6 +540,40 @@ export default function SettingsPage() {
                   <Field>
                     <FieldLabel htmlFor="address">Address</FieldLabel>
                     <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="industry">Industry</FieldLabel>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Used for CRM follow-up templates and portfolio insights matching.
+                    </p>
+                    <Select value={industry} onValueChange={(v) => setIndustry(v as typeof industry)}>
+                      <SelectTrigger id="industry">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="retail">Retail</SelectItem>
+                        <SelectItem value="restaurant">Restaurant / Food</SelectItem>
+                        <SelectItem value="services">Services</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="attributionRetentionDays">Attribution data retention (days)</FieldLabel>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      How long to keep social attribution data (30–730 days). Leave empty for platform default.
+                    </p>
+                    <Input
+                      id="attributionRetentionDays"
+                      type="number"
+                      min={30}
+                      max={730}
+                      placeholder="e.g. 365"
+                      value={attributionRetentionDays}
+                      onChange={(e) => setAttributionRetentionDays(e.target.value)}
+                    />
                   </Field>
 
                   <Field>
@@ -918,7 +967,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Collect payment for orders</CardTitle>
               <CardDescription>
-                Choose whether to collect payment after orders. You can use M-Pesa, card (Stripe), and/or manual payment details (e.g. bank account). Turn off to skip payment and only confirm the order.
+                Choose whether to collect payment after orders. You can use M-Pesa, card (Stripe), Paystack, and/or manual payment details (e.g. bank account). Turn off to skip payment and only confirm the order.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -949,6 +998,13 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Customer gets a payment link to pay by card online</p>
                   </div>
                   <Switch checked={ordersAcceptStripe} onCheckedChange={setOrdersAcceptStripe} disabled={!ordersCollectPaymentEnabled} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">Paystack</p>
+                    <p className="text-sm text-muted-foreground">Customer gets a Paystack payment link (cards, bank, mobile money)</p>
+                  </div>
+                  <Switch checked={ordersAcceptPaystack} onCheckedChange={setOrdersAcceptPaystack} disabled={!ordersCollectPaymentEnabled} />
                 </div>
 
                 <FieldGroup>

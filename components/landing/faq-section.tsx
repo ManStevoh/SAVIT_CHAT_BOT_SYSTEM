@@ -7,8 +7,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { useLanding } from "@/lib/api-hooks"
+import { SectionHeader } from "@/components/shared/section-header"
+import { FadeIn } from "@/components/shared/fade-in"
 
-/** Used only when GET /api/landing returns no faqs; real API data always takes precedence. */
 const FALLBACK_FAQS = [
   { id: "1", question: "How does the WhatsApp integration work?", answer: "We use the official WhatsApp Business API to connect your business number. The setup process takes about 10 minutes and requires your business to be verified on Facebook Business Manager. Once connected, all messages are routed through our platform." },
   { id: "2", question: "Can I train the AI with my own data?", answer: "Absolutely! You can upload FAQs, product catalogs, pricing information, and business policies. Our AI learns from this data to provide accurate, contextual responses. You can also fine-tune responses based on customer interactions." },
@@ -20,32 +21,37 @@ const FALLBACK_FAQS = [
 
 export function FAQSection() {
   const { data } = useLanding()
-  const faqs = (data?.faqs?.length ? data.faqs : FALLBACK_FAQS)
+  const faqs = data?.faqs?.length ? data.faqs : FALLBACK_FAQS
 
   return (
-    <section id="faq" className="py-20 lg:py-32 bg-card/30 border-y border-border/50">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Frequently asked questions
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            {"Everything you need to know about Savit Chat"}
-          </p>
-        </div>
+    <section id="faq" className="section-padding surface-subtle border-t border-border/60">
+      <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
+        <FadeIn>
+          <SectionHeader
+            label="FAQ"
+            title="Frequently asked questions"
+            description="Everything you need to know about Savit Chat."
+          />
+        </FadeIn>
 
-        <Accordion type="single" collapsible className="w-full">
-          {faqs.map((faq, index) => (
-            <AccordionItem key={faq.id} value={`item-${faq.id}-${index}`} className="border-border">
-              <AccordionTrigger className="text-left text-foreground hover:text-primary">
-                {faq.question}
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                {faq.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+        <FadeIn delay={100}>
+          <Accordion type="single" collapsible className="w-full">
+            {faqs.map((faq, index) => (
+              <AccordionItem
+                key={faq.id}
+                value={`item-${faq.id}-${index}`}
+                className="border-border/60"
+              >
+                <AccordionTrigger className="text-left text-sm font-medium text-foreground hover:no-underline">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
+                  {faq.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </FadeIn>
       </div>
     </section>
   )

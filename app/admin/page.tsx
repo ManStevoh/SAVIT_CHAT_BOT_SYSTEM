@@ -16,11 +16,14 @@ import {
 // API: GET /api/admin/overview — stats (useAdminOverview)
 // API: GET /api/admin/companies — recent companies (useAdminCompanies, slice for "recent")
 // Charts: GET /api/admin/overview returns companyGrowthData, messageVolumeData
-import { useAdminOverview, useAdminCompanies } from "@/lib/api-hooks"
+import { useAdminOverview, useAdminCompanies, useAdminSystemHealth } from "@/lib/api-hooks"
+import { Badge } from "@/components/ui/badge"
+import { AlertTriangle } from "lucide-react"
 
 export default function AdminOverviewPage() {
   const { data: overview, error: overviewError, isLoading: overviewLoading } = useAdminOverview()
   const { data: companies, isLoading: companiesLoading } = useAdminCompanies({})
+  const { data: systemHealth } = useAdminSystemHealth()
 
   const recentCompanies = companies?.slice(0, 4) ?? []
   const monthlyRevenue = overview?.monthlyRevenue ?? overview?.totalRevenue ?? 0
@@ -37,6 +40,8 @@ export default function AdminOverviewPage() {
         { name: "Messages Processed", value: "—", change: "—", icon: MessageSquare },
         { name: "Monthly Revenue", value: "—", change: "—", icon: DollarSign },
       ]
+
+  const queueAlerts = systemHealth?.alerts ?? []
 
   if (overviewLoading && !overview) {
     return (
@@ -74,12 +79,37 @@ export default function AdminOverviewPage() {
     )
   }
 
+  if (!overview) {
+    return null
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Platform Overview</h1>
         <p className="text-muted-foreground">Monitor your platform performance and metrics</p>
       </div>
+
+      {queueAlerts.length > 0 && (
+        <Card className="border-amber-500/50 bg-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              System alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {queueAlerts.map((alert) => (
+              <p key={alert} className="text-muted-foreground">{alert}</p>
+            ))}
+            <div className="flex gap-2 pt-1">
+              <Badge variant={systemHealth?.queue?.healthy ? 'secondary' : 'destructive'}>
+                Queue: {systemHealth?.queue?.pending ?? 0} pending, {systemHealth?.queue?.failed ?? 0} failed
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats — from useAdminOverview() */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

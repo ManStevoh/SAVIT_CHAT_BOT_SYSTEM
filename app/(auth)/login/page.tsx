@@ -146,9 +146,9 @@ function LoginPageContent() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="rounded-2xl border border-border/50 bg-card p-8 shadow-xl">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+      <div className="rounded-xl border border-border/60 bg-card p-8 shadow-premium">
+        <div className="mb-8">
+          <h1 className="font-display text-2xl font-normal text-foreground">Welcome back</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Sign in to your account to continue
           </p>
@@ -296,7 +296,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="w-full max-w-md">
-          <div className="rounded-2xl border border-border/50 bg-card p-8 shadow-xl flex items-center justify-center">
+          <div className="flex items-center justify-center rounded-xl border border-border/60 bg-card p-8 shadow-premium">
             <Spinner className="h-6 w-6" />
           </div>
         </div>

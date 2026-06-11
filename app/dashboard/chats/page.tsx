@@ -45,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { PageHeader } from '@/components/shared/page-header'
 
 export default function ChatsPage() {
   const { toast } = useToast()
@@ -55,6 +56,7 @@ export default function ChatsPage() {
   const chatIdFromUrl = searchParams.get('chat')
   const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [attributedOnly, setAttributedOnly] = useState(false)
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -71,7 +73,7 @@ export default function ChatsPage() {
     data: chats,
     isLoading: chatsLoading,
     error: chatsError,
-  } = useChats({ status: statusFilter, search: searchQuery })
+  } = useChats({ status: statusFilter, search: searchQuery, attributedOnly })
 
   const {
     data: messages,
@@ -234,15 +236,20 @@ export default function ChatsPage() {
   }, [selectedChatId, products, selectedProductId, orderQuantity, toast, mutate, statusFilter, searchQuery])
 
   return (
-    <div className="flex h-[calc(100dvh-7rem)] min-h-0 gap-4 lg:h-[calc(100vh-7rem)]">
-      {/* Conversations List — min-h-0 lets flex-1 ScrollArea shrink and scroll */}
+    <div className="flex h-[calc(100dvh-8rem)] min-h-0 flex-col gap-5 lg:h-[calc(100vh-8rem)]">
+      <PageHeader
+        title="Chats"
+        description="Manage customer conversations and agent handoff"
+      />
+      <div className="flex min-h-0 flex-1 gap-4">
+      {/* Conversations List */}
       <div
         className={`${
           isMobile && selectedChat ? 'hidden' : 'flex'
-        } h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card md:w-80`}
+        } h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm md:w-80`}
       >
-        <div className="border-b border-border/50 p-4">
-          <h2 className="mb-3 font-semibold text-foreground">Conversations</h2>
+        <div className="border-b border-border/60 p-4">
+          <h2 className="mb-3 text-sm font-medium text-foreground">Conversations</h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -254,14 +261,24 @@ export default function ChatsPage() {
           </div>
           {/* Status Filter Tabs */}
           <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => setAttributedOnly((v) => !v)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                attributedOnly
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              From social
+            </button>
             {['all', 'active', 'pending', 'resolved'].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   statusFilter === status
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                    ? 'bg-foreground text-background'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -320,14 +337,14 @@ export default function ChatsPage() {
                 <button
                   key={chat.id}
                   onClick={() => setSelectedChatId(chat.id)}
-                  className={`flex w-full items-start gap-3 rounded-lg p-3 text-left transition-colors ${
+                  className={`relative flex w-full items-start gap-3 rounded-lg p-3 text-left transition-colors ${
                     selectedChat?.id === chat.id
-                      ? 'bg-primary/10'
-                      : 'hover:bg-muted/5'
+                      ? 'bg-muted ring-1 ring-border/60'
+                      : 'hover:bg-muted/50'
                   }`}
                 >
                   <div className="relative">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-sm font-medium text-secondary-foreground">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
                       {chat.customerAvatar ? (
                         <img
                           src={chat.customerAvatar}
@@ -355,6 +372,11 @@ export default function ChatsPage() {
                       {chat.aiHandled && (
                         <Bot className="h-3 w-3 text-primary shrink-0" />
                       )}
+                      {chat.isAttributed && chat.attribution?.postTitle && (
+                        <Badge variant="outline" className="text-[10px] shrink-0 max-w-[120px] truncate">
+                          {chat.attribution.postTitle}
+                        </Badge>
+                      )}
                       <p className="truncate text-sm text-foreground/80">
                         {chat.lastMessage}
                       </p>
@@ -375,7 +397,7 @@ export default function ChatsPage() {
       <div
         className={`${
           isMobile && !selectedChat ? 'hidden' : 'flex'
-        } min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card`}
+        } min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm`}
       >
         {selectedChat ? (
           <>
@@ -713,6 +735,7 @@ export default function ChatsPage() {
             </p>
           </div>
         )}
+      </div>
       </div>
       <FormModal
         open={createOrderOpen}

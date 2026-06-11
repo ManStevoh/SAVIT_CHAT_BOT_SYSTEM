@@ -12,6 +12,7 @@ import type {
   Company,
   User,
   Subscription,
+  GrowthPost,
 } from './mock-data'
 import { mockSubscriptions } from './mock-data'
 import { useMockApi, apiRequest } from './api-client'
@@ -784,6 +785,8 @@ export interface UpdateSettingsData {
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
+  ordersAcceptPaystack?: boolean
+  attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
   orderPaymentManualInstructions?: string | null
   orderPaymentMpesaConfig?: {
@@ -800,6 +803,7 @@ export interface UpdateSettingsData {
   } | null
   /** ISO 4217 (3 letters), e.g. USD, KES — shown in dashboard and WhatsApp */
   displayCurrency?: string
+  industry?: 'retail' | 'restaurant' | 'services' | 'other'
 }
 
 /**
@@ -1219,6 +1223,29 @@ export async function createMpesaCheckout(
 }
 
 /**
+ * Initialize Paystack checkout for subscription (company user). Returns redirect URL.
+ * Laravel: POST /api/company/paystack/initialize
+ */
+export async function createPaystackCheckout(
+  planId: string,
+  options?: { callbackUrl?: string }
+): Promise<{ success: boolean; url?: string; reference?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true, url: 'https://checkout.paystack.com/mock-placeholder', reference: 'mock-ref-' + planId }
+  }
+  try {
+    const res = await apiRequest<{ authorizationUrl: string; reference: string }>('/api/company/paystack/initialize', {
+      method: 'POST',
+      body: { planId, ...options },
+    })
+    return { success: true, url: res.authorizationUrl, reference: res.reference }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Paystack checkout failed' }
+  }
+}
+
+/**
  * Create Stripe Billing Portal session (company user). Returns redirect URL.
  * Laravel: POST /api/company/billing-portal
  */
@@ -1299,6 +1326,8 @@ export interface UpdateAdminCompanyData {
   phone?: string
   plan?: Company['plan']
   status?: Company['status']
+  isGrowthPilot?: boolean
+  growthDemoMode?: boolean
 }
 
 /**
@@ -1764,6 +1793,434 @@ export async function importFaqs(file: File): Promise<{
     return await apiRequest<{ success: boolean; message?: string; created?: number; errors?: { row: number; errors: string[] }[] }>('/api/company/import/faqs', {
       method: 'POST',
       body: form,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+// ============================================
+// GROWTH ENGINE ACTIONS
+// ============================================
+
+export async function generateSmartGrowthContent(data: {
+  count?: number
+  platform?: string
+  topic?: string
+}): Promise<{ success: boolean; posts?: GrowthPost[]; message?: string }> {
+  if (useMockApi()) {
+    await delay(1200)
+    return { success: true, posts: [] }
+  }
+  try {
+    return await apiRequest('/api/company/growth/content/generate-smart', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function extractGrowthPatterns(periodDays = 30): Promise<{ success: boolean; patterns?: unknown[]; message?: string }> {
+  if (useMockApi()) {
+    await delay(800)
+    return { success: true, patterns: [] }
+  }
+  try {
+    return await apiRequest('/api/company/growth/intelligence/patterns/extract', {
+      method: 'POST',
+      body: { periodDays },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function applyGrowthPattern(patternId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/company/growth/intelligence/patterns/${patternId}/apply`, { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function executeGrowthMixPlan(): Promise<{ success: boolean; posts?: GrowthPost[]; message?: string }> {
+  if (useMockApi()) {
+    await delay(1500)
+    return { success: true, posts: [] }
+  }
+  try {
+    return await apiRequest('/api/company/growth/intelligence/execute-mix', { method: 'POST', body: {} })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function scoreGrowthDrafts(): Promise<{ success: boolean; drafts?: unknown[]; message?: string }> {
+  if (!useMockApi()) {
+    return apiRequest('/api/company/growth/intelligence/score-drafts')
+  }
+  await delay(400)
+  return { success: true, drafts: [] }
+}
+
+export async function generateGrowthContent(data: {
+  count?: number
+  platform?: string
+  topic?: string
+  audience?: string
+  tone?: string
+}): Promise<{ success: boolean; posts?: GrowthPost[]; message?: string }> {
+  if (useMockApi()) {
+    await delay(1200)
+    return { success: true, posts: [] }
+  }
+  try {
+    return await apiRequest('/api/company/growth/content/generate', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function approveGrowthPost(postId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/company/growth/posts/${postId}/approve`, { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function publishGrowthPost(postId: string): Promise<{ success: boolean; message?: string; metaError?: string }> {
+  if (useMockApi()) {
+    await delay(800)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/company/growth/posts/${postId}/publish`, { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function getGrowthPostSharePackage(postId: string): Promise<{
+  success: boolean
+  trackingUrl?: string
+  caption?: string
+  clipboardPackage?: string
+  message?: string
+}> {
+  if (useMockApi()) {
+    await delay(200)
+    return { success: true, trackingUrl: 'https://example.com/g/demo', caption: 'Demo caption', clipboardPackage: 'Demo' }
+  }
+  try {
+    const res = await apiRequest<{ trackingUrl: string; caption: string; clipboardPackage: string }>(
+      `/api/company/growth/posts/${postId}/share-package`
+    )
+    return { success: true, ...res }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function uploadGrowthPostImage(
+  postId: string,
+  file: File
+): Promise<{ success: boolean; url?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true, url: 'https://example.com/image.jpg' }
+  }
+  const form = new FormData()
+  form.append('image', file)
+  try {
+    const res = await apiRequest<{ url: string }>(`/api/company/growth/posts/${postId}/image`, {
+      method: 'POST',
+      body: form,
+    })
+    return { success: true, url: res.url }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function generateGrowthVariants(data: {
+  count?: number
+  platform?: string
+  topic?: string
+  saveIndexes?: number[]
+}): Promise<{ success: boolean; variants?: unknown[]; savedPosts?: unknown[]; message?: string }> {
+  if (useMockApi()) {
+    await delay(1000)
+    return { success: true, variants: [] }
+  }
+  try {
+    return await apiRequest('/api/company/growth/intelligence/generate-variants', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function exportGrowthAttribution(period = '30d'): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    const { downloadFile } = await import('./api-client')
+    await downloadFile(`/api/company/growth/export/attribution?period=${period}`, `attribution-${period}.csv`)
+    return { success: true }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Export failed' }
+  }
+}
+
+export async function scheduleGrowthPost(postId: string, scheduledAt: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/company/growth/posts/${postId}/schedule`, {
+      method: 'POST',
+      body: { scheduledAt },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function selectGrowthMetaPage(platform: string, pageId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/meta/select-page', {
+      method: 'POST',
+      body: { platform, pageId },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function selectGrowthAdAccount(platform: string, adAccountId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/meta/select-ad-account', {
+      method: 'POST',
+      body: { platform, adAccountId },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncGrowthMetaMetrics(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/meta/sync-metrics', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncGrowthMetaAds(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/meta/sync-ads', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function runGrowthCrmAgent(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/crm/run', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function connectGrowthIntegration(data: {
+  provider: 'ga4' | 'email' | 'website'
+  siteUrl?: string
+  measurementId?: string
+}): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/integrations/connect', {
+      method: 'POST',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncGrowthIntegrations(): Promise<{
+  success: boolean
+  results?: Record<string, { success: boolean; message: string }>
+  message?: string
+}> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true, results: {} }
+  }
+  try {
+    return await apiRequest('/api/company/growth/integrations/sync', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function generatePortfolioRecommendations(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(800)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/admin/growth-portfolio/generate', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function getGrowthOAuthAuthorizeUrl(platform: string): Promise<{ success: boolean; authorizeUrl?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, authorizeUrl: `https://example.com/oauth/${platform}` }
+  }
+  try {
+    return await apiRequest(`/api/company/growth/oauth/${platform}/authorize`)
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function addGrowthAdSpend(data: {
+  platform?: string
+  campaignName?: string
+  amount: number
+  currency?: string
+  spentAt: string
+}): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/ad-spend', {
+      method: 'POST',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function importGrowthAdSpend(file: File): Promise<{ success: boolean; created?: number; message?: string }> {
+  if (useMockApi()) {
+    await delay(800)
+    return { success: true, created: 0 }
+  }
+  const form = new FormData()
+  form.append('file', file)
+  try {
+    return await apiRequest('/api/company/growth/ad-spend/import', { method: 'POST', body: form })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function connectGrowthSocialAccount(data: {
+  platform: string
+  accountName?: string
+  pageId?: string
+  externalAccountId?: string
+  accessToken?: string
+}): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/social-accounts/connect', {
+      method: 'POST',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function generateGrowthInsights(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(800)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/insights/generate', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function runGrowthAgentPipeline(data?: {
+  topic?: string
+  platform?: string
+  audience?: string
+}): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(1000)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/agents/run', {
+      method: 'POST',
+      body: data ?? {},
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function addGrowthCompetitor(data: {
+  platform: string
+  accountName: string
+  accountUrl?: string
+}): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest('/api/company/growth/competitors', {
+      method: 'POST',
+      body: data,
     })
   } catch (e) {
     return handleApiError(e)

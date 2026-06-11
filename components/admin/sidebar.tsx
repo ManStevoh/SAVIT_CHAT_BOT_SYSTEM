@@ -9,6 +9,7 @@ import {
   Users,
   CreditCard,
   DollarSign,
+  Rocket,
   Bot,
   FileText,
   Settings,
@@ -27,6 +28,7 @@ const navigationMain = [
   { name: "Plans", href: "/admin/plans", icon: Layers },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
+  { name: "Growth Portfolio", href: "/admin/growth", icon: Rocket },
 ]
 
 const navigationConfig = [

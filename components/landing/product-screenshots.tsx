@@ -1,120 +1,59 @@
-import { Inbox, ShoppingBag, BarChart3, MessageSquare, Package, TrendingUp } from "lucide-react"
+import { Inbox, ShoppingBag, BarChart3 } from "lucide-react"
+import { SectionHeader } from "@/components/shared/section-header"
+import { FadeIn } from "@/components/shared/fade-in"
+import { InboxMockup, OrdersMockup, AnalyticsMockup } from "@/components/landing/product-mockups"
 
 const screenshots = [
   {
-    title: "Chat Inbox",
-    description: "Manage all customer conversations in a unified inbox with AI-powered suggestions.",
+    title: "Unified inbox",
+    description: "All customer conversations in one place with AI suggestions and agent handoff.",
     icon: Inbox,
-    preview: (
-      <div className="p-4 space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg bg-secondary/50 p-3">
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <MessageSquare className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="h-3 w-24 rounded bg-foreground/20 mb-1" />
-              <div className="h-2 w-32 rounded bg-muted-foreground/20" />
-            </div>
-            <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground font-medium">
-              {i}
-            </div>
-          </div>
-        ))}
-      </div>
-    ),
+    Mockup: InboxMockup,
   },
   {
-    title: "Orders Dashboard",
-    description: "Track and manage orders in real-time with status updates and customer notifications.",
+    title: "Orders dashboard",
+    description: "Track orders in real time with status updates and customer notifications.",
     icon: ShoppingBag,
-    preview: (
-      <div className="p-4 space-y-3">
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          {[
-            { label: "Pending", value: "12", color: "text-yellow-500" },
-            { label: "Processing", value: "8", color: "text-blue-500" },
-            { label: "Completed", value: "156", color: "text-primary" },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-lg bg-secondary/50 p-2 text-center">
-              <div className={`text-lg font-bold ${stat.color}`}>{stat.value}</div>
-              <div className="text-xs text-muted-foreground">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-        {[1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg bg-secondary/50 p-3">
-            <Package className="h-5 w-5 text-muted-foreground" />
-            <div className="flex-1">
-              <div className="h-3 w-20 rounded bg-foreground/20 mb-1" />
-              <div className="h-2 w-28 rounded bg-muted-foreground/20" />
-            </div>
-            <div className="text-xs text-primary font-medium">$49.99</div>
-          </div>
-        ))}
-      </div>
-    ),
+    Mockup: OrdersMockup,
   },
   {
-    title: "Analytics Dashboard",
-    description: "Gain insights with comprehensive analytics on messages, orders, and customer behavior.",
+    title: "Analytics",
+    description: "Insights on messages, orders, and customer behavior at a glance.",
     icon: BarChart3,
-    preview: (
-      <div className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">Weekly Overview</span>
-        </div>
-        <div className="flex items-end justify-between gap-2 h-20">
-          {[40, 65, 45, 80, 55, 90, 70].map((height, i) => (
-            <div key={i} className="flex-1">
-              <div
-                className="w-full rounded-t bg-primary/80 transition-all hover:bg-primary"
-                style={{ height: `${height}%` }}
-              />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between mt-2">
-          {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
-            <span key={i} className="text-xs text-muted-foreground">{day}</span>
-          ))}
-        </div>
-      </div>
-    ),
+    Mockup: AnalyticsMockup,
   },
 ]
 
 export function ProductScreenshots() {
   return (
-    <section className="py-20 lg:py-32">
+    <section id="demo" className="section-padding">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Powerful tools at your fingertips
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            A complete suite of tools designed for modern businesses
-          </p>
-        </div>
+        <FadeIn>
+          <SectionHeader
+            label="Product"
+            title="Built for how you work"
+            description="A complete suite of tools designed for modern WhatsApp businesses."
+          />
+        </FadeIn>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {screenshots.map((item) => (
-            <div
-              key={item.title}
-              className="group rounded-2xl border border-border bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
-            >
-              <div className="aspect-[4/3] bg-secondary/30 border-b border-border">
-                {item.preview}
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <item.icon className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">{item.title}</h3>
+        <div className="grid gap-5 md:grid-cols-3">
+          {screenshots.map((item, i) => (
+            <FadeIn key={item.title} delay={i * 80}>
+              <div className="group overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm transition-all duration-300 hover:shadow-premium">
+                <div className="relative aspect-[4/3] overflow-hidden border-b border-border/60 bg-muted/30">
+                  <div className="absolute inset-3 overflow-hidden rounded-lg shadow-premium ring-1 ring-border/60">
+                    <item.Mockup />
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
+                <div className="p-5">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <item.icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+                    <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+                </div>
               </div>
-            </div>
+            </FadeIn>
           ))}
         </div>
       </div>

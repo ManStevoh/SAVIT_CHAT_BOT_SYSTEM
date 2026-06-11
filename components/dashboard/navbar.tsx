@@ -38,6 +38,7 @@ function getStoredUser(): StoredUser | null {
 }
 
 function notificationHref(n: NotificationItem): string | null {
+  if (n.type === 'growth') return '/dashboard/growth'
   if (n.orderId) return `/dashboard/orders?orderId=${encodeURIComponent(n.orderId)}`
   if (n.chatId) return `/dashboard/chats?chat=${encodeURIComponent(n.chatId)}`
   return null
@@ -121,7 +122,7 @@ export function DashboardNavbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 px-6 backdrop-blur-xl backdrop-saturate-150">
       <div className="flex items-center gap-4 flex-1">
         {!isAdmin && (
           <Drawer open={mobileNavOpen} onOpenChange={setMobileNavOpen} direction="left">
@@ -268,7 +269,7 @@ export function DashboardNavbar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
                 {getInitials(user)}
               </div>
               <span className="hidden text-sm font-medium text-foreground sm:inline">

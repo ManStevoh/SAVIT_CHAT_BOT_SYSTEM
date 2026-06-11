@@ -7,10 +7,10 @@ import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 type Variant = "sidebar" | "navbar" | "footer" | "admin"
 
 const sizeMap: Record<Variant, { box: string; icon: string; textClass: string }> = {
-  sidebar: { box: "h-8 w-8", icon: "h-4 w-4", textClass: "text-sidebar-foreground" },
-  navbar: { box: "h-9 w-9", icon: "h-5 w-5", textClass: "text-foreground" },
-  footer: { box: "h-9 w-9", icon: "h-5 w-5", textClass: "text-foreground" },
-  admin: { box: "h-8 w-8", icon: "h-4 w-4", textClass: "text-sidebar-foreground" },
+  sidebar: { box: "h-7 w-7", icon: "h-3.5 w-3.5", textClass: "text-sidebar-foreground text-sm" },
+  navbar: { box: "h-8 w-8", icon: "h-4 w-4", textClass: "text-foreground text-sm" },
+  footer: { box: "h-8 w-8", icon: "h-4 w-4", textClass: "text-foreground text-sm" },
+  admin: { box: "h-7 w-7", icon: "h-3.5 w-3.5", textClass: "text-sidebar-foreground text-sm" },
 }
 
 export function AppLogoAndName({
@@ -22,9 +22,7 @@ export function AppLogoAndName({
 }: {
   variant?: Variant
   showAdminBadge?: boolean
-  /** e.g. <span className="ml-2 text-xs text-muted-foreground">Admin</span> */
   suffix?: React.ReactNode
-  /** Only render the logo/icon box (e.g. for collapsed sidebar) */
   iconOnly?: boolean
   className?: string
 }) {
@@ -34,18 +32,21 @@ export function AppLogoAndName({
 
   const iconBox = (
     <div
-      className={`flex ${sizes.box} items-center justify-center rounded-lg bg-primary shrink-0 overflow-hidden`}
+      className={cn(
+        `flex ${sizes.box} items-center justify-center rounded-lg bg-foreground shrink-0 overflow-hidden`,
+        branding.appLogo && "bg-transparent"
+      )}
     >
       {branding.appLogo ? (
         <img
           src={branding.appLogo}
           alt=""
-          className="h-full w-full object-contain p-0.5"
+          className="h-full w-full object-contain"
         />
       ) : showAdminBadge ? (
-        <Shield className={`${sizes.icon} text-primary-foreground`} />
+        <Shield className={`${sizes.icon} text-background`} />
       ) : (
-        <MessageSquare className={`${sizes.icon} text-primary-foreground`} />
+        <MessageSquare className={`${sizes.icon} text-background`} />
       )}
     </div>
   )
@@ -53,10 +54,12 @@ export function AppLogoAndName({
   if (iconOnly) return <div className={className}>{iconBox}</div>
 
   return (
-    <div className={className ?? "flex items-center gap-2"}>
+    <div className={className ?? "flex items-center gap-2.5"}>
       {iconBox}
-      <div className="flex items-center min-w-0">
-        <span className={cn("font-bold truncate", sizes.textClass)}>{name}</span>
+      <div className="flex min-w-0 items-center">
+        <span className={cn("font-semibold tracking-tight truncate", sizes.textClass)}>
+          {name}
+        </span>
         {suffix}
       </div>
     </div>

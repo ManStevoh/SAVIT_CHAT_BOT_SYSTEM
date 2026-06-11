@@ -39,6 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import { Search, MoreVertical, Building2, TrendingUp, UserPlus, AlertCircle, LogIn, Pencil } from "lucide-react"
 import { useAdminCompanies } from "@/lib/api-hooks"
 import {
@@ -67,6 +68,8 @@ export default function AdminCompaniesPage() {
     phone: "",
     plan: "starter",
     status: "active",
+    isGrowthPilot: false,
+    growthDemoMode: false,
   })
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
@@ -123,6 +126,8 @@ export default function AdminCompaniesPage() {
       phone: company.phone ?? "",
       plan: company.plan,
       status: company.status,
+      isGrowthPilot: company.isGrowthPilot ?? false,
+      growthDemoMode: company.growthDemoMode ?? false,
     })
     setEditError(null)
     const res = await getAdminCompany(company.id)
@@ -133,6 +138,8 @@ export default function AdminCompaniesPage() {
         phone: res.company.phone ?? "",
         plan: res.company.plan,
         status: res.company.status,
+        isGrowthPilot: res.company.isGrowthPilot ?? false,
+        growthDemoMode: res.company.growthDemoMode ?? false,
       })
     }
   }, [])
@@ -147,6 +154,8 @@ export default function AdminCompaniesPage() {
       phone: editForm.phone || undefined,
       plan: editForm.plan,
       status: editForm.status,
+      isGrowthPilot: editForm.isGrowthPilot,
+      growthDemoMode: editForm.growthDemoMode,
     })
     setEditLoading(false)
     if (res.success) {
@@ -384,6 +393,28 @@ export default function AdminCompaniesPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label htmlFor="edit-growth-pilot">Growth pilot</Label>
+                <p className="text-sm text-muted-foreground">Enable onboarding checklist and pilot features</p>
+              </div>
+              <Switch
+                id="edit-growth-pilot"
+                checked={editForm.isGrowthPilot ?? false}
+                onCheckedChange={(checked) => setEditForm((f) => ({ ...f, isGrowthPilot: checked }))}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label htmlFor="edit-growth-demo">Growth demo mode</Label>
+                <p className="text-sm text-muted-foreground">Show sample analytics when data is empty</p>
+              </div>
+              <Switch
+                id="edit-growth-demo"
+                checked={editForm.growthDemoMode ?? false}
+                onCheckedChange={(checked) => setEditForm((f) => ({ ...f, growthDemoMode: checked }))}
+              />
             </div>
           </div>
           <DialogFooter>

@@ -9,26 +9,17 @@ const footerLinks = {
   Product: [
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
-    { name: "Integrations", href: "#" },
-    { name: "API", href: "#" },
+    { name: "Integrations", href: "#features" },
   ],
   Resources: [
-    { name: "Documentation", href: "#" },
-    { name: "Blog", href: "#" },
-    { name: "Tutorials", href: "#" },
-    { name: "Changelog", href: "#" },
+    { name: "Documentation", href: "#faq" },
+    { name: "FAQ", href: "#faq" },
+    { name: "Book a demo", href: "#demo" },
   ],
   Company: [
-    { name: "About", href: "#" },
-    { name: "Careers", href: "#" },
-    { name: "Contact", href: "#" },
-    { name: "Partners", href: "#" },
-  ],
-  Support: [
-    { name: "Help Center", href: "#" },
-    { name: "Community", href: "#" },
-    { name: "Status", href: "#" },
-    { name: "Security", href: "#" },
+    { name: "About", href: "/" },
+    { name: "Contact", href: "#faq" },
+    { name: "Privacy", href: "#" },
   ],
 }
 
@@ -37,42 +28,44 @@ export function Footer() {
   const appName = branding.applicationName || "Savit Chat"
 
   return (
-    <footer className="border-t border-border bg-card/50">
+    <footer className="border-t border-border/60 bg-card">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="py-12 lg:py-16">
-          <div className="grid gap-8 lg:grid-cols-6">
+        <div className="py-14 lg:py-16">
+          <div className="grid gap-10 lg:grid-cols-5">
             <div className="lg:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <AppLogoAndName variant="footer" />
-              </div>
-              <p className="text-sm text-muted-foreground max-w-xs mb-6">
-                Automate your WhatsApp business communication with AI-powered chatbots and order management.
+              <AppLogoAndName variant="footer" />
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+                Automate your WhatsApp business with AI-powered chatbots, order management, and in-chat payments.
               </p>
-              <div className="flex gap-4">
-                <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Twitter className="h-5 w-5" />
-                  <span className="sr-only">Twitter</span>
-                </Link>
-                <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Linkedin className="h-5 w-5" />
-                  <span className="sr-only">LinkedIn</span>
-                </Link>
-                <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Github className="h-5 w-5" />
-                  <span className="sr-only">GitHub</span>
-                </Link>
+              <div className="mt-6 flex gap-4">
+                {[
+                  { Icon: Twitter, label: "Twitter" },
+                  { Icon: Linkedin, label: "LinkedIn" },
+                  { Icon: Github, label: "GitHub" },
+                ].map(({ Icon, label }) => (
+                  <Link
+                    key={label}
+                    href="#"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="sr-only">{label}</span>
+                  </Link>
+                ))}
               </div>
             </div>
 
             {Object.entries(footerLinks).map(([category, links]) => (
               <div key={category}>
-                <h3 className="font-semibold text-foreground mb-4">{category}</h3>
-                <ul className="space-y-3">
+                <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                  {category}
+                </h3>
+                <ul className="space-y-2.5">
                   {links.map((link) => (
                     <li key={link.name}>
                       <Link
                         href={link.href}
-                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                       >
                         {link.name}
                       </Link>
@@ -84,15 +77,15 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-border py-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-border/60 py-6 sm:flex-row">
+          <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} {appName}. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <div className="flex gap-5">
+            <Link href="#" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               Privacy Policy
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="#" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               Terms of Service
             </Link>
           </div>

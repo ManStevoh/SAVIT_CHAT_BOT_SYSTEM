@@ -16,6 +16,8 @@ import {
   mockUsers,
   mockSystemLogs,
   mockAnalytics,
+  mockGrowthAnalytics,
+  mockGrowthPosts,
   mockRevenueData,
   mockAIUsage,
   type Chat,
@@ -33,6 +35,12 @@ import {
   type AnalyticsData,
   type RevenueData,
   type AIUsageData,
+  type GrowthAnalyticsData,
+  type GrowthPost,
+  type GrowthInsight,
+  type GrowthSocialAccount,
+  type GrowthCompetitor,
+  type GrowthAgentRun,
 } from './mock-data'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -130,7 +138,7 @@ function buildPath(
  * Fetch all chats for the current company
  * API Endpoint: GET /api/company/chats
  */
-export function useChats(filters?: { status?: string; search?: string; limit?: number }) {
+export function useChats(filters?: { status?: string; search?: string; limit?: number; attributedOnly?: boolean; socialPostId?: string }) {
   return useSWR<Chat[]>(
     ['chats', filters],
     async () => {
@@ -230,7 +238,7 @@ export function useOrder(orderId: string | null) {
   )
 }
 
-export function useOrders(filters?: { status?: string; search?: string; page?: number; limit?: number }) {
+export function useOrders(filters?: { status?: string; search?: string; page?: number; limit?: number; attributedOnly?: boolean }) {
   return useSWR<{ orders: Order[]; total: number; page: number; totalPages: number }>(
     ['orders', filters],
     async () => {
@@ -442,6 +450,7 @@ export interface CompanySettings {
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
+  ordersAcceptPaystack?: boolean
   ordersCollectPaymentEnabled?: boolean
   orderPaymentManualInstructions?: string
   orderPaymentMpesaConfigured?: boolean
@@ -459,6 +468,10 @@ export interface CompanySettings {
   orderPaymentStripeConfig?: { secret?: string; currency?: string } | null
   /** ISO 4217 — catalog & chat price display (e.g. USD, KES) */
   displayCurrency?: string
+  /** Industry cluster for CRM templates and portfolio insights */
+  industry?: 'retail' | 'restaurant' | 'services' | 'other'
+  /** Days to retain attribution data (30–730); null uses platform default */
+  attributionRetentionDays?: number | null
 }
 
 /**
@@ -523,7 +536,7 @@ export interface NotificationItem {
   id: string
   title: string
   body?: string
-  type?: 'order' | 'handoff' | 'report' | 'info'
+  type?: 'order' | 'handoff' | 'report' | 'info' | 'growth'
   read?: boolean
   createdAt?: string
   /** Deep link to Orders detail when present */
@@ -572,22 +585,56 @@ export interface UsageItem {
  * Fetch subscription usage for current billing period
  * API Endpoint: GET /api/company/subscription/usage
  */
+export type UsageWarning = {
+  resource: string
+  level: 'critical' | 'warning' | 'info'
+  message: string
+  percentUsed: number
+  projectedOverage?: boolean
+}
+
 export function useSubscriptionUsage() {
-  return useSWR<{ items: UsageItem[] }>(
+  return useSWR<{
+    items: UsageItem[]
+    growth?: { aiPostsUsed: number; aiPostsLimit: number; platformsConnected: number; platformLimit: number }
+    warnings?: UsageWarning[]
+    upgradeUrl?: string
+  }>(
     'subscription-usage',
     async () => {
       if (!useMockApi()) {
-        return apiRequest<{ items: UsageItem[] }>('/api/company/subscription/usage')
+        return apiRequest('/api/company/subscription/usage')
       }
       await delay(400)
       return {
         items: [
           { name: 'Messages', used: 3240, limit: 5000 },
           { name: 'Team members', used: 3, limit: 5 },
+          { name: 'AI posts (this month)', used: 12, limit: 20 },
         ],
+        warnings: [],
       }
     },
     { revalidateOnFocus: false }
+  )
+}
+
+export type AdminSystemHealth = {
+  queue: { pending: number; failed: number; healthy: boolean }
+  alerts: string[]
+}
+
+export function useAdminSystemHealth() {
+  return useSWR<AdminSystemHealth>(
+    'admin-system-health',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<AdminSystemHealth>('/api/admin/system-health')
+      }
+      await delay(200)
+      return { queue: { pending: 0, failed: 0, healthy: true }, alerts: [] }
+    },
+    { revalidateOnFocus: false, refreshInterval: 60_000 }
   )
 }
 
@@ -907,11 +954,13 @@ export function useAdminOverview() {
           activeCompanies: number
           totalUsers: number
           totalRevenue: number
+          monthlyRevenue?: number
           totalMessages: number
           totalOrders: number
           companiesChange: number
           revenueChange: number
           messagesChange: number
+          usersChange?: number
           companyGrowthData?: { name: string; companies: number }[]
           messageVolumeData?: { name: string; messages: number }[]
         }>('/api/admin/overview')
@@ -948,6 +997,431 @@ export function useAdminOverview() {
           { name: 'Sat', messages: 350000 },
           { name: 'Sun', messages: 280000 },
         ],
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+// ============================================
+// GROWTH ENGINE
+// ============================================
+
+export function useGrowthAnalytics(period?: string) {
+  return useSWR<GrowthAnalyticsData>(
+    ['growth-analytics', period],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthAnalyticsData>(buildPath('/api/company/growth/analytics', { period }))
+      }
+      await delay(600)
+      return mockGrowthAnalytics
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthPosts(status?: string) {
+  return useSWR<GrowthPost[]>(
+    ['growth-posts', status],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthPost[]>(buildPath('/api/company/growth/posts', { status }))
+      }
+      await delay(500)
+      return mockGrowthPosts
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthInsights() {
+  return useSWR<GrowthInsight[]>(
+    'growth-insights',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthInsight[]>('/api/company/growth/insights')
+      }
+      await delay(400)
+      return [
+        { id: '1', insightType: 'strategy', title: 'Best performing platform', body: 'Facebook posts are generating the highest attributed revenue.', confidenceScore: 75, isRead: false },
+      ]
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export interface GrowthAdSpendData {
+  entries: {
+    id: string
+    platform: string | null
+    campaignName: string | null
+    amount: number
+    currency: string
+    spentAt: string
+    source: string
+  }[]
+  totalSpend: number
+}
+
+export interface GrowthOAuthConfig {
+  callbackUrl: string
+  platforms: { platform: string; configured: boolean; authorizeSupported: boolean }[]
+}
+
+export function useGrowthOAuthConfig() {
+  return useSWR<GrowthOAuthConfig>(
+    'growth-oauth-config',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthOAuthConfig>('/api/company/growth/oauth/config')
+      }
+      await delay(200)
+      return {
+        callbackUrl: 'http://localhost:8000/oauth/growth/callback',
+        platforms: [
+          { platform: 'facebook', configured: true, authorizeSupported: true },
+          { platform: 'instagram', configured: true, authorizeSupported: true },
+          { platform: 'linkedin', configured: false, authorizeSupported: true },
+          { platform: 'tiktok', configured: false, authorizeSupported: true },
+          { platform: 'twitter', configured: false, authorizeSupported: true },
+        ],
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthAdSpend(period?: string) {
+  return useSWR<GrowthAdSpendData>(
+    ['growth-ad-spend', period],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthAdSpendData>(buildPath('/api/company/growth/ad-spend', { period }))
+      }
+      await delay(300)
+      return { entries: [], totalSpend: 25000 }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthSocialAccounts() {
+  return useSWR<GrowthSocialAccount[]>(
+    'growth-social-accounts',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthSocialAccount[]>('/api/company/growth/social-accounts')
+      }
+      await delay(300)
+      return [{ id: '1', platform: 'facebook', accountName: 'Demo Page', status: 'connected' }]
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthCompetitors() {
+  return useSWR<GrowthCompetitor[]>(
+    'growth-competitors',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthCompetitor[]>('/api/company/growth/competitors')
+      }
+      await delay(300)
+      return []
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export interface GrowthLearningPattern {
+  id: string
+  companyId: string | null
+  patternType: string
+  source: string
+  title: string
+  body: string
+  metrics?: Record<string, unknown> | null
+  confidenceScore: number
+  isApplied: boolean
+  appliedCount: number
+  createdAt?: string
+}
+
+export interface GrowthContentMixPlan {
+  weekOf: string
+  totalPosts: number
+  mix: { tag: string; count: number; reason: string }[]
+  platform: string | null
+  adjustments: string[]
+}
+
+export interface GrowthDraftScore {
+  postId: string
+  title: string
+  predictedScore: number
+  estimatedRevenue: number
+  tags: string[]
+}
+
+export function useGrowthPatterns() {
+  return useSWR<{ patterns: GrowthLearningPattern[] }>(
+    'growth-patterns',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest('/api/company/growth/intelligence/patterns')
+      }
+      await delay(300)
+      return { patterns: [] }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthContentMix() {
+  return useSWR<{ plan: GrowthContentMixPlan }>(
+    'growth-content-mix',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest('/api/company/growth/intelligence/content-mix')
+      }
+      await delay(300)
+      return {
+        plan: {
+          weekOf: new Date().toISOString().slice(0, 10),
+          totalPosts: 7,
+          mix: [
+            { tag: 'product_showcase', count: 3, reason: 'Default' },
+            { tag: 'testimonial', count: 2, reason: 'Trust' },
+            { tag: 'promo', count: 2, reason: 'Conversions' },
+          ],
+          platform: 'facebook',
+          adjustments: [],
+        },
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthDraftScores() {
+  return useSWR<{ drafts: GrowthDraftScore[] }>(
+    'growth-draft-scores',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest('/api/company/growth/intelligence/score-drafts')
+      }
+      await delay(300)
+      return { drafts: [] }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthAgents() {
+  return useSWR<GrowthAgentRun[]>(
+    'growth-agents',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthAgentRun[]>('/api/company/growth/agents')
+      }
+      await delay(300)
+      return []
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export type GrowthIntegrationStatus = {
+  provider: 'ga4' | 'email' | 'website'
+  status: string
+  configured: boolean
+  lastSyncedAt?: string | null
+  message?: string | null
+}
+
+export type GrowthCrmStatus = {
+  coldLeads: number
+  paymentRecovery: number
+  totalEligible: number
+  hoursQuiet: number
+  paymentRecoveryHours: number
+  maxFollowUps: number
+  whatsAppActive: boolean
+}
+
+export function useGrowthIntegrations() {
+  return useSWR<{ integrations: GrowthIntegrationStatus[] }>(
+    'growth-integrations',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<{ integrations: GrowthIntegrationStatus[] }>('/api/company/growth/integrations')
+      }
+      await delay(200)
+      return {
+        integrations: [
+          { provider: 'ga4', status: 'not_configured', configured: false },
+          { provider: 'email', status: 'not_configured', configured: false },
+          { provider: 'website', status: 'available', configured: true },
+        ],
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthCrmStatus() {
+  return useSWR<GrowthCrmStatus>(
+    'growth-crm-status',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthCrmStatus>('/api/company/growth/crm/status')
+      }
+      await delay(200)
+      return {
+        coldLeads: 0,
+        paymentRecovery: 0,
+        totalEligible: 0,
+        hoursQuiet: 24,
+        paymentRecoveryHours: 48,
+        maxFollowUps: 2,
+        whatsAppActive: true,
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export interface PortfolioRecommendation {
+  id: string
+  companyId: string | null
+  companyName?: string | null
+  recommendationType: string
+  title: string
+  body: string
+  confidenceScore: number
+  isRead: boolean
+  createdAt?: string
+}
+
+export interface GrowthPortfolioData {
+  period: string
+  companies: { companyId: string; companyName: string; leads: number; revenue: number; posts: number }[]
+  crossBrandInsight: string
+  totals: { leads: number; revenue: number; posts: number }
+  recommendations?: PortfolioRecommendation[]
+}
+
+export type GrowthPilotStatus = {
+  isPilot: boolean
+  pilotSince?: string | null
+  demoMode?: boolean
+  firstAttributedSaleAt?: string | null
+  onboarding?: {
+    steps: { key: string; label: string; description: string; completed: boolean; actionTab?: string }[]
+    completedCount: number
+    totalCount: number
+    percentComplete: number
+    isComplete: boolean
+  }
+  tokenExpiryWarnings?: { platform: string; accountName: string; expiresAt: string }[]
+}
+
+export function useGrowthPilotStatus() {
+  return useSWR<GrowthPilotStatus>(
+    'growth-pilot',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthPilotStatus>('/api/company/growth/pilot')
+      }
+      await delay(200)
+      return { isPilot: false }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export type GrowthPredictionAccuracy = {
+  hasEnoughData: boolean
+  items: { title: string; predictedRevenue: number; actualRevenue: number }[]
+  accuracyPercent: number | null
+  message: string
+}
+
+export type GrowthPortfolioInsights = {
+  tips: unknown[]
+  benchmark: { percentile: number | null; leadToOrderRate?: number; message: string }
+}
+
+export function useGrowthPredictionAccuracy() {
+  return useSWR<GrowthPredictionAccuracy>(
+    'growth-prediction-accuracy',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthPredictionAccuracy>('/api/company/growth/intelligence/prediction-accuracy')
+      }
+      await delay(300)
+      return { hasEnoughData: false, items: [], accuracyPercent: null, message: 'Demo mode' }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthPortfolioInsights() {
+  return useSWR<GrowthPortfolioInsights>(
+    'growth-portfolio-insights',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthPortfolioInsights>('/api/company/growth/intelligence/portfolio-insights')
+      }
+      await delay(300)
+      return { tips: [], benchmark: { percentile: null, message: 'Demo' } }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthMetaPages(platform = 'facebook') {
+  return useSWR<{ pages: { id: string; name: string }[] }>(
+    ['growth-meta-pages', platform],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest(buildPath('/api/company/growth/meta/pages', { platform }))
+      }
+      await delay(200)
+      return { pages: [] }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useGrowthAdAccounts() {
+  return useSWR<{ adAccounts: { id: string; name: string }[]; selectedAdAccountId?: string | null }>(
+    'growth-ad-accounts',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest('/api/company/growth/meta/ad-accounts')
+      }
+      await delay(200)
+      return { adAccounts: [], selectedAdAccountId: null }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useAdminGrowthPortfolio(period?: string) {
+  return useSWR<GrowthPortfolioData>(
+    ['admin-growth-portfolio', period],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<GrowthPortfolioData>(buildPath('/api/admin/growth-portfolio', { period }))
+      }
+      await delay(500)
+      return {
+        period: period ?? '30d',
+        companies: [],
+        crossBrandInsight: 'Connect social accounts to unlock portfolio insights.',
+        totals: { leads: 0, revenue: 0, posts: 0 },
       }
     },
     { revalidateOnFocus: false }

@@ -88,12 +88,12 @@ export function DataTable<T extends { id: string }>({
         </div>
         
         {/* Table Skeleton */}
-        <div className="rounded-lg border border-border/50 bg-card">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow className="border-border/50 hover:bg-transparent">
+              <TableRow className="border-border/60 bg-muted/30 hover:bg-muted/30">
                 {columns.map((column) => (
-                  <TableHead key={column.key} className="text-muted-foreground">
+                  <TableHead key={column.key} className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     <Skeleton className="h-4 w-20" />
                   </TableHead>
                 ))}
@@ -228,12 +228,12 @@ export function DataTable<T extends { id: string }>({
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-border/50 bg-card overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="border-border/50 hover:bg-transparent">
+            <TableRow className="border-border/60 bg-muted/30 hover:bg-muted/30">
               {columns.map((column) => (
-                <TableHead key={column.key} className="text-muted-foreground font-medium">
+                <TableHead key={column.key} className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {column.header}
                 </TableHead>
               ))}
@@ -241,7 +241,7 @@ export function DataTable<T extends { id: string }>({
           </TableHeader>
           <TableBody>
             {data.map((item) => (
-              <TableRow key={item.id} className="border-border/50 hover:bg-muted/5">
+              <TableRow key={item.id} className="border-border/60 hover:bg-muted/30">
                 {columns.map((column) => (
                   <TableCell key={column.key}>{column.cell(item)}</TableCell>
                 ))}

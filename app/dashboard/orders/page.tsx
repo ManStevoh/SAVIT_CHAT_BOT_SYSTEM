@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
@@ -50,6 +51,7 @@ import {
 } from '@/components/ui/tooltip'
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
+import { PageHeader } from '@/components/shared/page-header'
 
 export default function OrdersPage() {
   const router = useRouter()
@@ -62,6 +64,7 @@ export default function OrdersPage() {
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [attributedOnly, setAttributedOnly] = useState(false)
   const [page, setPage] = useState(1)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -77,6 +80,7 @@ export default function OrdersPage() {
     search: searchQuery,
     page,
     limit: 10,
+    attributedOnly,
   })
 
   const { data: singleOrderPayload } = useOrder(orderIdFromNotif)
@@ -202,6 +206,18 @@ export default function OrdersPage() {
       cell: (order) => <StatusBadge status={order.paymentStatus} />,
     },
     {
+      key: 'attribution',
+      header: 'From post',
+      cell: (order) =>
+        order.attribution ? (
+          <Badge variant="outline" className="max-w-[140px] truncate" title={order.attribution.postTitle}>
+            {order.attribution.postTitle}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        ),
+    },
+    {
       key: 'date',
       header: 'Date',
       cell: (order) => (
@@ -241,47 +257,56 @@ export default function OrdersPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Orders</h1>
-          <p className="text-muted-foreground">Manage and track customer orders</p>
-        </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Popover open={exportOpen} onOpenChange={setExportOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64" align="end">
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium">Export orders</p>
-                    <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'csv' | 'json')}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="csv">CSV (Excel)</SelectItem>
-                        <SelectItem value="json">JSON</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" className="w-full" onClick={handleExportOrders} disabled={exporting}>
-                      {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                      {exporting ? 'Exporting…' : 'Download'}
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-xs">
-              Download order history as CSV (for Excel) or JSON. Includes order lines and customer details.
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Orders"
+        description="Manage and track customer orders"
+        actions={
+          <>
+            <Button
+              variant={attributedOnly ? 'default' : 'outline'}
+              size="sm"
+              className="h-9"
+              onClick={() => { setAttributedOnly((v) => !v); setPage(1) }}
+            >
+              Attributed only
+            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9">
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64" align="end">
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">Export orders</p>
+                        <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'csv' | 'json')}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="csv">CSV (Excel)</SelectItem>
+                            <SelectItem value="json">JSON</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" className="w-full" onClick={handleExportOrders} disabled={exporting}>
+                          {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                          {exporting ? 'Exporting…' : 'Download'}
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  Download order history as CSV (for Excel) or JSON. Includes order lines and customer details.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </>
+        }
+      />
 
       {/* Stats Grid - API Ready */}
       <StatsGrid columns={4}>
@@ -316,9 +341,9 @@ export default function OrdersPage() {
       </StatsGrid>
 
       {/* Orders Table - API Ready */}
-      <Card className="bg-card border-border/50">
-        <CardHeader>
-          <CardTitle className="text-base font-medium">All Orders</CardTitle>
+      <Card className="border-border/60 bg-card shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium">All orders</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable

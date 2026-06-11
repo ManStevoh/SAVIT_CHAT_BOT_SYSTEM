@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -16,11 +18,11 @@ import {
 } from "@/components/ui/table"
 import { Check, CreditCard, Download, MessageSquare, Smartphone, Users, Zap } from "lucide-react"
 import { useSubscription, useSubscriptionInvoices, useSubscriptionUsage, usePlans, type BillingInvoice } from "@/lib/api-hooks"
-import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout } from "@/lib/api-actions"
+import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout } from "@/lib/api-actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export default function SubscriptionPage() {
+function SubscriptionPageContent() {
   const searchParams = useSearchParams()
   const { data: subscription, error, isLoading, mutate } = useSubscription()
   const { data: billingHistory = [] } = useSubscriptionInvoices()
@@ -50,8 +52,9 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     const q = searchParams.get("checkout")
-    if (q === "success" || q === "cancelled") {
-      setCheckoutMessage(q)
+    const paystackRef = searchParams.get("reference") || searchParams.get("trxref")
+    if (q === "success" || q === "cancelled" || paystackRef) {
+      setCheckoutMessage(q === "cancelled" ? "cancelled" : "success")
       mutate()
       if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
     }
@@ -67,7 +70,7 @@ export default function SubscriptionPage() {
     if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
     createCheckoutSession(subscribePlanId).then((result) => {
       if (result.success && result.url) window.location.href = result.url
-      else if (!result.success) alert(result.message ?? "Could not start checkout.")
+      else if (!result.success) toast.error(result.message ?? "Could not start checkout.")
     })
   }, [searchParams, plansData, autoSubscribeDone])
 
@@ -150,7 +153,19 @@ export default function SubscriptionPage() {
     const result = await createCheckoutSession(planId)
     setCheckoutPlanId(null)
     if (result.success && result.url) window.location.href = result.url
-    else alert(result.message ?? "Could not start checkout.")
+    else toast.error(result.message ?? "Could not start checkout.")
+  }
+
+  const handlePaystackSubscribe = async (planId: string) => {
+    setCheckoutPlanId(planId)
+    const callbackUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/dashboard/subscription?checkout=success`
+        : undefined
+    const result = await createPaystackCheckout(planId, { callbackUrl })
+    setCheckoutPlanId(null)
+    if (result.success && result.url) window.location.href = result.url
+    else toast.error(result.message ?? "Could not start Paystack checkout.")
   }
 
   const handleMpesaSubmit = async (planId: string) => {
@@ -175,7 +190,7 @@ export default function SubscriptionPage() {
     const result = await createBillingPortalSession()
     setPortalLoading(false)
     if (result.success && result.url) window.location.href = result.url
-    else alert(result.message ?? "Could not open billing portal.")
+    else toast.error(result.message ?? "Could not open billing portal.")
   }
   const formatInvoiceDate = (d: string) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
@@ -249,6 +264,31 @@ export default function SubscriptionPage() {
         </CardContent>
       </Card>
 
+      {(usageData?.warnings ?? []).length > 0 && (
+        <div className="space-y-2">
+          {(usageData?.warnings ?? []).map((w) => (
+            <div
+              key={w.resource}
+              className={`rounded-lg border px-4 py-3 text-sm ${
+                w.level === 'critical'
+                  ? 'border-destructive/50 bg-destructive/10 text-destructive'
+                  : w.level === 'warning'
+                    ? 'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-300'
+                    : 'border-primary/30 bg-primary/5 text-muted-foreground'
+              }`}
+            >
+              {w.message}
+              {w.projectedOverage && (
+                <span className="block text-xs mt-1 opacity-80">Projected to exceed limit this month at current pace.</span>
+              )}
+            </div>
+          ))}
+          <Button asChild variant="outline" size="sm">
+            <Link href="/dashboard/subscription#plans">Upgrade plan</Link>
+          </Button>
+        </div>
+      )}
+
       {/* Usage — API: GET /api/company/subscription/usage */}
       <Card>
         <CardHeader>
@@ -257,26 +297,29 @@ export default function SubscriptionPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {usage.map((item) => (
+            {usage.map((item) => {
+              const pct = item.limit > 0 ? (item.used / item.limit) * 100 : 0
+              const nearLimit = pct >= 80
+              return (
               <div key={item.name} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <item.icon className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium text-foreground">{item.name}</span>
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className={`text-sm ${nearLimit ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
                     {item.used.toLocaleString()} / {item.limit.toLocaleString()}
                   </span>
                 </div>
-                <Progress value={(item.used / item.limit) * 100} className="h-2" />
+                <Progress value={Math.min(100, pct)} className={`h-2 ${nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
               </div>
-            ))}
+            )})}
           </div>
         </CardContent>
       </Card>
 
       {/* Available Plans — from usePlans() */}
-      <Card>
+      <Card id="plans">
         <CardHeader>
           <CardTitle>Available Plans</CardTitle>
           <CardDescription>Compare and switch plans</CardDescription>
@@ -323,14 +366,28 @@ export default function SubscriptionPage() {
                     </Button>
                   ) : (
                     <>
-                      {(plan.paymentMethods?.stripe ?? plan.checkoutAvailable) && (
+                      {plan.paymentMethods?.stripe && (
                         <Button
                           className="w-full"
                           variant="default"
                           disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
                           onClick={() => handleSubscribe(plan.id)}
                         >
-                          {checkoutPlanId === plan.id ? "Redirecting…" : plan.paymentMethods?.mpesa ? "Subscribe with Card" : "Subscribe"}
+                          {checkoutPlanId === plan.id
+                            ? "Redirecting…"
+                            : plan.paymentMethods?.mpesa || plan.paymentMethods?.paystack
+                              ? "Subscribe with Card"
+                              : "Subscribe"}
+                        </Button>
+                      )}
+                      {plan.paymentMethods?.paystack && (
+                        <Button
+                          className="w-full"
+                          variant={plan.paymentMethods?.stripe ? "outline" : "default"}
+                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
+                          onClick={() => handlePaystackSubscribe(plan.id)}
+                        >
+                          {checkoutPlanId === plan.id ? "Redirecting…" : "Pay with Paystack"}
                         </Button>
                       )}
                       {plan.paymentMethods?.mpesa && (
@@ -436,5 +493,17 @@ export default function SubscriptionPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function SubscriptionPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20">
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    }>
+      <SubscriptionPageContent />
+    </Suspense>
   )
 }

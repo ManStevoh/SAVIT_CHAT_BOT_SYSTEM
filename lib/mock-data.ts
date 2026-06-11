@@ -36,6 +36,8 @@ export interface Chat {
   aiHandled: boolean
   /** When set, an agent is handling this chat; bot is paused. Clear via "Hand back to bot". */
   agentHandlingAt?: string | null
+  isAttributed?: boolean
+  attribution?: { socialPostId: string | null; postTitle: string; platform: string | null } | null
 }
 
 export interface Message {
@@ -61,6 +63,8 @@ export interface Order {
   total: number
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   paymentStatus: 'pending' | 'paid' | 'refunded'
+  chatId?: string | null
+  attribution?: { socialPostId: string; postTitle: string; platform: string } | null
   createdAt: string
   updatedAt: string
 }
@@ -172,11 +176,11 @@ export interface Plan {
   popular: boolean
   cta?: string
   sortOrder?: number
-  stripePriceId?: string
+  stripePriceId?: string | null
   /** When true, user can start checkout for this plan (Stripe and/or M-Pesa) */
   checkoutAvailable?: boolean
-  /** Which payment methods are available: { stripe?: boolean, mpesa?: boolean } */
-  paymentMethods?: { stripe?: boolean; mpesa?: boolean }
+  /** Which payment methods are available */
+  paymentMethods?: { stripe?: boolean; mpesa?: boolean; paystack?: boolean }
   /** Plan is free (no payment required) */
   isFree?: boolean
   /** Paid plan offers a trial period */
@@ -198,6 +202,10 @@ export interface Company {
   totalChats: number
   totalOrders: number
   createdAt: string
+  isGrowthPilot?: boolean
+  growthDemoMode?: boolean
+  growthPilotSince?: string | null
+  industry?: string
 }
 
 export interface User {
@@ -840,5 +848,203 @@ export const landingFAQs = [
     id: '5',
     question: 'Can I try WazzBot before committing?',
     answer: 'Yes! We offer a 14-day free trial on all plans. No credit card required. You can test all features and see the results before making a decision.',
+  },
+]
+
+// Growth Engine — GET /api/company/growth/analytics
+export interface GrowthAnalyticsData {
+  isDemo?: boolean
+  celebration?: {
+    firstAttributedSaleAt: string
+    showHighlight: boolean
+    message: string
+  } | null
+  summary: {
+    period: string
+    leads: number
+    whatsappStarts: number
+    clicks: number
+    orders: number
+    revenue: number
+    conversionRate: number
+    leadToOrderRate: number
+    adSpend?: number
+    costPerLead?: number | null
+    customerAcquisitionCost?: number | null
+    roi?: number | null
+  }
+  platformBreakdown: { platform: string; orders: number; revenue: number; leads: number }[]
+  topPosts: {
+    id: string
+    title: string
+    platform: string
+    reach: number
+    clicks: number
+    leads: number
+    orders: number
+    revenue: number
+    engagementRate: number
+    performanceScore?: number | null
+    contentTags?: string[]
+  }[]
+  contentIntelligence: {
+    bestPlatform: string | null
+    bestContentType: string | null
+    bestPostingHour: number | null
+    platformRevenue: { platform: string; revenue: number }[]
+    contentTypeRevenue: { contentType: string; revenue: number }[]
+  }
+  funnel: { stage: string; value: number }[]
+  limits: { aiPostsUsed: number; aiPostsLimit: number; platformLimit: number }
+  intelligence?: {
+    hasLearningProfile: boolean
+    lastLearnedAt?: string | null
+    winningTags: string[]
+    pendingPatterns: number
+    weeklyBrief?: { id: string; title: string; body: string; createdAt?: string } | null
+    contentMix?: GrowthContentMixPlan
+  }
+}
+
+export interface GrowthContentMixPlan {
+  weekOf: string
+  totalPosts: number
+  mix: { tag: string; count: number; reason: string }[]
+  platform: string | null
+  adjustments: string[]
+}
+
+export interface GrowthPost {
+  id: string
+  platform: string
+  title: string | null
+  content: string
+  contentType: string
+  hashtags: string[]
+  status: string
+  scheduledAt?: string | null
+  publishedAt?: string | null
+  aiGenerated: boolean
+  approvedAt?: string | null
+  performanceScore?: number | null
+  predictedRevenueScore?: number | null
+  contentTags?: string[]
+  predictionFactors?: Record<string, unknown> | null
+  mediaUrls?: string[]
+  publishError?: string | null
+  trackingUrl?: string | null
+  metrics?: {
+    reach: number
+    clicks: number
+    likes: number
+    comments: number
+    shares: number
+    engagementRate: number
+  } | null
+  createdAt?: string
+}
+
+export interface GrowthInsight {
+  id: string
+  insightType: string
+  title: string
+  body: string
+  confidenceScore: number
+  isRead: boolean
+  createdAt?: string
+}
+
+export interface GrowthSocialAccount {
+  id: string
+  platform: string
+  accountName: string | null
+  status: string
+  connectedAt?: string | null
+}
+
+export interface GrowthCompetitor {
+  id: string
+  platform: string
+  accountName: string
+  accountUrl?: string | null
+  isActive: boolean
+  latestSnapshot?: {
+    followerCount: number | null
+    avgEngagement: number
+    recordedAt?: string
+  } | null
+}
+
+export interface GrowthAgentRun {
+  id: string
+  agentType: string
+  status: string
+  input?: Record<string, unknown> | null
+  output?: Record<string, unknown> | null
+  startedAt?: string | null
+  completedAt?: string | null
+}
+
+export const mockGrowthAnalytics: GrowthAnalyticsData = {
+  summary: {
+    period: '30d',
+    leads: 42,
+    whatsappStarts: 38,
+    clicks: 520,
+    orders: 12,
+    revenue: 180000,
+    conversionRate: 7.31,
+    leadToOrderRate: 28.57,
+    adSpend: 25000,
+    costPerLead: 595.24,
+    customerAcquisitionCost: 2083.33,
+    roi: 620,
+  },
+  platformBreakdown: [
+    { platform: 'facebook', orders: 8, revenue: 120000, leads: 25 },
+    { platform: 'instagram', orders: 3, revenue: 45000, leads: 12 },
+    { platform: 'linkedin', orders: 1, revenue: 15000, leads: 5 },
+  ],
+  topPosts: [
+    { id: '1', title: 'IoT Project Workshop', platform: 'facebook', reach: 4500, clicks: 300, leads: 25, orders: 8, revenue: 100000, engagementRate: 6.2 },
+    { id: '2', title: 'Graphic Design Course', platform: 'instagram', reach: 5000, clicks: 200, leads: 15, orders: 3, revenue: 45000, engagementRate: 4.8 },
+    { id: '3', title: 'Scratch Programming', platform: 'facebook', reach: 3000, clicks: 80, leads: 2, orders: 1, revenue: 20000, engagementRate: 2.1 },
+  ],
+  contentIntelligence: {
+    bestPlatform: 'facebook',
+    bestContentType: 'video',
+    bestPostingHour: 19,
+    platformRevenue: [
+      { platform: 'facebook', revenue: 120000 },
+      { platform: 'instagram', revenue: 45000 },
+    ],
+    contentTypeRevenue: [
+      { contentType: 'video', revenue: 100000 },
+      { contentType: 'text', revenue: 65000 },
+    ],
+  },
+  funnel: [
+    { stage: 'reach', value: 12500 },
+    { stage: 'clicks', value: 520 },
+    { stage: 'whatsapp', value: 38 },
+    { stage: 'leads', value: 42 },
+    { stage: 'orders', value: 12 },
+    { stage: 'revenue', value: 180000 },
+  ],
+  limits: { aiPostsUsed: 8, aiPostsLimit: 100, platformLimit: 3 },
+}
+
+export const mockGrowthPosts: GrowthPost[] = [
+  {
+    id: '1',
+    platform: 'facebook',
+    title: 'IoT Project Workshop',
+    content: 'Join our hands-on IoT workshop. Message us on WhatsApp to register!',
+    contentType: 'text',
+    hashtags: ['IoT', 'STEM', 'Kenya'],
+    status: 'published',
+    aiGenerated: true,
+    trackingUrl: 'http://localhost:8000/g/abc12345',
+    metrics: { reach: 4500, clicks: 300, likes: 120, comments: 45, shares: 30, engagementRate: 6.2 },
   },
 ]

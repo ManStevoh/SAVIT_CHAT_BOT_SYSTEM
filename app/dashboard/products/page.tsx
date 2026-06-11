@@ -789,14 +789,12 @@ export default function ProductsPage() {
           title="Low Stock"
           value={stats.lowStock}
           icon={AlertCircle}
-          iconColor="text-yellow-500"
           isLoading={isLoading}
         />
         <StatsCard
           title="Out of Stock"
           value={stats.outOfStock}
           icon={AlertCircle}
-          iconColor="text-destructive"
           isLoading={isLoading}
         />
       </StatsGrid>

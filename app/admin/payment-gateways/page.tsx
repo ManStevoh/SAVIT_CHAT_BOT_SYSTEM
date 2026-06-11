@@ -35,6 +35,13 @@ const MPESA_FIELDS: { key: string; label: string; type: string; placeholder?: st
   { key: "callback_url", label: "Callback URL", type: "text", placeholder: "https://..." },
 ]
 
+const PAYSTACK_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
+  { key: "public_key", label: "Public Key", type: "text", placeholder: "pk_test_..." },
+  { key: "secret_key", label: "Secret Key", type: "password", placeholder: "sk_test_... (leave blank to keep)" },
+  { key: "currency", label: "Currency", type: "text", placeholder: "ngn" },
+  { key: "callback_url", label: "Callback URL (optional)", type: "text", placeholder: "https://yourapp.com/dashboard/subscription?checkout=success" },
+]
+
 function isMasked(val: unknown): boolean {
   return typeof val === "string" && val.startsWith("••••")
 }
@@ -141,7 +148,14 @@ export default function AdminPaymentGatewaysPage() {
           const expanded = expandedSlug === gateway.slug
           const saving = savingSlug === gateway.slug
           const displayConfig = getDisplayConfig(gateway)
-          const fields = gateway.slug === "stripe" ? STRIPE_FIELDS : gateway.slug === "mpesa" ? MPESA_FIELDS : []
+          const fields =
+            gateway.slug === "stripe"
+              ? STRIPE_FIELDS
+              : gateway.slug === "mpesa"
+                ? MPESA_FIELDS
+                : gateway.slug === "paystack"
+                  ? PAYSTACK_FIELDS
+                  : []
 
           return (
             <Card key={gateway.id}>

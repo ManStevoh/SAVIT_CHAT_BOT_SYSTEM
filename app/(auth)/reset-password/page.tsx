@@ -55,7 +55,7 @@ function ResetPasswordForm() {
   if (isSuccess) {
     return (
       <div className="w-full max-w-md">
-        <div className="rounded-2xl border border-border bg-card p-8 shadow-xl text-center">
+        <div className="rounded-xl border border-border/60 bg-card p-8 shadow-premium text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <CheckCircle className="h-6 w-6 text-primary" />
           </div>
@@ -70,7 +70,7 @@ function ResetPasswordForm() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="rounded-2xl border border-border bg-card p-8 shadow-xl">
+      <div className="rounded-xl border border-border/60 bg-card p-8 shadow-premium">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-foreground">Reset password</h1>
           <p className="mt-2 text-sm text-muted-foreground">
