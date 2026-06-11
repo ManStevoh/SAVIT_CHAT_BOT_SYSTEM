@@ -24,6 +24,10 @@ class CompanyController extends Controller
             'totalChats' => (int) $c->chats_count,
             'totalOrders' => (int) $c->orders_count,
             'createdAt' => $c->created_at->format('Y-m-d'),
+            'industry' => $c->industry ?? 'other',
+            'isGrowthPilot' => (bool) $c->growth_pilot_at,
+            'growthDemoMode' => (bool) $c->growth_demo_mode,
+            'growthPilotSince' => $c->growth_pilot_at?->toIso8601String(),
         ];
     }
 
@@ -64,7 +68,19 @@ class CompanyController extends Controller
             'phone' => 'nullable|string|max:50',
             'plan' => 'sometimes|in:starter,professional,enterprise',
             'status' => 'sometimes|in:active,suspended,pending',
+            'industry' => 'sometimes|nullable|string|in:retail,restaurant,services,other',
+            'isGrowthPilot' => 'sometimes|boolean',
+            'growthDemoMode' => 'sometimes|boolean',
         ]);
+
+        if (array_key_exists('isGrowthPilot', $validated)) {
+            $company->growth_pilot_at = $validated['isGrowthPilot'] ? ($company->growth_pilot_at ?? now()) : null;
+            unset($validated['isGrowthPilot']);
+        }
+        if (array_key_exists('growthDemoMode', $validated)) {
+            $company->growth_demo_mode = (bool) $validated['growthDemoMode'];
+            unset($validated['growthDemoMode']);
+        }
 
         $company->update($validated);
 

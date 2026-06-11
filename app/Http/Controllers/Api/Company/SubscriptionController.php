@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Message;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Growth\GrowthLimitService;
 use App\Services\PlanLimitService;
 use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
@@ -89,11 +90,25 @@ class SubscriptionController extends Controller
         $teamCount = User::where('company_id', $companyId)->count();
         $planLimits = PlanLimitService::getLimitsForPlan($plan);
 
+        $growth = GrowthLimitService::usageSummary($company);
+
         $items = [
             ['name' => 'Messages', 'used' => $messageCount, 'limit' => $planLimits['messages']],
             ['name' => 'Team members', 'used' => $teamCount, 'limit' => $planLimits['team']],
         ];
 
-        return response()->json(['items' => $items]);
+        if ($growth['growthEnabled']) {
+            $items[] = ['name' => 'AI posts (this month)', 'used' => $growth['aiPostsUsed'], 'limit' => $growth['aiPostsLimit']];
+            $items[] = ['name' => 'Social platforms', 'used' => $growth['platformsConnected'], 'limit' => $growth['platformLimit']];
+        }
+
+        $warnings = GrowthLimitService::usageWarnings($company);
+
+        return response()->json([
+            'items' => $items,
+            'growth' => $growth,
+            'warnings' => $warnings,
+            'upgradeUrl' => rtrim(config('app.frontend_url', config('app.url')), '/').'/dashboard/subscription',
+        ]);
     }
 }

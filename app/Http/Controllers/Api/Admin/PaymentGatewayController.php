@@ -85,6 +85,7 @@ class PaymentGatewayController extends Controller
         return in_array($key, match ($slug) {
             'stripe' => ['secret', 'webhook_secret'],
             'mpesa' => ['consumer_secret', 'passkey'],
+            'paystack' => ['secret_key'],
             default => [],
         }, true);
     }
@@ -102,6 +103,7 @@ class PaymentGatewayController extends Controller
         $secretKeys = match ($slug) {
             'stripe' => ['secret', 'webhook_secret'],
             'mpesa' => ['consumer_secret', 'passkey'],
+            'paystack' => ['secret_key'],
             default => [],
         };
 

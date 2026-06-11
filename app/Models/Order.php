@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\CompanyInAppNotificationService;
+use App\Services\Growth\AttributionService;
 use App\Services\MailService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ class Order extends Model
     protected $fillable = [
         'company_id',
         'chat_id',
+        'social_post_id',
         'order_number',
         'customer_name',
         'customer_phone',
@@ -41,6 +43,11 @@ class Order extends Model
     public function orderProducts(): HasMany
     {
         return $this->hasMany(OrderProduct::class);
+    }
+
+    public function socialPost(): BelongsTo
+    {
+        return $this->belongsTo(SocialPost::class);
     }
 
     /**
@@ -78,6 +85,12 @@ class Order extends Model
 
             if ($notificationsOn) {
                 app(CompanyInAppNotificationService::class)->recordNewOrder($order);
+            }
+
+            try {
+                app(AttributionService::class)->recordOrder($order);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to record growth attribution for order', ['order_id' => $order->id, 'error' => $e->getMessage()]);
             }
         });
     }

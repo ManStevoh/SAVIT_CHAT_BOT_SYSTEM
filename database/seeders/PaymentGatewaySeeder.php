@@ -35,6 +35,17 @@ class PaymentGatewaySeeder extends Seeder
                     'callback_url' => '',
                 ],
             ],
+            [
+                'slug' => 'paystack',
+                'name' => 'Paystack',
+                'is_enabled' => false,
+                'config' => [
+                    'public_key' => '',
+                    'secret_key' => '',
+                    'currency' => 'ngn',
+                    'callback_url' => '',
+                ],
+            ],
         ];
 
         foreach ($gateways as $data) {

@@ -20,6 +20,16 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('subscription:expiry-reminders')->dailyAt('09:00');
+        $schedule->job(new \App\Jobs\Growth\PublishScheduledPostsJob)->everyFiveMinutes();
+        $schedule->job(new \App\Jobs\Growth\SyncMetaMetricsJob)->dailyAt('06:00');
+        $schedule->job(new \App\Jobs\Growth\SyncMetaAdSpendJob)->dailyAt('06:30');
+        $schedule->job(new \App\Jobs\Growth\ProcessCrmFollowUpsJob)->hourly();
+        $schedule->job(new \App\Jobs\Growth\GeneratePortfolioRecommendationsJob)->weeklyOn(1, '07:00');
+        $schedule->job(new \App\Jobs\Growth\PrunePortfolioRecommendationsJob)->weeklyOn(0, '03:00');
+        $schedule->job(new \App\Jobs\Growth\SyncGrowthIntegrationsJob)->dailyAt('05:00');
+        $schedule->job(new \App\Jobs\Growth\ExtractGrowthPatternsJob)->weeklyOn(1, '08:00');
+        $schedule->job(new \App\Jobs\Growth\GenerateWeeklyBriefJob)->weeklyOn(1, '08:30');
+        $schedule->job(new \App\Jobs\Growth\ScorePostPerformanceJob)->dailyAt('07:00');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

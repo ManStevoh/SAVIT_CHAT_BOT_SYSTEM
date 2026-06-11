@@ -10,6 +10,8 @@ class Chat extends Model
 {
     protected $fillable = [
         'company_id',
+        'social_post_id',
+        'attribution_link_id',
         'customer_name',
         'customer_phone',
         'customer_avatar',
@@ -19,6 +21,8 @@ class Chat extends Model
         'status',
         'ai_handled',
         'agent_handling_at',
+        'crm_last_follow_up_at',
+        'crm_follow_up_count',
         'conversation_step',
         'order_draft',
     ];
@@ -27,6 +31,8 @@ class Chat extends Model
         'last_message_at' => 'datetime',
         'ai_handled' => 'boolean',
         'agent_handling_at' => 'datetime',
+        'crm_last_follow_up_at' => 'datetime',
+        'crm_follow_up_count' => 'integer',
         'order_draft' => 'array',
     ];
 
@@ -47,5 +53,15 @@ class Chat extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class);
+    }
+
+    public function socialPost(): BelongsTo
+    {
+        return $this->belongsTo(SocialPost::class);
+    }
+
+    public function attributionLink(): BelongsTo
+    {
+        return $this->belongsTo(AttributionLink::class);
     }
 }

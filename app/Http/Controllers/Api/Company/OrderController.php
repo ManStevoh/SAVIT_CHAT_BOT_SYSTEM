@@ -7,6 +7,7 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\Order;
 use App\Models\OrderProduct;
+use App\Models\SocialPost;
 use App\Services\OrderPaymentService;
 use App\Services\WhatsAppMessageSenderService;
 use Illuminate\Http\JsonResponse;
@@ -63,6 +64,7 @@ class OrderController extends Controller
             && (
                 (bool) ($settings?->orders_accept_stripe ?? false)
                 || (bool) ($settings?->orders_accept_mpesa ?? false)
+                || (bool) ($settings?->orders_accept_paystack ?? false)
                 || (is_string($settings?->order_payment_manual_instructions ?? null) && trim((string) $settings?->order_payment_manual_instructions) !== '')
             );
 
@@ -84,6 +86,13 @@ class OrderController extends Controller
 
             if ((bool) ($settings?->orders_accept_mpesa ?? false)) {
                 $lines[] = 'M-Pesa: If you prefer M-Pesa, reply "1" to proceed and we’ll prompt payment on your phone.';
+            }
+
+            if ((bool) ($settings?->orders_accept_paystack ?? false)) {
+                $paystack = app(OrderPaymentService::class)->createPaystackPaymentLinkForOrder($order);
+                if (! empty($paystack['success']) && ! empty($paystack['url'])) {
+                    $lines[] = "Pay with Paystack: {$paystack['url']}";
+                }
             }
 
             $manual = $settings?->order_payment_manual_instructions ?? null;
@@ -123,28 +132,46 @@ class OrderController extends Controller
             });
         }
 
+        if ($request->boolean('attributedOnly')) {
+            $query->whereNotNull('social_post_id');
+        }
+
         $page = max(1, (int) $request->input('page', 1));
         $limit = max(1, min(100, (int) $request->input('limit', 10)));
         $total = $query->count();
         $orders = $query->skip(($page - 1) * $limit)->take($limit)->get();
 
-        $ordersData = $orders->map(fn (Order $order) => [
-            'id' => (string) $order->id,
-            'orderNumber' => $order->order_number,
-            'customerName' => $order->customer_name,
-            'customerPhone' => $order->customer_phone,
-            'products' => $order->orderProducts->map(fn ($p) => [
-                'id' => (string) $p->id,
-                'name' => $p->name,
-                'quantity' => (int) $p->quantity,
-                'price' => (float) $p->price,
-            ])->values()->all(),
-            'total' => (float) $order->total,
-            'status' => $order->status,
-            'paymentStatus' => $order->payment_status,
-            'createdAt' => $order->created_at->toIso8601String(),
-            'updatedAt' => $order->updated_at->toIso8601String(),
-        ]);
+        $posts = SocialPost::whereIn('id', $orders->pluck('social_post_id')->filter())
+            ->get(['id', 'title', 'platform', 'content'])
+            ->keyBy('id');
+
+        $ordersData = $orders->map(function (Order $order) use ($posts) {
+            $post = $order->social_post_id ? $posts->get($order->social_post_id) : null;
+
+            return [
+                'id' => (string) $order->id,
+                'orderNumber' => $order->order_number,
+                'customerName' => $order->customer_name,
+                'customerPhone' => $order->customer_phone,
+                'chatId' => $order->chat_id ? (string) $order->chat_id : null,
+                'products' => $order->orderProducts->map(fn ($p) => [
+                    'id' => (string) $p->id,
+                    'name' => $p->name,
+                    'quantity' => (int) $p->quantity,
+                    'price' => (float) $p->price,
+                ])->values()->all(),
+                'total' => (float) $order->total,
+                'status' => $order->status,
+                'paymentStatus' => $order->payment_status,
+                'attribution' => $post ? [
+                    'socialPostId' => (string) $post->id,
+                    'postTitle' => $post->title ?? Str::limit($post->content, 40),
+                    'platform' => $post->platform,
+                ] : null,
+                'createdAt' => $order->created_at->toIso8601String(),
+                'updatedAt' => $order->updated_at->toIso8601String(),
+            ];
+        });
 
         return response()->json([
             'orders' => $ordersData,

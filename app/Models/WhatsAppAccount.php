@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Crypt;
 
 class WhatsAppAccount extends Model
 {
+    protected $table = 'whatsapp_accounts';
+
     protected $fillable = [
         'company_id',
         'phone_number_id',

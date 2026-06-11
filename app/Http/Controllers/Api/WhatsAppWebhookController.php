@@ -8,6 +8,7 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\PlatformSetting;
 use App\Models\WhatsAppAccount;
+use App\Services\Growth\AttributionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -217,6 +218,8 @@ class WhatsAppWebhookController extends Controller
             ]);
         }
 
+        $this->attachAttributionFromMessage($chat, $text);
+
         $existing = $waMessageId
             ? Message::where('chat_id', $chat->id)->where('whatsapp_message_id', $waMessageId)->exists()
             : false;
@@ -253,6 +256,23 @@ class WhatsAppWebhookController extends Controller
      *
      * @return array{message_type: string, attachment_url: string, attachment_name: string, attachment_mime: string, attachment_size: int}|null
      */
+    protected function attachAttributionFromMessage(Chat $chat, string $text): void
+    {
+        if ($chat->attribution_link_id) {
+            return;
+        }
+
+        $slug = app(AttributionService::class)->parseReferralFromMessage($text);
+        if (! $slug) {
+            return;
+        }
+
+        $link = app(AttributionService::class)->attachReferralToChat($chat, $slug);
+        if ($link) {
+            app(AttributionService::class)->recordLead($chat->fresh());
+        }
+    }
+
     protected function downloadIncomingMedia(
         WhatsAppAccount $account,
         string $type,

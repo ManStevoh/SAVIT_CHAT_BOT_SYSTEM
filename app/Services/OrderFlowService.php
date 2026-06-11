@@ -144,12 +144,9 @@ class OrderFlowService
             $draft['order_id'] = $order->id;
             $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, $draft);
 
-            $settings = $company->settings;
-            $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
-            $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
-            $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
+            $pay = $this->resolvePaymentAcceptance($company->settings);
 
-            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual);
+            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
         }
 
         if ($step === self::STEP_EXISTING_ORDER_PAYMENT_METHOD) {
@@ -159,37 +156,32 @@ class OrderFlowService
 
                 return 'Something went wrong. Please ask us to resend your invoice or start a new order.';
             }
-            $settings = $company->settings;
-            $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
-            $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
-            $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
+            $pay = $this->resolvePaymentAcceptance($company->settings);
+            $method = $this->matchPaymentMethod($lower, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
 
-            if ($this->wantsManual($lower)) {
+            if ($method === 'manual') {
                 $this->clearState($chat);
 
                 return $this->formatOrderWithManualPaymentInstructions($order);
             }
-            if ($this->wantsMpesa($lower)) {
+            if ($method === 'mpesa') {
                 $draft['payment_method'] = 'mpesa';
                 $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
                 $displayPhone = $this->formatPhoneForDisplay($customerPhone);
 
                 return "We'll send an M-Pesa payment request to your phone.\n\nReply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
             }
-            if ($this->wantsStripe($lower)) {
-                $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
-                $this->clearState($chat);
-                if ($result['success'] && ! empty($result['url'])) {
-                    return $this->withReceipt($order, "Order #{$order->order_number} – Pay by card here: {$result['url']}\n\nReply once you've completed payment. Thank you!");
-                }
-
-                return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". (".($result['error'] ?? 'Payment link unavailable.').')');
+            if ($method === 'stripe') {
+                return $this->handleStripePayment($order, $chat);
+            }
+            if ($method === 'paystack') {
+                return $this->handlePaystackPayment($order, $chat);
             }
             if ($this->shouldDelegateOrderStepToAssistant($lower, $trimmed)) {
                 return null;
             }
 
-            return $this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual, true);
+            return $this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], true);
         }
 
         if ($this->wantsStartOrder($lower) && ! $step) {
@@ -289,15 +281,14 @@ class OrderFlowService
 
                     return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We'll prepare it and contact you for delivery.");
                 }
-                $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
-                $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
-                $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
-                if ($acceptMpesa || $acceptStripe) {
+                $pay = $this->resolvePaymentAcceptance($settings);
+                if ($pay['acceptMpesa'] || $pay['acceptStripe'] || $pay['acceptPaystack']) {
                     $draft['order_id'] = $order->id;
                     $this->setStep($chat, self::STEP_PAYMENT_METHOD, $draft);
 
-                    return $this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual);
+                    return $this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
                 }
+                $acceptManual = $pay['acceptManual'];
                 if ($acceptManual) {
                     $this->clearState($chat);
 
@@ -316,36 +307,32 @@ class OrderFlowService
 
                 return 'Something went wrong. Please start over with "order" or "2".';
             }
-            $settings = $company->settings;
-            $acceptMpesa = $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig());
-            $acceptStripe = $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig());
-            $acceptManual = $settings && $settings->hasOrderPaymentManualInstructions();
-            if ($this->wantsManual($lower)) {
+            $pay = $this->resolvePaymentAcceptance($company->settings);
+            $method = $this->matchPaymentMethod($lower, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
+
+            if ($method === 'manual') {
                 $this->clearState($chat);
 
                 return $this->formatOrderWithManualPaymentInstructions($order);
             }
-            if ($this->wantsMpesa($lower)) {
+            if ($method === 'mpesa') {
                 $draft['payment_method'] = 'mpesa';
                 $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
                 $displayPhone = $this->formatPhoneForDisplay($customerPhone);
 
                 return "We'll send an M-Pesa payment request to your phone.\n\nReply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
             }
-            if ($this->wantsStripe($lower)) {
-                $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
-                $this->clearState($chat);
-                if ($result['success'] && ! empty($result['url'])) {
-                    return $this->withReceipt($order, "Order #{$order->order_number} – Pay by card here: {$result['url']}\n\nReply once you've completed payment. Thank you!");
-                }
-
-                return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We'll prepare it and contact you for delivery. (".($result['error'] ?? 'Payment link unavailable.').')');
+            if ($method === 'stripe') {
+                return $this->handleStripePayment($order, $chat, true);
+            }
+            if ($method === 'paystack') {
+                return $this->handlePaystackPayment($order, $chat, true);
             }
             if ($this->shouldDelegateOrderStepToAssistant($lower, $trimmed)) {
                 return null;
             }
 
-            return $this->formatPaymentMethodPrompt($order, $acceptMpesa, $acceptStripe, $acceptManual, true);
+            return $this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], true);
         }
 
         if ($step === self::STEP_MPESA_PHONE) {
@@ -732,25 +719,124 @@ class OrderFlowService
         return "✅ Added to cart\n{$name} x {$quantity}\n\n{$summary}\n\n".$this->afterAddItemInstructions();
     }
 
-    protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptManual = false, bool $invalid = false): string
+    /**
+     * @return array{acceptMpesa: bool, acceptStripe: bool, acceptPaystack: bool, acceptManual: bool}
+     */
+    protected function resolvePaymentAcceptance(?\App\Models\CompanySetting $settings): array
+    {
+        return [
+            'acceptMpesa' => $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig()),
+            'acceptStripe' => $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig()),
+            'acceptPaystack' => $settings && $settings->orders_accept_paystack && PaystackService::isEnabled(),
+            'acceptManual' => $settings && $settings->hasOrderPaymentManualInstructions(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function paymentMethodKeys(bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual): array
+    {
+        $keys = [];
+        if ($acceptMpesa) {
+            $keys[] = 'mpesa';
+        }
+        if ($acceptStripe) {
+            $keys[] = 'stripe';
+        }
+        if ($acceptPaystack) {
+            $keys[] = 'paystack';
+        }
+        if ($acceptManual) {
+            $keys[] = 'manual';
+        }
+
+        return $keys;
+    }
+
+    protected function matchPaymentMethod(string $lower, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual): ?string
+    {
+        $keys = $this->paymentMethodKeys($acceptMpesa, $acceptStripe, $acceptPaystack, $acceptManual);
+        if (preg_match('/^\d+$/', $lower)) {
+            $idx = (int) $lower - 1;
+
+            return $keys[$idx] ?? null;
+        }
+        if ($acceptManual && $this->wantsManual($lower)) {
+            return 'manual';
+        }
+        if ($acceptMpesa && $this->wantsMpesaText($lower)) {
+            return 'mpesa';
+        }
+        if ($acceptStripe && $this->wantsStripeText($lower)) {
+            return 'stripe';
+        }
+        if ($acceptPaystack && $this->wantsPaystackText($lower)) {
+            return 'paystack';
+        }
+
+        return null;
+    }
+
+    protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual = false, bool $invalid = false): string
     {
         $line = 'Order #'.$order->order_number.' – Total: '.$this->formatMoneyForOrder($order, (float) $order->total).".\n\nHow would you like to pay?";
         $opts = [];
+        $n = 1;
         if ($acceptMpesa) {
-            $opts[] = '1. M-Pesa (pay on your phone)';
+            $opts[] = "{$n}. M-Pesa (pay on your phone)";
+            $n++;
         }
         if ($acceptStripe) {
-            $opts[] = '2. Card (pay online)';
+            $opts[] = "{$n}. Card (pay online)";
+            $n++;
+        }
+        if ($acceptPaystack) {
+            $opts[] = "{$n}. Paystack (pay online)";
+            $n++;
         }
         if ($acceptManual) {
-            $opts[] = '3. Pay manually (bank / other details)';
+            $opts[] = "{$n}. Pay manually (bank / other details)";
         }
         $line .= "\n".implode("\n", $opts);
         if ($invalid) {
-            $line .= "\n\nPlease reply with 1, 2 or 3 (or M-Pesa / Card / Manual).";
+            $count = count($opts);
+            $line .= $count > 1
+                ? "\n\nPlease reply with a number 1–{$count} or name the payment method."
+                : "\n\nPlease reply with 1 or name the payment method.";
         }
 
         return $this->withReceipt($order, $line);
+    }
+
+    protected function handleStripePayment(Order $order, Chat $chat, bool $confirmedOrder = false): string
+    {
+        $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
+        $this->clearState($chat);
+        if ($result['success'] && ! empty($result['url'])) {
+            return $this->withReceipt($order, "Order #{$order->order_number} – Pay by card here: {$result['url']}\n\nReply once you've completed payment. Thank you!");
+        }
+        $suffix = ' ('.($result['error'] ?? 'Payment link unavailable.').')';
+        if ($confirmedOrder) {
+            return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We'll prepare it and contact you for delivery.{$suffix}");
+        }
+
+        return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).".{$suffix}");
+    }
+
+    protected function handlePaystackPayment(Order $order, Chat $chat, bool $confirmedOrder = false): string
+    {
+        $result = $this->orderPayment->createPaystackPaymentLinkForOrder($order);
+        $this->clearState($chat);
+        if ($result['success'] && ! empty($result['url'])) {
+            return $this->withReceipt($order, "Order #{$order->order_number} – Pay here: {$result['url']}\n\nReply once you've completed payment. Thank you!");
+        }
+        $suffix = ' ('.($result['error'] ?? 'Payment link unavailable.').')';
+        if ($confirmedOrder) {
+            return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We'll prepare it and contact you for delivery.{$suffix}");
+        }
+
+        return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).".{$suffix}");
     }
 
     protected function formatOrderWithManualPaymentInstructions(Order $order): string
@@ -786,6 +872,23 @@ class OrderFlowService
     {
         return in_array($lower, ['2', 'card', 'stripe', 'pay online', 'online', 'link'], true)
             || str_contains($lower, 'card') || str_contains($lower, 'pay online');
+    }
+
+    protected function wantsMpesaText(string $lower): bool
+    {
+        return in_array($lower, ['mpesa', 'm-pesa', 'mobile', 'phone'], true)
+            || str_contains($lower, 'mpesa') || str_contains($lower, 'm-pesa');
+    }
+
+    protected function wantsStripeText(string $lower): bool
+    {
+        return in_array($lower, ['card', 'stripe', 'pay online', 'online'], true)
+            || str_contains($lower, 'card') || str_contains($lower, 'pay online');
+    }
+
+    protected function wantsPaystackText(string $lower): bool
+    {
+        return in_array($lower, ['paystack', 'link'], true) || str_contains($lower, 'paystack');
     }
 
     protected function formatPhoneForDisplay(string $customerPhone): string

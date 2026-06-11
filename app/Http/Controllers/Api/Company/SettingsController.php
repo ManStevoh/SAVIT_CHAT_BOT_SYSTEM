@@ -37,6 +37,7 @@ class SettingsController extends Controller
             'notificationsEnabled' => (bool) ($settings?->notifications_enabled ?? false),
             'ordersAcceptMpesa' => (bool) ($settings?->orders_accept_mpesa ?? false),
             'ordersAcceptStripe' => (bool) ($settings?->orders_accept_stripe ?? false),
+            'ordersAcceptPaystack' => (bool) ($settings?->orders_accept_paystack ?? false),
             'ordersCollectPaymentEnabled' => ($settings?->orders_collect_payment_enabled ?? true) !== false,
             'orderPaymentManualInstructions' => $settings?->order_payment_manual_instructions ?? '',
             'orderPaymentMpesaConfigured' => $settings?->hasOrderPaymentMpesaConfig() ?? false,
@@ -44,6 +45,8 @@ class SettingsController extends Controller
             'orderPaymentMpesaConfig' => $settings ? $this->maskOrderPaymentMpesaConfig($settings->order_payment_mpesa_config) : null,
             'orderPaymentStripeConfig' => $settings ? $this->maskOrderPaymentStripeConfig($settings->order_payment_stripe_config) : null,
             'displayCurrency' => $settings?->displayCurrencyCode() ?? 'USD',
+            'industry' => $company->industry ?? 'other',
+            'attributionRetentionDays' => $company->attribution_retention_days,
         ]);
     }
 
@@ -82,6 +85,8 @@ class SettingsController extends Controller
             'notificationsEnabled' => 'sometimes|boolean',
             'ordersAcceptMpesa' => 'sometimes|boolean',
             'ordersAcceptStripe' => 'sometimes|boolean',
+            'ordersAcceptPaystack' => 'sometimes|boolean',
+            'attributionRetentionDays' => 'sometimes|nullable|integer|min:30|max:730',
             'ordersCollectPaymentEnabled' => 'sometimes|boolean',
             'orderPaymentManualInstructions' => 'sometimes|nullable|string|max:2000',
             'orderPaymentMpesaConfig' => 'sometimes|nullable|array',
@@ -95,6 +100,7 @@ class SettingsController extends Controller
             'orderPaymentStripeConfig.secret' => 'nullable|string|max:255',
             'orderPaymentStripeConfig.currency' => 'nullable|string|max:10',
             'displayCurrency' => 'sometimes|nullable|string|size:3',
+            'industry' => 'sometimes|nullable|string|in:retail,restaurant,services,other',
         ]);
 
         if (isset($companyValidated['companyName'])) {
@@ -108,6 +114,12 @@ class SettingsController extends Controller
         }
         if (array_key_exists('address', $companyValidated)) {
             $company->update(['address' => $companyValidated['address']]);
+        }
+        if (array_key_exists('industry', $companyValidated)) {
+            $company->update(['industry' => $companyValidated['industry'] ?? 'other']);
+        }
+        if (array_key_exists('attributionRetentionDays', $companyValidated)) {
+            $company->update(['attribution_retention_days' => $companyValidated['attributionRetentionDays']]);
         }
 
         $settings = $company->settings()->firstOrNew([]);
@@ -147,6 +159,9 @@ class SettingsController extends Controller
         }
         if (array_key_exists('ordersAcceptStripe', $companyValidated)) {
             $settings->orders_accept_stripe = $companyValidated['ordersAcceptStripe'];
+        }
+        if (array_key_exists('ordersAcceptPaystack', $companyValidated)) {
+            $settings->orders_accept_paystack = $companyValidated['ordersAcceptPaystack'];
         }
         if (array_key_exists('ordersCollectPaymentEnabled', $companyValidated)) {
             $settings->orders_collect_payment_enabled = $companyValidated['ordersCollectPaymentEnabled'];

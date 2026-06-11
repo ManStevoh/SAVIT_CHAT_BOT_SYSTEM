@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Handles payment collection for customer orders: M-Pesa STK push and Stripe payment link.
+ * Handles payment collection for customer orders: M-Pesa STK push, Stripe, and Paystack payment links.
  * Used by the bot after order confirm and by callbacks when payment is received.
  */
 class OrderPaymentService
@@ -21,6 +21,7 @@ class OrderPaymentService
     public function __construct(
         protected MpesaService $mpesa,
         protected StripeService $stripe,
+        protected PaystackService $paystack,
         protected WhatsAppMessageSenderService $waSender
     ) {}
 
@@ -105,6 +106,39 @@ class OrderPaymentService
         }
 
         return ['success' => true, 'url' => $url];
+    }
+
+    /**
+     * Create a Paystack payment link for an order (platform config).
+     *
+     * @return array{success: bool, url?: string, reference?: string, error?: string}
+     */
+    public function createPaystackPaymentLinkForOrder(Order $order): array
+    {
+        if (! PaystackService::isEnabled()) {
+            return ['success' => false, 'error' => 'Paystack is not configured.'];
+        }
+
+        $callbackUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')).'/orders/payment-complete';
+        $result = $this->paystack->createPaymentLinkForOrder($order, $callbackUrl);
+        if (! $result['success'] || empty($result['url'])) {
+            return ['success' => false, 'error' => $result['error'] ?? 'Could not create payment link.'];
+        }
+
+        $reference = $result['reference'] ?? null;
+        if ($reference) {
+            Cache::put(
+                PaystackService::CACHE_KEY_ORDER_PREFIX.$reference,
+                ['order_id' => $order->id],
+                now()->addMinutes(self::CACHE_TTL_MINUTES)
+            );
+        }
+
+        return [
+            'success' => true,
+            'url' => $result['url'],
+            'reference' => $reference,
+        ];
     }
 
     /**

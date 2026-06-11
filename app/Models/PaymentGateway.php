@@ -71,6 +71,12 @@ class PaymentGateway extends Model
                 'env' => 'sandbox',
                 'callback_url' => '',
             ],
+            'paystack' => [
+                'public_key' => '',
+                'secret_key' => '',
+                'currency' => 'ngn',
+                'callback_url' => '',
+            ],
             default => [],
         };
     }
@@ -95,6 +101,12 @@ class PaymentGateway extends Model
                 'passkey' => env('MPESA_PASSKEY', ''),
                 'env' => env('MPESA_ENV', 'sandbox'),
                 'callback_url' => env('MPESA_CALLBACK_URL', ''),
+            ],
+            'paystack' => [
+                'public_key' => env('PAYSTACK_PUBLIC_KEY', ''),
+                'secret_key' => env('PAYSTACK_SECRET_KEY', ''),
+                'currency' => env('PAYSTACK_CURRENCY', 'ngn'),
+                'callback_url' => env('PAYSTACK_CALLBACK_URL', ''),
             ],
             default => [],
         };
