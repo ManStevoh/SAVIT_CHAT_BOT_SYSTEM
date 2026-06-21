@@ -1,4 +1,5 @@
 {
+  "installCommand": "npm install",
   "git": {
     "deploymentEnabled": {
       "monorepo": false,

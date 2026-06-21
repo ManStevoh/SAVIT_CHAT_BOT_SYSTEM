@@ -1,0 +1,6 @@
+import { AuthBranding } from '@/components/branding/AuthBranding'
+import type { ReactNode } from 'react'
+
+export default function AuthLayout({ children }: { children: ReactNode }) {
+  return <AuthBranding>{children}</AuthBranding>
+}
