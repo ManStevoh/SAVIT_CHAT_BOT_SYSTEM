@@ -8,6 +8,9 @@ permalink: /
 
 # SAVIT Chat Bot Documentation
 
+> **Enable docs site:** [Settings → Pages](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/settings/pages) → Deploy from branch → `main` → `/docs` → Save.  
+> **URL:** https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/
+
 Welcome to the official documentation for **SAVIT Chat Bot** — a multi-tenant SaaS platform that lets businesses connect WhatsApp, automate customer conversations with AI, manage orders and products, collect payments, and grow revenue through social media attribution.
 
 ## What is SAVIT Chat Bot?

@@ -15,28 +15,11 @@ This documentation site is built with [Jekyll](https://jekyllrb.com/) and the [j
 
 ## Enable GitHub Pages
 
-1. Open your repository on GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment → Source**, select **Deploy from a branch**.
-4. Under **Branch**, choose `main` (or your default branch) and folder **`/docs`**.
-5. Click **Save**.
+1. Open **[Settings → Pages](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/settings/pages)**.
+2. **Source:** Deploy from a branch → **Branch:** `main` → **Folder:** `/docs`
+3. Click **Save** — build takes 1–3 minutes.
 
-GitHub will build the site within a few minutes. Refresh the Pages settings page to see the live URL.
-
-## Shareable documentation URL
-
-After Pages is enabled, your docs will be available at:
-
-| Repository type | URL pattern |
-|-----------------|-------------|
-| **Project site** (most common) | `https://<github-username-or-org>.github.io/<repository-name>/` |
-| **User/org site** (repo named `username.github.io`) | `https://<username>.github.io/` |
-
-**Example:** This project uses [ManStevoh/SAVIT_CHAT_BOT_SYSTEM](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM):
-
-```
-https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/
-```
+**Live URL:** https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/
 
 Share this link with your team, customers, or partners.
 
