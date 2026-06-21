@@ -1,0 +1,23 @@
+title: SAVIT Chat Bot
+description: Complete documentation for the SAVIT WhatsApp AI Commerce & Growth Engine platform
+theme: just-the-docs
+url: "https://manstevoh.github.io"
+baseurl: "/SAVIT_CHAT_BOT_SYSTEM"
+
+color_scheme: nil
+search_enabled: true
+heading_anchors: true
+
+aux_links:
+  "Live App":
+    - "https://savit-chat-bot-system.vercel.app"
+  "API Backend":
+    - "https://savitchat.savitglobalsolutions.com"
+
+footer_content: "SAVIT Global Solutions — WhatsApp AI Commerce Platform"
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
