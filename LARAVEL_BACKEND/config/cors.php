@@ -6,7 +6,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    // Production Inertia (same-origin): APP_URL and FRONTEND_URL are typically identical.
+    'allowed_origins' => array_values(array_unique(array_filter([
+        env('FRONTEND_URL', 'http://localhost:8080'),
+        env('APP_URL', 'http://localhost:8080'),
+    ]))),
 
     'allowed_origins_patterns' => [],
 

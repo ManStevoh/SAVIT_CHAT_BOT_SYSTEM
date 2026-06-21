@@ -13,6 +13,10 @@ return [
     | authentication cookies. Typically, these should include your local
     | and production domains which access your API via a frontend SPA.
     |
+    | Set SANCTUM_STATEFUL_DOMAINS in .env (comma-separated hostnames, no scheme).
+    | Production (Inertia same-origin): SANCTUM_STATEFUL_DOMAINS=savitchat.savitglobalsolutions.com
+    | Must match the host in APP_URL / FRONTEND_URL (e.g. savitchat.savitglobalsolutions.com).
+    |
     */
 
     'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(

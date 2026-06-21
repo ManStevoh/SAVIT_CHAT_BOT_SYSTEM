@@ -12,18 +12,16 @@ nav_order: 1
 flowchart TB
     subgraph clients [Clients]
         WA[WhatsApp Customer]
-        CO[Company User Browser]
-        AD[Admin Browser]
+        BR[Browser - Company / Admin / Public]
     end
 
-    subgraph frontend [FRONTED - Next.js 16]
-        LP[Landing /]
-        AUTH[Auth Pages]
-        DASH[Dashboard /dashboard]
-        ADMIN[Admin /admin]
-    end
-
-    subgraph backend [LARAVEL_BACKEND - Laravel 12]
+    subgraph laravel [LARAVEL_BACKEND - Laravel 12]
+        subgraph ui [Inertia + React UI]
+            LP[Landing /]
+            AUTH[Auth Pages]
+            DASH[Dashboard /dashboard]
+            ADMIN[Admin /admin]
+        end
         API["REST API /api/*"]
         WH[WhatsApp Webhook]
         PAY[Payment Webhooks]
@@ -47,10 +45,14 @@ flowchart TB
 
     WA --> META
     META --> WH
-    CO --> DASH --> API
-    AD --> ADMIN --> API
+    BR --> LP
+    BR --> AUTH
+    BR --> DASH
+    BR --> ADMIN
     LP --> API
     AUTH --> API
+    DASH --> API
+    ADMIN --> API
     WH --> Q
     API --> DB
     Q --> DB
@@ -61,6 +63,7 @@ flowchart TB
     PAY --> API
     CRON --> Q
     WEB --> DB
+    API --> FS
 ```
 
 ## Architectural patterns
@@ -68,7 +71,8 @@ flowchart TB
 | Pattern | Implementation |
 |---------|----------------|
 | Multi-tenancy | Company-scoped data; `company_id` on all tenant tables |
-| API-first | Next.js is pure client; all data via Laravel REST API |
+| Unified deploy | Single Laravel app serves Inertia UI and JSON API on one domain |
+| Hybrid UI data | Inertia for page shells; SWR fetches `/api/*` for interactive data |
 | Async processing | WhatsApp replies, Growth publish, CRM via queue jobs |
 | Webhook-driven | Meta, Stripe, M-Pesa, Paystack push events to backend |
 | Human-in-the-loop | Growth posts require approve before publish |
@@ -92,25 +96,27 @@ flowchart TB
 ## Request flow: Dashboard action
 
 ```
-1. User logs in → POST /api/auth/login → Sanctum token
-2. Token stored in localStorage (auth_token)
-3. api-client.ts attaches Authorization: Bearer header
-4. SWR hooks fetch data (e.g. GET /api/company/chats)
-5. Middleware: auth:sanctum + subscription.active
-6. Controller → Service → Model → JSON response
-7. React components render data
+1. User navigates to /dashboard/chats → Laravel returns Inertia page (React shell)
+2. User logs in → POST /api/auth/login → Sanctum token
+3. Token stored in localStorage (auth_token)
+4. api-client.ts attaches Authorization: Bearer header to same-origin /api/* calls
+5. SWR hooks fetch data (e.g. GET /api/company/chats)
+6. Middleware: auth:sanctum + subscription.active
+7. Controller → Service → Model → JSON response
+8. React components render data; Inertia handles full-page navigations
 ```
 
 ## Deployment topology (production)
 
 | Component | Host | Notes |
 |-----------|------|-------|
-| Next.js frontend | Vercel | Serverless, edge CDN |
-| Laravel API | cPanel VPS | Document root = `public/` |
+| Laravel (UI + API) | cPanel VPS | Document root = `public/`; Vite build in `public/build/` |
 | Database | MySQL on VPS | SQLite for local dev |
 | Queue worker | VPS systemd/Supervisor | `php artisan queue:work` |
 | Cron | VPS crontab | `* * * * * php artisan schedule:run` |
 | File uploads | Local disk or S3 | Product images, post images |
+
+No separate frontend host. `APP_URL` and `FRONTEND_URL` both point to the production domain.
 
 ## Key design decisions
 
@@ -119,6 +125,7 @@ flowchart TB
 3. **Platform OpenAI key** — Centralized billing; companies control behavior not credentials
 4. **Attribution via ref codes** — WhatsApp prefill `ref:{slug}` links social to commerce
 5. **Subscription middleware** — Hard gate on company routes; webhook still receives but bot sends unavailable message
+6. **Inertia over separate SPA** — One deploy unit, same-origin API, no CORS split with Vercel
 
 ## Scalability considerations
 
@@ -129,10 +136,17 @@ flowchart TB
 | Meta rate limits | Queue throttling; exponential backoff on send failures |
 | DB connections | Connection pooling; read replicas at scale |
 
-## Monorepo boundaries
+## Repository layout
 
-Frontend and backend deploy independently:
+```
+LARAVEL_BACKEND/          # Single deployable application
+├── app/                    # Controllers, services, jobs
+├── resources/js/           # Inertia + React UI (29 pages)
+├── routes/web.php          # UI routes → PageController
+├── routes/api.php          # JSON API (138 endpoints)
+└── public/build/           # Vite production assets
 
-- Frontend env: `NEXT_PUBLIC_API_URL` points to backend
-- Backend env: `FRONTEND_URL`, `SANCTUM_STATEFUL_DOMAINS` for CORS
-- No shared code package — API contract is HTTP JSON
+FRONTED/                    # Deprecated Next.js app (do not deploy)
+```
+
+API contract remains HTTP JSON at `/api/*`. UI migrated from Next.js with shims for `next/link` and `next/navigation`.

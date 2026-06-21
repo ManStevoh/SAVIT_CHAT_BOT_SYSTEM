@@ -6,68 +6,91 @@ nav_order: 3
 
 # Frontend Application
 
-**Path:** `FRONTED/`  
-**Framework:** Next.js 16 App Router
+**Path:** `LARAVEL_BACKEND/resources/js/`  
+**Stack:** Inertia.js + React 19 + Vite + Tailwind CSS
+
+The UI is a React SPA embedded in Laravel. Laravel `web.php` routes render Inertia pages; data mutations and reads use the existing JSON API at `/api/*` on the same origin.
 
 ## Route map
 
+Routes are defined in `LARAVEL_BACKEND/routes/web.php` and mapped to React pages under `resources/js/Pages/`.
+
 ### Public routes
 
-| Route | File | Description |
-|-------|------|-------------|
-| `/` | `app/page.tsx` | Landing page |
-| `/login` | `app/(auth)/login/page.tsx` | Login |
-| `/register` | `app/(auth)/register/page.tsx` | Registration |
-| `/forgot-password` | `app/(auth)/forgot-password/page.tsx` | Password reset request |
-| `/reset-password` | `app/(auth)/reset-password/page.tsx` | Password reset form |
-| `/order-paid` | `app/order-paid/page.tsx` | Post-Stripe order thank-you |
+| Route | Page component | Description |
+|-------|----------------|-------------|
+| `/` | `Pages/Home/page.tsx` | Landing page |
+| `/login` | `Pages/Auth/login/page.tsx` | Login |
+| `/register` | `Pages/Auth/register/page.tsx` | Registration |
+| `/forgot-password` | `Pages/Auth/forgot-password/page.tsx` | Password reset request |
+| `/reset-password` | `Pages/Auth/reset-password/page.tsx` | Password reset form |
+| `/order-paid` | `Pages/order-paid/page.tsx` | Post-Stripe order thank-you |
 
 ### Company dashboard
 
-| Route | File |
-|-------|------|
-| `/dashboard` | `app/dashboard/page.tsx` |
-| `/dashboard/chats` | `app/dashboard/chats/page.tsx` |
-| `/dashboard/orders` | `app/dashboard/orders/page.tsx` |
-| `/dashboard/products` | `app/dashboard/products/page.tsx` |
-| `/dashboard/customers` | `app/dashboard/customers/page.tsx` |
-| `/dashboard/faq` | `app/dashboard/faq/page.tsx` |
-| `/dashboard/analytics` | `app/dashboard/analytics/page.tsx` |
-| `/dashboard/growth` | `app/dashboard/growth/page.tsx` |
-| `/dashboard/subscription` | `app/dashboard/subscription/page.tsx` |
-| `/dashboard/settings` | `app/dashboard/settings/page.tsx` |
+| Route | Page component |
+|-------|----------------|
+| `/dashboard` | `Pages/dashboard/page.tsx` |
+| `/dashboard/chats` | `Pages/dashboard/chats/page.tsx` |
+| `/dashboard/orders` | `Pages/dashboard/orders/page.tsx` |
+| `/dashboard/products` | `Pages/dashboard/products/page.tsx` |
+| `/dashboard/customers` | `Pages/dashboard/customers/page.tsx` |
+| `/dashboard/faq` | `Pages/dashboard/faq/page.tsx` |
+| `/dashboard/analytics` | `Pages/dashboard/analytics/page.tsx` |
+| `/dashboard/growth` | `Pages/dashboard/growth/page.tsx` |
+| `/dashboard/subscription` | `Pages/dashboard/subscription/page.tsx` |
+| `/dashboard/settings` | `Pages/dashboard/settings/page.tsx` |
 
 ### Super admin
 
-| Route | File |
-|-------|------|
-| `/admin` | `app/admin/page.tsx` |
-| `/admin/companies` | `app/admin/companies/page.tsx` |
-| `/admin/users` | `app/admin/users/page.tsx` |
-| `/admin/plans` | `app/admin/plans/page.tsx` |
-| `/admin/subscriptions` | `app/admin/subscriptions/page.tsx` |
-| `/admin/revenue` | `app/admin/revenue/page.tsx` |
-| `/admin/payment-gateways` | `app/admin/payment-gateways/page.tsx` |
-| `/admin/growth` | `app/admin/growth/page.tsx` |
-| `/admin/testimonials` | `app/admin/testimonials/page.tsx` |
-| `/admin/landing-faqs` | `app/admin/landing-faqs/page.tsx` |
-| `/admin/settings` | `app/admin/settings/page.tsx` |
-| `/admin/logs` | `app/admin/logs/page.tsx` |
-| `/admin/ai-usage` | `app/admin/ai-usage/page.tsx` |
+| Route | Page component |
+|-------|----------------|
+| `/admin` | `Pages/admin/page.tsx` |
+| `/admin/companies` | `Pages/admin/companies/page.tsx` |
+| `/admin/users` | `Pages/admin/users/page.tsx` |
+| `/admin/plans` | `Pages/admin/plans/page.tsx` |
+| `/admin/subscriptions` | `Pages/admin/subscriptions/page.tsx` |
+| `/admin/revenue` | `Pages/admin/revenue/page.tsx` |
+| `/admin/payment-gateways` | `Pages/admin/payment-gateways/page.tsx` |
+| `/admin/growth` | `Pages/admin/growth/page.tsx` |
+| `/admin/testimonials` | `Pages/admin/testimonials/page.tsx` |
+| `/admin/landing-faqs` | `Pages/admin/landing-faqs/page.tsx` |
+| `/admin/settings` | `Pages/admin/settings/page.tsx` |
+| `/admin/logs` | `Pages/admin/logs/page.tsx` |
+| `/admin/ai-usage` | `Pages/admin/ai-usage/page.tsx` |
+
+## Directory layout
+
+```
+resources/js/
+├── app.tsx              # Inertia bootstrap, layout resolution
+├── Pages/               # One page per screen (29 total)
+├── layouts/             # AuthLayout, DashboardLayout, AdminLayout
+├── components/
+│   ├── ui/              # shadcn/Radix primitives
+│   ├── dashboard/       # Dashboard-specific components
+│   ├── admin/           # Admin panel components
+│   └── growth/          # Growth Engine UI
+├── lib/
+│   ├── api-client.ts    # HTTP client, relative /api/* paths
+│   ├── api-hooks.ts     # SWR hooks for API resources
+│   ├── api-actions.ts   # Mutations (POST/PUT/DELETE)
+│   ├── auth-cookie.ts   # Client-side route-guard cookies
+│   └── mock-data.ts     # Mock data when VITE_USE_MOCK_API=true
+└── shims/               # next/link & next/navigation → Inertia adapters
+```
 
 ## Key libraries
 
 | File | Purpose |
 |------|---------|
+| `@inertiajs/react` | Page navigation, form submissions, shared props |
 | `lib/api-client.ts` | Base HTTP client, auth header, error handling |
 | `lib/api-hooks.ts` | SWR hooks for all API resources |
 | `lib/api-actions.ts` | Mutations (POST/PUT/DELETE) |
-| `lib/auth.ts` | Token storage, login/logout helpers |
-| `lib/mock-data.ts` | Mock API data when `NEXT_PUBLIC_USE_MOCK_API=true` |
+| `shims/next-link.tsx` | Drop-in `Link` using Inertia `<Link>` |
+| `shims/next-navigation.ts` | `useRouter`, `usePathname` via Inertia |
 | `components/ui/*` | shadcn/ui primitives |
-| `components/dashboard/*` | Dashboard-specific components |
-| `components/admin/*` | Admin panel components |
-| `components/growth/*` | Growth Engine UI |
 
 ## Authentication flow
 
@@ -75,6 +98,7 @@ nav_order: 3
 // Login
 POST /api/auth/login → { token, user }
 localStorage.setItem('auth_token', token)
+setAuthCookie(role, rememberMe)
 
 // Subsequent requests
 headers: { Authorization: `Bearer ${token}` }
@@ -82,14 +106,16 @@ headers: { Authorization: `Bearer ${token}` }
 // Logout
 POST /api/auth/logout
 localStorage.removeItem('auth_token')
+clearAuthCookie()
 ```
 
-Protected layouts check token presence and redirect to `/login`.
+Layouts check token presence and redirect to `/login`. Auth cookies (`savit_token`, `savit_role`) support client-side route protection.
 
 ## Data fetching pattern
 
+Initial page shell loads via Inertia. Interactive data uses SWR against same-origin `/api/*`:
+
 ```typescript
-// SWR hook example
 export function useChats() {
   return useSWR('/api/company/chats', fetcher)
 }
@@ -99,45 +125,54 @@ SWR provides caching, revalidation, and loading states. Polling interval configu
 
 ## Environment variables
 
+Set in `.env` (Vite exposes `VITE_*` at build time):
+
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Yes | Laravel backend base URL |
-| `NEXT_PUBLIC_USE_MOCK_API` | No | `true` = mock data, `false` = live API |
+| `VITE_APP_NAME` | No | Browser tab title prefix |
+| `VITE_API_URL` | No | Override API base (omit for same-origin `/api/*`) |
+| `VITE_USE_MOCK_API` | No | `true` = mock data, omit or `false` = live API |
+
+## Development
+
+Run PHP and Vite together:
+
+```bash
+cd LARAVEL_BACKEND
+composer install && npm install
+php artisan migrate --seed
+
+# Terminal 1
+php artisan serve --port=8080
+
+# Terminal 2
+npm run dev
+```
+
+Open **http://127.0.0.1:8080**
 
 ## Build & deploy
 
 ```bash
-npm run build    # Production build
-npm run start    # Production server (local)
-npm run dev      # Development with HMR
-npm run test:e2e # Playwright tests
+npm run build      # Production assets → public/build/
+npm run typecheck  # TypeScript validation
 ```
 
-Vercel auto-deploys from connected Git branch. Set env vars in Vercel dashboard.
-
-## Component organization
-
-```
-components/
-├── landing/       # Hero, pricing, features
-├── dashboard/     # Sidebar, chat inbox, order tables
-├── admin/         # Admin tables and forms
-├── growth/        # Growth Engine tabs
-└── ui/            # shadcn primitives (button, dialog, etc.)
-```
+Assets are served by Laravel from `public/build/`. Re-run `npm run build` after frontend changes before deploying.
 
 ## Styling conventions
 
-- Tailwind utility classes
+- Tailwind utility classes via `@tailwindcss/vite`
 - CSS variables for theme colors (supports company/admin branding)
 - Dark mode: follows system preference where implemented
 
 ## Mock API mode
 
-Set `NEXT_PUBLIC_USE_MOCK_API=true` for frontend development without backend. All hooks return data from `lib/mock-data.ts`.
+Set `VITE_USE_MOCK_API=true` in `.env` and rebuild (or use `npm run dev`) to develop UI without a live API. Hooks return data from `lib/mock-data.ts`.
 
 ## Known technical notes
 
-- TypeScript build errors ignored in production build (`ignoreBuildErrors: true`)
+- `next/link` and `next/navigation` imports resolve to Inertia shims (Vite aliases in `vite.config.js`)
 - File uploads use POST (not PUT) for multipart — PHP limitation documented in api.php
 - Growth OAuth callback redirects to `/dashboard/growth?growth_oauth=success`
+- Legacy Next.js app at repo root `FRONTED/` is deprecated; do not deploy separately
