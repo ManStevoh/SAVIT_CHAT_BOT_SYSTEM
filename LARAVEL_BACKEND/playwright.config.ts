@@ -28,7 +28,7 @@ export default defineConfig({
             'php -S 127.0.0.1:8080 -t public',
           url: baseURL,
           cwd: process.cwd(),
-          reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
+          reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },
 })
