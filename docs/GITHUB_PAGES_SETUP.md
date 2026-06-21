@@ -15,11 +15,21 @@ This documentation site is built with [Jekyll](https://jekyllrb.com/) and the [j
 
 ## Enable GitHub Pages
 
-1. Open **[Settings → Pages](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/settings/pages)**.
-2. **Source:** Deploy from a branch → **Branch:** `main` → **Folder:** `/docs`
-3. Click **Save** — build takes 1–3 minutes.
+Your repo is configured for **GitHub Actions** deployment (Settings → Pages).
 
-**Live URL:** https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/
+1. Ensure `.github/workflows/docs-pages.yml` exists on `main` (it deploys from `/docs`).
+2. Push to `main` or run the workflow manually: **Actions → Deploy documentation to GitHub Pages → Run workflow**.
+3. After a green run, the site is live at:
+
+**https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/**
+
+### Alternative: deploy from branch
+
+If you prefer not to use Actions: **Settings → Pages → Deploy from a branch → `main` → `/docs`**.
+
+### Vercel (frontend app)
+
+Vercel must deploy branch **`main`** only (Next.js at repo root). Do not deploy the `monorepo` branch — set **Root Directory** to `.` or leave blank. `vercel.json` disables auto-deploys from `monorepo`.
 
 Share this link with your team, customers, or partners.
 

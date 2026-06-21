@@ -1,0 +1,9 @@
+{
+  "git": {
+    "deploymentEnabled": {
+      "monorepo": false,
+      "docs-github-pages": false,
+      "backend": false
+    }
+  }
+}
