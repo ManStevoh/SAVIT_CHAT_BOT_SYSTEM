@@ -32,10 +32,10 @@ After Pages is enabled, your docs will be available at:
 | **Project site** (most common) | `https://<github-username-or-org>.github.io/<repository-name>/` |
 | **User/org site** (repo named `username.github.io`) | `https://<username>.github.io/` |
 
-**Example:** If your repo is `https://github.com/savitglobalsolutions/SAVIT_CHAT_BOT`, the docs URL is:
+**Example:** This project uses [ManStevoh/SAVIT_CHAT_BOT_SYSTEM](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM):
 
 ```
-https://savitglobalsolutions.github.io/SAVIT_CHAT_BOT/
+https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/
 ```
 
 Share this link with your team, customers, or partners.
