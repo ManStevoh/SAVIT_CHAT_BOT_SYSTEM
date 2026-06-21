@@ -1,0 +1,35 @@
+---
+description: Run tests and long shell commands in background; poll for results
+alwaysApply: true
+---
+
+# Background Command Execution
+
+When running tests, builds, installs, or any command expected to take more than ~10 seconds:
+
+1. **Always use background execution** — set `block_until_ms: 0` on the Shell tool so the command runs in a background terminal.
+2. **Poll with Await** — use the Await tool with a sensible timeout and optional `pattern` to collect output when the command finishes.
+3. **Do not block the user** — continue other work (fixes, file edits, agent dispatch) while background commands run.
+4. **Report results** — when a background task completes, summarize pass/fail and act on failures.
+
+## Commands that must run in background
+
+- `npm install`, `npm run build`, `npm run typecheck`, `npm run test*`
+- `composer install`, `composer update`
+- `php artisan test`, `php artisan serve`, `php -S`
+- `npx playwright test`
+- `git push`, large `git` operations
+- Any multi-step CI-style verification loop
+
+## Example workflow
+
+```
+Shell(block_until_ms: 0) → php artisan test
+# continue editing / dispatching agents
+Await(pattern: "Tests:|FAIL|PASS") → read results → fix failures → re-run in background
+```
+
+## Parallel work
+
+- Dispatch sub-agents for independent audit/test/migration tasks while background shells run.
+- Batch independent background commands when they do not conflict (e.g. PHP tests + TypeScript check).
