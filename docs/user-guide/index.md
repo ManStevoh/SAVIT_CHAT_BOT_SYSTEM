@@ -52,6 +52,7 @@ This section covers every user-facing feature of SAVIT Chat Bot from end to end.
 | [Plans & Billing](super-admin/plans-billing.md) | Subscription plans and revenue |
 | [Payment Gateways](super-admin/payment-gateways.md) | Stripe, M-Pesa, Paystack config |
 | [Platform Settings](super-admin/platform-settings.md) | SMTP, WhatsApp, OpenAI, branding |
+| [WhatsApp Complete Setup](../WHATSAPP_COMPLETE_SETUP_GUIDE.md) | Full Meta + admin + billing guide |
 | [Growth Portfolio](super-admin/growth-portfolio.md) | Cross-company growth insights |
 | [Content Management](super-admin/content-management.md) | Landing page testimonials & FAQs |
 | [Monitoring](super-admin/monitoring.md) | Logs, AI usage, system health |
