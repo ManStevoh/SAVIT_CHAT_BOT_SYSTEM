@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Company;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -66,6 +67,18 @@ class CompanySeeder extends Seeder
                     'company_id' => $company->id,
                     'status' => 'active',
                     'email_verified_at' => now(),
+                ]
+            );
+
+            Subscription::firstOrCreate(
+                ['company_id' => $company->id],
+                [
+                    'plan' => $data['plan'],
+                    'status' => 'active',
+                    'start_date' => now()->subMonth(),
+                    'end_date' => now()->addYear(),
+                    'amount' => 29.00,
+                    'billing_cycle' => 'monthly',
                 ]
             );
         }

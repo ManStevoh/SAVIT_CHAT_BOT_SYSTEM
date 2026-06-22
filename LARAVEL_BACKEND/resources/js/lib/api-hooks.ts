@@ -1,6 +1,6 @@
 // API Hooks for data fetching
 // These hooks use SWR for caching and real-time updates
-// When NEXT_PUBLIC_USE_MOCK_API=false, they call the Laravel backend.
+// When VITE_USE_MOCK_API is not 'true', they call the Laravel backend.
 
 import useSWR from 'swr'
 import { useMockApi, apiRequest } from './api-client'

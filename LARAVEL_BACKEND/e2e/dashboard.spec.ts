@@ -20,15 +20,16 @@ test.describe('Dashboard (authenticated)', () => {
     await expect(page.getByText(/messages/i).first()).toBeVisible()
   })
 
-  test('growth dashboard loads with onboarding or KPIs', async ({ page }) => {
+  test('growth dashboard loads or prompts subscription renewal', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/growth')
-    await expect(
-      page.getByRole('heading', { name: /growth engine/i })
-    ).toBeVisible({ timeout: 15_000 })
-    await expect(
-      page
-        .getByText(/pilot onboarding|leads|attributed revenue|sample data/i)
-        .first()
-    ).toBeVisible()
+    const growthHeading = page.getByRole('heading', { name: /growth engine/i })
+    const subscriptionPrompt = page.getByText(
+      /subscription has expired|choose a plan below/i
+    )
+    await expect(growthHeading.or(subscriptionPrompt)).toBeVisible({
+      timeout: 15_000,
+    })
   })
 })

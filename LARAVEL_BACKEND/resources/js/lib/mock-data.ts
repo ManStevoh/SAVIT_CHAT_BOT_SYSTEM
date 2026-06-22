@@ -1,5 +1,5 @@
 // Mock data for API-ready components
-// Used only when useMockApi() is true (no API URL or NEXT_PUBLIC_USE_MOCK_API=true).
+// Used only when useMockApi() is true (no API URL or VITE_USE_MOCK_API=true).
 // When real API is available, all hooks/actions use backend data; this file provides types and mock fallbacks.
 //
 // ========== EXAMPLE MOCK JSON FOR API INTEGRATION ==========

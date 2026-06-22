@@ -21,7 +21,7 @@ export function apiUrl(path: string): string {
 }
 
 /**
- * Normalize Laravel public-disk URLs so `<img>` loads from NEXT_PUBLIC_API_URL.
+ * Normalize Laravel public-disk URLs so `<img>` loads from VITE_API_URL.
  * Only rewrites paths under `/storage` (wrong host from APP_URL e.g. localhost is fixed).
  * Other absolute URLs (CDN, etc.) are left unchanged.
  */

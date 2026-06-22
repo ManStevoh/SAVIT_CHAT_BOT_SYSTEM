@@ -1,5 +1,5 @@
 // API Actions for form submissions and mutations
-// When real API is available (NEXT_PUBLIC_API_URL set and NEXT_PUBLIC_USE_MOCK_API not 'true'), all functions call Laravel; mock branches are skipped.
+// When real API is available (VITE_API_URL set and VITE_USE_MOCK_API not 'true'), all functions call Laravel; mock branches are skipped.
 
 import type {
   Order,
