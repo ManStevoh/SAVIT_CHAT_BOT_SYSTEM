@@ -39,6 +39,7 @@ Route::get('/admin/payment-gateways', [PageController::class, 'adminPaymentGatew
 Route::get('/admin/plans', [PageController::class, 'adminPlans'])->name('admin.plans');
 Route::get('/admin/revenue', [PageController::class, 'adminRevenue'])->name('admin.revenue');
 Route::get('/admin/settings', [PageController::class, 'adminSettings'])->name('admin.settings');
+Route::get('/admin/whatsapp', [PageController::class, 'adminWhatsApp'])->name('admin.whatsapp');
 Route::get('/admin/subscriptions', [PageController::class, 'adminSubscriptions'])->name('admin.subscriptions');
 Route::get('/admin/testimonials', [PageController::class, 'adminTestimonials'])->name('admin.testimonials');
 Route::get('/admin/users', [PageController::class, 'adminUsers'])->name('admin.users');

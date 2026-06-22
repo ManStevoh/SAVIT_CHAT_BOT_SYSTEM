@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\WhatsAppAccount;
+use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -10,7 +11,7 @@ class WhatsAppMessageSenderService
 {
     protected function graphUrl(): string
     {
-        return config('whatsapp.graph_url', 'https://graph.facebook.com/v21.0');
+        return WhatsAppPlatformConfig::graphUrl();
     }
 
     /**

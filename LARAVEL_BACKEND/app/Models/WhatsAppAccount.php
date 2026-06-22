@@ -17,11 +17,28 @@ class WhatsAppAccount extends Model
         'access_token',
         'verify_token',
         'status',
+        'onboarding_status',
+        'onboarding_error',
+        'webhook_subscribed_at',
+        'phone_registered_at',
+        'display_name_status',
+        'quality_rating',
+        'registration_pin',
         'display_phone_number',
+        'connected_at',
+        'disconnected_at',
+    ];
+
+    protected $casts = [
+        'webhook_subscribed_at' => 'datetime',
+        'phone_registered_at' => 'datetime',
+        'connected_at' => 'datetime',
+        'disconnected_at' => 'datetime',
     ];
 
     protected $hidden = [
         'access_token',
+        'registration_pin',
     ];
 
     public function company(): BelongsTo

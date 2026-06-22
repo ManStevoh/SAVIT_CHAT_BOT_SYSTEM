@@ -848,22 +848,10 @@ export interface ConnectWhatsAppPayload {
 }
 
 /**
- * Connect WhatsApp Business number (Meta Cloud API).
- * Laravel: POST /api/company/whatsapp/connect
+ * @deprecated Manual connect removed — use completeWhatsAppEmbeddedSignup.
  */
-export async function connectWhatsApp(payload: ConnectWhatsAppPayload): Promise<{ success: boolean; message?: string }> {
-  if (useMockApi()) {
-    await delay(2000)
-    return { success: true, message: 'WhatsApp account connected.' }
-  }
-  try {
-    return await apiRequest<{ success: boolean; message?: string }>('/api/company/whatsapp/connect', {
-      method: 'POST',
-      body: payload,
-    })
-  } catch (e) {
-    return handleApiError(e)
-  }
+export async function connectWhatsApp(_payload: ConnectWhatsAppPayload): Promise<{ success: boolean; message?: string }> {
+  return { success: false, message: 'Manual WhatsApp connection is disabled. Use Connect with Facebook.' }
 }
 
 /** WhatsApp connection status from backend */
@@ -871,6 +859,14 @@ export interface WhatsAppStatus {
   connected: boolean
   phoneNumberId: string | null
   displayPhoneNumber: string | null
+  onboardingStatus?: string | null
+  displayNameStatus?: string | null
+  qualityRating?: string | null
+  webhookSubscribed?: boolean
+  phoneRegistered?: boolean
+  onboardingError?: string | null
+  embeddedSignupEnabled?: boolean
+  webhookUrl?: string | null
 }
 
 export interface WhatsAppEmbeddedConfig {
@@ -878,14 +874,27 @@ export interface WhatsAppEmbeddedConfig {
   appId: string | null
   configId: string | null
   graphVersion: string
+  enableCoexist?: boolean
+  webhookUrl?: string | null
+}
+
+export interface WhatsAppTemplate {
+  id: string
+  metaTemplateId?: string | null
+  name: string
+  language: string
+  category: string
+  status: string
+  bodyPreview?: string | null
+  rejectionReason?: string | null
+  updatedAt?: string | null
 }
 
 export interface CompleteEmbeddedSignupPayload {
-  code?: string
+  code: string
   phoneNumberId?: string
   whatsappBusinessAccountId?: string
   displayPhoneNumber?: string
-  accessToken?: string
 }
 
 export async function getWhatsAppStatus(): Promise<WhatsAppStatus> {
@@ -912,9 +921,66 @@ export async function disconnectWhatsApp(): Promise<{ success: boolean; message?
 export async function getWhatsAppEmbeddedConfig(): Promise<WhatsAppEmbeddedConfig> {
   if (useMockApi()) {
     await delay(200)
-    return { enabled: false, appId: null, configId: null, graphVersion: 'v21.0' }
+    return { enabled: false, appId: null, configId: null, graphVersion: 'v22.0' }
   }
   return apiRequest<WhatsAppEmbeddedConfig>('/api/company/whatsapp/embedded/config', { method: 'GET' })
+}
+
+export async function listWhatsAppTemplates(): Promise<WhatsAppTemplate[]> {
+  if (useMockApi()) return []
+  return apiRequest<WhatsAppTemplate[]>('/api/company/whatsapp/templates', { method: 'GET' })
+}
+
+export async function createWhatsAppTemplate(payload: {
+  name: string
+  body: string
+  language?: string
+  category?: 'utility' | 'marketing' | 'authentication'
+}): Promise<{ success: boolean; message?: string; template?: WhatsAppTemplate }> {
+  if (useMockApi()) return { success: true, message: 'Template submitted.' }
+  try {
+    return await apiRequest('/api/company/whatsapp/templates', { method: 'POST', body: payload })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncWhatsAppTemplates(): Promise<{ success: boolean; message?: string; count?: number }> {
+  if (useMockApi()) return { success: true, message: 'Synced.', count: 0 }
+  try {
+    return await apiRequest('/api/company/whatsapp/templates/sync', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteWhatsAppTemplate(id: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) return { success: true, message: 'Deleted.' }
+  try {
+    return await apiRequest(`/api/company/whatsapp/templates/${id}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface AdminWhatsAppConnection {
+  id: string
+  companyId: string
+  companyName?: string
+  companyEmail?: string
+  displayPhoneNumber?: string | null
+  status: string
+  onboardingStatus?: string
+  onboardingError?: string | null
+  connectedAt?: string | null
+}
+
+export async function getAdminWhatsAppConnections(): Promise<{
+  connections: AdminWhatsAppConnection[]
+  platform: { embeddedSignupEnabled: boolean; webhookUrl: string; graphVersion: string }
+}> {
+  if (useMockApi()) return { connections: [], platform: { embeddedSignupEnabled: false, webhookUrl: '', graphVersion: 'v22.0' } }
+  return apiRequest('/api/admin/whatsapp/connections', { method: 'GET' })
 }
 
 export async function completeWhatsAppEmbeddedSignup(
@@ -1522,6 +1588,13 @@ export interface PlatformSettings {
   fromName?: string | null
   whatsappWebhookVerifyToken?: string | null
   metaAppSecret?: string | null
+  whatsappEmbeddedAppId?: string | null
+  whatsappEmbeddedConfigId?: string | null
+  whatsappEmbeddedAppSecret?: string | null
+  whatsappEmbeddedRedirectUri?: string | null
+  whatsappEnableCoexist?: boolean
+  whatsappWebhookUrl?: string | null
+  whatsappEmbeddedSignupReady?: boolean
   openaiApiKey?: string | null
   openaiModel?: string | null
   openaiMaxTokens?: number | null
@@ -1563,6 +1636,11 @@ export interface UpdatePlatformSettingsData {
   fromName?: string
   whatsappWebhookVerifyToken?: string
   metaAppSecret?: string
+  whatsappEmbeddedAppId?: string
+  whatsappEmbeddedConfigId?: string
+  whatsappEmbeddedAppSecret?: string
+  whatsappEmbeddedRedirectUri?: string
+  whatsappEnableCoexist?: boolean
   openaiApiKey?: string
   openaiModel?: string
   openaiMaxTokens?: number

@@ -23,19 +23,31 @@ When email verification is **off** (default), registrations auto-verify and user
 
 ## Integrations tab
 
-### WhatsApp (platform)
+### WhatsApp (platform — configure once)
+
+Super admin sets up **one Meta app** for the entire platform. Companies never touch Meta Developer Console.
 
 | Setting | Description |
 |---------|-------------|
 | Webhook verify token | Must match Meta App → WhatsApp → Configuration |
-| Meta App Secret | Validates webhook POST signatures (recommended) |
-| Embedded Signup App ID | For company self-service WhatsApp connect |
-| Embedded Config ID | Meta embedded signup configuration |
-| Default access token | Fallback for testing |
+| Meta App Secret | Validates webhook POST signatures (required in production) |
+| Embedded Signup App ID | Your Meta Business app ID |
+| Embedded Signup Config ID | From Embedded Signup Builder (v4) |
+| Embedded App Secret | Used server-side to exchange OAuth codes |
+| OAuth redirect URI | Whitelist in Meta; default `{APP_URL}/dashboard/settings` |
+| Enable coexist | Allow numbers already on WhatsApp Business mobile app |
 
-**Webhook URL (Meta):** `https://your-backend.com/api/whatsapp/webhook`
+**Webhook URL (set in Meta once):** `https://your-domain.com/api/whatsapp/webhook`
 
-One webhook serves all companies; backend routes by `phone_number_id`.
+When a company completes **Connect with Facebook**, the platform automatically:
+
+1. Exchanges the OAuth code for a business token  
+2. Subscribes webhooks on their WABA  
+3. Registers their phone for Cloud API  
+
+Monitor all connections at **Admin → WhatsApp** (`/admin/whatsapp`).
+
+**Meta requirements (one-time for Savit):** Business verification, App Review (`whatsapp_business_messaging` + `whatsapp_business_management`), Tech Provider access verification. Companies must add a payment method to their WABA (unless you are a Solution Partner with shared billing).
 
 ### OpenAI
 

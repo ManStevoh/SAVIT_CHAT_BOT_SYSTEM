@@ -41,12 +41,16 @@ import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode } from "@/lib/format-cu
 import { useSWRConfig } from "swr"
 import {
   updateSettings,
-  connectWhatsApp,
   getWhatsAppStatus,
   disconnectWhatsApp,
   getWhatsAppEmbeddedConfig,
   completeWhatsAppEmbeddedSignup,
+  listWhatsAppTemplates,
+  createWhatsAppTemplate,
+  syncWhatsAppTemplates,
+  deleteWhatsAppTemplate,
   type WhatsAppStatus,
+  type WhatsAppTemplate,
 } from "@/lib/api-actions"
 import { getTimezoneGroups, getTimezoneOptions } from "@/lib/timezones"
 
@@ -104,12 +108,22 @@ export default function SettingsPage() {
 
   const [waStatus, setWaStatus] = useState<WhatsAppStatus | null>(null)
   const [waLoading, setWaLoading] = useState(false)
-  const [waConnectLoading, setWaConnectLoading] = useState(false)
-  const [waPhoneNumberId, setWaPhoneNumberId] = useState("")
-  const [waAccessToken, setWaAccessToken] = useState("")
-  const [waDisplayNumber, setWaDisplayNumber] = useState("")
   const [waMessage, setWaMessage] = useState<string | null>(null)
   const [waEmbeddedLoading, setWaEmbeddedLoading] = useState(false)
+  const [waTemplates, setWaTemplates] = useState<WhatsAppTemplate[]>([])
+  const [tplName, setTplName] = useState("")
+  const [tplBody, setTplBody] = useState("")
+  const [tplCategory, setTplCategory] = useState<"utility" | "marketing" | "authentication">("utility")
+  const [tplLoading, setTplLoading] = useState(false)
+
+  const loadWhatsAppTemplates = async () => {
+    try {
+      const items = await listWhatsAppTemplates()
+      setWaTemplates(items)
+    } catch {
+      setWaTemplates([])
+    }
+  }
 
   const loadWhatsAppStatus = async () => {
     setWaLoading(true)
@@ -182,25 +196,11 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    if (activeTab === "whatsapp") loadWhatsAppStatus()
-  }, [activeTab])
-
-  const handleWhatsAppConnect = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setWaMessage(null)
-    setWaConnectLoading(true)
-    const result = await connectWhatsApp({
-      phoneNumberId: waPhoneNumberId.trim(),
-      accessToken: waAccessToken.trim(),
-      displayPhoneNumber: waDisplayNumber.trim() || undefined,
-    })
-    setWaConnectLoading(false)
-    setWaMessage(result.message ?? (result.success ? "Connected." : "Failed."))
-    if (result.success) {
-      setWaAccessToken("")
+    if (activeTab === "whatsapp") {
       loadWhatsAppStatus()
+      loadWhatsAppTemplates()
     }
-  }
+  }, [activeTab])
 
   const handleWhatsAppDisconnect = async () => {
     setWaMessage(null)
@@ -234,6 +234,11 @@ export default function SettingsPage() {
       })
 
       const finishPromise = waitForEmbeddedSignupFinish()
+      const loginExtras: Record<string, unknown> = { setup: {} }
+      if (cfg.enableCoexist) {
+        loginExtras.feature_type = "coex"
+      }
+
       const code = await new Promise<string | null>((resolve) => {
         window.FB?.login(
           (response) => {
@@ -243,25 +248,26 @@ export default function SettingsPage() {
             config_id: cfg.configId,
             response_type: "code",
             override_default_response_type: true,
-            extras: { setup: {} },
+            extras: loginExtras,
           }
         )
       })
       const finishData = await finishPromise
 
-      if (!code && !finishData?.phoneNumberId) {
-        setWaMessage("Signup was cancelled or no data was returned.")
+      if (!code) {
+        setWaMessage("Signup was cancelled or Meta did not return an authorization code.")
         return
       }
 
       const result = await completeWhatsAppEmbeddedSignup({
-        code: code ?? undefined,
+        code,
         phoneNumberId: finishData?.phoneNumberId,
         whatsappBusinessAccountId: finishData?.whatsappBusinessAccountId,
       })
       setWaMessage(result.message ?? (result.success ? "WhatsApp connected via embedded signup." : "Failed to connect."))
       if (result.success) {
         await loadWhatsAppStatus()
+        await loadWhatsAppTemplates()
       }
     } catch (e) {
       setWaMessage(e instanceof Error ? e.message : "Embedded signup failed.")
@@ -626,19 +632,20 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* WhatsApp Setup — Meta Cloud API */}
         <TabsContent value="whatsapp">
           <Card>
             <CardHeader>
-              <CardTitle>WhatsApp Business (Meta Cloud API)</CardTitle>
-              <CardDescription>Connect your WhatsApp Business number to receive and send messages. Get Phone Number ID and Access Token from Meta for Developers.</CardDescription>
+              <CardTitle>WhatsApp Business</CardTitle>
+              <CardDescription>
+                Connect your WhatsApp number in one click. Your platform administrator has already configured Meta — you only need to sign in with Facebook and verify your number.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {waLoading && !waStatus ? (
                 <p className="text-sm text-muted-foreground">Loading status…</p>
               ) : waStatus?.connected ? (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="default" className="gap-1">
                       <Check className="h-3 w-3" />
                       Connected
@@ -646,16 +653,17 @@ export default function SettingsPage() {
                     {waStatus.displayPhoneNumber && (
                       <span className="text-sm text-muted-foreground">{waStatus.displayPhoneNumber}</span>
                     )}
-                    {waStatus.phoneNumberId && (
-                      <span className="text-xs text-muted-foreground">ID: {waStatus.phoneNumberId}</span>
+                    {waStatus.qualityRating && (
+                      <Badge variant="outline">Quality: {waStatus.qualityRating}</Badge>
+                    )}
+                    {waStatus.displayNameStatus && (
+                      <Badge variant="outline">Display name: {waStatus.displayNameStatus}</Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Webhook URL (set in Meta App → WhatsApp → Configuration):{" "}
-                    <code className="rounded bg-muted px-1">
-                      {(import.meta.env.VITE_API_URL as string | undefined) ?? window.location.origin}/api/whatsapp/webhook
-                    </code>
-                  </p>
+                  <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                    <p>Webhook subscribed: {waStatus.webhookSubscribed ? "Yes" : "No"}</p>
+                    <p>Phone registered: {waStatus.phoneRegistered ? "Yes" : "No"}</p>
+                  </div>
                   {whatsappNumbers.length > 0 && (
                     <div className="rounded-lg border border-border p-3 space-y-2">
                       <p className="text-sm font-medium text-foreground">Connected numbers</p>
@@ -672,67 +680,127 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-5">
-                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-                    <p className="text-sm font-medium text-foreground">Recommended: One-click Meta signup (OTP inside Meta)</p>
-                    <p className="text-sm text-muted-foreground">
-                      Click connect, sign into Facebook, select/create your WhatsApp Business account, then verify your number by OTP.
-                      Once Meta confirms, your number is linked here automatically.
-                    </p>
-                    <Button type="button" onClick={handleEmbeddedSignup} disabled={waEmbeddedLoading}>
-                      {waEmbeddedLoading ? "Opening Meta signup…" : "Connect with Facebook"}
-                    </Button>
-                  </div>
-
-                  <div className="rounded-lg border border-border p-4 space-y-2">
-                    <p className="text-sm font-medium text-foreground">Need help? Quick checklist</p>
-                    <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
-                      <li>Use a phone number that can receive SMS/voice OTP.</li>
-                      <li>Do not use a number already connected to another WhatsApp API provider.</li>
-                      <li>Finish all Meta popup steps without closing the window.</li>
-                      <li>If popup blocks, allow popups for this site and retry.</li>
-                    </ul>
-                  </div>
-
-                  <div className="pt-1">
-                    <p className="text-sm font-medium text-foreground mb-3">Fallback: Manual connect</p>
-                    <form onSubmit={handleWhatsAppConnect} className="space-y-4">
-                      <Field>
-                        <FieldLabel>Phone Number ID</FieldLabel>
-                        <Input
-                          placeholder="From Meta App → WhatsApp → API Setup"
-                          value={waPhoneNumberId}
-                          onChange={(e) => setWaPhoneNumberId(e.target.value)}
-                          required
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel>Access Token</FieldLabel>
-                        <Input
-                          type="password"
-                          placeholder="Permanent token from Meta"
-                          value={waAccessToken}
-                          onChange={(e) => setWaAccessToken(e.target.value)}
-                          required
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel>Display phone (optional)</FieldLabel>
-                        <Input
-                          placeholder="e.g. +201234567890"
-                          value={waDisplayNumber}
-                          onChange={(e) => setWaDisplayNumber(e.target.value)}
-                        />
-                      </Field>
-                      <Button type="submit" disabled={waConnectLoading}>
-                        {waConnectLoading ? "Connecting…" : "Connect manually"}
+                  {!waStatus?.embeddedSignupEnabled ? (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground">
+                      WhatsApp signup is not configured yet. Ask your platform administrator to complete Meta Embedded Signup in Admin → Settings → Integrations.
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                      <p className="text-sm font-medium text-foreground">Connect with Facebook</p>
+                      <p className="text-sm text-muted-foreground">
+                        Sign in with Facebook, select or create your WhatsApp Business account, and verify your phone number with OTP. No Meta Developer setup required on your side.
+                      </p>
+                      <Button type="button" onClick={handleEmbeddedSignup} disabled={waEmbeddedLoading}>
+                        {waEmbeddedLoading ? "Opening Meta signup…" : "Connect with Facebook"}
                       </Button>
-                    </form>
+                    </div>
+                  )}
+                  <div className="rounded-lg border border-border p-4 space-y-2">
+                    <p className="text-sm font-medium text-foreground">Before you connect</p>
+                    <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                      <li>Use a number that can receive SMS or voice OTP.</li>
+                      <li>Do not use a number already linked to another WhatsApp API provider.</li>
+                      <li>Add a payment method to your WhatsApp Business account in Meta when prompted (required for messaging).</li>
+                      <li>Finish all Meta popup steps without closing the window.</li>
+                    </ul>
                   </div>
                 </div>
               )}
               {waMessage && <p className="text-sm text-muted-foreground">{waMessage}</p>}
+              {waStatus?.onboardingError && (
+                <p className="text-sm text-destructive">{waStatus.onboardingError}</p>
+              )}
             </CardContent>
           </Card>
+
+          {waStatus?.connected && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Message templates</CardTitle>
+                <CardDescription>
+                  Create and sync WhatsApp message templates for outbound marketing and notifications (Meta approval required).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" disabled={tplLoading} onClick={async () => {
+                    setTplLoading(true)
+                    const res = await syncWhatsAppTemplates()
+                    setTplLoading(false)
+                    setWaMessage(res.message ?? null)
+                    if (res.success) await loadWhatsAppTemplates()
+                  }}>
+                    Sync from Meta
+                  </Button>
+                </div>
+                <form className="space-y-3 border rounded-lg p-4" onSubmit={async (e) => {
+                  e.preventDefault()
+                  setTplLoading(true)
+                  const res = await createWhatsAppTemplate({ name: tplName, body: tplBody, category: tplCategory })
+                  setTplLoading(false)
+                  setWaMessage(res.message ?? null)
+                  if (res.success) {
+                    setTplName("")
+                    setTplBody("")
+                    await loadWhatsAppTemplates()
+                  }
+                }}>
+                  <Field>
+                    <FieldLabel>Template name</FieldLabel>
+                    <Input value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="order_update" required />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Category</FieldLabel>
+                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={tplCategory} onChange={(e) => setTplCategory(e.target.value as typeof tplCategory)}>
+                      <option value="utility">Utility</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="authentication">Authentication</option>
+                    </select>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Body text</FieldLabel>
+                    <Textarea value={tplBody} onChange={(e) => setTplBody(e.target.value)} placeholder="Hello {{1}}, your order is ready." required rows={3} />
+                  </Field>
+                  <Button type="submit" disabled={tplLoading}>{tplLoading ? "Submitting…" : "Submit to Meta"}</Button>
+                </form>
+                {waTemplates.length > 0 ? (
+                  <div className="rounded-lg border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {waTemplates.map((t) => (
+                          <TableRow key={t.id}>
+                            <TableCell>
+                              <div className="font-medium">{t.name}</div>
+                              <div className="text-xs text-muted-foreground truncate max-w-xs">{t.bodyPreview}</div>
+                            </TableCell>
+                            <TableCell><Badge variant={t.status === "approved" ? "default" : "secondary"}>{t.status}</Badge></TableCell>
+                            <TableCell>{t.category}</TableCell>
+                            <TableCell className="text-right">
+                              <Button type="button" variant="ghost" size="sm" onClick={async () => {
+                                const res = await deleteWhatsAppTemplate(t.id)
+                                setWaMessage(res.message ?? null)
+                                if (res.success) await loadWhatsAppTemplates()
+                              }}>Delete</Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No templates yet. Create one or sync from Meta.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* AI Settings — PUT /api/company/settings */}

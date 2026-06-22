@@ -33,6 +33,7 @@ const navigationMain = [
 
 const navigationConfig = [
   { name: "Settings", href: "/admin/settings", icon: Settings, subtitle: "APIs, email, security" },
+  { name: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare, subtitle: "Company connections" },
   { name: "Payment Gateways", href: "/admin/payment-gateways", icon: Wallet, subtitle: "Stripe, M-Pesa" },
 ]
 

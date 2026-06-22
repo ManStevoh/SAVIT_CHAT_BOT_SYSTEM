@@ -1,55 +1,60 @@
-# WhatsApp Embedded Signup (Shared Super Admin App)
+# WhatsApp Embedded Signup (Platform-Wide)
 
-This setup enables self-service onboarding where each company connects their own number using Meta's popup flow, while all numbers are managed under one shared platform Meta app.
+One Meta app serves all companies. Super admin configures once; companies connect via **Connect with Facebook**.
 
-## 1) Environment variables (backend)
+## Super admin setup
 
-Set these in `LARAVEL_BACKEND/.env`:
+**Admin → Settings → Integrations** (or env fallbacks in `.env`):
 
-- `WHATSAPP_EMBEDDED_APP_ID` - Meta app id used by the frontend SDK popup.
-- `WHATSAPP_EMBEDDED_CONFIG_ID` - WhatsApp Embedded Signup configuration id from Meta.
-- `WHATSAPP_EMBEDDED_APP_SECRET` - app secret used for code exchange fallback.
-- `WHATSAPP_EMBEDDED_REDIRECT_URI` - redirect URI configured in Meta for code exchange.
-- `WHATSAPP_DEFAULT_ACCESS_TOKEN` - platform token used to send messages for connected numbers.
+| Setting | Description |
+|---------|-------------|
+| Webhook verify token | Meta App → WhatsApp → Configuration |
+| Meta App Secret | Webhook signature validation |
+| Embedded Signup App ID | Meta Business app ID |
+| Embedded Signup Config ID | Embedded Signup Builder (v4) |
+| Embedded App Secret | Server-side OAuth code exchange |
+| OAuth redirect URI | Whitelist in Meta (default: `{APP_URL}/dashboard/settings`) |
+| Enable coexist | Numbers already on WhatsApp Business mobile app |
 
-Existing required settings still apply:
+**Webhook URL (Meta):** `https://YOUR_DOMAIN/api/whatsapp/webhook`
 
-- `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
-- `META_APP_SECRET`
+Monitor connections: **Admin → WhatsApp** (`/admin/whatsapp`)
 
-## 2) Meta app checklist (Super Admin)
+## Meta one-time requirements (Savit)
 
-1. Open your shared Meta app.
-2. Add WhatsApp product and configure Embedded Signup.
-3. Enable required permissions for WhatsApp management/messaging.
-4. Set webhook callback to:
-   - `https://YOUR_API_DOMAIN/api/whatsapp/webhook`
-5. Subscribe webhook to `messages`.
-6. Ensure app mode/review requirements are complete for production onboarding.
+1. Business verification  
+2. App Review: `whatsapp_business_messaging`, `whatsapp_business_management`  
+3. Tech Provider / Access Verification  
+4. Embedded Signup v4 before Oct 15, 2026  
 
-## 3) Company onboarding flow (in-app)
+## Company flow
 
-1. Company opens `Dashboard -> Settings -> WhatsApp Setup`.
-2. Clicks **Connect with Facebook**.
-3. Completes popup steps:
-   - Login to Facebook
-   - Select/create WhatsApp Business Account
-   - Add phone number
-   - Complete OTP verification
-4. App stores `phone_number_id` and `waba_id` to company record.
-5. Status changes to Connected.
+1. **Connect with Facebook** in Dashboard → Settings → WhatsApp  
+2. Complete Meta popup (WABA + phone + OTP)  
+3. Backend automatically:
+   - Exchanges OAuth `code` → business token  
+   - `POST /{WABA_ID}/subscribed_apps`  
+   - `POST /{PHONE_NUMBER_ID}/register`  
+4. Company can message immediately (after WABA payment method added)
 
-## 4) API endpoints added
+## API endpoints
 
-- `GET /api/company/whatsapp/embedded/config`
-- `POST /api/company/whatsapp/embedded/complete`
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/company/whatsapp/embedded/config` | Frontend SDK config |
+| POST | `/api/company/whatsapp/embedded/complete` | Finish onboarding |
+| GET | `/api/company/whatsapp/status` | Connection health |
+| POST | `/api/company/whatsapp/disconnect` | Unsubscribe + deactivate |
+| GET | `/api/company/whatsapp/templates` | List templates |
+| POST | `/api/company/whatsapp/templates` | Create template |
+| POST | `/api/company/whatsapp/templates/sync` | Sync from Meta |
+| GET | `/api/admin/whatsapp/connections` | Admin monitor |
 
-Manual fallback remains available:
+Manual token connect (`POST /api/company/whatsapp/connect`) is **disabled**.
 
-- `POST /api/company/whatsapp/connect`
+## Troubleshooting
 
-## 5) Troubleshooting
-
-- "Embedded signup is not enabled": missing app/config id env variables.
-- "Phone Number ID not received": retry flow; user may have closed popup early.
-- Connected but no messages sent: verify queue worker, webhook subscription, and token validity.
+- **Embedded signup not enabled** — missing App ID, Config ID, or App Secret in admin settings  
+- **Webhook subscription failed** — check verify token and app permissions  
+- **Phone register failed** — number may be on another BSP; try coexist mode  
+- **No inbound messages** — confirm webhook URL in Meta app; check `meta_app_secret` in production  

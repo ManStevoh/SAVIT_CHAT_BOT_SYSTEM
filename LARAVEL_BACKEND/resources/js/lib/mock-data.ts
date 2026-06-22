@@ -206,6 +206,9 @@ export interface Company {
   growthDemoMode?: boolean
   growthPilotSince?: string | null
   industry?: string
+  whatsappConnected?: boolean
+  whatsappDisplayPhone?: string | null
+  whatsappOnboardingStatus?: string | null
 }
 
 export interface User {

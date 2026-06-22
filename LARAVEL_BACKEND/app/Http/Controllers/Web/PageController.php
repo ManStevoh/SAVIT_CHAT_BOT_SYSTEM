@@ -138,6 +138,11 @@ class PageController extends Controller
         return Inertia::render('admin/settings/page');
     }
 
+    public function adminWhatsApp(): Response
+    {
+        return Inertia::render('admin/whatsapp/page');
+    }
+
     public function adminSubscriptions(): Response
     {
         return Inertia::render('admin/subscriptions/page');

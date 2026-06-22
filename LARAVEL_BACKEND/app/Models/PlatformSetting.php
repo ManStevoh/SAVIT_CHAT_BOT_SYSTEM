@@ -30,6 +30,11 @@ class PlatformSetting extends Model
         'mail_from_name',
         'whatsapp_webhook_verify_token',
         'meta_app_secret',
+        'whatsapp_embedded_app_id',
+        'whatsapp_embedded_config_id',
+        'whatsapp_embedded_app_secret',
+        'whatsapp_embedded_redirect_uri',
+        'whatsapp_enable_coexist',
         'openai_api_key',
         'openai_model',
         'openai_max_tokens',
@@ -52,6 +57,7 @@ class PlatformSetting extends Model
         'maintenance_mode' => 'boolean',
         'allow_new_registrations' => 'boolean',
         'require_email_verification' => 'boolean',
+        'whatsapp_enable_coexist' => 'boolean',
         'smtp_port' => 'integer',
         'require_2fa' => 'boolean',
         'ip_allowlist_enabled' => 'boolean',
@@ -69,6 +75,7 @@ class PlatformSetting extends Model
     protected $hidden = [
         'smtp_password',
         'meta_app_secret',
+        'whatsapp_embedded_app_secret',
         'openai_api_key',
     ];
 

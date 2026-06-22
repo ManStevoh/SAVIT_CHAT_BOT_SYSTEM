@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\WhatsAppAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +14,10 @@ class CompanyController extends Controller
     private function companyToArray(Company $c): array
     {
         $c->loadCount(['chats', 'orders']);
+        $wa = WhatsAppAccount::where('company_id', $c->id)
+            ->where('status', 'active')
+            ->first();
+
         return [
             'id' => (string) $c->id,
             'name' => $c->name,
@@ -28,6 +33,9 @@ class CompanyController extends Controller
             'isGrowthPilot' => (bool) $c->growth_pilot_at,
             'growthDemoMode' => (bool) $c->growth_demo_mode,
             'growthPilotSince' => $c->growth_pilot_at?->toIso8601String(),
+            'whatsappConnected' => (bool) $wa,
+            'whatsappDisplayPhone' => $wa?->display_phone_number,
+            'whatsappOnboardingStatus' => $wa?->onboarding_status,
         ];
     }
 

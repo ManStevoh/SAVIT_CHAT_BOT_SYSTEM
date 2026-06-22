@@ -216,6 +216,14 @@ export default function AdminSettingsPage() {
       const res = await updatePlatformSettings({
         whatsappWebhookVerifyToken: settings.whatsappWebhookVerifyToken ?? undefined,
         metaAppSecret: settings.metaAppSecret && settings.metaAppSecret !== "********" ? settings.metaAppSecret : undefined,
+        whatsappEmbeddedAppId: settings.whatsappEmbeddedAppId ?? undefined,
+        whatsappEmbeddedConfigId: settings.whatsappEmbeddedConfigId ?? undefined,
+        whatsappEmbeddedAppSecret:
+          settings.whatsappEmbeddedAppSecret && settings.whatsappEmbeddedAppSecret !== "********"
+            ? settings.whatsappEmbeddedAppSecret
+            : undefined,
+        whatsappEmbeddedRedirectUri: settings.whatsappEmbeddedRedirectUri ?? undefined,
+        whatsappEnableCoexist: settings.whatsappEnableCoexist ?? false,
         openaiApiKey: settings.openaiApiKey && settings.openaiApiKey !== "********" ? settings.openaiApiKey : undefined,
         openaiModel: settings.openaiModel ?? undefined,
         openaiMaxTokens: settings.openaiMaxTokens ?? undefined,
@@ -717,10 +725,22 @@ export default function AdminSettingsPage() {
             <CardHeader>
               <CardTitle>WhatsApp &amp; OpenAI</CardTitle>
               <CardDescription>
-                Stored in database and used for webhook verification and AI replies. Leave secrets blank to keep existing.
+                Configure the platform Meta app once. Companies connect via Embedded Signup — they never need Meta Developer access.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+                <p className="font-medium text-foreground">Webhook URL (set in Meta App → WhatsApp → Configuration)</p>
+                <code className="block break-all rounded bg-background px-2 py-1 text-xs">
+                  {settings?.whatsappWebhookUrl ?? `${typeof window !== "undefined" ? window.location.origin : ""}/api/whatsapp/webhook`}
+                </code>
+                <p className="text-muted-foreground">
+                  Embedded signup ready:{" "}
+                  <strong>{settings?.whatsappEmbeddedSignupReady ? "Yes" : "No"}</strong>
+                  {" · "}
+                  Graph API: v22.0 (Embedded Signup v4)
+                </p>
+              </div>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="whatsappWebhookVerifyToken">WhatsApp webhook verify token</FieldLabel>
@@ -739,6 +759,53 @@ export default function AdminSettingsPage() {
                     value={settings?.metaAppSecret ?? ""}
                     onChange={(e) => updateSetting("metaAppSecret", e.target.value)}
                     placeholder="Leave blank to keep existing"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="whatsappEmbeddedAppId">Meta App ID (Embedded Signup)</FieldLabel>
+                  <Input
+                    id="whatsappEmbeddedAppId"
+                    value={settings?.whatsappEmbeddedAppId ?? ""}
+                    onChange={(e) => updateSetting("whatsappEmbeddedAppId", e.target.value)}
+                    placeholder="From Meta App Dashboard"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="whatsappEmbeddedConfigId">Embedded Signup Config ID (v4)</FieldLabel>
+                  <Input
+                    id="whatsappEmbeddedConfigId"
+                    value={settings?.whatsappEmbeddedConfigId ?? ""}
+                    onChange={(e) => updateSetting("whatsappEmbeddedConfigId", e.target.value)}
+                    placeholder="From Embedded Signup Builder"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="whatsappEmbeddedAppSecret">Meta App Secret (for token exchange)</FieldLabel>
+                  <Input
+                    id="whatsappEmbeddedAppSecret"
+                    type="password"
+                    value={settings?.whatsappEmbeddedAppSecret ?? ""}
+                    onChange={(e) => updateSetting("whatsappEmbeddedAppSecret", e.target.value)}
+                    placeholder="Leave blank to keep existing"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="whatsappEmbeddedRedirectUri">OAuth redirect URI</FieldLabel>
+                  <Input
+                    id="whatsappEmbeddedRedirectUri"
+                    value={settings?.whatsappEmbeddedRedirectUri ?? ""}
+                    onChange={(e) => updateSetting("whatsappEmbeddedRedirectUri", e.target.value)}
+                    placeholder="https://your-domain.com/dashboard/settings"
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Enable WhatsApp Business app coexistence</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Allow numbers already on WhatsApp Business mobile app (coex flow).</p>
+                  </div>
+                  <Switch
+                    checked={settings?.whatsappEnableCoexist ?? false}
+                    onCheckedChange={(v) => updateSetting("whatsappEnableCoexist", v)}
                   />
                 </Field>
                 <Field>

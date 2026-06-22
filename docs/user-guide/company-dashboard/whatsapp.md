@@ -8,81 +8,51 @@ nav_order: 18
 
 **URL:** `/dashboard/settings` (WhatsApp tab)
 
-Connect your WhatsApp Business number so the platform can receive and send messages on your behalf.
+Connect your WhatsApp Business number in one click. **You do not need a Meta Developer account** — your platform administrator has already configured Meta for everyone.
 
-## What you need from Meta
+## How to connect
 
-Before connecting, set up a Meta Developer app with WhatsApp product:
+1. Go to **Settings → WhatsApp Setup**
+2. Click **Connect with Facebook**
+3. Sign in with Facebook / Meta
+4. Select or create your WhatsApp Business account
+5. Add your phone number and complete OTP verification
+6. Add a payment method to your WhatsApp Business account when Meta prompts you (required for messaging)
 
-1. [Meta for Developers](https://developers.facebook.com/) account
-2. WhatsApp Business Account (WABA)
-3. **Phone Number ID** — from WhatsApp → API Setup
-4. **Permanent Access Token** — system user or long-lived token
+When finished, status shows **Connected** with your display number.
 
-Platform admin must configure the shared webhook (see Super Admin docs). Your company only connects **your number**.
+The platform automatically subscribes webhooks and registers your number — no manual tokens or webhook setup.
 
-## Connection methods
+## Message templates
 
-### Method 1: Manual connect
+After connecting, use the **Message templates** section on the same tab to:
 
-1. Go to **Settings → WhatsApp**
-2. Enter **Phone Number ID**
-3. Enter **Access Token**
-4. Optional: display phone number, WABA ID
-5. Click **Connect**
-6. Status should show **Connected** with your number
-
-### Method 2: Embedded Signup (if enabled)
-
-1. Click **Connect with Meta**
-2. Complete Meta's embedded signup flow in popup
-3. Select your WhatsApp Business account and phone number
-4. Platform stores credentials automatically
-
-Requires platform admin to configure `WHATSAPP_EMBEDDED_*` credentials.
+- **Sync from Meta** — pull approved templates
+- **Submit to Meta** — create utility/marketing/authentication templates (Meta approval required)
 
 ## Verify connection
 
 | Check | Expected |
 |-------|----------|
 | Dashboard status | Green "Connected" badge |
-| API status endpoint | `connected: true`, correct phoneNumberId |
+| Webhook subscribed | Yes |
+| Phone registered | Yes |
 | Test message | Send "Hi" from personal WhatsApp → receive greeting |
 
 ## Disconnect
 
-Click **Disconnect** to remove WhatsApp credentials. Bot stops replying; existing chat history remains.
-
-## What platform admin configures (not you)
-
-| Setting | Why platform-wide |
-|---------|-------------------|
-| Webhook URL | One URL for all companies: `/api/whatsapp/webhook` |
-| Webhook verify token | Meta verification |
-| Meta App Secret | Webhook signature validation |
-| OpenAI API key | Shared AI provider |
+Click **Disconnect** to unsubscribe webhooks and deactivate the number. Chat history remains.
 
 ## Troubleshooting
 
-### No auto-reply after connecting
-
-Check in order:
-
-1. **Queue worker running** on server (`php artisan queue:work`) — most common production issue
-2. **Auto-reply enabled** in Settings → AI
-3. **Active subscription** — expired plans show unavailable message
-4. **Meta webhook** subscribed to "messages" with correct callback URL
-5. **Meta App Secret** matches between admin settings and Meta app
-6. **Escalation keywords** — message contains "agent"/"human" skips bot
-
-### Wrong company receives messages
-
-Phone Number ID must match the number registered in Meta. Each company has unique `phone_number_id` in database.
-
-### Messages in dashboard but not sent to customer
-
-Check Laravel logs for WhatsApp send API errors (invalid token, expired token, rate limits).
+| Issue | Fix |
+|-------|-----|
+| "Embedded signup is not enabled" | Ask platform admin to complete Admin → Settings → Integrations |
+| Popup blocked | Allow popups for this site |
+| OTP not received | Use a number that can receive SMS/voice; avoid numbers on another API provider |
+| Connected but no replies | Ensure queue worker runs; check AI auto-reply is on; verify subscription is active |
+| Template rejected | Read rejection reason; edit and resubmit |
 
 ## Security
 
-Access tokens are **encrypted** in the database. Rotate tokens in Meta if compromised, then reconnect in dashboard.
+Access tokens are encrypted per company. If compromised, disconnect and reconnect via Facebook.

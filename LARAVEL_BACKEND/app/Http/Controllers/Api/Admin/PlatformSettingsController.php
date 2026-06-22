@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformSetting;
 use App\Services\MailService;
+use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -50,6 +51,13 @@ class PlatformSettingsController extends Controller
             'fromName' => $data['mail_from_name'] ?? null,
             'whatsappWebhookVerifyToken' => $this->maskSecret($settings, 'whatsapp_webhook_verify_token'),
             'metaAppSecret' => $this->maskSecret($settings, 'meta_app_secret'),
+            'whatsappEmbeddedAppId' => $data['whatsapp_embedded_app_id'] ?? null,
+            'whatsappEmbeddedConfigId' => $data['whatsapp_embedded_config_id'] ?? null,
+            'whatsappEmbeddedAppSecret' => $this->maskSecret($settings, 'whatsapp_embedded_app_secret'),
+            'whatsappEmbeddedRedirectUri' => $data['whatsapp_embedded_redirect_uri'] ?? null,
+            'whatsappEnableCoexist' => (bool) ($data['whatsapp_enable_coexist'] ?? false),
+            'whatsappWebhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
+            'whatsappEmbeddedSignupReady' => WhatsAppPlatformConfig::isEmbeddedSignupEnabled(),
             'openaiApiKey' => $this->maskSecret($settings, 'openai_api_key'),
             'openaiModel' => $data['openai_model'] ?? null,
             'openaiMaxTokens' => isset($data['openai_max_tokens']) ? (int) $data['openai_max_tokens'] : null,
@@ -107,6 +115,11 @@ class PlatformSettingsController extends Controller
             'fromName' => 'nullable|string|max:255',
             'whatsappWebhookVerifyToken' => 'nullable|string|max:255',
             'metaAppSecret' => 'nullable|string|max:500',
+            'whatsappEmbeddedAppId' => 'nullable|string|max:100',
+            'whatsappEmbeddedConfigId' => 'nullable|string|max:100',
+            'whatsappEmbeddedAppSecret' => 'nullable|string|max:500',
+            'whatsappEmbeddedRedirectUri' => 'nullable|string|max:500',
+            'whatsappEnableCoexist' => 'sometimes|boolean',
             'openaiApiKey' => 'nullable|string|max:500',
             'openaiModel' => 'nullable|string|max:100',
             'openaiMaxTokens' => 'nullable|integer|min:1|max:4096',
@@ -149,6 +162,11 @@ class PlatformSettingsController extends Controller
             'fromName' => 'mail_from_name',
             'whatsappWebhookVerifyToken' => 'whatsapp_webhook_verify_token',
             'metaAppSecret' => 'meta_app_secret',
+            'whatsappEmbeddedAppId' => 'whatsapp_embedded_app_id',
+            'whatsappEmbeddedConfigId' => 'whatsapp_embedded_config_id',
+            'whatsappEmbeddedAppSecret' => 'whatsapp_embedded_app_secret',
+            'whatsappEmbeddedRedirectUri' => 'whatsapp_embedded_redirect_uri',
+            'whatsappEnableCoexist' => 'whatsapp_enable_coexist',
             'openaiApiKey' => 'openai_api_key',
             'openaiModel' => 'openai_model',
             'openaiMaxTokens' => 'openai_max_tokens',
@@ -166,7 +184,7 @@ class PlatformSettingsController extends Controller
             'notifyDailySummary' => 'notify_daily_summary',
             'landingTrustedCompanies' => 'landing_trusted_companies',
         ];
-        $skipIfMasked = ['smtp_password', 'meta_app_secret', 'openai_api_key'];
+        $skipIfMasked = ['smtp_password', 'meta_app_secret', 'whatsapp_embedded_app_secret', 'openai_api_key'];
         foreach ($validated as $key => $value) {
             if ($key === 'logo') {
                 continue;
@@ -190,6 +208,7 @@ class PlatformSettingsController extends Controller
         }
 
         $settings->save();
+        WhatsAppPlatformConfig::clearCache();
 
         return response()->json([
             'success' => true,

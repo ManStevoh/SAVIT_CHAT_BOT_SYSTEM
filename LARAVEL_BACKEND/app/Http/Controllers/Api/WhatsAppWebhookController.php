@@ -8,7 +8,9 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\PlatformSetting;
 use App\Models\WhatsAppAccount;
+use App\Models\WhatsAppMessageTemplate;
 use App\Services\Growth\AttributionService;
+use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -19,15 +21,12 @@ use Illuminate\Support\Str;
 
 class WhatsAppWebhookController extends Controller
 {
-    /** Minutes to cache platform settings. */
-    private const PLATFORM_SETTINGS_CACHE_TTL = 5;
-
     /**
      * Webhook verification (GET). Meta sends hub.mode, hub.verify_token, hub.challenge.
      */
     public function verify(Request $request): Response|string
     {
-        $verifyToken = $this->getPlatformSettings()?->whatsapp_webhook_verify_token ?? config('whatsapp.webhook_verify_token');
+        $verifyToken = WhatsAppPlatformConfig::webhookVerifyToken();
         $mode = $request->query('hub_mode');
         $token = $request->query('hub_verify_token');
         $challenge = $request->query('hub_challenge');
@@ -44,7 +43,7 @@ class WhatsAppWebhookController extends Controller
      */
     public function receive(Request $request): Response
     {
-        $secret = $this->getPlatformSettings()?->meta_app_secret ?? config('whatsapp.app_secret');
+        $secret = WhatsAppPlatformConfig::metaAppSecret();
 
         if ($secret === null || $secret === '') {
             if (app()->environment('production')) {
@@ -76,6 +75,12 @@ class WhatsAppWebhookController extends Controller
                     if ($field === 'messages') {
                         $this->processMessagesValue($value);
                         $this->processStatusesValue($value);
+                    } elseif ($field === 'phone_number_name_update') {
+                        $this->processPhoneNumberNameUpdate($value);
+                    } elseif ($field === 'message_template_status_update') {
+                        $this->processTemplateStatusUpdate($value);
+                    } elseif ($field === 'account_update') {
+                        $this->processAccountUpdate($value);
                     }
                 }
             }
@@ -91,9 +96,74 @@ class WhatsAppWebhookController extends Controller
 
     protected function getPlatformSettings(): ?PlatformSetting
     {
-        return Cache::remember('platform_settings_whatsapp', self::PLATFORM_SETTINGS_CACHE_TTL * 60, function () {
-            return PlatformSetting::first();
-        });
+        return WhatsAppPlatformConfig::settings();
+    }
+
+    protected function processPhoneNumberNameUpdate(array $value): void
+    {
+        $phoneNumberId = (string) ($value['phone_number_id'] ?? $value['display_phone_number_id'] ?? '');
+        if ($phoneNumberId === '') {
+            return;
+        }
+
+        $account = WhatsAppAccount::where('phone_number_id', $phoneNumberId)->first();
+        if (! $account) {
+            return;
+        }
+
+        $decision = $value['decision'] ?? $value['event'] ?? $value['status'] ?? null;
+        if ($decision !== null) {
+            $account->update(['display_name_status' => (string) $decision]);
+        }
+    }
+
+    protected function processTemplateStatusUpdate(array $value): void
+    {
+        $templateName = (string) ($value['message_template_name'] ?? $value['name'] ?? '');
+        $language = (string) ($value['message_template_language'] ?? $value['language'] ?? 'en');
+        $status = strtolower((string) ($value['event'] ?? $value['status'] ?? ''));
+        $wabaId = (string) ($value['whatsapp_business_account_id'] ?? '');
+
+        if ($templateName === '' || $status === '') {
+            return;
+        }
+
+        $query = WhatsAppMessageTemplate::where('name', $templateName)->where('language', $language);
+        if ($wabaId !== '') {
+            $companyIds = WhatsAppAccount::where('whatsapp_business_account_id', $wabaId)->pluck('company_id');
+            $query->whereIn('company_id', $companyIds);
+        }
+
+        $template = $query->first();
+        if (! $template) {
+            return;
+        }
+
+        $template->update([
+            'status' => $status,
+            'rejection_reason' => $value['reason'] ?? $value['rejected_reason'] ?? $template->rejection_reason,
+        ]);
+    }
+
+    protected function processAccountUpdate(array $value): void
+    {
+        $phoneNumberId = (string) ($value['phone_number'] ?? $value['phone_number_id'] ?? '');
+        if ($phoneNumberId === '') {
+            return;
+        }
+
+        $account = WhatsAppAccount::where('phone_number_id', $phoneNumberId)->first();
+        if (! $account) {
+            return;
+        }
+
+        if (isset($value['event']) && str_contains(strtolower((string) $value['event']), 'disable')) {
+            $account->update([
+                'status' => 'inactive',
+                'onboarding_status' => 'suspended_by_meta',
+                'onboarding_error' => 'Account update from Meta: ' . $value['event'],
+            ]);
+        }
     }
 
     protected function rateLimitWebhook(Request $request): void
@@ -292,7 +362,7 @@ class WhatsAppWebhookController extends Controller
             return null;
         }
 
-        $graphUrl = rtrim(config('whatsapp.graph_url', 'https://graph.facebook.com/v21.0'), '/');
+        $graphUrl = WhatsAppPlatformConfig::graphUrl();
 
         try {
             $metaResponse = Http::withToken($account->access_token)

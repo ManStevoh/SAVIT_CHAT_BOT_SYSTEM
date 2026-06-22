@@ -256,6 +256,7 @@ export default function AdminCompaniesPage() {
                 <TableRow>
                   <TableHead>Company</TableHead>
                   <TableHead>Plan</TableHead>
+                  <TableHead>WhatsApp</TableHead>
                   <TableHead>Chats</TableHead>
                   <TableHead>Orders</TableHead>
                   <TableHead>Status</TableHead>
@@ -279,6 +280,15 @@ export default function AdminCompaniesPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={company.plan === "enterprise" ? "default" : "secondary"}>{company.plan}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {company.whatsappConnected ? (
+                        <Badge variant="default" className="text-xs">
+                          {company.whatsappDisplayPhone ?? "Connected"}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Not connected</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-foreground">{company.totalChats.toLocaleString()}</TableCell>
                     <TableCell className="text-foreground">{company.totalOrders.toLocaleString()}</TableCell>
