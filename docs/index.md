@@ -68,6 +68,7 @@ Growth Engine: Social Post → Attribution Link → WhatsApp → Order → Reven
 Older in-repo specs remain available for deep reference:
 
 - [Growth Engine Spec (legacy)](GROWTH_ENGINE_SPEC.md)
+- [WhatsApp Complete Setup Guide](WHATSAPP_COMPLETE_SETUP_GUIDE.md) — **start here** (Meta registration, admin setup, company connect, pricing)
 - [WhatsApp Setup (legacy)](WHATSAPP_SETUP.md)
 - [Order Payments (legacy)](ORDER_PAYMENTS.md)
 - [Sample Data Import (legacy)](SAMPLE_DATA_IMPORT.md)

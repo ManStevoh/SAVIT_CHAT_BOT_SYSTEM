@@ -1,5 +1,7 @@
 # WhatsApp Embedded Signup (Platform-Wide)
 
+> **Full guide:** See [WhatsApp Complete Setup Guide](WHATSAPP_COMPLETE_SETUP_GUIDE.md) for Meta registration, App Review, pricing, billing, and step-by-step admin + company flows.
+
 One Meta app serves all companies. Super admin configures once; companies connect via **Connect with Facebook**.
 
 ## Super admin setup
