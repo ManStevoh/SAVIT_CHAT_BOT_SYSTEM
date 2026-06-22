@@ -96,7 +96,7 @@ External monitor recommended on:
 
 - `GET /up` — Laravel health endpoint
 - `GET /api/plans` — API availability
-- Frontend URL — Vercel deployment
+- Landing page `/` — Inertia React UI loads
 
 ## Alerting recommendations
 

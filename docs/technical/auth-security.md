@@ -16,11 +16,18 @@ nav_order: 10
 4. All protected requests include: `Authorization: Bearer {token}`
 5. Logout POST `/api/auth/logout` revokes current token
 
-Tokens stored in `personal_access_tokens` table.
+Tokens stored in `personal_access_tokens` table. Default lifetime: **24 hours** (`SANCTUM_EXPIRATION=1440` in `.env`).
 
-### Stateful domains (optional)
+### Brute-force protection
 
-`SANCTUM_STATEFUL_DOMAINS` configured for SPA cookie auth. Primary implementation uses Bearer tokens in localStorage.
+- Login: per-email+IP lockout after `maxLoginAttempts` (platform setting, default 5)
+- Route throttles: login 10/min, register 3/min, password endpoints 6/min per IP
+
+### Account status checks
+
+- Inactive users cannot log in; existing tokens revoked when admin deactivates
+- Suspended companies blocked at login and on all authenticated routes (`user.active` middleware)
+- Password reset revokes all existing API tokens
 
 ## Authorization
 
@@ -68,12 +75,24 @@ Production must set matching `FRONTEND_URL` on backend and `NEXT_PUBLIC_API_URL`
 
 | Webhook | Verification method |
 |---------|---------------------|
-| WhatsApp | `X-Hub-Signature-256` HMAC with Meta App Secret |
+| WhatsApp | `X-Hub-Signature-256` HMAC required in production; verify token has no default |
 | Stripe | `Stripe-Signature` with webhook secret |
-| Paystack | `X-Paystack-Signature` HMAC SHA512 |
-| M-Pesa | Safaricom callback structure validation |
+| Paystack | `X-Paystack-Signature` HMAC SHA512 + amount validation against order/plan |
+| M-Pesa | Pending cache + paid amount must match expected order/plan total |
 
-WhatsApp GET verification uses shared verify token (not secret, but required to match).
+## HTTP security headers
+
+All web and API responses include:
+
+- `X-Frame-Options: SAMEORIGIN`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Strict-Transport-Security` (HTTPS only)
+
+## Payment integrity
+
+- Company users **cannot** manually set `paymentStatus: paid` via API
+- Paid status is set only by verified gateway webhooks/callbacks
 
 ## Data encryption
 

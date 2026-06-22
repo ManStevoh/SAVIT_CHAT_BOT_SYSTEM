@@ -6,28 +6,30 @@ nav_order: 2
 
 # Tech Stack
 
-## Frontend (`FRONTED/`)
+## Frontend (`LARAVEL_BACKEND/resources/js/`)
+
+The UI is a **unified Laravel + Inertia.js + React** application. All screens live in `LARAVEL_BACKEND/` — no separate Next.js deploy.
 
 | Category | Technology | Version |
 |----------|------------|---------|
-| Framework | Next.js (App Router) | 16.1.6 |
+| Server framework | Laravel + Inertia.js | 12 / 2.x |
 | UI library | React | 19 |
 | Language | TypeScript | 5.7 |
+| Build | Vite | 7 |
 | Styling | Tailwind CSS | 4 |
 | Components | shadcn/ui (Radix UI) | — |
 | Icons | lucide-react | — |
-| Data fetching | SWR | 2.x |
+| Data fetching | SWR (same-origin `/api/*`) | 2.x |
 | Forms | react-hook-form + zod | — |
 | Charts | recharts | — |
-| Analytics | @vercel/analytics | — |
-| E2E tests | Playwright | — |
-| Package manager | npm (pnpm-lock also present) | — |
+| E2E tests | Playwright | 1.60+ |
+| Package manager | npm | — |
 
 ### Frontend config notes
 
-- `next.config.mjs`: `ignoreBuildErrors: true` for TypeScript (technical debt)
-- Images: `unoptimized: true`
-- No server-side API routes — all data from Laravel
+- `vite.config.js`: React plugin, Tailwind, path aliases for `@/` and Next.js shims
+- `shims/next-link.tsx` and `shims/next-navigation.ts`: Inertia adapters for migrated pages
+- Legacy Next.js app at repo root is **deprecated**
 
 ## Backend (`LARAVEL_BACKEND/`)
 
@@ -39,7 +41,7 @@ nav_order: 2
 | Queue | Database driver | default |
 | Scheduler | Laravel Schedule | bootstrap/app.php |
 | CSV | league/csv | Import/export |
-| Asset build | Vite + Tailwind | Minimal Laravel UI |
+| Asset build | Vite + React + Inertia | Production UI in `public/build/` |
 | Testing | PHPUnit | Feature + Unit |
 | Code style | Laravel Pint | — |
 | Local dev | Laravel Sail | Optional Docker |
@@ -69,8 +71,7 @@ Session, cache, and queue use database tables by default.
 
 | Component | Provider |
 |-----------|----------|
-| Frontend hosting | Vercel |
-| Backend hosting | cPanel VPS (savitchat.savitglobalsolutions.com) |
+| Application hosting | cPanel VPS (single Laravel app — UI + API) |
 | DNS / SSL | Provider-managed |
 | Email | SMTP (configurable in admin) |
 
@@ -78,11 +79,18 @@ Session, cache, and queue use database tables by default.
 
 | Layer | Tool | Location |
 |-------|------|----------|
-| Backend unit/feature | PHPUnit | `LARAVEL_BACKEND/tests/` |
-| Frontend E2E | Playwright | `FRONTED/e2e/` |
-| CI script | `npm run test:ci` | tsc + Playwright |
+| Backend unit/feature | PHPUnit | `LARAVEL_BACKEND/tests/` (71 tests) |
+| Full UI E2E | Playwright | `LARAVEL_BACKEND/e2e/` (14 tests) |
+| TypeScript | `tsc --noEmit` | `npm run typecheck` |
 
-No GitHub Actions CI configured in repository.
+Run E2E locally (PHP server on 8080 required):
+
+```bash
+cd LARAVEL_BACKEND
+php -S 127.0.0.1:8080 -t public   # or reuse existing server
+npm run test:e2e                  # all 14 tests
+npm run test:e2e:journey          # full admin/company/public journeys only
+```
 
 ## Version requirements summary
 

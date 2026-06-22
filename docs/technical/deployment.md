@@ -6,48 +6,29 @@ nav_order: 11
 
 # Deployment Guide
 
-Production deployment uses **Vercel (frontend)** + **cPanel VPS (backend)**.
+Production runs as a **single Laravel application** on cPanel/VPS. The Inertia + React UI and JSON API (`/api/*`) are served from the same domain — no separate frontend host (Vercel/Next.js) is required.
 
-## Production URLs
+## Production URL
 
 | Component | URL |
 |-----------|-----|
-| Frontend | https://savit-chat-bot-system.vercel.app |
-| Backend | https://savitchat.savitglobalsolutions.com |
+| App (UI + API) | https://savitchat.savitglobalsolutions.com |
 
-## Frontend: Vercel
+All routes — landing, dashboard, admin, webhooks, and REST API — live under this domain.
 
-### Setup
-
-1. Connect GitHub repo to Vercel
-2. Set root directory: `FRONTED`
-3. Framework preset: Next.js
-4. Build command: `npm run build`
-5. Output: Next.js default
-
-### Environment variables
-
-| Name | Production value |
-|------|------------------|
-| `NEXT_PUBLIC_API_URL` | `https://savitchat.savitglobalsolutions.com` |
-| `NEXT_PUBLIC_USE_MOCK_API` | `false` |
-
-Redeploy after changing env vars.
-
-## Backend: cPanel / VPS
-
-### Server requirements
+## Server requirements
 
 | Requirement | Minimum |
 |-------------|---------|
 | PHP | 8.2+ with extensions: mbstring, openssl, pdo, tokenizer, xml, ctype, json, bcmath |
 | Composer | 2.x |
+| Node.js | 20+ (build step only — compile Vite assets) |
 | Database | MySQL 8.0+ or MariaDB 10.6+ |
-| SSL | Required for webhooks |
+| SSL | Required for webhooks and secure cookies |
 | Cron | Required for scheduler |
 | Process manager | Supervisor/systemd for queue worker |
 
-### Document root
+## Document root
 
 **Critical:** Point domain document root to Laravel `public/` directory:
 
@@ -56,19 +37,23 @@ Redeploy after changing env vars.
 ❌ /home/user/LARAVEL_BACKEND
 ```
 
-Wrong root causes "Index of /" listing and broken API.
+Wrong root causes "Index of /" listing, broken routes, and missing Vite assets.
 
-### Deployment steps
+## Deployment steps
 
 ```bash
 cd LARAVEL_BACKEND
 
-# Install dependencies
+# PHP dependencies
 composer install --no-dev --optimize-autoloader
+
+# Frontend assets (required — UI is bundled into public/build/)
+npm ci
+npm run build
 
 # Environment
 cp .env.example .env
-# Edit .env with production values (see Environment Variables doc)
+# Edit .env with production values (see below)
 php artisan key:generate
 
 # Database
@@ -88,15 +73,20 @@ chmod -R 775 storage bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 ```
 
-### Production `.env` essentials
+### Build assets without Node on the server
+
+If the host has no Node.js, build locally or in CI and upload `public/build/` (and `public/build/manifest.json`) before running `php artisan config:cache`.
+
+## Production `.env` essentials
 
 ```env
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://savitchat.savitglobalsolutions.com
 
-FRONTEND_URL=https://savit-chat-bot-system.vercel.app
-SANCTUM_STATEFUL_DOMAINS=savit-chat-bot-system.vercel.app,savitchat.savitglobalsolutions.com
+# Same as APP_URL for Inertia same-origin (checkout redirects, email links)
+FRONTEND_URL=https://savitchat.savitglobalsolutions.com
+SANCTUM_STATEFUL_DOMAINS=savitchat.savitglobalsolutions.com
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -105,9 +95,13 @@ DB_USERNAME=your_user
 DB_PASSWORD=your_password
 
 QUEUE_CONNECTION=database
+
+VITE_APP_NAME="Savit Chat"
 ```
 
-### Queue worker (Supervisor)
+The UI calls `/api/*` on the same origin, so `VITE_API_URL` is usually omitted in production. Set `VITE_USE_MOCK_API=false` (or leave unset) for live data.
+
+## Queue worker (Supervisor)
 
 ```ini
 [program:savit-queue]
@@ -121,7 +115,7 @@ redirect_stderr=true
 stdout_logfile=/path/to/LARAVEL_BACKEND/storage/logs/worker.log
 ```
 
-### Cron scheduler
+## Cron scheduler
 
 ```cron
 * * * * * cd /path/to/LARAVEL_BACKEND && php artisan schedule:run >> /dev/null 2>&1
@@ -129,11 +123,11 @@ stdout_logfile=/path/to/LARAVEL_BACKEND/storage/logs/worker.log
 
 Required for: Growth post publishing, subscription reminders, Meta sync, CRM follow-ups.
 
-### Apache (.htaccess)
+## Apache (.htaccess)
 
-Laravel `public/.htaccess` handles URL rewriting. Ensure `mod_rewrite` enabled.
+Laravel `public/.htaccess` handles URL rewriting. Ensure `mod_rewrite` is enabled. Inertia page navigations and API routes both pass through `index.php`.
 
-### Nginx (alternative)
+## Nginx (alternative)
 
 ```nginx
 server {
@@ -153,13 +147,9 @@ server {
 }
 ```
 
-## Alternative: single cPanel hosting
-
-Both frontend and backend on one account — see [CPANEL-HOSTING.md (legacy)](../FRONTED/docs/CPANEL-HOSTING.md) in repo.
-
 ## Meta webhook configuration
 
-After backend is live with HTTPS:
+After the app is live with HTTPS:
 
 1. Meta Developer → WhatsApp → Configuration
 2. Callback URL: `https://savitchat.savitglobalsolutions.com/api/whatsapp/webhook`
@@ -183,10 +173,12 @@ curl https://savitchat.savitglobalsolutions.com/api/plans
 | Check | Expected |
 |-------|----------|
 | `/up` | 200 OK |
+| `/` | Landing page (Inertia/React) |
 | `/api/plans` | JSON plan list |
+| `public/build/manifest.json` | Present after `npm run build` |
 | Queue worker | Running (`supervisorctl status`) |
 | Cron | `schedule:run` in crontab |
-| Frontend login | Connects to API |
+| Login at `/login` | Dashboard loads after auth |
 | WhatsApp test message | Bot replies within seconds |
 
 ## Documentation site (GitHub Pages)
@@ -198,6 +190,7 @@ See [GitHub Pages Setup](../GITHUB_PAGES_SETUP.md).
 ```bash
 git checkout previous-tag
 composer install --no-dev
+npm ci && npm run build
 php artisan migrate
 php artisan config:cache
 supervisorctl restart savit-queue

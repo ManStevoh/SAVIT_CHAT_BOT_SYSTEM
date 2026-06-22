@@ -1,0 +1,239 @@
+<?php
+
+use App\Http\Controllers\Api\Admin\AIUsageController;
+use App\Http\Controllers\Api\Admin\CompanyController;
+use App\Http\Controllers\Api\Admin\ImpersonateController;
+use App\Http\Controllers\Api\Admin\LandingFaqController;
+use App\Http\Controllers\Api\Admin\LogController;
+use App\Http\Controllers\Api\Admin\OverviewController;
+use App\Http\Controllers\Api\Admin\PaymentGatewayController;
+use App\Http\Controllers\Api\Admin\PlatformSettingsController;
+use App\Http\Controllers\Api\Admin\RevenueController;
+use App\Http\Controllers\Api\Admin\TestimonialController;
+use App\Http\Controllers\Api\Admin\UserController;
+use App\Http\Controllers\Api\Admin\WhatsAppConnectionController;
+use App\Http\Controllers\Api\AppBrandingController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Company\AnalyticsController;
+use App\Http\Controllers\Api\Company\ChatController;
+use App\Http\Controllers\Api\Company\ChatMessageController;
+use App\Http\Controllers\Api\Company\CustomerController;
+use App\Http\Controllers\Api\Admin\GrowthPortfolioController;
+use App\Http\Controllers\Api\Admin\SystemHealthController;
+use App\Http\Controllers\Api\Company\ExportController;
+use App\Http\Controllers\Api\Company\GrowthAdSpendController;
+use App\Http\Controllers\Api\Company\GrowthAgentController;
+use App\Http\Controllers\Api\Company\GrowthAnalyticsController;
+use App\Http\Controllers\Api\Company\GrowthCompetitorController;
+use App\Http\Controllers\Api\Company\GrowthInsightController;
+use App\Http\Controllers\Api\Company\GrowthIntegrationController;
+use App\Http\Controllers\Api\Company\GrowthIntelligenceController;
+use App\Http\Controllers\Api\Company\GrowthMetaController;
+use App\Http\Controllers\Api\Company\GrowthPostController;
+use App\Http\Controllers\Api\Company\GrowthSocialController;
+use App\Http\Controllers\Api\Company\FaqController;
+use App\Http\Controllers\Api\Company\ImportController;
+use App\Http\Controllers\Api\Company\MpesaCheckoutController;
+use App\Http\Controllers\Api\Company\PaystackCheckoutController;
+use App\Http\Controllers\Api\Company\NotificationController;
+use App\Http\Controllers\Api\Company\OrderController;
+use App\Http\Controllers\Api\Company\ProductController;
+use App\Http\Controllers\Api\Company\SettingsController;
+use App\Http\Controllers\Api\Company\StripeCheckoutController;
+use App\Http\Controllers\Api\Company\SubscriptionController;
+use App\Http\Controllers\Api\Company\TeamController;
+use App\Http\Controllers\Api\Company\WhatsAppController;
+use App\Http\Controllers\Api\Company\WhatsAppTemplateController;
+use App\Http\Controllers\Api\EmailVerificationController;
+use App\Http\Controllers\Api\LandingController;
+use App\Http\Controllers\Api\MpesaCallbackController;
+use App\Http\Controllers\Api\PaystackWebhookController;
+use App\Http\Controllers\Api\PlanController;
+use App\Http\Controllers\Api\StripeWebhookController;
+use App\Http\Controllers\Api\WhatsAppWebhookController;
+use Illuminate\Support\Facades\Route;
+
+// Public (no auth)
+Route::get('plans', [PlanController::class, 'index']);
+Route::get('app-branding', [AppBrandingController::class, 'show']);
+Route::get('landing', [LandingController::class, 'index']);
+
+// Stripe webhook (no auth; verified by Stripe signature)
+Route::post('stripe/webhook', StripeWebhookController::class);
+
+// M-Pesa callback (no auth; called by Safaricom)
+Route::post('mpesa/callback', MpesaCallbackController::class);
+
+// Paystack webhook (no auth; verified by HMAC signature)
+Route::post('paystack/webhook', PaystackWebhookController::class);
+
+// WhatsApp webhook (no auth; Meta calls for verification and incoming messages)
+Route::get('whatsapp/webhook', [WhatsAppWebhookController::class, 'verify']);
+Route::post('whatsapp/webhook', [WhatsAppWebhookController::class, 'receive']);
+
+// Auth (no auth required)
+Route::prefix('auth')->group(function () {
+    Route::get('verify-email', EmailVerificationController::class)->name('api.verification.verify');
+    Route::middleware('throttle:auth-login')->post('login', [AuthController::class, 'login']);
+    Route::middleware('throttle:auth-register')->post('register', [AuthController::class, 'register']);
+    Route::middleware('throttle:auth-password')->group(function () {
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
+        Route::post('reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('resend-verification', [AuthController::class, 'resendVerification']);
+    });
+    Route::post('logout', [AuthController::class, 'logout'])->middleware(['auth:sanctum', 'user.active']);
+});
+
+// Company (auth required; subscription must be active except for subscription/checkout routes)
+Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscription.active'])->group(function () {
+    Route::get('chats', [ChatController::class, 'index']);
+    Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);
+    Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
+    Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
+    Route::get('orders', [OrderController::class, 'index']);
+    Route::get('orders/{order}', [OrderController::class, 'show']);
+    Route::post('orders', [OrderController::class, 'store']);
+    Route::patch('orders/{order}', [OrderController::class, 'updateStatus']);
+    Route::get('customers/stats', [CustomerController::class, 'stats']);
+    Route::get('customers', [CustomerController::class, 'index']);
+    Route::get('products', [ProductController::class, 'index']);
+    Route::post('products/{product}/variants', [ProductController::class, 'storeVariant']);
+    Route::put('product-variants/{productVariant}', [ProductController::class, 'updateVariant']);
+    Route::delete('product-variants/{productVariant}', [ProductController::class, 'destroyVariant']);
+    Route::post('products/{product}/images', [ProductController::class, 'storeProductImage']);
+    Route::post('product-variants/{productVariant}/images', [ProductController::class, 'storeVariantImage']);
+    Route::put('product-images/{productImage}', [ProductController::class, 'updateImage']);
+    Route::delete('product-images/{productImage}', [ProductController::class, 'destroyImage']);
+    // POST alias for update: PHP does not populate $_FILES on multipart PUT; browsers send file uploads as POST.
+    Route::post('products/{product}', [ProductController::class, 'update']);
+    Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);
+    Route::get('faqs', [FaqController::class, 'index']);
+    Route::apiResource('faqs', FaqController::class)->only(['store', 'update', 'destroy']);
+    Route::get('analytics', [AnalyticsController::class, 'index']);
+    Route::get('growth/analytics', [GrowthAnalyticsController::class, 'index']);
+    Route::get('growth/posts', [GrowthPostController::class, 'index']);
+    Route::post('growth/posts', [GrowthPostController::class, 'store']);
+    Route::post('growth/content/generate', [GrowthPostController::class, 'generate']);
+    Route::post('growth/content/generate-smart', [GrowthIntelligenceController::class, 'generateSmart']);
+    Route::get('growth/intelligence/patterns', [GrowthIntelligenceController::class, 'patterns']);
+    Route::post('growth/intelligence/patterns/extract', [GrowthIntelligenceController::class, 'extractPatterns']);
+    Route::post('growth/intelligence/patterns/queue', [GrowthIntelligenceController::class, 'queueExtractPatterns']);
+    Route::post('growth/intelligence/patterns/{pattern}/apply', [GrowthIntelligenceController::class, 'applyPattern']);
+    Route::get('growth/intelligence/content-mix', [GrowthIntelligenceController::class, 'contentMix']);
+    Route::get('growth/intelligence/weekly-brief', [GrowthIntelligenceController::class, 'weeklyBrief']);
+    Route::get('growth/intelligence/score-drafts', [GrowthIntelligenceController::class, 'scoreDrafts']);
+    Route::get('growth/intelligence/summary', [GrowthIntelligenceController::class, 'intelligenceSummary']);
+    Route::get('growth/intelligence/prediction-accuracy', [GrowthIntelligenceController::class, 'predictionAccuracy']);
+    Route::get('growth/intelligence/portfolio-insights', [GrowthIntelligenceController::class, 'portfolioInsights']);
+    Route::post('growth/intelligence/generate-variants', [GrowthIntelligenceController::class, 'generateVariants']);
+    Route::get('growth/export/attribution', [GrowthIntelligenceController::class, 'exportAttribution']);
+    Route::post('growth/intelligence/execute-mix', [GrowthIntelligenceController::class, 'executeMixPlan']);
+    Route::post('growth/posts/{post}/approve', [GrowthPostController::class, 'approve']);
+    Route::post('growth/posts/{post}/schedule', [GrowthPostController::class, 'schedule']);
+    Route::post('growth/posts/{post}/publish', [GrowthPostController::class, 'publish']);
+    Route::post('growth/posts/{post}/image', [GrowthPostController::class, 'uploadImage']);
+    Route::get('growth/posts/{post}/share-package', [GrowthPostController::class, 'sharePackage']);
+    Route::delete('growth/posts/{post}', [GrowthPostController::class, 'destroy']);
+    Route::get('growth/social-accounts', [GrowthSocialController::class, 'index']);
+    Route::get('growth/oauth/config', [GrowthSocialController::class, 'oauthConfig']);
+    Route::get('growth/oauth/{platform}/authorize', [GrowthSocialController::class, 'oauthAuthorize']);
+    Route::post('growth/social-accounts/connect', [GrowthSocialController::class, 'connect']);
+    Route::post('growth/social-accounts/{account}/disconnect', [GrowthSocialController::class, 'disconnect']);
+    Route::get('growth/ad-spend', [GrowthAdSpendController::class, 'index']);
+    Route::post('growth/ad-spend', [GrowthAdSpendController::class, 'store']);
+    Route::post('growth/ad-spend/import', [GrowthAdSpendController::class, 'import']);
+    Route::delete('growth/ad-spend/{entry}', [GrowthAdSpendController::class, 'destroy']);
+    Route::get('growth/insights', [GrowthInsightController::class, 'index']);
+    Route::post('growth/insights/generate', [GrowthInsightController::class, 'generate']);
+    Route::post('growth/insights/{insight}/read', [GrowthInsightController::class, 'markRead']);
+    Route::get('growth/competitors', [GrowthCompetitorController::class, 'index']);
+    Route::post('growth/competitors', [GrowthCompetitorController::class, 'store']);
+    Route::delete('growth/competitors/{competitor}', [GrowthCompetitorController::class, 'destroy']);
+    Route::get('growth/agents', [GrowthAgentController::class, 'index']);
+    Route::post('growth/agents/run', [GrowthAgentController::class, 'runPipeline']);
+    Route::get('growth/pilot', [GrowthMetaController::class, 'pilotStatus']);
+    Route::get('growth/onboarding', [GrowthMetaController::class, 'onboarding']);
+    Route::get('growth/meta/pages', [GrowthMetaController::class, 'pages']);
+    Route::post('growth/meta/select-page', [GrowthMetaController::class, 'selectPage']);
+    Route::get('growth/meta/ad-accounts', [GrowthMetaController::class, 'adAccounts']);
+    Route::post('growth/meta/select-ad-account', [GrowthMetaController::class, 'selectAdAccount']);
+    Route::post('growth/meta/sync-metrics', [GrowthMetaController::class, 'syncMetrics']);
+    Route::post('growth/meta/sync-ads', [GrowthMetaController::class, 'syncAds']);
+    Route::get('growth/crm/status', [GrowthMetaController::class, 'crmStatus']);
+    Route::post('growth/crm/run', [GrowthMetaController::class, 'runCrmAgent']);
+    Route::get('growth/integrations', [GrowthIntegrationController::class, 'index']);
+    Route::post('growth/integrations/connect', [GrowthIntegrationController::class, 'connect']);
+    Route::post('growth/integrations/sync', [GrowthIntegrationController::class, 'sync']);
+    Route::get('subscription', [SubscriptionController::class, 'show']);
+    Route::get('subscription/invoices', [SubscriptionController::class, 'invoices']);
+    Route::get('subscription/usage', [SubscriptionController::class, 'usage']);
+    Route::get('team', [TeamController::class, 'index']);
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
+    Route::get('settings', [SettingsController::class, 'show']);
+    Route::put('settings', [SettingsController::class, 'update']);
+    Route::get('whatsapp/status', [WhatsAppController::class, 'status']);
+    Route::post('whatsapp/connect', [WhatsAppController::class, 'connect']);
+    Route::get('whatsapp/numbers', [WhatsAppController::class, 'numbers']);
+    Route::get('whatsapp/embedded/config', [WhatsAppController::class, 'embeddedConfig']);
+    Route::post('whatsapp/embedded/complete', [WhatsAppController::class, 'completeEmbeddedSignup']);
+    Route::post('whatsapp/disconnect', [WhatsAppController::class, 'disconnect']);
+    Route::get('whatsapp/templates', [WhatsAppTemplateController::class, 'index']);
+    Route::post('whatsapp/templates', [WhatsAppTemplateController::class, 'store']);
+    Route::post('whatsapp/templates/sync', [WhatsAppTemplateController::class, 'sync']);
+    Route::delete('whatsapp/templates/{template}', [WhatsAppTemplateController::class, 'destroy']);
+    Route::post('export', [ExportController::class, 'export']);
+    Route::get('export/download/{filename}', [ExportController::class, 'download']);
+    Route::post('import/products', [ImportController::class, 'importProducts']);
+    Route::post('import/faqs', [ImportController::class, 'importFaqs']);
+    Route::post('checkout', [StripeCheckoutController::class, 'createSession']);
+    Route::post('billing-portal', [StripeCheckoutController::class, 'createPortalSession']);
+    Route::post('mpesa/initiate', [MpesaCheckoutController::class, 'initiate']);
+    Route::post('paystack/initialize', [PaystackCheckoutController::class, 'initialize']);
+});
+
+// Admin (auth:sanctum + admin role)
+Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->group(function () {
+    Route::get('overview', [OverviewController::class, 'index']);
+    Route::get('growth-portfolio', [GrowthPortfolioController::class, 'index']);
+    Route::post('growth-portfolio/generate', [GrowthPortfolioController::class, 'generateRecommendations']);
+    Route::post('growth-portfolio/queue', [GrowthPortfolioController::class, 'queueRecommendations']);
+    Route::post('growth-portfolio/recommendations/{recommendation}/read', [GrowthPortfolioController::class, 'markRecommendationRead']);
+    Route::post('growth-portfolio/recommendations/{recommendation}/approve', [GrowthPortfolioController::class, 'approveRecommendation']);
+    Route::get('system-health', [SystemHealthController::class, 'index']);
+    Route::get('whatsapp/connections', [WhatsAppConnectionController::class, 'index']);
+    Route::get('companies', [CompanyController::class, 'index']);
+    Route::get('companies/{company}', [CompanyController::class, 'show']);
+    Route::put('companies/{company}', [CompanyController::class, 'update']);
+    Route::patch('companies/{company}', [CompanyController::class, 'updateStatus']);
+    Route::get('users', [UserController::class, 'index']);
+    Route::patch('users/{user}', [UserController::class, 'updateStatus']);
+    Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
+    Route::get('subscriptions', [App\Http\Controllers\Api\Admin\SubscriptionController::class, 'index']);
+    Route::get('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'index']);
+    Route::post('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'store']);
+    Route::put('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'update']);
+    Route::delete('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'destroy']);
+    Route::get('revenue', [RevenueController::class, 'index']);
+    Route::get('ai-usage', [AIUsageController::class, 'index']);
+    Route::get('logs', [LogController::class, 'index']);
+    Route::get('payment-gateways', [PaymentGatewayController::class, 'index']);
+    Route::put('payment-gateways/{slug}', [PaymentGatewayController::class, 'update']);
+    Route::get('settings', [PlatformSettingsController::class, 'show']);
+    Route::put('settings', [PlatformSettingsController::class, 'update']);
+    Route::post('settings', [PlatformSettingsController::class, 'update']);
+    Route::post('settings/test-email', [PlatformSettingsController::class, 'testEmail']);
+    Route::post('export', [App\Http\Controllers\Api\Admin\ExportController::class, 'export']);
+    Route::get('export/download/{filename}', [App\Http\Controllers\Api\Admin\ExportController::class, 'download']);
+    Route::post('impersonate/user/{user}', [ImpersonateController::class, 'impersonateUser']);
+    Route::post('impersonate/company/{company}', [ImpersonateController::class, 'impersonateCompany']);
+    Route::get('testimonials', [TestimonialController::class, 'index']);
+    Route::post('testimonials', [TestimonialController::class, 'store']);
+    Route::put('testimonials/{testimonial}', [TestimonialController::class, 'update']);
+    Route::delete('testimonials/{testimonial}', [TestimonialController::class, 'destroy']);
+    Route::get('landing-faqs', [LandingFaqController::class, 'index']);
+    Route::post('landing-faqs', [LandingFaqController::class, 'store']);
+    Route::put('landing-faqs/{landing_faq}', [LandingFaqController::class, 'update']);
+    Route::delete('landing-faqs/{landing_faq}', [LandingFaqController::class, 'destroy']);
+});

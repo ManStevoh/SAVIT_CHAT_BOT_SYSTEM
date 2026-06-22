@@ -151,9 +151,9 @@ Defined in `bootstrap/app.php`.
 
 ## Frontend
 
-- Page: `FRONTED/app/dashboard/growth/page.tsx`
+- Page: `LARAVEL_BACKEND/resources/js/Pages/dashboard/growth/page.tsx`
 - Hooks: `useGrowthAnalytics`, `useGrowthPosts`, etc. in `lib/api-hooks.ts`
-- E2E tests: `FRONTED/e2e/`
+- E2E tests: `LARAVEL_BACKEND/e2e/dashboard.spec.ts`, `journey-company.spec.ts`
 
 ## Deployment requirements
 

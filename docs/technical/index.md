@@ -13,12 +13,12 @@ Developer and DevOps reference for the SAVIT Chat Bot platform.
 
 ```
 SAVIT_CHAT_BOT/
-├── FRONTED/           # Next.js 16 frontend (App Router)
-├── LARAVEL_BACKEND/   # Laravel 12 API + webhooks + jobs
-└── docs/              # This documentation site (GitHub Pages)
+├── LARAVEL_BACKEND/   # Unified Laravel 12 + Inertia + React app (UI + API)
+├── docs/              # This documentation site (GitHub Pages)
+└── (deprecated)       # Legacy Next.js at repo root — do not deploy
 ```
 
-> **Note:** The frontend folder is named `FRONTED` (not FRONTEND).
+> **Note:** The application is `LARAVEL_BACKEND/` only (Laravel + Inertia). The old Next.js frontend has been removed.
 
 ## Documentation map
 
@@ -26,7 +26,7 @@ SAVIT_CHAT_BOT/
 |-------|----------|
 | System design | [Architecture](architecture.md) |
 | Languages & frameworks | [Tech Stack](tech-stack.md) |
-| Next.js application | [Frontend](frontend.md) |
+| Inertia + React UI | [Frontend](frontend.md) |
 | Laravel API | [Backend](backend.md) |
 | REST endpoints | [API Reference](api-reference.md) |
 | Data model | [Database Schema](database.md) |
@@ -34,7 +34,7 @@ SAVIT_CHAT_BOT/
 | Stripe, M-Pesa, Paystack | [Payments](payments.md) |
 | Social attribution | [Growth Engine](growth-engine.md) |
 | Sanctum, roles, CORS | [Auth & Security](auth-security.md) |
-| Vercel + cPanel production | [Deployment](deployment.md) |
+| Single-app cPanel production | [Deployment](deployment.md) |
 | `.env` reference | [Environment Variables](environment-variables.md) |
 | Cron, queues, jobs | [Queues & Scheduler](queues-scheduler.md) |
 | Common issues | [Troubleshooting](troubleshooting.md) |
@@ -43,47 +43,37 @@ SAVIT_CHAT_BOT/
 
 | Service | URL |
 |---------|-----|
-| Frontend | https://savit-chat-bot-system.vercel.app |
-| Backend API | https://savitchat.savitglobalsolutions.com |
-| Health check | https://savitchat.savitglobalsolutions.com/up |
+| Application (UI + API) | https://savitchat.savitglobalsolutions.com |
+| Health check | `GET /up` on the same domain |
 
 ## Quick local setup
-
-### Backend
 
 ```bash
 cd LARAVEL_BACKEND
 cp .env.example .env
 composer install
+npm install
 php artisan key:generate
 php artisan migrate --seed
-php artisan serve          # http://localhost:8000
-php artisan queue:work     # separate terminal
+npm run build
+
+# Terminal 1 — PHP server
+php -S 127.0.0.1:8080 -t public
+
+# Terminal 2 — Vite HMR (optional)
+npm run dev
+
+# Terminal 3 — queue worker
+php artisan queue:work
 ```
 
-### Frontend
-
-```bash
-cd FRONTED
-cp .env.example .env.local
-# NEXT_PUBLIC_API_URL=http://localhost:8000
-# NEXT_PUBLIC_USE_MOCK_API=false
-npm install
-npm run dev                # http://localhost:3000
-```
-
-### Dev stack (all-in-one)
-
-```bash
-cd LARAVEL_BACKEND
-composer dev   # Runs serve + queue + logs + Vite concurrently
-```
+Open **http://127.0.0.1:8080**
 
 ## Default seeded credentials
 
 | Account | Email | Password | Role |
 |---------|-------|----------|------|
-| Super admin | admin@savit.local | password | admin |
-| Sample company | (from CompanySeeder) | password | company_owner |
+| Super admin | superadmin@savit.local | password | admin |
+| Demo company | demo1@company.local | password | company_owner |
 
 Change immediately in production.
