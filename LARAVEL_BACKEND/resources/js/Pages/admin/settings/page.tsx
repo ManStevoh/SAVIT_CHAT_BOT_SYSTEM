@@ -70,6 +70,7 @@ export default function AdminSettingsPage() {
         defaultTimezone: settings.defaultTimezone ?? undefined,
         maintenanceMessage: settings.maintenanceMessage ?? undefined,
         allowNewRegistrations: settings.allowNewRegistrations,
+        requireEmailVerification: settings.requireEmailVerification,
       })
       if (res.success) {
         toast({ title: res.message ?? "Settings saved" })
@@ -395,6 +396,19 @@ export default function AdminSettingsPage() {
                   <Switch
                     checked={settings?.allowNewRegistrations ?? true}
                     onCheckedChange={(v) => updateSetting("allowNewRegistrations", v)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">Require Email Verification</p>
+                    <p className="text-sm text-muted-foreground">
+                      New users must verify email before signing in. Requires SMTP configured in Email tab.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.requireEmailVerification ?? false}
+                    onCheckedChange={(v) => updateSetting("requireEmailVerification", v)}
                   />
                 </div>
               </div>

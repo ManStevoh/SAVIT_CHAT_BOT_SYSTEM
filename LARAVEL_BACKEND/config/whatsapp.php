@@ -8,7 +8,7 @@ return [
     | Set this in Meta App Dashboard → WhatsApp → Configuration → Callback verify token.
     | Must match exactly for webhook verification (GET).
     */
-    'webhook_verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', 'savit_verify_token'),
+    'webhook_verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', ''),
 
     /*
     |--------------------------------------------------------------------------

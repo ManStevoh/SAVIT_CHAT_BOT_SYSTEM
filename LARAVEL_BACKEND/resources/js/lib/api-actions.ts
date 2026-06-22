@@ -1509,6 +1509,7 @@ export interface PlatformSettings {
   defaultTimezone?: string | null
   maintenanceMessage?: string | null
   allowNewRegistrations?: boolean
+  requireEmailVerification?: boolean
   aiModel?: string | null
   maxTokensPerRequest?: number | null
   rateLimitPerMinute?: number | null
@@ -1549,6 +1550,7 @@ export interface UpdatePlatformSettingsData {
   defaultTimezone?: string
   maintenanceMessage?: string
   allowNewRegistrations?: boolean
+  requireEmailVerification?: boolean
   aiModel?: string
   maxTokensPerRequest?: number
   rateLimitPerMinute?: number
@@ -1585,6 +1587,7 @@ export interface AppBranding {
   appLogo: string | null
   primaryColor: string | null
   secondaryColor: string | null
+  requireEmailVerification?: boolean
 }
 
 /**
@@ -1669,6 +1672,7 @@ export async function getAppBranding(): Promise<AppBranding> {
       appLogo: null,
       primaryColor: null,
       secondaryColor: null,
+      requireEmailVerification: false,
     }
   }
   const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) || ''

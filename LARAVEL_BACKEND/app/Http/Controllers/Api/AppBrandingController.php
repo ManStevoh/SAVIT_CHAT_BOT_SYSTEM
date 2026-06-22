@@ -28,6 +28,7 @@ class AppBrandingController extends Controller
             'appLogo' => $appLogo,
             'primaryColor' => $settings ? $settings->primary_color : null,
             'secondaryColor' => $settings ? $settings->secondary_color : null,
+            'requireEmailVerification' => PlatformSetting::requiresEmailVerification(),
         ]);
     }
 }

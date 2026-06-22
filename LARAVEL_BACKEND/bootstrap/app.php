@@ -15,11 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
+        $middleware->api(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
         ]);
         $middleware->statefulApi();
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'subscription.active' => \App\Http\Middleware\EnsureSubscriptionActive::class,
+            'user.active' => \App\Http\Middleware\EnsureUserActive::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {

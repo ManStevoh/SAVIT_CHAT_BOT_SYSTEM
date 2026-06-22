@@ -77,6 +77,7 @@ class MpesaCheckoutController extends Controller
         Cache::put('mpesa_pending:'.$checkoutRequestId, [
             'company_id' => $company->id,
             'plan_slug' => $plan->slug,
+            'expected_amount' => $amount,
         ], now()->addMinutes(10));
 
         return response()->json([

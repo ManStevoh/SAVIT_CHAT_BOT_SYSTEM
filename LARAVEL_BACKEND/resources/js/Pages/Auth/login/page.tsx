@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { login, resendVerificationEmail, type LoginCredentials } from '@/lib/api-actions'
 import { setAuthCookie } from '@/lib/auth-cookie'
+import { useAppBranding } from '@/components/providers/AppBrandingProvider'
 import { Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 const SAFE_REDIRECT_PREFIXES = ['/admin', '/dashboard']
@@ -17,6 +18,7 @@ const SAFE_REDIRECT_PREFIXES = ['/admin', '/dashboard']
 function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const branding = useAppBranding()
   const redirectTo = useMemo(() => {
     const r = searchParams.get('redirect')
     if (!r || !r.startsWith('/')) return null
@@ -164,7 +166,9 @@ function LoginPageContent() {
         {/* Post-registration: must sign in (no token issued on register) */}
         {registeredParam && !verifiedParam && (
           <div className="mb-6 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
-            Account created. Please check your email to verify your account, then sign in below.
+            {branding.requireEmailVerification
+              ? 'Account created. Please check your email to verify your account, then sign in below.'
+              : 'Account created successfully. You can sign in below.'}
           </div>
         )}
 

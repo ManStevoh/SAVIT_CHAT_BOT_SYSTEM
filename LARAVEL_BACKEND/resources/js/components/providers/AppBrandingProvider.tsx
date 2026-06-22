@@ -13,6 +13,7 @@ export function useAppBranding(): AppBranding {
       appLogo: null,
       primaryColor: null,
       secondaryColor: null,
+      requireEmailVerification: false,
     }
   )
 }

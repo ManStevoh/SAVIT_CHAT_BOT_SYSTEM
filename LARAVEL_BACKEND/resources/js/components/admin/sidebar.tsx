@@ -56,7 +56,7 @@ export function AdminSidebar() {
         />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2">
         {navigationMain.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
           return (
@@ -124,7 +124,7 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="absolute bottom-4 left-4 right-4">
+      <div className="shrink-0 border-t border-sidebar-border p-4">
         <Link
           href="/dashboard"
           className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"

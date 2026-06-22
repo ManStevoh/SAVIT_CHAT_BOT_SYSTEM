@@ -135,12 +135,14 @@ Prefer Admin → Settings for production SMTP (stored in DB).
 | `AWS_DEFAULT_REGION` | us-east-1 |
 | `AWS_BUCKET` | Bucket name |
 
-## Frontend (`FRONTED/.env.local`)
+## Frontend (Inertia — `LARAVEL_BACKEND/.env`)
+
+The UI is served from Laravel; API calls use same-origin `/api/*`. No separate `NEXT_PUBLIC_*` env file is required for production.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Yes | Backend URL (no trailing slash) |
-| `NEXT_PUBLIC_USE_MOCK_API` | No | true = mock data |
+| `APP_URL` | Yes | Public app URL (used for links and assets) |
+| `VITE_*` | No | Only if you add custom Vite env vars |
 
 ### Playwright (testing)
 

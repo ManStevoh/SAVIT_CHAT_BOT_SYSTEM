@@ -145,8 +145,6 @@ LARAVEL_BACKEND/          # Single deployable application
 ├── routes/web.php          # UI routes → PageController
 ├── routes/api.php          # JSON API (138 endpoints)
 └── public/build/           # Vite production assets
-
-FRONTED/                    # Deprecated Next.js app (do not deploy)
 ```
 
-API contract remains HTTP JSON at `/api/*`. UI migrated from Next.js with shims for `next/link` and `next/navigation`.
+The old standalone Next.js frontend has been removed from the repo.

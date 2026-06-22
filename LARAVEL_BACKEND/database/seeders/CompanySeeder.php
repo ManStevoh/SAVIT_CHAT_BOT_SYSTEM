@@ -58,17 +58,20 @@ class CompanySeeder extends Seeder
                 $data
             );
 
-            User::firstOrCreate(
+            $user = User::firstOrCreate(
                 ['email' => $userData['email']],
                 [
                     'name' => $userData['name'],
                     'password' => Hash::make($userData['password']),
-                    'role' => $userData['role'],
                     'company_id' => $company->id,
                     'status' => 'active',
                     'email_verified_at' => now(),
                 ]
             );
+            if ($user->role !== $userData['role']) {
+                $user->role = $userData['role'];
+                $user->save();
+            }
 
             Subscription::firstOrCreate(
                 ['company_id' => $company->id],

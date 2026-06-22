@@ -74,10 +74,10 @@ class PaystackWebhookController extends Controller
     protected function handleOrderPayment(string $reference, array $metadata, array $data): void
     {
         $pending = Cache::get(PaystackService::CACHE_KEY_ORDER_PREFIX.$reference);
-        $orderId = $pending['order_id'] ?? ($metadata['order_id'] ?? null);
+        $orderId = $pending['order_id'] ?? null;
 
         if (! $orderId) {
-            Log::warning('Paystack webhook: no order for reference '.$reference);
+            Log::warning('Paystack webhook: no cached order for reference '.$reference);
 
             return;
         }
@@ -85,6 +85,18 @@ class PaystackWebhookController extends Controller
         $order = Order::find($orderId);
         if (! $order || $order->payment_status === 'paid') {
             Cache::forget(PaystackService::CACHE_KEY_ORDER_PREFIX.$reference);
+
+            return;
+        }
+
+        $amountSubunit = (int) ($data['amount'] ?? 0);
+        $paidAmount = $amountSubunit > 0 ? $amountSubunit / 100 : 0;
+        if (! $this->amountsMatch($paidAmount, (float) $order->total)) {
+            Log::warning('Paystack webhook: order amount mismatch', [
+                'reference' => $reference,
+                'paid' => $paidAmount,
+                'expected' => (float) $order->total,
+            ]);
 
             return;
         }
@@ -106,11 +118,17 @@ class PaystackWebhookController extends Controller
         }
 
         $pending = Cache::get(PaystackService::CACHE_KEY_SUB_PREFIX.$reference);
-        $companyId = $pending['company_id'] ?? ($metadata['company_id'] ?? null);
-        $planSlug = $pending['plan_slug'] ?? ($metadata['plan_slug'] ?? null);
+        if (! $pending) {
+            Log::warning('Paystack webhook: no cached subscription for reference '.$reference);
+
+            return;
+        }
+
+        $companyId = $pending['company_id'] ?? null;
+        $planSlug = $pending['plan_slug'] ?? null;
 
         if (! $companyId || ! $planSlug) {
-            Log::warning('Paystack webhook: no pending subscription for reference '.$reference);
+            Log::warning('Paystack webhook: incomplete pending subscription for reference '.$reference);
 
             return;
         }
@@ -122,7 +140,17 @@ class PaystackWebhookController extends Controller
         }
 
         $amountSubunit = (int) ($data['amount'] ?? 0);
-        $amount = $amountSubunit > 0 ? $amountSubunit / 100 : (float) $plan->price_amount;
+        $amount = $amountSubunit > 0 ? $amountSubunit / 100 : 0;
+
+        if (! $this->amountsMatch($amount, (float) $plan->price_amount)) {
+            Log::warning('Paystack webhook: subscription amount mismatch', [
+                'reference' => $reference,
+                'paid' => $amount,
+                'expected' => (float) $plan->price_amount,
+            ]);
+
+            return;
+        }
 
         Subscription::where('company_id', $company->id)->where('status', 'active')->update(['status' => 'cancelled']);
 
@@ -150,5 +178,14 @@ class PaystackWebhookController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Paystack webhook: subscription email failed: '.$e->getMessage());
         }
+    }
+
+    protected function amountsMatch(float $paid, float $expected): bool
+    {
+        if ($expected <= 0) {
+            return $paid > 0;
+        }
+
+        return abs($paid - $expected) <= 0.01;
     }
 }

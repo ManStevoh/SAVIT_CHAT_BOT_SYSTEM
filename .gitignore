@@ -1,23 +1,16 @@
-# v0 sandbox internal files
-__v0_runtime_loader.js
-__v0_devtools.tsx
-__v0_jsx-dev-runtime.ts
-.npmrc
-.snowflake/
-.v0-trash/
-.vercel/
-next.user-config.*
-
-# Environment variables
-.env*.local
-.env
-
-# Common ignores
+# Deprecated local copies (do not commit)
+FRONTED/
 node_modules/
 .next/
+
+# Environment / secrets
+.env
+.env*.local
+
+# OS
 .DS_Store
 
-# Laravel backend (local dependencies and secrets)
+# Laravel backend
 LARAVEL_BACKEND/vendor/
 LARAVEL_BACKEND/.env
 LARAVEL_BACKEND/.phpunit.result.cache
@@ -25,3 +18,7 @@ LARAVEL_BACKEND/database/database.sqlite
 LARAVEL_BACKEND/storage/*.key
 LARAVEL_BACKEND/public/storage
 LARAVEL_BACKEND/bootstrap/cache/*.php
+LARAVEL_BACKEND/node_modules/
+
+# Cursor
+.cursor/

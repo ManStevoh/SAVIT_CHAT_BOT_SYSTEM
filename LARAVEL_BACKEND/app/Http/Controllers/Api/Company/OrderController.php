@@ -343,6 +343,12 @@ class OrderController extends Controller
             $updates['status'] = $request->status;
         }
         if ($request->has('paymentStatus')) {
+            if ($request->paymentStatus === 'paid') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment can only be marked paid through a verified payment gateway.',
+                ], 403);
+            }
             $updates['payment_status'] = $request->paymentStatus;
         }
         if ($updates !== []) {

@@ -1,10 +1,5 @@
 {
-  "installCommand": "npm install",
   "git": {
-    "deploymentEnabled": {
-      "monorepo": false,
-      "docs-github-pages": false,
-      "backend": false
-    }
+    "deploymentEnabled": false
   }
 }

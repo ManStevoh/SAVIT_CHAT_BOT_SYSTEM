@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlatformSetting;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class UserController extends Controller
 {
@@ -55,6 +55,10 @@ class UserController extends Controller
 
         $user->update(['status' => $request->status]);
 
+        if ($request->status === 'inactive') {
+            $user->tokens()->delete();
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'User status updated successfully',
@@ -75,10 +79,11 @@ class UserController extends Controller
 
         $request->merge(['password_confirmation' => $request->input('confirmPassword', $request->input('password_confirmation'))]);
         $validated = $request->validate([
-            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+            'password' => ['required', 'confirmed', PlatformSetting::passwordRule()],
         ]);
 
         $user->update(['password' => Hash::make($validated['password'])]);
+        $user->tokens()->delete();
 
         return response()->json([
             'success' => true,

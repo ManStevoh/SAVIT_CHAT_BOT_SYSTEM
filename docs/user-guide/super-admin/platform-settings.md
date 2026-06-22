@@ -10,6 +10,17 @@ nav_order: 45
 
 Platform-wide configuration affecting all tenants. Organized in tabs.
 
+## General tab
+
+| Setting | Description |
+|---------|-------------|
+| Allow new registrations | When off, `/register` is blocked at the API |
+| Require email verification | When on, new users must verify email before login (requires SMTP in Email tab) |
+| Maintenance mode | Shows maintenance message; blocks normal access |
+| Default timezone | Platform-wide date/time boundaries |
+
+When email verification is **off** (default), registrations auto-verify and users can sign in immediately. When **on**, registration sends a verification email; login returns `email_not_verified` until the link is clicked.
+
 ## Integrations tab
 
 ### WhatsApp (platform)

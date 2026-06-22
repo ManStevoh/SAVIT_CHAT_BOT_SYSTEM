@@ -170,9 +170,32 @@ Assets are served by Laravel from `public/build/`. Re-run `npm run build` after 
 
 Set `VITE_USE_MOCK_API=true` in `.env` and rebuild (or use `npm run dev`) to develop UI without a live API. Hooks return data from `lib/mock-data.ts`.
 
+## E2E testing (Playwright)
+
+Tests live in `LARAVEL_BACKEND/e2e/`:
+
+| Spec | Coverage |
+|------|----------|
+| `login.spec.ts` | Login page, auth redirects, company + admin sign-in |
+| `dashboard.spec.ts` | Dashboard home, growth page |
+| `admin.spec.ts` | Admin overview, growth |
+| `app-public.spec.ts` | Landing page, auth guards |
+| `journey-public.spec.ts` | Landing → register → forgot password → login → order-paid |
+| `journey-company.spec.ts` | All 10 dashboard pages + sidebar nav + logout |
+| `journey-admin.spec.ts` | All 13 admin pages + sidebar nav + logout |
+
+```bash
+cd LARAVEL_BACKEND
+php -S 127.0.0.1:8080 -t public   # start server first
+npm run test:e2e                  # 14 tests
+npm run test:e2e:journey          # full journey tests only
+```
+
+Shared helpers: `e2e/helpers/auth.ts` (login, logout, page assertions).
+
 ## Known technical notes
 
 - `next/link` and `next/navigation` imports resolve to Inertia shims (Vite aliases in `vite.config.js`)
 - File uploads use POST (not PUT) for multipart — PHP limitation documented in api.php
 - Growth OAuth callback redirects to `/dashboard/growth?growth_oauth=success`
-- Legacy Next.js app at repo root `FRONTED/` is deprecated; do not deploy separately
+- Legacy Next.js app at repo root is deprecated; do not deploy separately

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class PlatformSetting extends Model
 {
@@ -16,6 +17,7 @@ class PlatformSetting extends Model
         'default_timezone',
         'maintenance_message',
         'allow_new_registrations',
+        'require_email_verification',
         'ai_model',
         'max_tokens_per_request',
         'rate_limit_per_minute',
@@ -49,6 +51,7 @@ class PlatformSetting extends Model
     protected $casts = [
         'maintenance_mode' => 'boolean',
         'allow_new_registrations' => 'boolean',
+        'require_email_verification' => 'boolean',
         'smtp_port' => 'integer',
         'require_2fa' => 'boolean',
         'ip_allowlist_enabled' => 'boolean',
@@ -73,5 +76,39 @@ class PlatformSetting extends Model
     public function hasSmtpConfigured(): bool
     {
         return ! empty($this->smtp_host) && ! empty($this->mail_from_address);
+    }
+
+    /** Whether new registrations must verify email before login. Default: off. */
+    public static function requiresEmailVerification(): bool
+    {
+        $settings = static::first();
+
+        return (bool) ($settings?->require_email_verification ?? false);
+    }
+
+    /** Whether new company registrations are allowed. Default: on. */
+    public static function allowsNewRegistrations(): bool
+    {
+        $settings = static::first();
+
+        return (bool) ($settings?->allow_new_registrations ?? true);
+    }
+
+    /** Max failed login attempts before lockout (per email + IP). Default: 5. */
+    public static function maxLoginAttempts(): int
+    {
+        $settings = static::first();
+        $value = (int) ($settings?->max_login_attempts ?? 5);
+
+        return max(3, min($value, 20));
+    }
+
+    /** Password validation rule using platform minimum length. */
+    public static function passwordRule(): PasswordRule
+    {
+        $settings = static::first();
+        $min = (int) ($settings?->password_min_length ?? 8);
+
+        return PasswordRule::min(max(8, min($min, 128)));
     }
 }

@@ -22,8 +22,7 @@ class MpesaCallbackController extends Controller
     ) {}
 
     /**
-     * Daraja API calls this URL with STK push result. No auth; validate by processing only known structure.
-     * Handles both: order payments (mpesa_pending_order) and subscription payments (mpesa_pending).
+     * Daraja API calls this URL with STK push result. Validates pending cache and amount before marking paid.
      */
     public function __invoke(Request $request): Response
     {
@@ -32,6 +31,7 @@ class MpesaCallbackController extends Controller
         $stkCallback = $payload['Body']['stkCallback'] ?? null;
         if (! $stkCallback) {
             Log::warning('M-Pesa callback: missing Body.stkCallback');
+
             return response('OK', 200);
         }
 
@@ -45,17 +45,33 @@ class MpesaCallbackController extends Controller
                 'ResultCode' => $resultCode,
                 'ResultDesc' => $resultDesc,
             ]);
+
             return response('OK', 200);
         }
 
+        $paidAmount = $this->extractCallbackAmount($stkCallback);
+
         // Order payment: key mpesa_pending_order:{CheckoutRequestID}
-        $pendingOrder = $checkoutRequestId ? Cache::get(OrderPaymentService::CACHE_KEY_ORDER_PREFIX . $checkoutRequestId) : null;
+        $pendingOrder = $checkoutRequestId ? Cache::get(OrderPaymentService::CACHE_KEY_ORDER_PREFIX.$checkoutRequestId) : null;
         if ($pendingOrder && ! empty($pendingOrder['order_id'])) {
             $order = Order::find($pendingOrder['order_id']);
             if ($order && $order->payment_status !== 'paid') {
+                $expectedAmount = (float) ($pendingOrder['expected_amount'] ?? $order->total);
+                if (! $this->amountsMatch($paidAmount, $expectedAmount)) {
+                    Log::warning('M-Pesa callback: order amount mismatch', [
+                        'CheckoutRequestID' => $checkoutRequestId,
+                        'paid' => $paidAmount,
+                        'expected' => $expectedAmount,
+                        'order_id' => $order->id,
+                    ]);
+
+                    return response('OK', 200);
+                }
+
                 $this->orderPaymentService->markOrderPaid($order);
             }
-            Cache::forget(OrderPaymentService::CACHE_KEY_ORDER_PREFIX . $checkoutRequestId);
+            Cache::forget(OrderPaymentService::CACHE_KEY_ORDER_PREFIX.$checkoutRequestId);
+
             return response('OK', 200);
         }
 
@@ -63,6 +79,7 @@ class MpesaCallbackController extends Controller
         $pending = $checkoutRequestId ? Cache::get('mpesa_pending:'.$checkoutRequestId) : null;
         if (! $pending) {
             Log::warning('M-Pesa callback: no pending record for CheckoutRequestID '.$checkoutRequestId);
+
             return response('OK', 200);
         }
 
@@ -78,21 +95,25 @@ class MpesaCallbackController extends Controller
             return response('OK', 200);
         }
 
+        $expectedAmount = (float) ($pending['expected_amount'] ?? $plan->price_amount);
+        $amount = $paidAmount > 0 ? $paidAmount : $expectedAmount;
+
+        if (! $this->amountsMatch($amount, $expectedAmount)) {
+            Log::warning('M-Pesa callback: subscription amount mismatch', [
+                'CheckoutRequestID' => $checkoutRequestId,
+                'paid' => $amount,
+                'expected' => $expectedAmount,
+            ]);
+
+            return response('OK', 200);
+        }
+
         $metadata = $stkCallback['CallbackMetadata']['Item'] ?? [];
-        $amount = 0;
         $transactionId = '';
         foreach ($metadata as $item) {
-            $name = $item['Name'] ?? '';
-            $value = $item['Value'] ?? null;
-            if ($name === 'Amount') {
-                $amount = (float) $value;
+            if (($item['Name'] ?? '') === 'MpesaReceiptNumber') {
+                $transactionId = (string) ($item['Value'] ?? '');
             }
-            if ($name === 'MpesaReceiptNumber') {
-                $transactionId = (string) $value;
-            }
-        }
-        if ($amount <= 0) {
-            $amount = (float) $plan->price_amount;
         }
 
         $startDate = now()->format('Y-m-d');
@@ -126,5 +147,28 @@ class MpesaCallbackController extends Controller
         }
 
         return response('OK', 200);
+    }
+
+    /**
+     * @param  array<string, mixed>  $stkCallback
+     */
+    protected function extractCallbackAmount(array $stkCallback): float
+    {
+        foreach ($stkCallback['CallbackMetadata']['Item'] ?? [] as $item) {
+            if (($item['Name'] ?? '') === 'Amount') {
+                return (float) ($item['Value'] ?? 0);
+            }
+        }
+
+        return 0.0;
+    }
+
+    protected function amountsMatch(float $paid, float $expected): bool
+    {
+        if ($expected <= 0) {
+            return $paid > 0;
+        }
+
+        return abs($paid - $expected) <= 0.01;
     }
 }

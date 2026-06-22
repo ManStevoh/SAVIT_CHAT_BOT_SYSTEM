@@ -13,16 +13,19 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        User::firstOrCreate(
+        $user = User::firstOrCreate(
             ['email' => 'admin@savit.local'],
             [
                 'name' => 'Super Admin',
                 'password' => Hash::make('password'),
-                'role' => 'admin',
                 'company_id' => null,
                 'phone' => null,
                 'status' => 'active',
             ]
         );
+        if ($user->role !== 'admin') {
+            $user->role = 'admin';
+            $user->save();
+        }
     }
 }

@@ -136,7 +136,8 @@ Scheduled automatically:
 ## 11. E2E tests (frontend)
 
 ```bash
-cd FRONTED
+cd LARAVEL_BACKEND
+php -S 127.0.0.1:8080 -t public   # separate terminal
 npm run test:e2e
 ```
 

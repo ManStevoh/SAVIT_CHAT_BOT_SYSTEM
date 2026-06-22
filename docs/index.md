@@ -28,8 +28,7 @@ SAVIT Chat Bot is an end-to-end commerce platform built for businesses that sell
 
 | Component | URL |
 |-----------|-----|
-| Web application (frontend) | [savit-chat-bot-system.vercel.app](https://savit-chat-bot-system.vercel.app) |
-| API backend (Laravel) | [savitchat.savitglobalsolutions.com](https://savitchat.savitglobalsolutions.com) |
+| Web application (UI + API) | [savitchat.savitglobalsolutions.com](https://savitchat.savitglobalsolutions.com) |
 
 ## Documentation sections
 
@@ -57,9 +56,9 @@ Architecture, API reference, database schema, deployment, environment variables,
 ## System at a glance
 
 ```
-Customer (WhatsApp)  →  Meta Cloud API  →  Laravel Backend  →  AI / FAQ / Orders
+Customer (WhatsApp)  →  Meta Cloud API  →  Laravel (API + Inertia UI)  →  AI / FAQ / Orders
                                               ↓
-Company Dashboard (Next.js)  ←  REST API  ←  Database + Queue Jobs
+Company Dashboard (React)  ←  REST API  ←  Database + Queue Jobs
 
 Growth Engine: Social Post → Attribution Link → WhatsApp → Order → Revenue
 ```

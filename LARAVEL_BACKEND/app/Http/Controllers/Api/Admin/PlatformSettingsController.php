@@ -37,6 +37,7 @@ class PlatformSettingsController extends Controller
             'defaultTimezone' => $data['default_timezone'] ?? 'UTC',
             'maintenanceMessage' => $data['maintenance_message'] ?? null,
             'allowNewRegistrations' => (bool) ($data['allow_new_registrations'] ?? true),
+            'requireEmailVerification' => (bool) ($data['require_email_verification'] ?? false),
             'aiModel' => $data['ai_model'] ?? null,
             'maxTokensPerRequest' => isset($data['max_tokens_per_request']) ? (int) $data['max_tokens_per_request'] : null,
             'rateLimitPerMinute' => isset($data['rate_limit_per_minute']) ? (int) $data['rate_limit_per_minute'] : null,
@@ -47,7 +48,7 @@ class PlatformSettingsController extends Controller
             'smtpPassword' => $smtpPasswordMasked,
             'fromEmail' => $data['mail_from_address'] ?? null,
             'fromName' => $data['mail_from_name'] ?? null,
-            'whatsappWebhookVerifyToken' => $data['whatsapp_webhook_verify_token'] ?? null,
+            'whatsappWebhookVerifyToken' => $this->maskSecret($settings, 'whatsapp_webhook_verify_token'),
             'metaAppSecret' => $this->maskSecret($settings, 'meta_app_secret'),
             'openaiApiKey' => $this->maskSecret($settings, 'openai_api_key'),
             'openaiModel' => $data['openai_model'] ?? null,
@@ -93,6 +94,7 @@ class PlatformSettingsController extends Controller
             'defaultTimezone' => 'nullable|string|max:50',
             'maintenanceMessage' => 'nullable|string|max:2000',
             'allowNewRegistrations' => 'sometimes|boolean',
+            'requireEmailVerification' => 'sometimes|boolean',
             'aiModel' => 'nullable|string|max:255',
             'maxTokensPerRequest' => 'nullable|integer|min:1',
             'rateLimitPerMinute' => 'nullable|integer|min:1',
@@ -134,6 +136,7 @@ class PlatformSettingsController extends Controller
             'defaultTimezone' => 'default_timezone',
             'maintenanceMessage' => 'maintenance_message',
             'allowNewRegistrations' => 'allow_new_registrations',
+            'requireEmailVerification' => 'require_email_verification',
             'aiModel' => 'ai_model',
             'maxTokensPerRequest' => 'max_tokens_per_request',
             'rateLimitPerMinute' => 'rate_limit_per_minute',
@@ -207,9 +210,11 @@ class PlatformSettingsController extends Controller
                 'message' => 'Test email sent successfully. Check the inbox for ' . $validated['to'],
             ]);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send test email: ' . $e->getMessage(),
+                'message' => 'Failed to send test email. Check SMTP settings and try again.',
             ], 422);
         }
     }

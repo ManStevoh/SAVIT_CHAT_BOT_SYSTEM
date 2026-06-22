@@ -77,6 +77,7 @@ class OrderPaymentService
 
         Cache::put(self::CACHE_KEY_ORDER_PREFIX.$checkoutRequestId, [
             'order_id' => $order->id,
+            'expected_amount' => $amount,
         ], now()->addMinutes(self::CACHE_TTL_MINUTES));
 
         return [

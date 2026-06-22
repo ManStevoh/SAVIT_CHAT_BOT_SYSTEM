@@ -13,12 +13,11 @@ class SuperAdminSeeder extends Seeder
      */
     public function run(): void
     {
-        User::firstOrCreate(
+        $user = User::firstOrCreate(
             ['email' => env('SUPER_ADMIN_EMAIL', 'superadmin@savit.local')],
             [
                 'name' => 'Super Admin',
                 'password' => Hash::make(env('SUPER_ADMIN_PASSWORD', 'password')),
-                'role' => 'admin',
                 'company_id' => null,
                 'phone' => null,
                 'status' => 'active',
@@ -26,5 +25,9 @@ class SuperAdminSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+        if ($user->role !== 'admin') {
+            $user->role = 'admin';
+            $user->save();
+        }
     }
 }

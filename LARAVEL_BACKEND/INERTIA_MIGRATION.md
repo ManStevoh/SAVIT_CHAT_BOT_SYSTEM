@@ -54,7 +54,21 @@ LARAVEL_BACKEND/
 | `npm run dev` | Vite HMR (with `php artisan serve` or `php -S`) |
 | `npm run build` | Production assets → `public/build/` |
 | `npm run typecheck` | TypeScript validation |
-| `php artisan test` | Backend tests (39 passing) |
+| `php artisan test` | Backend tests (71 passing) |
+| `npm run test:e2e` | Playwright E2E (14 tests) |
+| `npm run test:e2e:journey` | Full admin/company/public journey tests |
+
+## E2E testing
+
+Full user journeys are covered by Playwright in `e2e/`:
+
+```bash
+php -S 127.0.0.1:8080 -t public
+npm run test:e2e           # all 14 tests (~1–5 min)
+npm run test:e2e:journey   # journey specs only
+```
+
+Journey specs visit every admin page (13), every company dashboard page (10), and the public auth flow end-to-end.
 
 ## Migration from Next.js
 

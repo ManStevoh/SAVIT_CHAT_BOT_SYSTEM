@@ -5,14 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Plan;
+use App\Models\PlatformSetting;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -24,15 +25,48 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
+        $throttleKey = $this->loginThrottleKey($request);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, PlatformSetting::maxLoginAttempts())) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            throw ValidationException::withMessages([
+                'email' => ["Too many login attempts. Please try again in {$seconds} seconds."],
+            ]);
+        }
+
         $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
+            RateLimiter::hit($throttleKey, 900);
+
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
-        if (! $user->hasVerifiedEmail()) {
+        RateLimiter::clear($throttleKey);
+
+        if (($user->status ?? 'active') === 'inactive') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account has been deactivated. Contact support.',
+                'code' => 'account_inactive',
+            ], 403);
+        }
+
+        if ($user->company_id) {
+            $company = $user->company;
+            if (! $company || $company->status === 'suspended') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your company account is not active. Contact support.',
+                    'code' => 'company_inactive',
+                ], 403);
+            }
+        }
+
+        if (PlatformSetting::requiresEmailVerification() && ! $user->hasVerifiedEmail()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please verify your email address before logging in. Check your inbox for the verification link.',
@@ -55,6 +89,13 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
+        if (! PlatformSetting::allowsNewRegistrations()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'New registrations are currently closed.',
+            ], 403);
+        }
+
         // Support both snake_case (password_confirmation) and camelCase (confirmPassword) from frontend
         $request->merge([
             'password_confirmation' => $request->input('password_confirmation') ?? $request->input('confirmPassword'),
@@ -65,7 +106,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:50',
-            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+            'password' => ['required', 'confirmed', PlatformSetting::passwordRule()],
             'acceptTerms' => 'accepted',
         ], [
             'acceptTerms.accepted' => 'You must accept the terms and conditions.',
@@ -84,17 +125,31 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
             'phone' => $validated['phone'],
             'company_id' => $company->id,
-            'role' => 'company_owner',
             'status' => 'active',
         ]);
+        $user->role = 'company_owner';
+        $user->save();
 
         $this->createDefaultTrialSubscription($company);
 
-        $user->sendEmailVerificationNotification();
+        $requireVerification = PlatformSetting::requiresEmailVerification();
+
+        if ($requireVerification) {
+            $user->sendEmailVerificationNotification();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Registration successful! Please check your email to verify your account.',
+                'requireEmailVerification' => true,
+            ]);
+        }
+
+        $user->markEmailAsVerified();
 
         return response()->json([
             'success' => true,
-            'message' => 'Registration successful! Please check your email to verify your account.',
+            'message' => 'Registration successful! You can now sign in.',
+            'requireEmailVerification' => false,
         ]);
     }
 
@@ -102,7 +157,7 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $status = Password::sendResetLink($request->only('email'));
+        Password::sendResetLink($request->only('email'));
 
         return response()->json([
             'success' => true,
@@ -116,7 +171,7 @@ class AuthController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+            'password' => ['required', 'confirmed', PlatformSetting::passwordRule()],
         ]);
 
         $status = Password::reset(
@@ -126,6 +181,7 @@ class AuthController extends Controller
                     'password' => Hash::make($password),
                     'remember_token' => Str::random(60),
                 ])->save();
+                $user->tokens()->delete();
             }
         );
 
@@ -147,6 +203,13 @@ class AuthController extends Controller
     public function resendVerification(Request $request): JsonResponse
     {
         $request->validate(['email' => 'required|email']);
+
+        if (! PlatformSetting::requiresEmailVerification()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Email verification is not required for this platform. You can log in with your password.',
+            ]);
+        }
 
         $user = User::where('email', $request->email)->first();
         if (! $user) {
@@ -176,6 +239,13 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    private function loginThrottleKey(Request $request): string
+    {
+        $email = Str::transliterate(Str::lower((string) $request->email));
+
+        return 'login:'.$email.'|'.$request->ip();
     }
 
     /**

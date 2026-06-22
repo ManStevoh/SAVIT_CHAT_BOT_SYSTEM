@@ -72,16 +72,18 @@ Route::post('whatsapp/webhook', [WhatsAppWebhookController::class, 'receive']);
 // Auth (no auth required)
 Route::prefix('auth')->group(function () {
     Route::get('verify-email', EmailVerificationController::class)->name('api.verification.verify');
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('reset-password', [AuthController::class, 'resetPassword']);
-    Route::post('resend-verification', [AuthController::class, 'resendVerification']);
-    Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+    Route::middleware('throttle:auth-login')->post('login', [AuthController::class, 'login']);
+    Route::middleware('throttle:auth-register')->post('register', [AuthController::class, 'register']);
+    Route::middleware('throttle:auth-password')->group(function () {
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
+        Route::post('reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('resend-verification', [AuthController::class, 'resendVerification']);
+    });
+    Route::post('logout', [AuthController::class, 'logout'])->middleware(['auth:sanctum', 'user.active']);
 });
 
 // Company (auth required; subscription must be active except for subscription/checkout routes)
-Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->group(function () {
+Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscription.active'])->group(function () {
     Route::get('chats', [ChatController::class, 'index']);
     Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);
     Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
@@ -186,7 +188,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'subscription.active'])->g
 });
 
 // Admin (auth:sanctum + admin role)
-Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->group(function () {
     Route::get('overview', [OverviewController::class, 'index']);
     Route::get('growth-portfolio', [GrowthPortfolioController::class, 'index']);
     Route::post('growth-portfolio/generate', [GrowthPortfolioController::class, 'generateRecommendations']);

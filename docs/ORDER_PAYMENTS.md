@@ -132,9 +132,9 @@ If a company does **not** set its own M-Pesa/Stripe config, the **platform** con
 | Stripe one-time session + webhook | `LARAVEL_BACKEND/app/Services/StripeService.php`, `StripeWebhookController.php` |
 | Company settings (payment flags) | `LARAVEL_BACKEND/app/Models/CompanySetting.php`, `SettingsController.php` |
 | Orders (chat_id, PATCH) | `LARAVEL_BACKEND/app/Models/Order.php`, `OrderController.php` |
-| Frontend: settings | `FRONTED/app/dashboard/settings/page.tsx` (Order Payments tab) |
-| Frontend: orders | `FRONTED/app/dashboard/orders/page.tsx` (payment status in modal) |
-| Stripe success/cancel page | `FRONTED/app/order-paid/page.tsx` |
+| Frontend: settings | `LARAVEL_BACKEND/resources/js/Pages/dashboard/settings/page.tsx` (Order Payments tab) |
+| Frontend: orders | `LARAVEL_BACKEND/resources/js/Pages/dashboard/orders/page.tsx` (payment status in modal) |
+| Stripe success/cancel page | `LARAVEL_BACKEND/resources/js/Pages/order-paid/page.tsx` |
 
 ---
 

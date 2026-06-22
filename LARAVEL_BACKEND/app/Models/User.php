@@ -27,7 +27,6 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'name',
         'email',
         'password',
-        'role',
         'company_id',
         'phone',
         'status',

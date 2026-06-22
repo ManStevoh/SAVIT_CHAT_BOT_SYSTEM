@@ -45,10 +45,18 @@ class WhatsAppWebhookController extends Controller
     public function receive(Request $request): Response
     {
         $secret = $this->getPlatformSettings()?->meta_app_secret ?? config('whatsapp.app_secret');
-        if ($secret !== null && $secret !== '') {
+
+        if ($secret === null || $secret === '') {
+            if (app()->environment('production')) {
+                Log::critical('WhatsApp webhook rejected: meta_app_secret not configured in production');
+
+                return response('', 403);
+            }
+        } else {
             $signature = $request->header('X-Hub-Signature-256');
             if (! $signature || ! $this->verifySignature($request->getContent(), $signature, $secret)) {
                 Log::warning('WhatsApp webhook signature verification failed');
+
                 return response('', 403);
             }
         }
