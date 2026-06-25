@@ -14,13 +14,13 @@ Complete reference for `.env` configuration. Admin UI settings in `platform_sett
 
 | Variable | Example | Description |
 |----------|---------|-------------|
-| `APP_NAME` | SAVIT Chat Bot | Application name |
+| `APP_NAME` | Essem Chat Bot | Application name |
 | `APP_ENV` | production | local / production |
 | `APP_KEY` | base64:... | Encryption key (required) |
 | `APP_DEBUG` | false | Never true in production |
-| `APP_URL` | https://savitchat.savitglobalsolutions.com | Backend public URL |
-| `FRONTEND_URL` | https://savit-chat-bot-system.vercel.app | CORS allowed origin |
-| `SANCTUM_STATEFUL_DOMAINS` | savit-chat-bot-system.vercel.app | Comma-separated SPA domains |
+| `APP_URL` | https://essemchat.essemglobalsolutions.com | Backend public URL |
+| `FRONTEND_URL` | https://essem-chat-bot-system.vercel.app | CORS allowed origin |
+| `SANCTUM_STATEFUL_DOMAINS` | essem-chat-bot-system.vercel.app | Comma-separated SPA domains |
 
 ### Database
 
@@ -52,7 +52,7 @@ Complete reference for `.env` configuration. Admin UI settings in `platform_sett
 | `MAIL_PASSWORD` | SMTP password |
 | `MAIL_ENCRYPTION` | tls |
 | `MAIL_FROM_ADDRESS` | noreply@example.com |
-| `MAIL_FROM_NAME` | SAVIT Chat Bot |
+| `MAIL_FROM_NAME` | Essem Chat Bot |
 
 Prefer Admin → Settings for production SMTP (stored in DB).
 
@@ -123,7 +123,7 @@ Prefer Admin → Settings for production SMTP (stored in DB).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SUPER_ADMIN_EMAIL` | admin@savit.local | Seed admin email |
+| `SUPER_ADMIN_EMAIL` | admin@essem.local | Seed admin email |
 | `SUPER_ADMIN_PASSWORD` | password | Seed admin password |
 
 ### AWS (optional)

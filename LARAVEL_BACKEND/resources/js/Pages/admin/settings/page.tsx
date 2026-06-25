@@ -360,7 +360,7 @@ export default function AdminSettingsPage() {
                     id="platformName"
                     value={settings?.platformName ?? ""}
                     onChange={(e) => updateSetting("platformName", e.target.value)}
-                    placeholder="e.g. Savit Chat"
+                    placeholder="e.g. Essem Chat"
                   />
                   <p className="text-xs text-muted-foreground mt-1">Used in emails, invoices, and headers across the app.</p>
                 </Field>

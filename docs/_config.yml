@@ -1,5 +1,5 @@
-title: SAVIT Chat Bot
-description: Complete documentation for the SAVIT WhatsApp AI Commerce & Growth Engine platform
+title: Essem Chat Bot
+description: Complete documentation for the Essem WhatsApp AI Commerce & Growth Engine platform
 remote_theme: just-the-docs/just-the-docs
 url: "https://manstevoh.github.io"
 baseurl: "/SAVIT_CHAT_BOT_SYSTEM"
@@ -16,11 +16,11 @@ heading_anchors: true
 
 aux_links:
   "Live App":
-    - "https://savit-chat-bot-system.vercel.app"
+    - "https://essem-chat-bot-system.vercel.app"
   "API Backend":
-    - "https://savitchat.savitglobalsolutions.com"
+    - "https://essemchat.essemglobalsolutions.com"
 
-footer_content: "SAVIT Global Solutions — WhatsApp AI Commerce Platform"
+footer_content: "Essem Global Solutions — WhatsApp AI Commerce Platform"
 
 defaults:
   - scope:

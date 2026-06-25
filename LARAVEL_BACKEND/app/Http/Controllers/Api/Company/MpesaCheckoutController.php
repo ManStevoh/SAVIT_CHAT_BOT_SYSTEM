@@ -54,7 +54,7 @@ class MpesaCheckoutController extends Controller
         $result = $this->mpesa->stkPush(
             $validated['phone'],
             $amount,
-            'SAVIT_'.$plan->slug,
+            'ESSEM_'.$plan->slug,
             'Subscription '.$plan->name,
             $callbackUrl
         );

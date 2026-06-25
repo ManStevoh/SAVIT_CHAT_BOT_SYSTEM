@@ -4,7 +4,7 @@ import { LegalLayout } from "@/components/landing/legal-layout"
 export default function TermsPage() {
   return (
     <>
-      <Head title="Terms of Service — Savit Chat" />
+      <Head title="Terms of Service — Essem Chat" />
       <LegalLayout title="Terms of Service">
         <p className="text-sm leading-relaxed">
           <strong>Last updated:</strong> June 2026
@@ -12,14 +12,14 @@ export default function TermsPage() {
 
         <h2>1. Acceptance</h2>
         <p>
-          By creating an account or using Savit Chat, you agree to these Terms of Service. If you
+          By creating an account or using Essem Chat, you agree to these Terms of Service. If you
           are using the service on behalf of a company, you represent that you have authority to
           bind that company.
         </p>
 
         <h2>2. Service description</h2>
         <p>
-          Savit Chat provides WhatsApp business messaging, AI-assisted automation, order management,
+          Essem Chat provides WhatsApp business messaging, AI-assisted automation, order management,
           payment integrations, and related tools. Features vary by subscription plan.
         </p>
 
@@ -47,7 +47,7 @@ export default function TermsPage() {
 
         <h2>6. Limitation of liability</h2>
         <p>
-          The service is provided &quot;as is&quot; to the maximum extent permitted by law. SAVIT
+          The service is provided &quot;as is&quot; to the maximum extent permitted by law. Essem
           Global Solutions is not liable for indirect, incidental, or consequential damages arising
           from use of the platform.
         </p>
@@ -61,7 +61,7 @@ export default function TermsPage() {
         <h2>8. Contact</h2>
         <p>
           For questions about these terms, contact{" "}
-          <a href="mailto:support@savitglobalsolutions.com">support@savitglobalsolutions.com</a>.
+          <a href="mailto:support@essemglobalsolutions.com">support@essemglobalsolutions.com</a>.
         </p>
       </LegalLayout>
     </>

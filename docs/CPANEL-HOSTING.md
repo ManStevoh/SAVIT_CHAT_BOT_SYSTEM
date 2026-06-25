@@ -12,7 +12,7 @@ This guide covers hosting both the **Next.js frontend** and **Laravel backend** 
 
 ### 1.1 Build the Next.js app
 ```bash
-cd SAVIT_BOT
+cd ESSEM_BOT
 npm install
 npm run build
 ```
@@ -51,7 +51,7 @@ Suggested layout under your home directory:
 │   ├── public/       ← Apache will use THIS as document root for api.yourdomain.com
 │   ├── .env
 │   └── ...
-├── nextjs/           ← full Next.js app (SAVIT_BOT root: package.json, app/, lib/, etc.)
+├── nextjs/           ← full Next.js app (ESSEM_BOT root: package.json, app/, lib/, etc.)
 │   ├── app/
 │   ├── lib/
 │   ├── .next/        ← upload after local "npm run build", or build on server
@@ -115,7 +115,7 @@ Next.js needs **Node.js**. Use cPanel’s **“Setup Node.js App”** (or “App
 1. In cPanel open **Setup Node.js App** (or similar).
 2. **Create application:**
    - **Node.js version:** 18 or 20 (LTS).
-   - **Application root:** folder that contains your Next.js app (e.g. `nextjs` or `savit_bot`).
+   - **Application root:** folder that contains your Next.js app (e.g. `nextjs` or `ESSEM_BOT`).
    - **Application URL:** your main domain or subdomain (e.g. `yourdomain.com` or `app.yourdomain.com`).
    - **Application startup file:** leave default or set to run `npm start` (see below).
 

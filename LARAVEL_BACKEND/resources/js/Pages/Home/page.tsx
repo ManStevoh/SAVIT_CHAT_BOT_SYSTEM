@@ -16,7 +16,7 @@ import { CtaSection } from "@/components/landing/cta-section"
 import { Footer } from "@/components/landing/footer"
 
 const META = {
-  title: "Savit Chat — AI WhatsApp Sales & Order Automation",
+  title: "Essem Chat — AI WhatsApp Sales & Order Automation",
   description:
     "Turn WhatsApp into your best sales channel. AI replies, order flows, M-Pesa & Stripe payments, multi-agent inbox, and Growth Engine attribution — all in one platform.",
 }

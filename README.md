@@ -1,4 +1,4 @@
-# SAVIT Chat Bot — Unified Application
+# Essem Chat Bot — Unified Application
 
 The application lives in **`LARAVEL_BACKEND/`** — a single **Laravel 12 + Inertia.js + React** app. The old standalone Next.js frontend has been removed.
 
@@ -21,7 +21,7 @@ Open **http://127.0.0.1:8080**
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | superadmin@savit.local | password |
+| Super Admin | superadmin@essem.local | password |
 | Company | demo1@company.local | password |
 
 ## Testing

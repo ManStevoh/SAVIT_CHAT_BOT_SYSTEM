@@ -1,4 +1,4 @@
-# SAVIT Growth Engine — Technical Specification
+# Essem Growth Engine — Technical Specification
 
 **Module:** AI Social Media Growth Engine with closed-loop attribution  
 **Stack:** Laravel (API) + Next.js (dashboard) + Meta Graph API + OpenAI  
@@ -8,7 +8,7 @@
 
 ## Overview
 
-The Growth Engine extends SAVIT_CHAT_BOT from WhatsApp-only commerce to a full **post → click → WhatsApp → lead → order → revenue** growth loop.
+The Growth Engine extends Essem Chat Bot from WhatsApp-only commerce to a full **post → click → WhatsApp → lead → order → revenue** growth loop.
 
 ### Layers implemented
 

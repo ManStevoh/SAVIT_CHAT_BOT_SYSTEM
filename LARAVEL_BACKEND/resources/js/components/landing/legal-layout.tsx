@@ -19,8 +19,8 @@ export function LegalLayout({ title, children }: LegalLayoutProps) {
         </div>
         <p className="mt-12 text-sm text-muted-foreground">
           Questions?{" "}
-          <a href="mailto:support@savitglobalsolutions.com" className="text-primary hover:underline">
-            support@savitglobalsolutions.com
+          <a href="mailto:support@essemglobalsolutions.com" className="text-primary hover:underline">
+            support@essemglobalsolutions.com
           </a>
           {" · "}
           <Link href="/" className="text-primary hover:underline">

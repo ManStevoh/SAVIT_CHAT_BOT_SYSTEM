@@ -11,7 +11,7 @@ import AdminLayout from './layouts/AdminLayout'
 import AuthLayout from './layouts/AuthLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 
-const appName = import.meta.env.VITE_APP_NAME || 'Savit Chat'
+const appName = import.meta.env.VITE_APP_NAME || 'Essem Chat'
 
 function resolveLayout(name: string) {
   if (name.startsWith('Auth/')) return AuthLayout
@@ -38,7 +38,7 @@ createInertiaApp({
   },
   setup({ el, App, props }) {
     createRoot(el).render(
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="savit-theme">
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="essem-theme">
         <AppBrandingProvider>
           <App {...props} />
           <Toaster />

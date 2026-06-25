@@ -1,6 +1,6 @@
 # Meta Developer Account & WhatsApp Cloud API — Admin Setup Guide
 
-This guide is for **platform administrators** who configure the **Meta for Developers** app and link it to this product (SAVIT Chat Bot). Companies connect their own WhatsApp Business numbers in the dashboard; **you** set up the shared Meta app, webhook, and platform secrets.
+This guide is for **platform administrators** who configure the **Meta for Developers** app and link it to this product (Essem Chat Bot). Companies connect their own WhatsApp Business numbers in the dashboard; **you** set up the shared Meta app, webhook, and platform secrets.
 
 **Official reference:** [Meta WhatsApp Cloud API documentation](https://developers.facebook.com/docs/whatsapp/cloud-api)
 
@@ -165,4 +165,4 @@ For deeper product behavior (auto-reply, FAQ, OpenAI), see **`docs/WHATSAPP_SETU
 
 ---
 
-*Last aligned with SAVIT Chat Bot backend routes and `config/whatsapp.php`. Meta’s developer UI may rename menus; if a label differs, use Meta’s in-product help or the official Cloud API docs.*
+*Last aligned with Essem Chat Bot backend routes and `config/whatsapp.php`. Meta’s developer UI may rename menus; if a label differs, use Meta’s in-product help or the official Cloud API docs.*

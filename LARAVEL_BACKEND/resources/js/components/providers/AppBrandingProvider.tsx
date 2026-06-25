@@ -9,7 +9,7 @@ export function useAppBranding(): AppBranding {
   const ctx = useContext(AppBrandingContext)
   return (
     ctx ?? {
-      applicationName: "Savit Chat",
+      applicationName: "Essem Chat",
       appLogo: null,
       primaryColor: null,
       secondaryColor: null,

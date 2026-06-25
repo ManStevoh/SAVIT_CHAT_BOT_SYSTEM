@@ -1,6 +1,6 @@
-# SAVIT_BOT Laravel API
+# ESSEM_BOT Laravel API
 
-Backend for the SAVIT_BOT Next.js app. Implements all API endpoints from `../LARAVEL_API.md`.
+Backend for the ESSEM_BOT Next.js app. Implements all API endpoints from `../LARAVEL_API.md`.
 
 ## Setup
 
@@ -30,7 +30,7 @@ Backend for the SAVIT_BOT Next.js app. Implements all API endpoints from `../LAR
    ```bash
    php artisan db:seed
    ```
-   Creates a super admin: **email** `admin@savit.local`, **password** `password`. Change the password after first login.
+   Creates a super admin: **email** `admin@essem.local`, **password** `password`. Change the password after first login.
 
 5. **Serve**
    ```bash
@@ -54,7 +54,7 @@ Backend for the SAVIT_BOT Next.js app. Implements all API endpoints from `../LAR
 
 ## Testing with Next.js
 
-In the SAVIT_BOT root:
+In the ESSEM_BOT root:
 
 1. Create `.env.local` with:
    ```

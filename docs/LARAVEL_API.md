@@ -1,4 +1,4 @@
-# Laravel API contract for SAVIT_BOT
+# Laravel API contract for ESSEM_BOT
 
 Use this as a checklist when building your Laravel backend. The Next.js app sends `Accept: application/json` and expects JSON responses. Use **Laravel Sanctum** (or your auth) and ensure CORS allows your Next.js origin.
 

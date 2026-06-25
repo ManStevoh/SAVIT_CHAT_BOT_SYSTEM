@@ -49,7 +49,7 @@ class PaystackCheckoutController extends Controller
             return response()->json(['message' => 'Company email is required for Paystack checkout.'], 422);
         }
 
-        $reference = 'savit_sub_'.$company->id.'_'.uniqid();
+        $reference = 'essem_sub_'.$company->id.'_'.uniqid();
         $callbackUrl = $validated['callbackUrl']
             ?? config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')).'/dashboard/subscription?checkout=success';
 

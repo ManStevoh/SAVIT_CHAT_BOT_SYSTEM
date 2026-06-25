@@ -65,10 +65,10 @@ export function HeroSection() {
                 style={{ backgroundColor: "var(--wa-header)" }}
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-sm font-semibold text-white">
-                  SC
+                  EC
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-white">Savit Assistant</div>
+                  <div className="text-sm font-medium text-white">Essem Assistant</div>
                   <div className="text-xs text-white/70">online</div>
                 </div>
               </div>

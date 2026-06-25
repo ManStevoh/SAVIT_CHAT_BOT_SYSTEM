@@ -7,7 +7,7 @@ permalink: /user-guide/
 
 # User Guide
 
-This section covers every user-facing feature of SAVIT Chat Bot from end to end. Choose your role to get started.
+This section covers every user-facing feature of Essem Chat Bot from end to end. Choose your role to get started.
 
 ## Who uses this platform?
 
@@ -15,7 +15,7 @@ This section covers every user-facing feature of SAVIT Chat Bot from end to end.
 |------|-------------|------------|
 | **Company owner / staff** | Businesses that sell via WhatsApp | [Getting Started](getting-started.md) |
 | **End customer** | Shoppers messaging a business on WhatsApp | [WhatsApp Shopping Journey](customer-journeys/whatsapp-shopping.md) |
-| **Super admin** | Platform operator (SAVIT team) | [Super Admin Overview](super-admin/overview.md) |
+| **Super admin** | Platform operator (Essem team) | [Super Admin Overview](super-admin/overview.md) |
 
 ## Company dashboard sections
 

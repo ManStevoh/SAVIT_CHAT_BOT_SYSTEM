@@ -7,7 +7,7 @@ description: Automate deploy from local machine to production server via GitHub 
 
 # CI/CD Pipeline
 
-SAVIT Chat Bot is a **Laravel + PHP** application. It **cannot run on Vercel** (Vercel is for static sites and serverless Node). Production lives on your **cPanel/VPS** at `https://savitchat.savitglobalsolutions.com`.
+Essem Chat Bot is a **Laravel + PHP** application. It **cannot run on Vercel** (Vercel is for static sites and serverless Node). Production lives on your **cPanel/VPS** at `https://essemchat.essemglobalsolutions.com`.
 
 This guide replaces the old **local → Vercel → API** flow with:
 
@@ -60,10 +60,10 @@ flowchart LR
 
 ### 1. Production server
 
-On `savitchat.savitglobalsolutions.com` (cPanel or VPS):
+On `essemchat.essemglobalsolutions.com` (cPanel or VPS):
 
 1. Upload or clone the app so Laravel lives at a known path, e.g.  
-   `/home/username/savitchat/LARAVEL_BACKEND`
+   `/home/username/essemchat/LARAVEL_BACKEND`
 2. Document root must point to **`.../LARAVEL_BACKEND/public`**
 3. Create production `.env` on the server (never committed, never overwritten by deploy)
 4. First-time only:
@@ -83,10 +83,10 @@ On `savitchat.savitglobalsolutions.com` (cPanel or VPS):
 On your **local machine**:
 
 ```powershell
-ssh-keygen -t ed25519 -C "github-actions-savit-deploy" -f $env:USERPROFILE\.ssh\savit_deploy
+ssh-keygen -t ed25519 -C "github-actions-Essem-deploy" -f $env:USERPROFILE\.ssh\ESSEM_deploy
 ```
 
-Add the **public** key (`savit_deploy.pub`) to the server:
+Add the **public** key (`ESSEM_deploy.pub`) to the server:
 
 - cPanel → **SSH Access** → **Manage SSH Keys** → Import → Authorize  
 - Or append to `~/.ssh/authorized_keys` on VPS
@@ -94,7 +94,7 @@ Add the **public** key (`savit_deploy.pub`) to the server:
 Test:
 
 ```powershell
-ssh -i $env:USERPROFILE\.ssh\savit_deploy -p 22 USER@YOUR_SERVER_HOST "echo ok"
+ssh -i $env:USERPROFILE\.ssh\ESSEM_deploy -p 22 USER@YOUR_SERVER_HOST "echo ok"
 ```
 
 ### 3. GitHub secrets
@@ -103,11 +103,11 @@ Repo → **Settings → Secrets and variables → Actions** → **New repository
 
 | Secret | Example | Description |
 |--------|---------|-------------|
-| `PROD_SSH_HOST` | `savitchat.savitglobalsolutions.com` or server IP | SSH hostname |
-| `PROD_SSH_USER` | `savituser` | cPanel/VPS username |
-| `PROD_SSH_KEY` | Full private key file contents | From `savit_deploy` (no passphrase recommended for CI) |
+| `PROD_SSH_HOST` | `essemchat.essemglobalsolutions.com` or server IP | SSH hostname |
+| `PROD_SSH_USER` | `essemuser` | cPanel/VPS username |
+| `PROD_SSH_KEY` | Full private key file contents | From `ESSEM_deploy` (no passphrase recommended for CI) |
 | `PROD_SSH_PORT` | `22` | Optional; omit if default |
-| `PROD_DEPLOY_PATH` | `/home/savituser/savitchat/LARAVEL_BACKEND` | Absolute path to app root on server |
+| `PROD_DEPLOY_PATH` | `/home/essemuser/essemchat/LARAVEL_BACKEND` | Absolute path to app root on server |
 
 ### 4. GitHub environment (optional but recommended)
 
@@ -190,7 +190,7 @@ bash scripts/post-deploy.sh
 ## Monitoring deploys
 
 - **Actions:** [github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions)
-- **Health:** `curl https://savitchat.savitglobalsolutions.com/up`
+- **Health:** `curl https://essemchat.essemglobalsolutions.com/up`
 - **Logs on server:** `storage/logs/laravel.log`, queue worker log
 
 ---
@@ -211,7 +211,7 @@ bash scripts/post-deploy.sh
 
 ## Staging (optional)
 
-To add a staging subdomain (e.g. `staging.savitchat...`):
+To add a staging subdomain (e.g. `staging.essemchat...`):
 
 1. Duplicate `deploy-production.yml` → `deploy-staging.yml`
 2. Use secrets prefixed `STAGING_*`

@@ -1,4 +1,4 @@
-# Push to GitHub and trigger production deploy (GitHub Actions → SSH → savitchat subdomain).
+# Push to GitHub and trigger production deploy (GitHub Actions → SSH → essemchat subdomain).
 # Usage:
 #   .\scripts\deploy-from-local.ps1              # push current branch, deploy if on main
 #   .\scripts\deploy-from-local.ps1 -Branch main  # merge workflow: checkout main, push, deploy
@@ -56,7 +56,7 @@ if ($TargetBranch -eq "main") {
     Write-Host ""
     Write-Host "Push to main will trigger: CI tests -> rsync -> post-deploy -> health check" -ForegroundColor Green
     Write-Host "Actions: https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions"
-    Write-Host "Live app: https://savitchat.savitglobalsolutions.com"
+    Write-Host "Live app: https://essemchat.essemglobalsolutions.com"
 } else {
     Write-Host ""
     Write-Host "Pushed $TargetBranch. CI runs on feature branches; production deploy runs only on main." -ForegroundColor Cyan

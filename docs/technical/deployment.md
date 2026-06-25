@@ -12,7 +12,7 @@ Production runs as a **single Laravel application** on cPanel/VPS. The Inertia +
 
 | Component | URL |
 |-----------|-----|
-| App (UI + API) | https://savitchat.savitglobalsolutions.com |
+| App (UI + API) | https://essemchat.essemglobalsolutions.com |
 
 All routes — landing, dashboard, admin, webhooks, and REST API — live under this domain.
 
@@ -82,11 +82,11 @@ If the host has no Node.js, build locally or in CI and upload `public/build/` (a
 ```env
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://savitchat.savitglobalsolutions.com
+APP_URL=https://essemchat.essemglobalsolutions.com
 
 # Same as APP_URL for Inertia same-origin (checkout redirects, email links)
-FRONTEND_URL=https://savitchat.savitglobalsolutions.com
-SANCTUM_STATEFUL_DOMAINS=savitchat.savitglobalsolutions.com
+FRONTEND_URL=https://essemchat.essemglobalsolutions.com
+SANCTUM_STATEFUL_DOMAINS=essemchat.essemglobalsolutions.com
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -96,7 +96,7 @@ DB_PASSWORD=your_password
 
 QUEUE_CONNECTION=database
 
-VITE_APP_NAME="Savit Chat"
+VITE_APP_NAME="Essem Chat"
 ```
 
 The UI calls `/api/*` on the same origin, so `VITE_API_URL` is usually omitted in production. Set `VITE_USE_MOCK_API=false` (or leave unset) for live data.
@@ -104,7 +104,7 @@ The UI calls `/api/*` on the same origin, so `VITE_API_URL` is usually omitted i
 ## Queue worker (Supervisor)
 
 ```ini
-[program:savit-queue]
+[program:essem-queue]
 process_name=%(program_name)s_%(process_num)02d
 command=php /path/to/LARAVEL_BACKEND/artisan queue:work --sleep=3 --tries=3 --max-time=3600
 autostart=true
@@ -132,7 +132,7 @@ Laravel `public/.htaccess` handles URL rewriting. Ensure `mod_rewrite` is enable
 ```nginx
 server {
     listen 443 ssl;
-    server_name savitchat.savitglobalsolutions.com;
+    server_name essemchat.essemglobalsolutions.com;
     root /path/to/LARAVEL_BACKEND/public;
 
     index index.php;
@@ -152,22 +152,22 @@ server {
 After the app is live with HTTPS:
 
 1. Meta Developer → WhatsApp → Configuration
-2. Callback URL: `https://savitchat.savitglobalsolutions.com/api/whatsapp/webhook`
+2. Callback URL: `https://essemchat.essemglobalsolutions.com/api/whatsapp/webhook`
 3. Verify token: match Admin → Settings
 4. Subscribe to **messages**
 
 ## Stripe webhook configuration
 
 1. Stripe Dashboard → Webhooks
-2. Endpoint: `https://savitchat.savitglobalsolutions.com/api/stripe/webhook`
+2. Endpoint: `https://essemchat.essemglobalsolutions.com/api/stripe/webhook`
 3. Events: `checkout.session.completed`, subscription events
 4. Copy webhook secret to Admin → Payment Gateways
 
 ## Post-deploy verification
 
 ```bash
-curl https://savitchat.savitglobalsolutions.com/up
-curl https://savitchat.savitglobalsolutions.com/api/plans
+curl https://essemchat.essemglobalsolutions.com/up
+curl https://essemchat.essemglobalsolutions.com/api/plans
 ```
 
 | Check | Expected |
@@ -190,7 +190,7 @@ See [GitHub Pages Setup](../GITHUB_PAGES_SETUP.md).
 Production deploy is automated via **GitHub Actions** (not Vercel):
 
 ```
-Local → git push main → GitHub Actions → SSH/rsync → savitchat.savitglobalsolutions.com
+Local → git push main → GitHub Actions → SSH/rsync → essemchat.essemglobalsolutions.com
 ```
 
 See **[CI/CD Pipeline](ci-cd.md)** for one-time SSH + secrets setup and the `scripts/deploy-from-local.ps1` helper.
@@ -203,7 +203,7 @@ composer install --no-dev
 npm ci && npm run build
 php artisan migrate
 php artisan config:cache
-supervisorctl restart savit-queue
+supervisorctl restart essem-queue
 ```
 
 Always backup database before migrations in production.

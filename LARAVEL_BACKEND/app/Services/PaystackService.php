@@ -158,7 +158,7 @@ class PaystackService
         }
 
         $email = $order->customer_email ?: ('order'.$order->id.'@paystack.local');
-        $reference = 'savit_ord_'.$order->id.'_'.uniqid();
+        $reference = 'essem_ord_'.$order->id.'_'.uniqid();
 
         $result = $this->initializeTransaction(
             $email,

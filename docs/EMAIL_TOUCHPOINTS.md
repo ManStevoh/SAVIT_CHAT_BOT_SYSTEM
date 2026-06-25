@@ -1,4 +1,4 @@
-# Email touchpoints in SAVIT
+# Email touchpoints in Essem
 
 This document lists every place where the system sends (or is intended to send) emails to users or companies.
 

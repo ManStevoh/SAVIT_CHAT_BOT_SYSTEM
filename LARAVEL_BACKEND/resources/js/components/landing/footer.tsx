@@ -6,7 +6,7 @@ import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
 const DOCS_URL = "https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/"
-const CONTACT_EMAIL = "support@savitglobalsolutions.com"
+const CONTACT_EMAIL = "support@essemglobalsolutions.com"
 
 const footerLinks = {
   Product: [
@@ -30,7 +30,7 @@ const footerLinks = {
 
 export function Footer() {
   const branding = useAppBranding()
-  const appName = branding.applicationName || "Savit Chat"
+  const appName = branding.applicationName || "Essem Chat"
 
   return (
     <footer className="border-t border-border/70 bg-card">

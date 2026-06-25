@@ -10,7 +10,7 @@ export function AuthBranding({
   children: React.ReactNode
 }) {
   const branding = useAppBranding()
-  const appName = branding.applicationName || "Savit Chat"
+  const appName = branding.applicationName || "Essem Chat"
 
   return (
     <div className="min-h-screen bg-background">

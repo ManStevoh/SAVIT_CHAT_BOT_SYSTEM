@@ -2,20 +2,20 @@
 title: Home
 layout: default
 nav_order: 1
-description: "SAVIT Chat Bot — WhatsApp AI Commerce & Growth Engine"
+description: "Essem Chat Bot — WhatsApp AI Commerce & Growth Engine"
 permalink: /
 ---
 
-# SAVIT Chat Bot Documentation
+# Essem Chat Bot Documentation
 
 > **Enable docs site:** [Settings → Pages](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/settings/pages) → Deploy from branch → `main` → `/docs` → Save.  
 > **URL:** https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/
 
-Welcome to the official documentation for **SAVIT Chat Bot** — a multi-tenant SaaS platform that lets businesses connect WhatsApp, automate customer conversations with AI, manage orders and products, collect payments, and grow revenue through social media attribution.
+Welcome to the official documentation for **Essem Chat Bot** — a multi-tenant SaaS platform that lets businesses connect WhatsApp, automate customer conversations with AI, manage orders and products, collect payments, and grow revenue through social media attribution.
 
-## What is SAVIT Chat Bot?
+## What is Essem Chat Bot?
 
-SAVIT Chat Bot is an end-to-end commerce platform built for businesses that sell through WhatsApp. Companies subscribe to the platform, connect their WhatsApp Business number, and the system handles:
+Essem Chat Bot is an end-to-end commerce platform built for businesses that sell through WhatsApp. Companies subscribe to the platform, connect their WhatsApp Business number, and the system handles:
 
 - **Instant AI replies** to customer messages (FAQs, catalog, greetings)
 - **Order collection** through conversational flows on WhatsApp
@@ -28,7 +28,7 @@ SAVIT Chat Bot is an end-to-end commerce platform built for businesses that sell
 
 | Component | URL |
 |-----------|-----|
-| Web application (UI + API) | [savitchat.savitglobalsolutions.com](https://savitchat.savitglobalsolutions.com) |
+| Web application (UI + API) | [essemchat.essemglobalsolutions.com](https://essemchat.essemglobalsolutions.com) |
 
 ## Documentation sections
 

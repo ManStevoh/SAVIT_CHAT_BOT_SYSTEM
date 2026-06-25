@@ -8,12 +8,12 @@ nav_order: 1
 
 **URL:** `/admin`
 
-The super admin panel is for **platform operators** (SAVIT Global Solutions team) to manage all tenants, billing, integrations, and system health.
+The super admin panel is for **platform operators** (Essem Global Solutions team) to manage all tenants, billing, integrations, and system health.
 
 ## Access
 
 - Role: `admin` on user account
-- Default seeded account: `admin@savit.local` / `password` (change immediately in production)
+- Default seeded account: `admin@essem.local` / `password` (change immediately in production)
 - Login at same URL as companies, then navigate to `/admin`
 
 ## Admin dashboard home

@@ -12,7 +12,7 @@ This guide walks a new business owner from registration to receiving their first
 
 Open the live application:
 
-**[https://savit-chat-bot-system.vercel.app](https://savit-chat-bot-system.vercel.app)**
+**[https://essem-chat-bot-system.vercel.app](https://essem-chat-bot-system.vercel.app)**
 
 Browse the landing page for features and pricing. Plans are loaded dynamically from the platform.
 

@@ -125,7 +125,7 @@ Laravel defaults when using database driver:
 |--------|------|
 | `PlanSeeder` | Starter, Growth, Enterprise plans |
 | `DatabaseSeeder` | Calls all seeders |
-| Super admin user | `admin@savit.local` (via env or default) |
+| Super admin user | `admin@essem.local` (via env or default) |
 | `PaymentGatewaySeeder` | Stripe, M-Pesa, Paystack stubs |
 | `CompanySeeder` | Sample company for dev |
 

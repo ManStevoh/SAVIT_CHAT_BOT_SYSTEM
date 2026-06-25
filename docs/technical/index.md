@@ -7,12 +7,12 @@ permalink: /technical/
 
 # Technical Documentation
 
-Developer and DevOps reference for the SAVIT Chat Bot platform.
+Developer and DevOps reference for the Essem Chat Bot platform.
 
 ## Repository structure
 
 ```
-SAVIT_CHAT_BOT/
+Essem Chat Bot/
 ├── LARAVEL_BACKEND/   # Unified Laravel 12 + Inertia + React app (UI + API)
 ├── docs/              # This documentation site (GitHub Pages)
 └── (deprecated)       # Legacy Next.js at repo root — do not deploy
@@ -44,7 +44,7 @@ SAVIT_CHAT_BOT/
 
 | Service | URL |
 |---------|-----|
-| Application (UI + API) | https://savitchat.savitglobalsolutions.com |
+| Application (UI + API) | https://essemchat.essemglobalsolutions.com |
 | Health check | `GET /up` on the same domain |
 
 ## Quick local setup
@@ -74,7 +74,7 @@ Open **http://127.0.0.1:8080**
 
 | Account | Email | Password | Role |
 |---------|-------|----------|------|
-| Super admin | superadmin@savit.local | password | admin |
+| Super admin | superadmin@essem.local | password | admin |
 | Demo company | demo1@company.local | password | company_owner |
 
 Change immediately in production.

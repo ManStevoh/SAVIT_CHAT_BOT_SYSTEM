@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 const email =
-  process.env.PLAYWRIGHT_TEST_ADMIN_EMAIL ?? 'superadmin@savit.local'
+  process.env.PLAYWRIGHT_TEST_ADMIN_EMAIL ?? 'superadmin@essem.local'
 const password =
   process.env.PLAYWRIGHT_TEST_ADMIN_PASSWORD ?? 'password'
 

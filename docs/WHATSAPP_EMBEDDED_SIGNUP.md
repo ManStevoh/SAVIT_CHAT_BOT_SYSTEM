@@ -26,7 +26,7 @@ Monitor connections: **Admin → WhatsApp** (`/admin/whatsapp`)
 
 **During Meta App Review:** Embedded Signup **off**, manual connection **on**, webhook verify token + App Secret configured.
 
-## Meta one-time requirements (Savit)
+## Meta one-time requirements (Essem)
 
 1. Business verification  
 2. App Review: `whatsapp_business_messaging`, `whatsapp_business_management`  

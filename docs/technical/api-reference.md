@@ -6,7 +6,7 @@ nav_order: 5
 
 # API Reference
 
-**Base URL:** `https://savitchat.savitglobalsolutions.com/api`  
+**Base URL:** `https://essemchat.essemglobalsolutions.com/api`  
 **Auth:** Bearer token via `Authorization: Bearer {token}` header  
 **Content-Type:** `application/json` (multipart for file uploads)
 

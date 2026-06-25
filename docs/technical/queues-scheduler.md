@@ -129,7 +129,7 @@ Runs concurrently:
 | Pending jobs | `SELECT COUNT(*) FROM jobs` |
 | Failed jobs | `SELECT COUNT(*) FROM failed_jobs` |
 | Last schedule run | Check cron logs or add logging |
-| Worker alive | `supervisorctl status savit-queue` |
+| Worker alive | `supervisorctl status essem-queue` |
 
 Admin system health endpoint reports queue status.
 

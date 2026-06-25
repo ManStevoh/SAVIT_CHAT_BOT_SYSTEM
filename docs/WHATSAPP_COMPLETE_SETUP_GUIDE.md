@@ -7,7 +7,7 @@ description: End-to-end guide for super admin Meta registration, platform config
 
 # WhatsApp Complete Setup Guide
 
-This is the **full playbook** for SAVIT Chat Bot: how **you (super admin)** register with Meta, get API access, configure the platform once, and how **each business** connects their WhatsApp number — including **pricing and who pays for what**.
+This is the **full playbook** for Essem Chat Bot: how **you (super admin)** register with Meta, get API access, configure the platform once, and how **each business** connects their WhatsApp number — including **pricing and who pays for what**.
 
 **Live docs:** [manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM](https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/)
 
@@ -17,7 +17,7 @@ This is the **full playbook** for SAVIT Chat Bot: how **you (super admin)** regi
 
 ```mermaid
 flowchart TB
-    subgraph once [You do once — Savit / Super Admin]
+    subgraph once [You do once — Essem / Super Admin]
         M1[Create Meta Business + Developer App]
         M2[Business Verification + App Review]
         M3[Tech Provider Access Verification]
@@ -26,7 +26,7 @@ flowchart TB
     end
 
     subgraph perco [Each company does]
-        C1[Register on Savit]
+        C1[Register on Essem]
         C2[Settings → WhatsApp → Connect with Facebook]
         C3[Meta popup: login, WABA, phone, OTP]
         C4[Add payment method to WABA in Meta]
@@ -46,7 +46,7 @@ flowchart TB
 
 | Role | What they need | What they do **not** need |
 |------|----------------|---------------------------|
-| **Super admin (Savit)** | Meta Developer account, verified business, one Meta app | Per-company Meta apps |
+| **Super admin (Essem)** | Meta Developer account, verified business, one Meta app | Per-company Meta apps |
 | **Company (tenant)** | Facebook/Meta login, phone for OTP, payment card on WABA | Meta Developer Console, API tokens, webhook setup |
 
 **One Meta app** serves **all companies**. One webhook URL receives all messages; the backend routes by `phone_number_id`.
@@ -55,10 +55,10 @@ flowchart TB
 
 ## 2. Prerequisites
 
-### For Savit (platform owner)
+### For Essem (platform owner)
 
 - Legal business entity (for Meta Business Verification)
-- Domain with HTTPS, e.g. `https://savitchat.savitglobalsolutions.com`
+- Domain with HTTPS, e.g. `https://essemchat.essemglobalsolutions.com`
 - Laravel app deployed with:
   - `php artisan migrate` (includes WhatsApp migrations)
   - `php artisan queue:work` (required for AI auto-replies)
@@ -68,8 +68,8 @@ flowchart TB
 
 ### For each company (tenant)
 
-- Savit account (register at `/register`)
-- Active **Savit subscription** (your Stripe/M-Pesa plans — separate from Meta)
+- Essem account (register at `/register`)
+- Active **Essem subscription** (your Stripe/M-Pesa plans — separate from Meta)
 - Phone number that can receive SMS/voice OTP
 - Number **not** locked to another WhatsApp API provider (unless using **coexist** mode)
 - Facebook account to complete Embedded Signup
@@ -82,7 +82,7 @@ flowchart TB
 ### Step A1: Meta Business Portfolio
 
 1. Go to [business.facebook.com](https://business.facebook.com) (Meta Business Suite).
-2. Create or select a **Business Portfolio** for **Savit Global Solutions** (or your legal entity name).
+2. Create or select a **Business Portfolio** for **Essem Global Solutions** (or your legal entity name).
 3. Complete **Business Verification**:
    - Business name, address, phone, website
    - Upload documents if Meta requests them
@@ -95,13 +95,13 @@ flowchart TB
 1. Go to [developers.facebook.com](https://developers.facebook.com).
 2. **My Apps → Create App**.
 3. Choose **Business** type (not Consumer).
-4. App name: e.g. `Savit Chat Bot Platform`.
+4. App name: e.g. `Essem Chat Bot Platform`.
 5. Link the app to your **verified Business Portfolio**.
 6. Add product: **WhatsApp**.
 
 ### Step A3: Become a Tech Provider (required for SaaS)
 
-SAVIT is a **multi-tenant SaaS** onboarding many businesses. Meta’s path for this is the **Tech Provider** program (not each company creating their own app).
+Essem is a **multi-tenant SaaS** onboarding many businesses. Meta’s path for this is the **Tech Provider** program (not each company creating their own app).
 
 Follow Meta’s official guide:  
 [Become a Tech Provider](https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/get-started-for-tech-providers)
@@ -119,7 +119,7 @@ Follow Meta’s official guide:
 
 **App Review tips:**
 
-- Provide test login: `superadmin@savit.local` / `password` (or a dedicated reviewer account on your staging URL).
+- Provide test login: `superadmin@essem.local` / `password` (or a dedicated reviewer account on your staging URL).
 - Explain: *“Multi-tenant SaaS; businesses connect WhatsApp via Embedded Signup; we send/receive on their behalf.”*
 - Whitelist your domain under **App Domains** and **Valid OAuth Redirect URIs**.
 
@@ -132,13 +132,13 @@ Meta deprecated Embedded Signup v2 — use **v4** before **October 15, 2026**.
 3. Note down:
    - **App ID** (same as your Meta app ID)
    - **Configuration ID** (Embedded Signup config id)
-4. **Allowed domains:** add your production domain, e.g. `savitchat.savitglobalsolutions.com`.
+4. **Allowed domains:** add your production domain, e.g. `essemchat.essemglobalsolutions.com`.
 5. **OAuth redirect URI:** add:
    ```
-   https://savitchat.savitglobalsolutions.com/dashboard/settings
+   https://essemchat.essemglobalsolutions.com/dashboard/settings
    ```
-   (Must match what you enter in Savit admin settings.)
-6. Optional: enable **coexist** in Embedded Signup if companies use **WhatsApp Business mobile app** on the same number (also enable **Enable coexist** in Savit admin).
+   (Must match what you enter in Essem admin settings.)
+6. Optional: enable **coexist** in Embedded Signup if companies use **WhatsApp Business mobile app** on the same number (also enable **Enable coexist** in Essem admin).
 
 Official docs: [Embedded Signup](https://developers.facebook.com/docs/whatsapp/embedded-signup/)
 
@@ -147,9 +147,9 @@ Official docs: [Embedded Signup](https://developers.facebook.com/docs/whatsapp/e
 1. App Dashboard → **WhatsApp** → **Configuration**.
 2. **Callback URL:**
    ```
-   https://savitchat.savitglobalsolutions.com/api/whatsapp/webhook
+   https://essemchat.essemglobalsolutions.com/api/whatsapp/webhook
    ```
-3. **Verify token:** choose a long random string (e.g. `savit_wa_verify_2026_xK9m...`). You will enter the **same** value in Savit admin.
+3. **Verify token:** choose a long random string (e.g. `essem_wa_verify_2026_xK9m...`). You will enter the **same** value in Essem admin.
 4. Click **Verify and save** (Meta sends GET to your server — app must be running).
 5. **Webhook fields** — subscribe at minimum:
    - `messages`
@@ -161,13 +161,13 @@ Official docs: [Embedded Signup](https://developers.facebook.com/docs/whatsapp/e
 
 1. App Dashboard → **Settings → Basic**.
 2. Copy **App Secret** (shown once; store securely).
-3. You will paste this in Savit **Admin → Settings → Integrations** as **Meta App Secret** (and again as **Embedded App Secret** if same app).
+3. You will paste this in Essem **Admin → Settings → Integrations** as **Meta App Secret** (and again as **Embedded App Secret** if same app).
 
 ---
 
-## 4. Part B — Configure SAVIT platform (super admin)
+## 4. Part B — Configure Essem platform (super admin)
 
-Log in as super admin → `superadmin@savit.local` / `password` (change in production).
+Log in as super admin → `superadmin@essem.local` / `password` (change in production).
 
 ### B1: Deploy & migrate
 
@@ -184,7 +184,7 @@ php artisan config:cache
 Ensure `.env`:
 
 ```env
-APP_URL=https://savitchat.savitglobalsolutions.com
+APP_URL=https://essemchat.essemglobalsolutions.com
 QUEUE_CONNECTION=database   # or redis
 ```
 
@@ -256,7 +256,7 @@ Companies can connect in two ways (super admin controls which are available):
 Requires **Enable Embedded Signup** = on in Admin → Settings → Integrations.
 
 1. Go to `/register` and create a company account.
-2. Subscribe to a plan (`/dashboard/subscription`) — **Savit billing**, not Meta.
+2. Subscribe to a plan (`/dashboard/subscription`) — **Essem billing**, not Meta.
 3. **Dashboard → Settings → WhatsApp Setup** → **Connect with Facebook**
 4. Complete Meta popup (WABA + phone + OTP)
 5. Add payment method to WABA in Meta when prompted
@@ -282,9 +282,9 @@ When using **Connect with Facebook**, the Meta popup will:
 - Enter business phone number and complete **SMS or voice OTP**
 - Set display name (shown to customers)
 
-Popup closes; Savit shows **Connected** with phone number.
+Popup closes; Essem shows **Connected** with phone number.
 
-### What Savit does automatically (backend)
+### What Essem does automatically (backend)
 
 1. Receives OAuth `code` from Meta JS SDK (Embedded Signup) or validates manual token
 2. Exchanges code for **per-company business access token** (Embedded Signup only)
@@ -301,7 +301,7 @@ Direct them to Meta Help:
 
 Or: **WhatsApp Manager** → their WABA → **Payment settings**.
 
-> This pays **Meta’s WhatsApp conversation fees**, not your Savit subscription.
+> This pays **Meta’s WhatsApp conversation fees**, not your Essem subscription.
 
 ### Step C4: Verify it works
 
@@ -319,7 +319,7 @@ Or: **WhatsApp Manager** → their WABA → **Payment settings**.
 
 ### Disconnect
 
-**Disconnect WhatsApp** in settings — unsubscribes webhooks and deactivates the number in Savit (chat history remains).
+**Disconnect WhatsApp** in settings — unsubscribes webhooks and deactivates the number in Essem (chat history remains).
 
 ---
 
@@ -341,7 +341,7 @@ Monitor in **WhatsApp Manager → Partner overview**.
 
 | Purpose | URL |
 |---------|-----|
-| Webhook (Meta → Savit) | `{APP_URL}/api/whatsapp/webhook` |
+| Webhook (Meta → Essem) | `{APP_URL}/api/whatsapp/webhook` |
 | Company settings | `{APP_URL}/dashboard/settings` |
 | Admin monitor | `{APP_URL}/admin/whatsapp` |
 | Graph API version | `v22.0` (Embedded Signup v4) |
@@ -377,10 +377,10 @@ Do not confuse these:
 
 | Bill | Who pays | What it covers |
 |------|----------|----------------|
-| **Savit subscription** | Company → Savit | Platform access, dashboard, AI, growth, support |
+| **Essem subscription** | Company → Essem | Platform access, dashboard, AI, growth, support |
 | **Meta WhatsApp fees** | Company → Meta (on their WABA) | WhatsApp conversation charges |
 
-You bill companies via **Stripe / M-Pesa / Paystack** in Savit (`/dashboard/subscription`).  
+You bill companies via **Stripe / M-Pesa / Paystack** in Essem (`/dashboard/subscription`).  
 Meta bills companies via **card on their WhatsApp Business Account**.
 
 ---
@@ -402,10 +402,10 @@ Meta uses **conversation-based pricing** (not per-SMS). Rates depend on **countr
 
 | Your Meta role | Who adds payment method | Who receives Meta invoice |
 |----------------|-------------------------|---------------------------|
-| **Tech Provider** (Savit’s path) | **Each company** on their WABA | Each company (via Meta) |
+| **Tech Provider** (Essem’s path) | **Each company** on their WABA | Each company (via Meta) |
 | **Solution Partner** | You share your line of credit | You allocate to clients (advanced) |
 
-SAVIT is set up as **Tech Provider**: companies pay Meta directly for WhatsApp usage.
+Essem is set up as **Tech Provider**: companies pay Meta directly for WhatsApp usage.
 
 ### Official pricing reference
 
@@ -418,15 +418,15 @@ SAVIT is set up as **Tech Provider**: companies pay Meta directly for WhatsApp u
 - User-initiated **service** conversations often have favorable pricing within the 24-hour window.
 - Some markets include **free tier** conversation allowances — verify on Meta’s site for your region.
 
-### How Savit can package pricing (your business decision)
+### How Essem can package pricing (your business decision)
 
 You can:
 
-1. **Pass through** — companies pay Meta only; Savit subscription is separate.
-2. **Bundle** — higher Savit plan “includes WhatsApp” but companies still need Meta card on WABA (Tech Provider model).
+1. **Pass through** — companies pay Meta only; Essem subscription is separate.
+2. **Bundle** — higher Essem plan “includes WhatsApp” but companies still need Meta card on WABA (Tech Provider model).
 3. **Become Solution Partner** later — share your Meta credit line and resell (requires extra Meta onboarding).
 
-### Savit subscription plans (platform)
+### Essem subscription plans (platform)
 
 Configured in **Admin → Plans** and billed via Stripe/M-Pesa. This is **independent** of Meta WhatsApp conversation fees.
 
@@ -442,14 +442,14 @@ Configured in **Admin → Plans** and billed via Stripe/M-Pesa. This is **indepe
 - [ ] App mode = **Live**
 - [ ] Embedded Signup v4 config created
 - [ ] Webhook URL verified in Meta
-- [ ] All Integrations fields saved in Savit admin
+- [ ] All Integrations fields saved in Essem admin
 - [ ] `APP_URL` correct in production `.env`
 - [ ] Queue worker running
 - [ ] `meta_app_secret` set (webhooks rejected in production without it)
 
 ### Per company (before they go live)
 
-- [ ] Savit account + active subscription
+- [ ] Essem account + active subscription
 - [ ] WhatsApp connected via Facebook
 - [ ] Payment method on WABA in Meta
 - [ ] Test message sent and reply received
@@ -468,7 +468,7 @@ Configured in **Admin → Plans** and billed via Stripe/M-Pesa. This is **indepe
 | Webhook 403 in logs | Wrong `meta_app_secret` | Match App Dashboard secret |
 | No AI reply | Queue worker not running | `php artisan queue:work` |
 | “AI usage limit reached” | Platform AI budget exceeded | Company adds BYOK key or upgrades plan |
-| “Subscription expired” | Savit plan lapsed | Renew at `/dashboard/subscription` |
+| “Subscription expired” | Essem plan lapsed | Renew at `/dashboard/subscription` |
 | Phone register failed | Number on another BSP | Use different number or coexist |
 | Template rejected | Meta policy | Read rejection reason; edit template |
 | Only testers can connect | App still in Dev / Review pending | Complete App Review; switch Live |
@@ -483,7 +483,7 @@ Configured in **Admin → Plans** and billed via Stripe/M-Pesa. This is **indepe
 |-------|----------|
 | Meta Business Verification | 2–5 business days |
 | App Review + Access Verification | 3–10 business days |
-| Savit platform config | 1–2 hours |
+| Essem platform config | 1–2 hours |
 | First company test connect | 10–15 minutes |
 | Display name approval (if needed) | 1–3 days |
 
@@ -558,17 +558,17 @@ SUPER ADMIN (once):
   Meta: Business verify → Create Business app → WhatsApp product
         → App Review → Tech Provider → Embedded Signup v4
         → Webhook: https://YOUR_DOMAIN/api/whatsapp/webhook
-  Savit: Admin → Settings → Integrations (Meta fields + toggles)
+  Essem: Admin → Settings → Integrations (Meta fields + toggles)
          Embedded Signup OFF + Manual ON during App Review
          Admin → WhatsApp (monitor)
 
 COMPANY (each):
-  Register → Subscribe (Savit) → Settings → WhatsApp
+  Register → Subscribe (Essem) → Settings → WhatsApp
   → Connect with Facebook (when enabled) OR Manual connect (Phone ID + token)
   → Add card in Meta WABA → Test "Hi" message
 
 BILLING:
-  Savit plan = you (Stripe/M-Pesa)
+  Essem plan = you (Stripe/M-Pesa)
   WhatsApp conversations = Meta (company's WABA card)
   Platform AI spend limits = starter $5 / pro $50 per month (BYOK exempt)
 

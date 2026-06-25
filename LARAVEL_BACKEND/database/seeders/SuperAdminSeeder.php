@@ -14,7 +14,7 @@ class SuperAdminSeeder extends Seeder
     public function run(): void
     {
         $user = User::firstOrCreate(
-            ['email' => env('SUPER_ADMIN_EMAIL', 'superadmin@savit.local')],
+            ['email' => env('SUPER_ADMIN_EMAIL', 'superadmin@essem.local')],
             [
                 'name' => 'Super Admin',
                 'password' => Hash::make(env('SUPER_ADMIN_PASSWORD', 'password')),

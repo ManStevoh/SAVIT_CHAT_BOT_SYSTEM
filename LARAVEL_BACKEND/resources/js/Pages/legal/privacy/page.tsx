@@ -4,7 +4,7 @@ import { LegalLayout } from "@/components/landing/legal-layout"
 export default function PrivacyPage() {
   return (
     <>
-      <Head title="Privacy Policy — Savit Chat" />
+      <Head title="Privacy Policy — Essem Chat" />
       <LegalLayout title="Privacy Policy">
         <p className="text-sm leading-relaxed">
           <strong>Last updated:</strong> June 2026
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
 
         <h2>1. Who we are</h2>
         <p>
-          Savit Chat is operated by SAVIT Global Solutions. We provide a multi-tenant SaaS platform
+          Essem Chat is operated by Essem Global Solutions. We provide a multi-tenant SaaS platform
           for WhatsApp business messaging, AI-assisted replies, order management, and related
           services.
         </p>
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
         <h2>3. How we use your information</h2>
         <p>We use collected data to:</p>
         <ul>
-          <li>Provide, operate, and improve the Savit Chat platform</li>
+          <li>Provide, operate, and improve the Essem Chat platform</li>
           <li>Process AI-assisted replies using your configured provider and business content</li>
           <li>Send service-related communications</li>
           <li>Comply with legal obligations and prevent abuse</li>
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
         <p>
           Depending on your jurisdiction, you may have rights to access, correct, or delete personal
           data. Contact us at{" "}
-          <a href="mailto:support@savitglobalsolutions.com">support@savitglobalsolutions.com</a> to
+          <a href="mailto:support@essemglobalsolutions.com">support@essemglobalsolutions.com</a> to
           submit a request.
         </p>
 

@@ -52,7 +52,7 @@ See company settings guide for PayBill vs Till setup.
 
 ### Security
 
-Card details never pass through SAVIT servers — handled entirely by Stripe.
+Card details never pass through Essem servers — handled entirely by Stripe.
 
 ## Option 3: Manual payment
 

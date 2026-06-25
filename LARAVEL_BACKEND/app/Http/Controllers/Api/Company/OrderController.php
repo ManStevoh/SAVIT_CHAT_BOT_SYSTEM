@@ -30,7 +30,7 @@ class OrderController extends Controller
 
     protected function buildOrderUpdateWhatsAppMessage(Order $order, ?string $oldStatus, ?string $oldPaymentStatus): string
     {
-        $companyName = $order->company?->name ?: 'Savit Chat';
+        $companyName = $order->company?->name ?: 'Essem Chat';
         $customerName = $order->customer_name ?: 'Customer';
         $settings = $order->company?->settings;
 

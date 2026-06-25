@@ -4,7 +4,7 @@ const companyEmail =
   process.env.PLAYWRIGHT_TEST_EMAIL ?? 'demo1@company.local'
 const companyPassword = process.env.PLAYWRIGHT_TEST_PASSWORD ?? 'password'
 const adminEmail =
-  process.env.PLAYWRIGHT_TEST_ADMIN_EMAIL ?? 'superadmin@savit.local'
+  process.env.PLAYWRIGHT_TEST_ADMIN_EMAIL ?? 'superadmin@essem.local'
 const adminPassword =
   process.env.PLAYWRIGHT_TEST_ADMIN_PASSWORD ?? 'password'
 

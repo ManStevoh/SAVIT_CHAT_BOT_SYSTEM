@@ -2168,7 +2168,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   if (useMockApi()) {
     await delay(300)
     return {
-      platformName: 'Savit Chat',
+      platformName: 'Essem Chat',
       supportEmail: 'support@chatflow.ai',
       maintenanceMode: false,
       defaultTimezone: 'UTC',
@@ -2179,7 +2179,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
       smtpEncryption: 'tls',
       smtpUser: 'apikey',
       fromEmail: 'noreply@chatflow.ai',
-      fromName: 'Savit Chat',
+      fromName: 'Essem Chat',
       sessionTimeoutMinutes: 60,
       maxLoginAttempts: 5,
       passwordMinLength: 8,
@@ -2238,7 +2238,7 @@ export async function getAppBranding(): Promise<AppBranding> {
   if (useMockApi()) {
     await delay(100)
     return {
-      applicationName: 'Savit Chat',
+      applicationName: 'Essem Chat',
       appLogo: null,
       primaryColor: null,
       secondaryColor: null,

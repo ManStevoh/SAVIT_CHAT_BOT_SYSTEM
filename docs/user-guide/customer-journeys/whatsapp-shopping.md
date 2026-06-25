@@ -6,7 +6,7 @@ nav_order: 30
 
 # Customer Journey: WhatsApp Shopping
 
-This guide describes the **end customer experience** — someone messaging your business on WhatsApp. Customers never log into the SAVIT dashboard.
+This guide describes the **end customer experience** — someone messaging your business on WhatsApp. Customers never log into the Essem dashboard.
 
 ## Starting a conversation
 

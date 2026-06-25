@@ -21,7 +21,7 @@ Open **http://127.0.0.1:8080**
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | superadmin@savit.local | password |
+| Super Admin | superadmin@essem.local | password |
 | Company 1 | demo1@company.local | password |
 | Company 2 | demo2@company.local | password |
 
@@ -108,9 +108,9 @@ Apache must serve from `public/` so `index.php`, `.htaccess`, and `public/build/
 ```env
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://savitchat.savitglobalsolutions.com
-FRONTEND_URL=https://savitchat.savitglobalsolutions.com
-SANCTUM_STATEFUL_DOMAINS=savitchat.savitglobalsolutions.com
+APP_URL=https://essemchat.essemglobalsolutions.com
+FRONTEND_URL=https://essemchat.essemglobalsolutions.com
+SANCTUM_STATEFUL_DOMAINS=essemchat.essemglobalsolutions.com
 
 DB_CONNECTION=mysql
 DB_HOST=localhost
@@ -119,7 +119,7 @@ DB_USERNAME=...
 DB_PASSWORD=...
 
 QUEUE_CONNECTION=database
-VITE_APP_NAME="Savit Chat"
+VITE_APP_NAME="Essem Chat"
 ```
 
 Run `php artisan key:generate` once if `APP_KEY` is empty.

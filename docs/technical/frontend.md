@@ -109,7 +109,7 @@ localStorage.removeItem('auth_token')
 clearAuthCookie()
 ```
 
-Layouts check token presence and redirect to `/login`. Auth cookies (`savit_token`, `savit_role`) support client-side route protection.
+Layouts check token presence and redirect to `/login`. Auth cookies (`essem_token`, `essem_role`) support client-side route protection.
 
 ## Data fetching pattern
 

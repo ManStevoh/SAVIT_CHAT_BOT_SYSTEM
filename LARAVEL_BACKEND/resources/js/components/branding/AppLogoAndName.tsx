@@ -28,7 +28,7 @@ export function AppLogoAndName({
 }) {
   const branding = useAppBranding()
   const sizes = sizeMap[variant]
-  const name = branding.applicationName || "Savit Chat"
+  const name = branding.applicationName || "Essem Chat"
 
   const iconBox = (
     <div

@@ -10,7 +10,7 @@ nav_order: 3
 
 | Role | Who | Access |
 |------|-----|--------|
-| **Super Admin** | Platform operator (SAVIT team) | Full admin panel at `/admin` — all companies, plans, platform settings |
+| **Super Admin** | Platform operator (Essem team) | Full admin panel at `/admin` — all companies, plans, platform settings |
 | **Company Owner** | Business registrant | Full company dashboard for their tenant |
 | **Company Team Member** | Staff invited by owner | Company dashboard (team view; permissions per implementation) |
 

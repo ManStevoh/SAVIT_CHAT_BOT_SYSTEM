@@ -3,8 +3,8 @@
  * Set on login, cleared on logout. Middleware uses these to protect /admin and /dashboard.
  */
 
-const COOKIE_TOKEN = 'savit_token'
-const COOKIE_ROLE = 'savit_role'
+const COOKIE_TOKEN = 'essem_token'
+const COOKIE_ROLE = 'essem_role'
 const COOKIE_PATH = '/'
 const REMEMBER_ME_DAYS = 7
 

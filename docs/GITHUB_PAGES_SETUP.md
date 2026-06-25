@@ -58,4 +58,4 @@ Open `http://localhost:4000` to preview.
 
 ## Custom domain (optional)
 
-In **Settings → Pages → Custom domain**, enter e.g. `docs.savitglobalsolutions.com` and configure DNS as GitHub instructs.
+In **Settings → Pages → Custom domain**, enter e.g. `docs.essemglobalsolutions.com` and configure DNS as GitHub instructs.

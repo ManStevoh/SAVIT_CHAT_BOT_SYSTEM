@@ -56,7 +56,7 @@ class PaystackWebhookController extends Controller
         $metadata = $data['metadata'] ?? [];
         $type = is_array($metadata) ? ($metadata['type'] ?? '') : '';
 
-        if ($type === 'order' || str_starts_with($reference, 'savit_ord_')) {
+        if ($type === 'order' || str_starts_with($reference, 'essem_ord_') || str_starts_with($reference, 'savit_ord_')) {
             $this->handleOrderPayment($reference, $metadata, $data);
 
             return response('OK', 200);

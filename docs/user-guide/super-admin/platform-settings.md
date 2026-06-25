@@ -54,7 +54,7 @@ When a company completes **Connect with Facebook**, the platform automatically:
 
 Monitor all connections at **Admin → WhatsApp** (`/admin/whatsapp`).
 
-**Meta requirements (one-time for Savit):** Business verification, App Review (`whatsapp_business_messaging` + `whatsapp_business_management`), Tech Provider access verification. Companies must add a payment method to their WABA (unless you are a Solution Partner with shared billing).
+**Meta requirements (one-time for Essem):** Business verification, App Review (`whatsapp_business_messaging` + `whatsapp_business_management`), Tech Provider access verification. Companies must add a payment method to their WABA (unless you are a Solution Partner with shared billing).
 
 ### OpenAI
 
