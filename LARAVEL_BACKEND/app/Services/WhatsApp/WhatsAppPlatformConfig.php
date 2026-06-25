@@ -86,11 +86,35 @@ class WhatsAppPlatformConfig
         return (bool) ($settings?->whatsapp_enable_coexist ?? false);
     }
 
-    public static function isEmbeddedSignupEnabled(): bool
+    public static function manualConnectEnabled(): bool
+    {
+        $settings = self::settings();
+
+        return (bool) ($settings?->whatsapp_manual_connect_enabled ?? true);
+    }
+
+    public static function isManualConnectEnabled(): bool
+    {
+        return self::manualConnectEnabled();
+    }
+
+    public static function embeddedSignupEnabled(): bool
+    {
+        $settings = self::settings();
+
+        return (bool) ($settings?->whatsapp_embedded_signup_enabled ?? true);
+    }
+
+    public static function hasEmbeddedSignupCredentials(): bool
     {
         return self::embeddedAppId() !== ''
             && self::embeddedConfigId() !== ''
             && self::embeddedAppSecret() !== '';
+    }
+
+    public static function isEmbeddedSignupEnabled(): bool
+    {
+        return self::embeddedSignupEnabled() && self::hasEmbeddedSignupCredentials();
     }
 
     public static function webhookCallbackUrl(): string

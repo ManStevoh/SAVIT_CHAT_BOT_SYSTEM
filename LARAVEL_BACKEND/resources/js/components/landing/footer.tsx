@@ -5,21 +5,26 @@ import { Twitter, Linkedin, Github } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
+const DOCS_URL = "https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/"
+const CONTACT_EMAIL = "support@savitglobalsolutions.com"
+
 const footerLinks = {
   Product: [
     { name: "Features", href: "#features" },
+    { name: "Use cases", href: "#use-cases" },
+    { name: "Growth Engine", href: "#growth" },
     { name: "Pricing", href: "#pricing" },
-    { name: "Integrations", href: "#features" },
+    { name: "Integrations", href: "#integrations" },
   ],
   Resources: [
-    { name: "Documentation", href: "#faq" },
+    { name: "Documentation", href: DOCS_URL, external: true },
     { name: "FAQ", href: "#faq" },
-    { name: "Book a demo", href: "#demo" },
+    { name: "Product tour", href: "#demo" },
   ],
   Company: [
-    { name: "About", href: "/" },
-    { name: "Contact", href: "#faq" },
-    { name: "Privacy", href: "#" },
+    { name: "Contact", href: `mailto:${CONTACT_EMAIL}` },
+    { name: "Privacy", href: "/privacy" },
+    { name: "Terms", href: "/terms" },
   ],
 }
 
@@ -28,7 +33,7 @@ export function Footer() {
   const appName = branding.applicationName || "Savit Chat"
 
   return (
-    <footer className="border-t border-border/60 bg-card">
+    <footer className="border-t border-border/70 bg-card">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="py-14 lg:py-16">
           <div className="grid gap-10 lg:grid-cols-5">
@@ -57,18 +62,36 @@ export function Footer() {
 
             {Object.entries(footerLinks).map(([category, links]) => (
               <div key={category}>
-                <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
                   {category}
                 </h3>
                 <ul className="space-y-2.5">
                   {links.map((link) => (
                     <li key={link.name}>
-                      <Link
-                        href={link.href}
-                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        {link.name}
-                      </Link>
+                      {"external" in link && link.external ? (
+                        <a
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          {link.name}
+                        </a>
+                      ) : link.href.startsWith("mailto:") ? (
+                        <a
+                          href={link.href}
+                          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          {link.name}
+                        </a>
+                      ) : (
+                        <Link
+                          href={link.href}
+                          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          {link.name}
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -82,10 +105,10 @@ export function Footer() {
             © {new Date().getFullYear()} {appName}. All rights reserved.
           </p>
           <div className="flex gap-5">
-            <Link href="#" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+            <Link href="/privacy" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               Privacy Policy
             </Link>
-            <Link href="#" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+            <Link href="/terms" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               Terms of Service
             </Link>
           </div>

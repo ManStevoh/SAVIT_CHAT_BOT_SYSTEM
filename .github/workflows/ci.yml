@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feature/inertia-unified]
+    paths:
+      - 'LARAVEL_BACKEND/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/deploy-production.yml'
+  pull_request:
+    paths:
+      - 'LARAVEL_BACKEND/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/deploy-production.yml'
+  workflow_call:
+
+defaults:
+  run:
+    working-directory: LARAVEL_BACKEND
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_sqlite, bcmath, xml, ctype, json, tokenizer, openssl
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: LARAVEL_BACKEND/package-lock.json
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare Laravel environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Typecheck frontend
+        run: npm run typecheck
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Run PHPUnit
+        run: php artisan test
+
+      - name: Upload Vite build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vite-build
+          path: LARAVEL_BACKEND/public/build
+          retention-days: 7

@@ -4,6 +4,7 @@ namespace App\Services\Growth;
 
 use App\Models\Company;
 use App\Models\SocialPost;
+use App\Services\AI\AiGateway;
 use App\Services\PlanLimitService;
 use Carbon\Carbon;
 
@@ -15,6 +16,29 @@ final class GrowthLimitService
         $limits = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
 
         return (int) ($limits['ai_posts_per_month'] ?? 20);
+    }
+
+    public static function getAiImagesLimit(Company $company): int
+    {
+        $plan = PlanLimitService::getCurrentPlanSlug($company);
+        $limits = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+
+        return (int) ($limits['ai_images_per_month'] ?? 10);
+    }
+
+    public static function aiImagesUsedThisMonth(Company $company): int
+    {
+        return \App\Models\AiRequestLog::query()
+            ->where('company_id', $company->id)
+            ->where('use_case', AiGateway::USE_CASE_IMAGE_GENERATION)
+            ->where('success', true)
+            ->where('created_at', '>=', Carbon::now()->startOfMonth())
+            ->count();
+    }
+
+    public static function canGenerateAiImage(Company $company): bool
+    {
+        return self::aiImagesUsedThisMonth($company) < self::getAiImagesLimit($company);
     }
 
     public static function getPlatformLimit(Company $company): int
@@ -74,13 +98,15 @@ final class GrowthLimitService
     }
 
     /**
-     * @return array{aiPostsUsed: int, aiPostsLimit: int, platformsConnected: int, platformLimit: int, growthEnabled: bool}
+     * @return array{aiPostsUsed: int, aiPostsLimit: int, aiImagesUsed: int, aiImagesLimit: int, platformsConnected: int, platformLimit: int, growthEnabled: bool}
      */
     public static function usageSummary(Company $company): array
     {
         return [
             'aiPostsUsed' => self::aiPostsUsedThisMonth($company),
             'aiPostsLimit' => self::getAiPostsLimit($company),
+            'aiImagesUsed' => self::aiImagesUsedThisMonth($company),
+            'aiImagesLimit' => self::getAiImagesLimit($company),
             'platformsConnected' => self::connectedPlatformsCount($company),
             'platformLimit' => self::getPlatformLimit($company),
             'growthEnabled' => self::isGrowthEnabled($company),
@@ -105,6 +131,7 @@ final class GrowthLimitService
         foreach (
             [
                 ['resource' => 'AI posts', 'used' => $summary['aiPostsUsed'], 'limit' => $summary['aiPostsLimit'], 'key' => 'ai_posts'],
+                ['resource' => 'AI images', 'used' => $summary['aiImagesUsed'], 'limit' => $summary['aiImagesLimit'], 'key' => 'ai_images'],
                 ['resource' => 'Social platforms', 'used' => $summary['platformsConnected'], 'limit' => $summary['platformLimit'], 'key' => 'platforms'],
             ] as $row
         ) {
@@ -112,7 +139,7 @@ final class GrowthLimitService
                 continue;
             }
             $percent = ($row['used'] / $row['limit']) * 100;
-            $projected = $row['key'] === 'ai_posts'
+            $projected = in_array($row['key'], ['ai_posts', 'ai_images'], true)
                 ? ($row['used'] / $dayOfMonth) * $daysInMonth
                 : null;
 
@@ -151,6 +178,7 @@ final class GrowthLimitService
         $summary = self::usageSummary($company);
         $map = [
             'ai_posts' => ['used' => $summary['aiPostsUsed'], 'limit' => $summary['aiPostsLimit'], 'label' => 'AI posts'],
+            'ai_images' => ['used' => $summary['aiImagesUsed'], 'limit' => $summary['aiImagesLimit'], 'label' => 'AI images'],
             'platforms' => ['used' => $summary['platformsConnected'], 'limit' => $summary['platformLimit'], 'label' => 'social platforms'],
         ];
 

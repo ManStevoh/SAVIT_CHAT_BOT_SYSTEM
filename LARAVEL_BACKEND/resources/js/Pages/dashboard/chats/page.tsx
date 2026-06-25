@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { useChats, useMessages, useProducts } from '@/lib/api-hooks'
-import { sendMessage, handBackToBot, createOrderFromChat } from '@/lib/api-actions'
+import { sendMessage, handBackToBot, createOrderFromChat, submitMessageLearningFeedback } from '@/lib/api-actions'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
 import {
   Search,
@@ -27,6 +27,8 @@ import {
   User,
   AlertCircle,
   X,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
@@ -66,6 +68,7 @@ export default function ChatsPage() {
   const [orderQuantity, setOrderQuantity] = useState('1')
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null)
+  const [feedbackBusy, setFeedbackBusy] = useState<string | null>(null)
   const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' })
 
   const {
@@ -563,6 +566,53 @@ export default function ChatsPage() {
                         >
                           {msg.timestamp}
                         </span>
+                        {msg.sender === 'bot' && (msg.learningSampleId || msg.replySource === 'openai' || msg.replySource === 'faq') && (
+                          <div className="mt-2 flex items-center gap-1 border-t border-border/30 pt-2">
+                            <span className="text-[10px] text-muted-foreground mr-1">Rate AI reply</span>
+                            <Button
+                              type="button"
+                              variant={msg.learningFeedback === 1 ? 'default' : 'ghost'}
+                              size="icon"
+                              className="h-7 w-7"
+                              disabled={feedbackBusy === msg.id || msg.learningFeedback != null}
+                              onClick={async () => {
+                                if (!selectedChatId) return
+                                setFeedbackBusy(msg.id)
+                                const res = await submitMessageLearningFeedback(selectedChatId, msg.id, 1)
+                                if (res.success) {
+                                  mutate(['messages', selectedChatId])
+                                  toast({ title: 'Thanks — helpful reply noted.' })
+                                } else {
+                                  toast({ title: res.message ?? 'Could not save feedback', variant: 'destructive' })
+                                }
+                                setFeedbackBusy(null)
+                              }}
+                            >
+                              <ThumbsUp className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={msg.learningFeedback === -1 ? 'destructive' : 'ghost'}
+                              size="icon"
+                              className="h-7 w-7"
+                              disabled={feedbackBusy === msg.id || msg.learningFeedback != null}
+                              onClick={async () => {
+                                if (!selectedChatId) return
+                                setFeedbackBusy(msg.id)
+                                const res = await submitMessageLearningFeedback(selectedChatId, msg.id, -1)
+                                if (res.success) {
+                                  mutate(['messages', selectedChatId])
+                                  toast({ title: 'Feedback saved — sample deprioritized.' })
+                                } else {
+                                  toast({ title: res.message ?? 'Could not save feedback', variant: 'destructive' })
+                                }
+                                setFeedbackBusy(null)
+                              }}
+                            >
+                              <ThumbsDown className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

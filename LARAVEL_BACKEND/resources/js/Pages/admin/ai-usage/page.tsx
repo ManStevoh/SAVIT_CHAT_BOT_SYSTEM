@@ -65,19 +65,28 @@ export default function AdminAIUsagePage() {
     )
   }
 
+  const formatTokens = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+    return String(n)
+  }
+
   const tokenUsageData = aiUsage?.usageByDay?.map((d) => ({ name: d.date, tokens: d.value })) ?? []
-  const modelUsageData = aiUsage?.modelUsage?.map((m) => ({ name: m.model, usage: m.requests ? Math.round((m.requests / (aiUsage.totalRequests || 1)) * 100) : 0 })) ?? []
+  const modelUsageData = aiUsage?.modelUsage?.map((m) => ({
+    name: m.model,
+    usage: aiUsage.totalTokens ? Math.round((m.tokens / aiUsage.totalTokens) * 100) : 0,
+  })) ?? []
   const topConsumers = aiUsage?.usageByCompany?.slice(0, 5).map((c) => ({
     company: c.companyName,
-    tokens: `${(c.tokens / 1e6).toFixed(0)}M`,
+    tokens: formatTokens(c.tokens),
     percentage: aiUsage.totalTokens ? Math.round((c.tokens / aiUsage.totalTokens) * 1000) / 10 : 0,
   })) ?? []
 
   const stats = [
-    { name: "Tokens Used", value: aiUsage?.totalTokens != null ? `${(aiUsage.totalTokens / 1e9).toFixed(1)}B` : "—", limit: "5B", percentage: 48, icon: Zap },
-    { name: "Messages Processed", value: aiUsage?.totalRequests != null ? (aiUsage.totalRequests / 1e6).toFixed(1) + "M" : "—", limit: "Unlimited", percentage: 0, icon: MessageSquare },
-    { name: "AI Responses", value: aiUsage?.totalRequests != null ? (aiUsage.totalRequests / 1e6).toFixed(1) + "M" : "—", limit: "Unlimited", percentage: 0, icon: Bot },
-    { name: "API Cost", value: "—", limit: "$15,000", percentage: 56, icon: DollarSign },
+    { name: "API Requests", value: aiUsage?.totalRequests != null ? formatTokens(aiUsage.totalRequests) : "—", icon: Bot },
+    { name: "Tokens Used", value: aiUsage?.totalTokens != null ? formatTokens(aiUsage.totalTokens) : "—", icon: Zap },
+    { name: "Est. API Cost", value: aiUsage?.totalCostUsd != null ? `$${aiUsage.totalCostUsd.toFixed(2)}` : "—", icon: DollarSign },
+    { name: "Success Rate", value: aiUsage?.successRate != null ? `${aiUsage.successRate}%` : "—", icon: MessageSquare },
   ]
 
   return (
@@ -113,15 +122,6 @@ export default function AdminAIUsagePage() {
                   <stat.icon className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              {stat.percentage > 0 && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">of {stat.limit}</span>
-                    <span className="text-foreground">{stat.percentage}%</span>
-                  </div>
-                  <Progress value={stat.percentage} className="h-2" />
-                </div>
-              )}
             </CardContent>
           </Card>
         ))}
@@ -142,8 +142,8 @@ export default function AdminAIUsagePage() {
                   <LineChart data={tokenUsageData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => `${value / 1000000}M`} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(value: number) => [`${(value / 1000000).toFixed(0)}M tokens`, "Tokens"]} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatTokens(value)} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(value: number) => [`${formatTokens(value)} tokens`, "Tokens"]} />
                     <Line type="monotone" dataKey="tokens" stroke="hsl(var(--primary))" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -200,6 +200,53 @@ export default function AdminAIUsagePage() {
                     <Progress value={consumer.percentage * 10} className="h-2 mt-2" />
                   </div>
                   <span className="text-sm text-muted-foreground w-12 text-right">{consumer.percentage}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>API billing split</CardTitle>
+          <CardDescription>Platform-billed vs bring-your-own-key (BYOK) usage</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(aiUsage?.usageByCredentialSource?.length ?? 0) === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">No credential-tagged requests in this period</div>
+          ) : (
+            <div className="space-y-3">
+              {aiUsage?.usageByCredentialSource?.map((row) => (
+                <div key={row.credentialSource} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-4 py-3">
+                  <span className="font-medium capitalize text-foreground">{row.credentialSource} keys</span>
+                  <span className="text-sm text-muted-foreground">
+                    {row.requests.toLocaleString()} req · {formatTokens(row.tokens)} tokens
+                    {row.credentialSource === 'platform'
+                      ? ` · billed $${row.billedCostUsd.toFixed(2)}`
+                      : ` · est. $${row.estimatedCostUsd.toFixed(2)}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Bot Reply Routing</CardTitle>
+          <CardDescription>How WhatsApp bot replies were produced (no OpenAI cost for FAQ/keyword paths)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(aiUsage?.botRepliesBySource?.length ?? 0) === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">No tagged bot replies in this period</div>
+          ) : (
+            <div className="space-y-3">
+              {aiUsage?.botRepliesBySource?.map((row) => (
+                <div key={row.source} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                  <span className="font-medium capitalize text-foreground">{row.source.replace(/_/g, " ")}</span>
+                  <span className="text-sm text-muted-foreground">{row.count.toLocaleString()} replies</span>
                 </div>
               ))}
             </div>

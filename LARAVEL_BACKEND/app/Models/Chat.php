@@ -14,6 +14,7 @@ class Chat extends Model
         'attribution_link_id',
         'customer_name',
         'customer_phone',
+        'detected_language',
         'customer_avatar',
         'last_message',
         'last_message_at',

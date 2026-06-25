@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');
+Route::get('/privacy', [PageController::class, 'privacy'])->name('privacy');
+Route::get('/terms', [PageController::class, 'terms'])->name('terms');
 Route::get('/order-paid', [PageController::class, 'orderPaid'])->name('order-paid');
 
 // Auth pages
@@ -17,20 +19,25 @@ Route::get('/forgot-password', [PageController::class, 'forgotPassword'])->name(
 Route::get('/reset-password', [PageController::class, 'resetPassword'])->name('password.reset');
 
 // Company dashboard
+Route::get('/dashboard/account', [PageController::class, 'dashboardAccount'])->name('dashboard.account');
 Route::get('/dashboard', [PageController::class, 'dashboard'])->name('dashboard');
 Route::get('/dashboard/analytics', [PageController::class, 'dashboardAnalytics'])->name('dashboard.analytics');
 Route::get('/dashboard/chats', [PageController::class, 'dashboardChats'])->name('dashboard.chats');
 Route::get('/dashboard/customers', [PageController::class, 'dashboardCustomers'])->name('dashboard.customers');
 Route::get('/dashboard/faq', [PageController::class, 'dashboardFaq'])->name('dashboard.faq');
 Route::get('/dashboard/growth', [PageController::class, 'dashboardGrowth'])->name('dashboard.growth');
+Route::get('/dashboard/whatsapp/campaigns', [PageController::class, 'dashboardWhatsAppCampaigns'])->name('dashboard.whatsapp.campaigns');
 Route::get('/dashboard/orders', [PageController::class, 'dashboardOrders'])->name('dashboard.orders');
 Route::get('/dashboard/products', [PageController::class, 'dashboardProducts'])->name('dashboard.products');
 Route::get('/dashboard/settings', [PageController::class, 'dashboardSettings'])->name('dashboard.settings');
 Route::get('/dashboard/subscription', [PageController::class, 'dashboardSubscription'])->name('dashboard.subscription');
 
 // Super admin
+Route::get('/admin/account', [PageController::class, 'adminAccount'])->name('admin.account');
 Route::get('/admin', [PageController::class, 'admin'])->name('admin');
 Route::get('/admin/ai-usage', [PageController::class, 'adminAiUsage'])->name('admin.ai-usage');
+Route::get('/admin/ai-learning', [PageController::class, 'adminAiLearning'])->name('admin.ai-learning');
+Route::get('/admin/ai-models', [PageController::class, 'adminAiModels'])->name('admin.ai-models');
 Route::get('/admin/companies', [PageController::class, 'adminCompanies'])->name('admin.companies');
 Route::get('/admin/growth', [PageController::class, 'adminGrowth'])->name('admin.growth');
 Route::get('/admin/landing-faqs', [PageController::class, 'adminLandingFaqs'])->name('admin.landing-faqs');

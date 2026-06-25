@@ -241,6 +241,84 @@ class AuthController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user()->load('company');
+
+        return response()->json([
+            'user' => $this->userToArray($user),
+        ]);
+    }
+
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'phone' => 'nullable|string|max:50',
+        ]);
+
+        $emailChanged = $validated['email'] !== $user->email;
+
+        $user->fill([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+        ]);
+
+        if ($emailChanged && PlatformSetting::requiresEmailVerification()) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
+
+        if ($emailChanged && PlatformSetting::requiresEmailVerification()) {
+            $user->sendEmailVerificationNotification();
+        }
+
+        $user->load('company');
+
+        $message = 'Profile updated successfully.';
+        if ($emailChanged && PlatformSetting::requiresEmailVerification()) {
+            $message = 'Profile updated. Please verify your new email address.';
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'user' => $this->userToArray($user),
+        ]);
+    }
+
+    public function updatePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $request->merge([
+            'password_confirmation' => $request->input('confirmPassword', $request->input('password_confirmation')),
+        ]);
+
+        $validated = $request->validate([
+            'currentPassword' => 'required|string',
+            'password' => ['required', 'confirmed', PlatformSetting::passwordRule()],
+        ]);
+
+        if (! Hash::check($validated['currentPassword'], $user->password)) {
+            throw ValidationException::withMessages([
+                'currentPassword' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        $user->update(['password' => Hash::make($validated['password'])]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password updated successfully.',
+        ]);
+    }
+
     private function loginThrottleKey(Request $request): string
     {
         $email = Str::transliterate(Str::lower((string) $request->email));
@@ -279,6 +357,7 @@ class AuthController extends Controller
             'id' => (string) $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'phone' => $user->phone,
             'role' => $user->role,
             'companyId' => $user->company_id ? (string) $user->company_id : null,
             'companyName' => $user->company?->name,

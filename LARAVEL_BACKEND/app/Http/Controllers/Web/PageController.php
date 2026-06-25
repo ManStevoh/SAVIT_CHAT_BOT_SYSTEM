@@ -13,6 +13,16 @@ class PageController extends Controller
         return Inertia::render('Home/page');
     }
 
+    public function privacy(): Response
+    {
+        return Inertia::render('legal/privacy/page');
+    }
+
+    public function terms(): Response
+    {
+        return Inertia::render('legal/terms/page');
+    }
+
     public function orderPaid(): Response
     {
         return Inertia::render('order-paid/page');
@@ -68,6 +78,11 @@ class PageController extends Controller
         return Inertia::render('dashboard/growth/page');
     }
 
+    public function dashboardWhatsAppCampaigns(): Response
+    {
+        return Inertia::render('dashboard/whatsapp/campaigns/page');
+    }
+
     public function dashboardOrders(): Response
     {
         return Inertia::render('dashboard/orders/page');
@@ -88,6 +103,16 @@ class PageController extends Controller
         return Inertia::render('dashboard/subscription/page');
     }
 
+    public function adminAccount(): Response
+    {
+        return Inertia::render('admin/account/page');
+    }
+
+    public function dashboardAccount(): Response
+    {
+        return Inertia::render('dashboard/account/page');
+    }
+
     public function admin(): Response
     {
         return Inertia::render('admin/page');
@@ -96,6 +121,16 @@ class PageController extends Controller
     public function adminAiUsage(): Response
     {
         return Inertia::render('admin/ai-usage/page');
+    }
+
+    public function adminAiLearning(): Response
+    {
+        return Inertia::render('admin/ai-learning/page');
+    }
+
+    public function adminAiModels(): Response
+    {
+        return Inertia::render('admin/ai-models/page');
     }
 
     public function adminCompanies(): Response

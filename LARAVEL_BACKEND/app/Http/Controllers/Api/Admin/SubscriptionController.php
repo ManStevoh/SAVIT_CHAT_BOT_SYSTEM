@@ -35,4 +35,50 @@ class SubscriptionController extends Controller
 
         return response()->json($data->values()->all());
     }
+
+    public function update(Request $request, Subscription $subscription): JsonResponse
+    {
+        $validated = $request->validate([
+            'plan' => 'sometimes|string|max:50',
+            'status' => 'sometimes|string|in:active,cancelled,expired,pending',
+            'startDate' => 'sometimes|date',
+            'endDate' => 'sometimes|date',
+            'amount' => 'sometimes|numeric|min:0',
+            'billingCycle' => 'sometimes|string|in:monthly,yearly',
+        ]);
+
+        if (isset($validated['startDate'])) {
+            $subscription->start_date = $validated['startDate'];
+        }
+        if (isset($validated['endDate'])) {
+            $subscription->end_date = $validated['endDate'];
+        }
+        if (isset($validated['plan'])) {
+            $subscription->plan = $validated['plan'];
+        }
+        if (isset($validated['status'])) {
+            $subscription->status = $validated['status'];
+        }
+        if (isset($validated['amount'])) {
+            $subscription->amount = $validated['amount'];
+        }
+        if (isset($validated['billingCycle'])) {
+            $subscription->billing_cycle = $validated['billingCycle'];
+        }
+        $subscription->save();
+
+        return response()->json([
+            'success' => true,
+            'subscription' => [
+                'id' => (string) $subscription->id,
+                'companyId' => (string) $subscription->company_id,
+                'plan' => $subscription->plan,
+                'status' => $subscription->status,
+                'startDate' => $subscription->start_date->format('Y-m-d'),
+                'endDate' => $subscription->end_date->format('Y-m-d'),
+                'amount' => (float) $subscription->amount,
+                'billingCycle' => $subscription->billing_cycle,
+            ],
+        ]);
+    }
 }

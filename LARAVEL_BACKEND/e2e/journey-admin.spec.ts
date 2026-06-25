@@ -19,6 +19,7 @@ const adminPages: { path: string; heading: RegExp }[] = [
   { path: '/admin/testimonials', heading: /^testimonials$/i },
   { path: '/admin/landing-faqs', heading: /landing faq/i },
   { path: '/admin/ai-usage', heading: /ai usage/i },
+  { path: '/admin/ai-learning', heading: /ai learning/i },
   { path: '/admin/logs', heading: /system logs/i },
 ]
 

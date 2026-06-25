@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Chat;
 use App\Models\Company;
+use App\Models\ConversationLearningSample;
 use App\Models\Message;
 use App\Models\Subscription;
 use App\Services\AIReplyService;
@@ -11,6 +12,9 @@ use App\Services\CompanyInAppNotificationService;
 use App\Services\MailService;
 use App\Services\OrderFlowService;
 use App\Services\PlanLimitService;
+use App\Services\AI\AiLearningConfig;
+use App\Services\Conversation\MessageLanguageDetector;
+use App\Services\ConversationLearningService;
 use App\Services\WhatsAppMessageSenderService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -64,6 +68,12 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        $this->updateChatLanguage($company, $chat);
+
+        if ($this->tryHandleCustomerLearningFeedback($chat)) {
+            return;
+        }
+
         if ($chat->isAgentHandling(30)) {
             $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
 
@@ -77,7 +87,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             $chat->update(['agent_handling_at' => now()]);
             $account = $company->whatsappAccount;
             if ($account && $account->isActive()) {
-                $this->sendReplyAndSave($waSender, $company, $chat, $this->humanHandoffCustomerMessage());
+                $this->sendReplyAndSave($waSender, $company, $chat, $this->humanHandoffCustomerMessage(), 'handoff');
             } else {
                 Log::warning('ProcessIncomingWhatsAppMessage: human escalation but no active WhatsApp account', ['company_id' => $this->companyId]);
             }
@@ -87,7 +97,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
         if (! $this->companyHasActiveSubscription($company)) {
             $replyText = 'Our service is temporarily unavailable. Please try again later or contact support.';
-            $this->sendReplyAndSave($waSender, $company, $chat, $replyText);
+            $this->sendReplyAndSave($waSender, $company, $chat, $replyText, 'subscription_unavailable');
 
             return;
         }
@@ -120,24 +130,37 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         if ($this->isFirstCustomerMessageInChat($this->chatId)) {
             app(OrderFlowService::class)->resetOrderState($chat);
             $chat->refresh();
-            $greeting = $aiReply->getGreetingOpening($company, $this->customerName);
-            $this->sendReplyAndSave($waSender, $company, $chat, $greeting);
 
-            $chat->refresh();
+            $skipOpening = $aiReply->shouldSkipScriptedOpening($company, $this->messageText);
+            if (! $skipOpening) {
+                $greeting = $aiReply->getGreetingOpening($company, $this->customerName);
+                $this->sendReplyAndSave($waSender, $company, $chat, $greeting, $aiReply->getLastReplyRoute());
+                $chat->refresh();
+            }
+
             $orderFlow = app(OrderFlowService::class);
             $stepBefore = $chat->conversation_step;
             $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
             if ($orderReply !== null && trim($orderReply) !== '') {
                 $chat->refresh();
                 $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
-                $this->sendReplyAndSave($waSender, $company, $chat, $orderReply);
+                $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
+
+                return;
+            }
+
+            if ($skipOpening) {
+                $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
+                if (trim($replyText) !== '') {
+                    $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
+                }
 
                 return;
             }
 
             $followUp = $aiReply->getReplyAfterOpeningGreeting($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
             if ($followUp !== null && trim($followUp) !== '') {
-                $this->sendReplyAndSave($waSender, $company, $chat, $followUp);
+                $this->sendReplyAndSave($waSender, $company, $chat, $followUp, $aiReply->getLastReplyRoute());
             }
 
             return;
@@ -149,13 +172,13 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         if ($orderReply !== null) {
             $chat->refresh();
             $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
-            $this->sendReplyAndSave($waSender, $company, $chat, $orderReply);
+            $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
 
             return;
         }
 
         $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
-        $this->sendReplyAndSave($waSender, $company, $chat, $replyText);
+        $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
     }
 
     /**
@@ -222,7 +245,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         WhatsAppMessageSenderService $waSender,
         Company $company,
         Chat $chat,
-        string $replyText
+        string $replyText,
+        ?string $replySource = null,
     ): void {
         $account = $company->whatsappAccount;
         if (! $account || ! $account->isActive()) {
@@ -231,13 +255,27 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
         $result = $waSender->sendText($account, $this->customerPhone, $replyText);
 
-        Message::create([
+        $message = Message::create([
             'chat_id' => $this->chatId,
             'content' => $replyText,
             'sender' => 'bot',
+            'reply_source' => $replySource,
             'status' => $result['success'] ? 'sent' : 'failed',
             'whatsapp_message_id' => $result['message_id'] ?? null,
         ]);
+
+        if ($result['success'] && $this->shouldLinkLearningSample($replySource)) {
+            $sampleId = app(ConversationLearningService::class)->linkSampleToMessage(
+                (int) $company->id,
+                $this->chatId,
+                $this->messageText,
+                (int) $message->id,
+            );
+            if ($sampleId !== null) {
+                $message->update(['learning_sample_id' => $sampleId]);
+            }
+        }
+
         $chat->update([
             'last_message' => $replyText,
             'last_message_at' => now(),
@@ -248,6 +286,49 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             Log::error('ProcessIncomingWhatsAppMessage: send failed', ['error' => $result['error'] ?? 'unknown']);
             throw new \RuntimeException($result['error'] ?? 'WhatsApp send failed');
         }
+    }
+
+    protected function shouldLinkLearningSample(?string $replySource): bool
+    {
+        if ($replySource === null || $replySource === '') {
+            return false;
+        }
+
+        return $replySource === 'openai'
+            || $replySource === 'faq'
+            || str_starts_with($replySource, 'faq_');
+    }
+
+    protected function tryHandleCustomerLearningFeedback(Chat $chat): bool
+    {
+        $text = mb_strtolower(trim($this->messageText));
+        $feedback = match (true) {
+            in_array($text, ['👍', 'thumbs up', 'helpful', 'good'], true) => 1,
+            in_array($text, ['👎', 'thumbs down', 'not helpful', 'bad'], true) => -1,
+            default => null,
+        };
+        if ($feedback === null) {
+            return false;
+        }
+
+        $lastBot = Message::query()
+            ->where('chat_id', $chat->id)
+            ->where('sender', 'bot')
+            ->whereNotNull('learning_sample_id')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $lastBot) {
+            return false;
+        }
+
+        $lastBot->update(['learning_feedback' => $feedback]);
+        $sample = ConversationLearningSample::find($lastBot->learning_sample_id);
+        if ($sample) {
+            app(ConversationLearningService::class)->applyFeedback($sample, $feedback);
+        }
+
+        return true;
     }
 
     protected function maybeSendOrderSelectionImage(
@@ -365,6 +446,22 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             $mailService->sendNewMessageNotification($to, $this->customerName ?: 'Customer', $this->customerPhone, $preview, $chatsUrl);
         } catch (\Throwable $e) {
             Log::warning('Failed to send new message notification', ['company_id' => $company->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    private function updateChatLanguage(Company $company, Chat $chat): void
+    {
+        $config = app(AiLearningConfig::class);
+        if (! $config->autoDetectLanguage()) {
+            return;
+        }
+
+        $company->loadMissing('settings');
+        $fallback = $company->settings?->default_reply_language ?? $config->fallbackLanguage();
+        $detected = app(MessageLanguageDetector::class)->detect($this->messageText, $fallback);
+
+        if ($detected !== $chat->detected_language) {
+            $chat->update(['detected_language' => $detected]);
         }
     }
 }

@@ -288,8 +288,11 @@ class WhatsAppFullFlowTest extends TestCase
         ])->assertUnprocessable();
     }
 
-    public function test_manual_connect_endpoint_disabled(): void
+    public function test_manual_connect_endpoint_disabled_when_toggle_off(): void
     {
+        PlatformSetting::query()->update(['whatsapp_manual_connect_enabled' => false]);
+        WhatsAppPlatformConfig::clearCache();
+
         Sanctum::actingAs($this->companyUser());
 
         $this->postJson('/api/company/whatsapp/connect', [

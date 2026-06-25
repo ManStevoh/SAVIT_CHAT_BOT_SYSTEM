@@ -50,6 +50,8 @@
   --wa-bubble-out: #d9fdd3;
   --wa-bubble-in: #ffffff;
   --wa-header: #075e54;
+  --wa-brand: #128c7e;
+  --wa-brand-hover: #0d7368;
 }
 
 .dark {
@@ -166,7 +168,28 @@
     @apply bg-muted/40;
   }
   .section-padding {
-    @apply py-24 lg:py-32;
+    @apply py-20 lg:py-28;
+  }
+  .landing-divider {
+    @apply border-t border-border/70;
+  }
+  .landing-card {
+    @apply rounded-lg border border-border/70 bg-card;
+  }
+  .landing-kicker {
+    @apply text-sm font-medium text-primary;
+  }
+  .landing-headline {
+    @apply text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl lg:leading-[1.08];
+  }
+  .landing-subhead {
+    @apply text-base leading-relaxed text-muted-foreground sm:text-lg;
+  }
+  .wa-cta {
+    @apply bg-primary text-primary-foreground;
+  }
+  .wa-cta:hover {
+    @apply bg-primary/90;
   }
   .tabular-nums {
     font-variant-numeric: tabular-nums;

@@ -147,9 +147,14 @@ class GrowthIntelligenceController extends Controller
         ]);
 
         try {
-            $posts = $content->generateFromWinners($company, $validated);
+            $result = $content->generateFromWinners($company, $validated);
 
-            return response()->json(['success' => true, 'posts' => $posts]);
+            return response()->json([
+                'success' => true,
+                'posts' => $result->posts,
+                'aiGenerated' => $result->aiGenerated,
+                'aiError' => $result->aiError,
+            ]);
         } catch (\RuntimeException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
@@ -207,16 +212,28 @@ class GrowthIntelligenceController extends Controller
         ]);
 
         try {
-            $variants = $content->generateVariants($company, $validated);
+            $generated = $content->generateVariants($company, $validated);
+            $variants = $generated['variants'];
 
             if (! empty($validated['saveIndexes'])) {
                 $toSave = collect($variants)->filter(fn ($_, $i) => in_array($i, $validated['saveIndexes'], true))->values()->all();
                 $saved = $content->saveSelectedVariants($company, $validated['platform'] ?? 'facebook', $toSave);
 
-                return response()->json(['success' => true, 'variants' => $variants, 'savedPosts' => $saved]);
+                return response()->json([
+                    'success' => true,
+                    'variants' => $variants,
+                    'savedPosts' => $saved,
+                    'aiGenerated' => $generated['aiGenerated'],
+                    'aiError' => $generated['aiError'],
+                ]);
             }
 
-            return response()->json(['success' => true, 'variants' => $variants]);
+            return response()->json([
+                'success' => true,
+                'variants' => $variants,
+                'aiGenerated' => $generated['aiGenerated'],
+                'aiError' => $generated['aiError'],
+            ]);
         } catch (\RuntimeException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }

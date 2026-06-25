@@ -1,56 +1,40 @@
 import { SectionHeader } from "@/components/shared/section-header"
-import { FadeIn } from "@/components/shared/fade-in"
 
 const steps = [
   {
-    step: "1",
+    step: "01",
     title: "Connect WhatsApp",
-    description:
-      "Link your WhatsApp Business account in minutes. No technical setup required.",
+    description: "Link your business number through Meta. Most teams are live in under 10 minutes.",
   },
   {
-    step: "2",
-    title: "Configure your bot",
-    description:
-      "Add FAQs, products, and business rules. The AI learns your catalog and tone.",
+    step: "02",
+    title: "Add your catalog",
+    description: "Upload products, FAQs, and business rules. Pick your AI model and tone.",
   },
   {
-    step: "3",
-    title: "Go live",
-    description:
-      "Start automating conversations. Your team can take over anytime.",
+    step: "03",
+    title: "Start selling",
+    description: "AI replies instantly. Your team takes over when a human touch is needed.",
   },
 ]
 
 export function HowItWorks() {
   return (
-    <section className="section-padding surface-subtle border-y border-border/60">
+    <section className="section-padding landing-divider bg-muted/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <FadeIn>
-          <SectionHeader
-            label="How it works"
-            title="Live in three steps"
-            description="Three simple steps to transform your WhatsApp business communication."
-          />
-        </FadeIn>
+        <SectionHeader
+          label="Setup"
+          title="Live in three steps"
+          description="No developers required. Connect, configure, and start receiving orders."
+        />
 
-        <div className="relative grid gap-10 md:grid-cols-3 md:gap-8">
-          <div className="absolute top-5 left-[16.67%] right-[16.67%] hidden h-px bg-border md:block" />
-
-          {steps.map((step, i) => (
-            <FadeIn key={step.step} delay={i * 100}>
-              <div className="relative text-center">
-                <div className="relative z-10 mx-auto mb-5 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-sm font-semibold text-foreground shadow-sm">
-                  {step.step}
-                </div>
-                <h3 className="mb-2 text-lg font-semibold text-foreground">
-                  {step.title}
-                </h3>
-                <p className="mx-auto max-w-xs text-sm leading-relaxed text-muted-foreground">
-                  {step.description}
-                </p>
-              </div>
-            </FadeIn>
+        <div className="grid gap-8 md:grid-cols-3">
+          {steps.map((step) => (
+            <div key={step.step} className="border-l-2 border-primary pl-5">
+              <p className="text-sm font-semibold tabular-nums text-primary">{step.step}</p>
+              <h3 className="mt-2 text-lg font-semibold text-foreground">{step.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+            </div>
           ))}
         </div>
       </div>

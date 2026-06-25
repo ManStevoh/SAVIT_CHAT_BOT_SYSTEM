@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,6 +24,7 @@ import {
   updatePlatformSettings,
   sendTestEmail,
   type PlatformSettings,
+  type AiLearningConfig,
 } from "@/lib/api-actions"
 import { useToast } from "@/hooks/use-toast"
 import { getTimezoneGroups } from "@/lib/timezones"
@@ -30,6 +32,13 @@ import { getTimezoneGroups } from "@/lib/timezones"
 const timezoneGroups = getTimezoneGroups()
 
 export default function AdminSettingsPage() {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab")
+  const validTabs = ["general", "appearance", "security", "email", "integrations", "notifications", "landing"] as const
+  const initialTab = validTabs.includes(tabParam as typeof validTabs[number])
+    ? (tabParam as typeof validTabs[number])
+    : "general"
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [settings, setSettings] = useState<PlatformSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [savingGeneral, setSavingGeneral] = useState(false)
@@ -224,9 +233,12 @@ export default function AdminSettingsPage() {
             : undefined,
         whatsappEmbeddedRedirectUri: settings.whatsappEmbeddedRedirectUri ?? undefined,
         whatsappEnableCoexist: settings.whatsappEnableCoexist ?? false,
+        whatsappEmbeddedSignupEnabled: settings.whatsappEmbeddedSignupEnabled ?? true,
+        whatsappManualConnectEnabled: settings.whatsappManualConnectEnabled ?? true,
         openaiApiKey: settings.openaiApiKey && settings.openaiApiKey !== "********" ? settings.openaiApiKey : undefined,
         openaiModel: settings.openaiModel ?? undefined,
         openaiMaxTokens: settings.openaiMaxTokens ?? undefined,
+        aiLearningConfig: settings.aiLearningConfig ?? undefined,
       })
       if (res.success) {
         toast({ title: res.message ?? "Integrations saved" })
@@ -266,6 +278,16 @@ export default function AdminSettingsPage() {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : null))
   }
 
+  const updateAiLearning = <K extends keyof AiLearningConfig>(key: K, value: AiLearningConfig[K]) => {
+    setSettings((prev) => {
+      if (!prev) return null
+      const current = prev.aiLearningConfig ?? {}
+      return { ...prev, aiLearningConfig: { ...current, [key]: value } }
+    })
+  }
+
+  const aiLearning = settings?.aiLearningConfig ?? {}
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -284,7 +306,15 @@ export default function AdminSettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          if (validTabs.includes(value as (typeof validTabs)[number])) {
+            setActiveTab(value as (typeof validTabs)[number])
+          }
+        }}
+        className="space-y-6"
+      >
         <TabsList className="flex-wrap h-auto gap-2">
           <TabsTrigger value="general" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -432,7 +462,7 @@ export default function AdminSettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Appearance & branding</CardTitle>
-              <CardDescription>Primary and secondary colours, and application logo. Used in the app theme, emails, and invoices.</CardDescription>
+              <CardDescription>Primary and secondary colours, logo, and app name. Applied to the landing page, dashboard theme, emails, and invoices.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FieldGroup>
@@ -735,12 +765,39 @@ export default function AdminSettingsPage() {
                   {settings?.whatsappWebhookUrl ?? `${typeof window !== "undefined" ? window.location.origin : ""}/api/whatsapp/webhook`}
                 </code>
                 <p className="text-muted-foreground">
-                  Embedded signup ready:{" "}
+                  Credentials complete:{" "}
                   <strong>{settings?.whatsappEmbeddedSignupReady ? "Yes" : "No"}</strong>
+                  {" · "}
+                  Live for companies:{" "}
+                  <strong>{settings?.whatsappEmbeddedSignupActive ? "Yes" : "No"}</strong>
                   {" · "}
                   Graph API: v22.0 (Embedded Signup v4)
                 </p>
               </div>
+              <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FieldLabel>Enable Embedded Signup for companies</FieldLabel>
+                  <p className="text-sm text-muted-foreground">
+                    Turn off while Meta App Review is pending or during maintenance. Credentials are kept when disabled.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings?.whatsappEmbeddedSignupEnabled ?? true}
+                  onCheckedChange={(v) => updateSetting("whatsappEmbeddedSignupEnabled", v)}
+                />
+              </Field>
+              <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FieldLabel>Enable manual connection for companies</FieldLabel>
+                  <p className="text-sm text-muted-foreground">
+                    Allow companies to paste Phone Number ID and access token from Meta Developer Console. Useful for testing or when Embedded Signup is off.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings?.whatsappManualConnectEnabled ?? true}
+                  onCheckedChange={(v) => updateSetting("whatsappManualConnectEnabled", v)}
+                />
+              </Field>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="whatsappWebhookVerifyToken">WhatsApp webhook verify token</FieldLabel>
@@ -840,6 +897,204 @@ export default function AdminSettingsPage() {
               </FieldGroup>
               <Button onClick={handleSaveIntegrations} disabled={savingIntegrations}>
                 {savingIntegrations ? "Saving…" : "Save Integrations"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>AI knowledge &amp; learning</CardTitle>
+              <CardDescription>
+                Platform-wide policy for FAQ embeddings, WhatsApp chat memory (RAG-style prompt enrichment), PII redaction, and retention. These settings replace the old <code className="text-xs">.env</code> keys for prompt tokens, embedding model, FAQ match threshold, and sample limits. This is not model fine-tuning — the AI uses your FAQs and past exchanges in each request.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FieldGroup>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Enable AI learning</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Master switch for storing exchanges and using them in prompts.</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.learningEnabled ?? true}
+                    onCheckedChange={(v) => updateAiLearning("learningEnabled", v)}
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Learn from WhatsApp chats (default)</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Store successful AI replies for future prompt context.</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.defaultLearnFromChats ?? true}
+                    onCheckedChange={(v) => updateAiLearning("defaultLearnFromChats", v)}
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Allow companies to override</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Companies can disable learning in their dashboard settings.</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.allowCompanyOverride ?? true}
+                    onCheckedChange={(v) => updateAiLearning("allowCompanyOverride", v)}
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>PII redaction before storage</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Redact emails, phones, and card-like numbers (GDPR-aligned minimization).</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.piiRedactionEnabled ?? true}
+                    onCheckedChange={(v) => updateAiLearning("piiRedactionEnabled", v)}
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Store FAQ exchanges</FieldLabel>
+                    <p className="text-sm text-muted-foreground">When a FAQ answer is sent, add it to learning memory.</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.storeFaqExchanges ?? true}
+                    onCheckedChange={(v) => updateAiLearning("storeFaqExchanges", v)}
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Learn from human agent replies</FieldLabel>
+                    <p className="text-sm text-muted-foreground">When agents reply in dashboard chat, pair with last customer message.</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.storeAgentReplies ?? false}
+                    onCheckedChange={(v) => updateAiLearning("storeAgentReplies", v)}
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>FAQ semantic embeddings</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Vector search for FAQ matching and knowledge base quality.</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.faqEmbeddingsEnabled ?? true}
+                    onCheckedChange={(v) => updateAiLearning("faqEmbeddingsEnabled", v)}
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Learning sample embeddings</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Hybrid lexical + vector retrieval for conversation memory (RAG-style).</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.learningEmbeddingsEnabled ?? true}
+                    onCheckedChange={(v) => updateAiLearning("learningEmbeddingsEnabled", v)}
+                  />
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel>Max prompt tokens</FieldLabel>
+                    <Input
+                      type="number"
+                      value={aiLearning.maxPromptTokens ?? 12000}
+                      onChange={(e) => updateAiLearning("maxPromptTokens", Number(e.target.value) || 12000)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Budget for system prompt + catalog/FAQ context (was OPENAI_MAX_PROMPT_TOKENS).</p>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Embedding model</FieldLabel>
+                    <Input
+                      value={aiLearning.embeddingModelKey ?? "text-embedding-3-small"}
+                      onChange={(e) => updateAiLearning("embeddingModelKey", e.target.value || "text-embedding-3-small")}
+                      placeholder="text-embedding-3-small"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Used for FAQ vector search (was OPENAI_EMBEDDING_MODEL).</p>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Max samples per company</FieldLabel>
+                    <Input
+                      type="number"
+                      value={aiLearning.maxSamplesPerCompany ?? 200}
+                      onChange={(e) => updateAiLearning("maxSamplesPerCompany", Number(e.target.value) || 200)}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Samples in each AI prompt</FieldLabel>
+                    <Input
+                      type="number"
+                      value={aiLearning.promptSampleLimit ?? 8}
+                      onChange={(e) => updateAiLearning("promptSampleLimit", Number(e.target.value) || 8)}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Retention (days)</FieldLabel>
+                    <Input
+                      type="number"
+                      value={aiLearning.retentionDays ?? 365}
+                      onChange={(e) => updateAiLearning("retentionDays", Number(e.target.value) || 365)}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>FAQ semantic match threshold (0–1)</FieldLabel>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={aiLearning.faqSemanticMinScore ?? 0.82}
+                      onChange={(e) => updateAiLearning("faqSemanticMinScore", Number(e.target.value) || 0.82)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Was FAQ_SEMANTIC_MIN_SCORE in .env.</p>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Learning semantic match threshold (0–1)</FieldLabel>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={aiLearning.learningSemanticMinScore ?? 0.78}
+                      onChange={(e) => updateAiLearning("learningSemanticMinScore", Number(e.target.value) || 0.78)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Minimum cosine score for vector retrieval into prompts.</p>
+                  </Field>
+                  <Field>
+                    <FieldLabel>AI cost markup (%)</FieldLabel>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={aiLearning.aiCostMarkupPercent ?? 0}
+                      onChange={(e) => updateAiLearning("aiCostMarkupPercent", Number(e.target.value) || 0)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Applied to platform-billed AI usage (not BYOK).</p>
+                  </Field>
+                </div>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Require human review for learning samples</FieldLabel>
+                    <p className="text-sm text-muted-foreground">New samples stay pending until approved in AI Learning.</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.requireLearningReview ?? false}
+                    onCheckedChange={(v) => updateAiLearning("requireLearningReview", v)}
+                  />
+                </Field>
+                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FieldLabel>Auto-detect customer language</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Detect language from WhatsApp messages and reply in kind.</p>
+                  </div>
+                  <Switch
+                    checked={aiLearning.autoDetectLanguage ?? true}
+                    onCheckedChange={(v) => updateAiLearning("autoDetectLanguage", v)}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Fallback reply language</FieldLabel>
+                  <Input
+                    value={aiLearning.fallbackLanguage ?? "en"}
+                    onChange={(e) => updateAiLearning("fallbackLanguage", e.target.value || "en")}
+                    placeholder="en"
+                  />
+                </Field>
+              </FieldGroup>
+              <Button onClick={handleSaveIntegrations} disabled={savingIntegrations}>
+                {savingIntegrations ? "Saving…" : "Save AI learning policy"}
               </Button>
             </CardContent>
           </Card>

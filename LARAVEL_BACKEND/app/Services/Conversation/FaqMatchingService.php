@@ -4,9 +4,13 @@ namespace App\Services\Conversation;
 
 use App\Models\Company;
 use App\Models\Faq;
+use App\Models\KnowledgeChunk;
+use App\Services\AI\AiLearningConfig;
+use App\Services\AI\FaqEmbeddingService;
+use App\Services\AI\KnowledgeChunkService;
 
 /**
- * Scored FAQ matching: only auto-reply when confidence is high; otherwise OpenAI
+ * Scored FAQ matching: lexical first, then semantic embeddings; otherwise OpenAI
  * answers using the same FAQs in the system prompt.
  */
 class FaqMatchingService
@@ -21,15 +25,24 @@ class FaqMatchingService
         'what', 'which', 'who', 'whom', 'whose', 'where', 'when', 'why', 'how',
     ];
 
+    public function __construct(
+        protected FaqEmbeddingService $faqEmbeddingService,
+        protected AiLearningConfig $learningConfig,
+    ) {}
+
     /**
-     * @return array{answer: string, faq_id: int, score: float}|null
+     * @return array{answer: string, faq_id: int, score: float, route?: string}|null
      */
     public function matchBest(Company $company, string $message, string $lower): ?array
     {
-        $minScore = (float) config('conversation.faq_direct_answer_min_score', 72);
+        $minScore = $this->learningConfig->faqDirectMinScore();
         $minSub = (int) config('conversation.faq_min_substring_length', 8);
 
-        $faqs = Faq::where('company_id', $company->id)->where('is_active', true)->get();
+        $faqs = Faq::query()
+            ->where('company_id', $company->id)
+            ->where('is_active', true)
+            ->select(['id', 'question', 'answer', 'keywords', 'question_embedding', 'usage_count'])
+            ->get();
         if ($faqs->isEmpty()) {
             return null;
         }
@@ -45,16 +58,83 @@ class FaqMatchingService
             }
         }
 
-        if ($best === null || $bestScore < $minScore) {
+        if ($best !== null && $bestScore >= $minScore) {
+            $best->increment('usage_count');
+
+            return [
+                'answer' => $best->answer,
+                'faq_id' => (int) $best->id,
+                'score' => round($bestScore, 2),
+                'route' => 'faq',
+            ];
+        }
+
+        return $this->matchSemantic($company, $faqs, $message);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Faq>  $faqs
+     * @return array{answer: string, faq_id: int, score: float, route: string}|null
+     */
+    protected function matchSemantic(Company $company, $faqs, string $message): ?array
+    {
+        $chunkHits = app(KnowledgeChunkService::class)->search(
+            (int) $company->id,
+            $message,
+            KnowledgeChunk::SOURCE_FAQ,
+            3,
+        );
+        if ($chunkHits !== []) {
+            $best = $chunkHits[0];
+            $faq = Faq::find($best['source_id']);
+            if ($faq) {
+                $faq->increment('usage_count');
+
+                return [
+                    'answer' => $faq->answer,
+                    'faq_id' => (int) $faq->id,
+                    'score' => round($best['score'] * 100, 2),
+                    'route' => 'faq_semantic',
+                ];
+            }
+        }
+
+        $hasEmbeddings = $faqs->contains(fn (Faq $faq) => is_array($faq->question_embedding) && $faq->question_embedding !== []);
+        if (! $hasEmbeddings) {
             return null;
         }
 
-        $best->increment('usage_count');
+        $minSemantic = $this->learningConfig->faqSemanticMinScore();
+        $messageEmbedding = $this->faqEmbeddingService->embedMessage($message, $company->id);
+        if ($messageEmbedding === null) {
+            return null;
+        }
+
+        $best = null;
+        $bestScore = 0.0;
+
+        foreach ($faqs as $faq) {
+            $match = $this->faqEmbeddingService->matchSemantic($faq, $messageEmbedding, $minSemantic);
+            if ($match === null) {
+                continue;
+            }
+            if ($match['score'] > $bestScore) {
+                $bestScore = $match['score'];
+                $best = $match;
+            }
+        }
+
+        if ($best === null) {
+            return null;
+        }
+
+        Faq::where('id', $best['faq_id'])->increment('usage_count');
 
         return [
-            'answer' => $best->answer,
-            'faq_id' => (int) $best->id,
-            'score' => round($bestScore, 2),
+            'answer' => $best['answer'],
+            'faq_id' => $best['faq_id'],
+            'score' => $best['score'],
+            'route' => 'faq_semantic',
         ];
     }
 

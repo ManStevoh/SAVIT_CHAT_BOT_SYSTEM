@@ -102,6 +102,80 @@ class WhatsAppOnboardingTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), 'phone-1/register'));
     }
 
+    public function test_embedded_config_disabled_when_admin_toggles_off(): void
+    {
+        PlatformSetting::query()->update(['whatsapp_embedded_signup_enabled' => false]);
+        WhatsAppPlatformConfig::clearCache();
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->getJson('/api/company/whatsapp/embedded/config')
+            ->assertOk()
+            ->assertJsonPath('enabled', false);
+
+        $this->postJson('/api/company/whatsapp/embedded/complete', [
+            'code' => 'oauth-code-xyz',
+            'phoneNumberId' => 'phone-1',
+            'whatsappBusinessAccountId' => 'waba-1',
+        ])
+            ->assertStatus(503)
+            ->assertJsonPath('success', false);
+    }
+
+    public function test_manual_connect_subscribes_webhooks_and_registers_phone(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/phone-manual*' => Http::response([
+                'id' => 'phone-manual',
+                'display_phone_number' => '+254712345678',
+                'quality_rating' => 'GREEN',
+            ], 200),
+            'graph.facebook.com/*/waba-manual/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/phone-manual/register' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+            'whatsappBusinessAccountId' => 'waba-manual',
+            'displayPhoneNumber' => '+254712345678',
+        ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertNotNull($account);
+        $this->assertSame('active', $account->status);
+        $this->assertSame('phone-manual', $account->phone_number_id);
+    }
+
+    public function test_manual_connect_disabled_when_admin_toggles_off(): void
+    {
+        PlatformSetting::query()->update(['whatsapp_manual_connect_enabled' => false]);
+        WhatsAppPlatformConfig::clearCache();
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+        ])
+            ->assertForbidden()
+            ->assertJsonPath('success', false);
+    }
+
+    public function test_status_includes_manual_connect_flag(): void
+    {
+        Sanctum::actingAs($this->companyUser());
+
+        $this->getJson('/api/company/whatsapp/status')
+            ->assertOk()
+            ->assertJsonPath('manualConnectEnabled', true);
+    }
+
     public function test_admin_can_list_whatsapp_connections(): void
     {
         $company = Company::create(['name' => 'Acme Ltd', 'email' => 'acme@test.local', 'status' => 'active']);

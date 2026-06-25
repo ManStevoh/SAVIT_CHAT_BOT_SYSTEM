@@ -35,13 +35,13 @@ export function PricingSection() {
   }
 
   return (
-    <section id="pricing" className="section-padding surface-subtle border-y border-border/60">
+    <section id="pricing" className="section-padding landing-divider bg-muted/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <FadeIn>
           <SectionHeader
             label="Pricing"
-            title="Simple, transparent pricing"
-            description="Choose the plan that fits your business. All plans include a 14-day free trial."
+            title="Straightforward plans"
+            description="14-day free trial on every plan. Pick what fits your volume."
           />
         </FadeIn>
 
@@ -64,15 +64,15 @@ export function PricingSection() {
                 <FadeIn key={plan.id} delay={i * 80}>
                   <div
                     className={cn(
-                      "relative flex h-full flex-col rounded-xl border bg-card p-7 transition-all duration-300",
+                      "relative flex h-full flex-col rounded-lg border bg-card p-7",
                       plan.popular
-                        ? "border-primary/30 shadow-premium ring-1 ring-primary/10"
-                        : "border-border/80 hover:shadow-premium"
+                        ? "border-primary ring-1 ring-primary/20"
+                        : "border-border/70"
                     )}
                   >
                     {plan.popular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className="inline-flex items-center rounded-full bg-primary px-3 py-0.5 text-xs font-medium text-primary-foreground">
+                        <span className="inline-flex items-center rounded-md bg-primary px-2.5 py-0.5 text-xs font-medium text-primary-foreground">
                           Most popular
                         </span>
                       </div>
@@ -94,7 +94,7 @@ export function PricingSection() {
                     <ul className="mb-8 flex-1 space-y-2.5">
                       {(plan.features ?? []).map((feature) => (
                         <li key={feature} className="flex items-start gap-2.5">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                           <span className="text-sm text-muted-foreground">{feature}</span>
                         </li>
                       ))}

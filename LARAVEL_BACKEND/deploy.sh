@@ -23,5 +23,9 @@ echo "==> Caching configuration and routes..."
 php artisan config:cache
 php artisan route:cache
 
+echo "==> Signaling queue workers to restart..."
+php artisan queue:restart || true
+
 echo "==> Deploy complete."
-echo "    Remember to restart queue workers and ensure cron runs: php artisan schedule:run"
+echo "    For CI/rsync deploys, post-deploy also runs scripts/post-deploy.sh on the server."
+echo "    Ensure cron runs: * * * * * php artisan schedule:run"

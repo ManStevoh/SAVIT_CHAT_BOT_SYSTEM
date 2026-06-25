@@ -67,6 +67,7 @@ import {
   generateGrowthVariants,
   getGrowthPostSharePackage,
   uploadGrowthPostImage,
+  generateGrowthPostImage,
   extractGrowthPatterns,
   applyGrowthPattern,
   executeGrowthMixPlan,
@@ -89,6 +90,7 @@ import {
 } from "@/lib/api-actions"
 import { useCompanySettings } from "@/lib/api-hooks"
 import { formatCurrencyAmount, normalizeCurrencyCode } from "@/lib/format-currency"
+import { resolveBackendMediaUrl } from "@/lib/api-client"
 import { toast } from "sonner"
 import { Loader2, Sparkles, Link2, Bot, TrendingUp, Target, Copy, ImagePlus, Download, Plug, Users } from "lucide-react"
 const FUNNEL_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--primary))"]
@@ -129,6 +131,7 @@ function GrowthPageContent() {
   const [adDate, setAdDate] = useState(new Date().toISOString().slice(0, 10))
   const [variants, setVariants] = useState<Array<{ variantIndex: number; angle: string; content: string; predictedScore: number; explanations?: string[] }>>([])
   const [generatingVariants, setGeneratingVariants] = useState(false)
+  const [generatingImagePostId, setGeneratingImagePostId] = useState<string | null>(null)
   const [integrationSiteUrl, setIntegrationSiteUrl] = useState("")
   const [integrationMeasurementId, setIntegrationMeasurementId] = useState("")
   const [connectingIntegration, setConnectingIntegration] = useState<string | null>(null)
@@ -200,7 +203,11 @@ function GrowthPageContent() {
       : await generateGrowthContent(payload)
     setGenerating(false)
     if (result.success) {
-      toast.success(smart ? "Smart posts generated from your winners" : "AI generated draft posts with tracking links")
+      if (result.aiGenerated === false) {
+        toast.warning(result.aiError ?? "AI was unavailable — placeholder drafts were created instead")
+      } else {
+        toast.success(smart ? "Smart posts generated from your winners" : "AI generated draft posts with tracking links")
+      }
       mutatePosts()
       mutateDraftScores()
       mutate(["growth-analytics", period])
@@ -643,7 +650,8 @@ function GrowthPageContent() {
                   </CardTitle>
                   <CardDescription>
                     Generates posts with UTM tracking links to WhatsApp ({analytics?.limits.aiPostsUsed ?? 0}/
-                    {analytics?.limits.aiPostsLimit ?? 0} AI posts this month)
+                    {analytics?.limits.aiPostsLimit ?? 0} AI posts · {analytics?.limits.aiImagesUsed ?? 0}/
+                    {analytics?.limits.aiImagesLimit ?? 0} AI images this month)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -755,6 +763,22 @@ function GrowthPageContent() {
                         </div>
                         {post.title && <p className="font-medium">{post.title}</p>}
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+                        {(post.mediaUrls?.length ?? 0) > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {post.mediaUrls!.map((url) => {
+                              const src = resolveBackendMediaUrl(url) ?? url
+                              return (
+                              <a key={url} href={src} target="_blank" rel="noreferrer" className="block">
+                                <img
+                                  src={src}
+                                  alt="Post media"
+                                  className="h-24 w-24 rounded-md border object-cover"
+                                />
+                              </a>
+                              )
+                            })}
+                          </div>
+                        )}
                         {post.publishError && (
                           <p className="text-xs text-destructive">Publish error: {post.publishError}</p>
                         )}
@@ -771,26 +795,49 @@ function GrowthPageContent() {
                               Copy post + link
                             </Button>
                           )}
-                          {post.platform === "instagram" && post.status !== "published" && (
-                            <label className="inline-flex">
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0]
-                                  if (!file) return
-                                  const res = await uploadGrowthPostImage(post.id, file)
+                          {post.status !== "published" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={generatingImagePostId === post.id}
+                                onClick={async () => {
+                                  setGeneratingImagePostId(post.id)
+                                  const res = await generateGrowthPostImage(post.id)
+                                  setGeneratingImagePostId(null)
                                   if (res.success) {
-                                    toast.success("Image added")
+                                    toast.success("AI poster generated")
                                     mutatePosts()
-                                  } else toast.error(res.message ?? "Upload failed")
+                                  } else toast.error(res.message ?? "Image generation failed")
                                 }}
-                              />
-                              <Button size="sm" variant="outline" asChild>
-                                <span><ImagePlus className="h-3 w-3 mr-1" />Add image</span>
+                              >
+                                {generatingImagePostId === post.id ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Sparkles className="h-3 w-3 mr-1" />
+                                )}
+                                Generate poster (AI)
                               </Button>
-                            </label>
+                              <label className="inline-flex">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0]
+                                    if (!file) return
+                                    const res = await uploadGrowthPostImage(post.id, file)
+                                    if (res.success) {
+                                      toast.success("Image added")
+                                      mutatePosts()
+                                    } else toast.error(res.message ?? "Upload failed")
+                                  }}
+                                />
+                                <Button size="sm" variant="outline" asChild>
+                                  <span><ImagePlus className="h-3 w-3 mr-1" />Add image</span>
+                                </Button>
+                              </label>
+                            </>
                           )}
                           {post.status === "draft" && (
                             <Button size="sm" variant="outline" onClick={() => handleApprove(post.id)}>

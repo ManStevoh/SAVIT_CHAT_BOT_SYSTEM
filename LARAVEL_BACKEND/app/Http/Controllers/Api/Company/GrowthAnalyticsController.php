@@ -78,12 +78,14 @@ class GrowthAnalyticsController extends Controller
     {
         $company = $request->user()->company;
         if (! $company) {
-            return ['aiPostsUsed' => 0, 'aiPostsLimit' => 0, 'platformLimit' => 0];
+            return ['aiPostsUsed' => 0, 'aiPostsLimit' => 0, 'aiImagesUsed' => 0, 'aiImagesLimit' => 0, 'platformLimit' => 0];
         }
 
         return [
             'aiPostsUsed' => GrowthLimitService::aiPostsUsedThisMonth($company),
             'aiPostsLimit' => GrowthLimitService::getAiPostsLimit($company),
+            'aiImagesUsed' => GrowthLimitService::aiImagesUsedThisMonth($company),
+            'aiImagesLimit' => GrowthLimitService::getAiImagesLimit($company),
             'platformLimit' => GrowthLimitService::getPlatformLimit($company),
         ];
     }

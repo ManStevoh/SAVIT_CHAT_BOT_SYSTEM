@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Faq;
+use App\Services\AI\FaqEmbeddingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,7 +35,7 @@ class FaqController extends Controller
         return response()->json($data->values()->all());
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, FaqEmbeddingService $embeddings): JsonResponse
     {
         $companyId = $request->user()->company_id;
         if (!$companyId) {
@@ -51,6 +52,11 @@ class FaqController extends Controller
 
         $validated['company_id'] = $companyId;
         $faq = Faq::create($validated);
+        try {
+            $embeddings->syncFaq($faq->fresh());
+        } catch (\Throwable) {
+            // FAQ save succeeds even if embedding sync fails
+        }
 
         return response()->json([
             'success' => true,
@@ -59,7 +65,7 @@ class FaqController extends Controller
         ]);
     }
 
-    public function update(Request $request, Faq $faq): JsonResponse
+    public function update(Request $request, Faq $faq, FaqEmbeddingService $embeddings): JsonResponse
     {
         if ($faq->company_id !== $request->user()->company_id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
@@ -80,6 +86,13 @@ class FaqController extends Controller
         ]);
 
         $faq->update($validated);
+        if (array_key_exists('question', $validated)) {
+            try {
+                $embeddings->syncFaq($faq->fresh());
+            } catch (\Throwable) {
+                // ignore embedding failures
+            }
+        }
 
         return response()->json([
             'success' => true,

@@ -17,7 +17,7 @@ test.describe('Public app pages', () => {
     await expect(page).toHaveTitle(/Savit Chat/i)
     await expect(
       page.getByRole('heading', {
-        name: /turn whatsapp into your best sales channel/i,
+        name: /sell on whatsapp/i,
       })
     ).toBeVisible({ timeout: 15_000 })
   })

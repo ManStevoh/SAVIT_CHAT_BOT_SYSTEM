@@ -3,10 +3,8 @@
 namespace App\Services\Growth;
 
 use App\Models\Company;
-use App\Models\PlatformSetting;
 use App\Models\SocialPost;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
+use App\Services\AI\OpenAiClient;
 use Illuminate\Support\Facades\Log;
 
 class GrowthContentService
@@ -14,13 +12,11 @@ class GrowthContentService
     public function __construct(
         protected AttributionService $attributionService,
         protected GrowthAnalyticsService $analytics,
-        protected ContentPredictionService $prediction
+        protected ContentPredictionService $prediction,
+        protected OpenAiClient $openAiClient,
     ) {}
 
-    /**
-     * @return array<int, array{title: string, content: string, hashtags: array<int, string>, platform: string}>
-     */
-    public function generatePosts(Company $company, array $params): array
+    public function generatePosts(Company $company, array $params): GrowthGenerationResult
     {
         if (! GrowthLimitService::isGrowthEnabled($company)) {
             throw new \RuntimeException('Growth Engine is not enabled for your plan. Upgrade to access AI content.');
@@ -47,21 +43,24 @@ class GrowthContentService
             ."Tone: {$tone}\n"
             ."Products:\n{$productList}\n"
             ."Performance learnings:\n{$learningContext}\n\n"
-            ."Return valid JSON array with objects: title, content, hashtags (array of strings), contentType (text|image|video).\n"
-            ."Each post should drive WhatsApp inquiries or orders. Include a clear call-to-action.";
+            .'Return JSON object: {"posts": [...]} where each post has title, content, hashtags (array of strings), contentType (text|image|video).'
+            ."\nEach post should drive WhatsApp inquiries or orders. Include a clear call-to-action.";
 
-        $raw = $this->callOpenAi($prompt);
-        $parsed = $this->parseJsonArray($raw);
+        $ai = $this->callOpenAi($company, $prompt);
+        $parsed = $this->parseJsonArray($ai['content']);
 
-        return $this->persistGeneratedPosts($company, $platform, $topic, array_slice($parsed, 0, $count));
+        $posts = $this->persistGeneratedPosts(
+            $company,
+            $platform,
+            $topic,
+            array_slice($parsed, 0, $count),
+            $ai['aiGenerated'],
+        );
+
+        return new GrowthGenerationResult($posts, $ai['aiGenerated'], $ai['error']);
     }
 
-    /**
-     * Generate posts mimicking top-performing content (smart generate).
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    public function generateFromWinners(Company $company, array $params = []): array
+    public function generateFromWinners(Company $company, array $params = []): GrowthGenerationResult
     {
         if (! GrowthLimitService::isGrowthEnabled($company)) {
             throw new \RuntimeException('Growth Engine is not enabled for your plan.');
@@ -89,24 +88,89 @@ class GrowthContentService
         $prompt = "Generate {$count} NEW social media posts for {$platform}.\n"
             ."Business: {$company->name}\n"
             ."Mimic the structure, tone, and CTA style of these proven winners but use fresh copy:\n{$examples}\n\n"
-            ."Return valid JSON array: title, content, hashtags, contentType.\n"
-            ."Each post must include a WhatsApp call-to-action.";
+            .'Return JSON object: {"posts": [...]} with title, content, hashtags, contentType per post.'
+            ."\nEach post must include a WhatsApp call-to-action.";
 
-        $parsed = $this->parseJsonArray($this->callOpenAi($prompt));
+        $ai = $this->callOpenAi($company, $prompt);
+        $parsed = $this->parseJsonArray($ai['content']);
 
-        return $this->persistGeneratedPosts(
+        $posts = $this->persistGeneratedPosts(
             $company,
             $platform,
             $params['topic'] ?? 'winning patterns',
-            array_slice($parsed, 0, $count)
+            array_slice($parsed, 0, $count),
+            $ai['aiGenerated'],
         );
+
+        return new GrowthGenerationResult($posts, $ai['aiGenerated'], $ai['error']);
+    }
+
+    /**
+     * @return array{variants: array<int, array<string, mixed>>, aiGenerated: bool, aiError: ?string}
+     */
+    public function generateVariants(Company $company, array $params): array
+    {
+        if (! GrowthLimitService::canGenerateAiContent($company)) {
+            throw new \RuntimeException('AI content generation limit reached for this billing period.');
+        }
+
+        $count = min(max((int) ($params['count'] ?? 3), 2), 5);
+        $platform = $params['platform'] ?? 'facebook';
+        $topic = $params['topic'] ?? 'our products and services';
+        $angles = ['testimonial style', 'limited-time offer', 'educational tip', 'behind the scenes', 'customer story'];
+
+        $prompt = "Generate {$count} DISTINCT social media post variants for {$platform}.\n"
+            ."Business: {$company->name}\nTopic: {$topic}\n"
+            .'Each variant must use a different angle: '.implode(', ', array_slice($angles, 0, $count)).".\n"
+            .'Return JSON object: {"posts": [...]} with title, content, hashtags, contentType, angle per post.'
+            ."\nEach must include a WhatsApp CTA.";
+
+        $ai = $this->callOpenAi($company, $prompt);
+        $parsed = $this->parseJsonArray($ai['content']);
+        $variants = [];
+
+        foreach (array_slice($parsed, 0, $count) as $i => $item) {
+            $content = $item['content'] ?? '';
+            $contentType = $item['contentType'] ?? 'text';
+            $draft = new SocialPost([
+                'company_id' => $company->id,
+                'platform' => $platform,
+                'content' => $content,
+                'content_type' => $contentType,
+            ]);
+            $prediction = $this->prediction->predictDraft($draft);
+
+            $variants[] = [
+                'variantIndex' => $i + 1,
+                'angle' => $item['angle'] ?? ('Variant '.($i + 1)),
+                'title' => $item['title'] ?? null,
+                'content' => $content,
+                'hashtags' => $item['hashtags'] ?? [],
+                'contentType' => $contentType,
+                'platform' => $platform,
+                'predictedScore' => $prediction['score'],
+                'estimatedRevenue' => $prediction['estimatedRevenue'],
+                'hasEnoughData' => $prediction['hasEnoughData'],
+                'explanations' => $prediction['explanations'],
+                'tags' => $prediction['tags'],
+                'aiGenerated' => $ai['aiGenerated'],
+            ];
+        }
+
+        usort($variants, fn ($a, $b) => $b['predictedScore'] <=> $a['predictedScore']);
+
+        return [
+            'variants' => array_values($variants),
+            'aiGenerated' => $ai['aiGenerated'],
+            'aiError' => $ai['error'],
+        ];
     }
 
     /**
      * @param  array<int, array<string, mixed>>  $items
      * @return array<int, array<string, mixed>>
      */
-    protected function persistGeneratedPosts(Company $company, string $platform, string $topic, array $items): array
+    protected function persistGeneratedPosts(Company $company, string $platform, string $topic, array $items, bool $aiGenerated): array
     {
         $results = [];
         foreach ($items as $item) {
@@ -126,7 +190,7 @@ class GrowthContentService
                 'utm_source' => $platform,
                 'utm_medium' => 'social',
                 'utm_campaign' => str($topic)->slug()->toString(),
-                'ai_generated' => true,
+                'ai_generated' => $aiGenerated,
             ]);
 
             $prediction = $this->prediction->predictAndStore($post);
@@ -144,7 +208,7 @@ class GrowthContentService
                 'predictedRevenueScore' => $prediction['score'],
                 'estimatedRevenue' => $prediction['estimatedRevenue'],
                 'trackingUrl' => $this->attributionService->trackingUrl($link),
-                'aiGenerated' => true,
+                'aiGenerated' => $aiGenerated,
             ];
         }
 
@@ -174,71 +238,12 @@ class GrowthContentService
     }
 
     /**
-     * Generate A/B content variants ranked by predicted score (not persisted until user saves).
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    public function generateVariants(Company $company, array $params): array
-    {
-        if (! GrowthLimitService::canGenerateAiContent($company)) {
-            throw new \RuntimeException('AI content generation limit reached for this billing period.');
-        }
-
-        $count = min(max((int) ($params['count'] ?? 3), 2), 5);
-        $platform = $params['platform'] ?? 'facebook';
-        $topic = $params['topic'] ?? 'our products and services';
-        $angles = ['testimonial style', 'limited-time offer', 'educational tip', 'behind the scenes', 'customer story'];
-
-        $prompt = "Generate {$count} DISTINCT social media post variants for {$platform}.\n"
-            ."Business: {$company->name}\nTopic: {$topic}\n"
-            ."Each variant must use a different angle: ".implode(', ', array_slice($angles, 0, $count)).".\n"
-            ."Return JSON array: title, content, hashtags, contentType, angle (short label).\n"
-            ."Each must include a WhatsApp CTA.";
-
-        $parsed = $this->parseJsonArray($this->callOpenAi($prompt));
-        $variants = [];
-
-        foreach (array_slice($parsed, 0, $count) as $i => $item) {
-            $content = $item['content'] ?? '';
-            $contentType = $item['contentType'] ?? 'text';
-            $draft = new SocialPost([
-                'company_id' => $company->id,
-                'platform' => $platform,
-                'content' => $content,
-                'content_type' => $contentType,
-            ]);
-            $prediction = $this->prediction->predictDraft($draft);
-
-            $variants[] = [
-                'variantIndex' => $i + 1,
-                'angle' => $item['angle'] ?? ('Variant '.($i + 1)),
-                'title' => $item['title'] ?? null,
-                'content' => $content,
-                'hashtags' => $item['hashtags'] ?? [],
-                'contentType' => $contentType,
-                'platform' => $platform,
-                'predictedScore' => $prediction['score'],
-                'estimatedRevenue' => $prediction['estimatedRevenue'],
-                'hasEnoughData' => $prediction['hasEnoughData'],
-                'explanations' => $prediction['explanations'],
-                'tags' => $prediction['tags'],
-            ];
-        }
-
-        usort($variants, fn ($a, $b) => $b['predictedScore'] <=> $a['predictedScore']);
-
-        return array_values($variants);
-    }
-
-    /**
-     * Persist user-selected variants as draft posts.
-     *
      * @param  array<int, array<string, mixed>>  $variants
      * @return array<int, array<string, mixed>>
      */
     public function saveSelectedVariants(Company $company, string $platform, array $variants): array
     {
-        return $this->persistGeneratedPosts($company, $platform, 'ab-variant', $variants);
+        return $this->persistGeneratedPosts($company, $platform, 'ab-variant', $variants, true);
     }
 
     public function approvePost(SocialPost $post, int $userId): SocialPost
@@ -262,38 +267,43 @@ class GrowthContentService
         return $post->fresh();
     }
 
-    protected function callOpenAi(string $prompt): string
+    /**
+     * @return array{content: string, aiGenerated: bool, error: ?string}
+     */
+    protected function callOpenAi(Company $company, string $prompt): array
     {
-        $settings = Cache::remember('platform_settings_openai', 300, fn () => PlatformSetting::first());
-        $apiKey = $settings?->openai_api_key ?? config('services.openai.key');
-        $model = $settings?->openai_model ?? 'gpt-4o-mini';
+        $result = $this->openAiClient->chatCompletion(
+            messages: [
+                ['role' => 'system', 'content' => 'You are a conversion-focused social media marketing expert. Output only valid JSON.'],
+                ['role' => 'user', 'content' => $prompt],
+            ],
+            useCase: OpenAiClient::USE_CASE_GROWTH,
+            companyId: $company->id,
+            temperature: 0.7,
+            timeoutSeconds: 60,
+            jsonMode: true,
+        );
 
-        if (! $apiKey) {
-            return $this->fallbackGeneratedJson($prompt);
+        if ($result->success && $result->content !== null) {
+            return [
+                'content' => $result->content,
+                'aiGenerated' => true,
+                'error' => null,
+            ];
         }
 
-        try {
-            $response = Http::withToken($apiKey)
-                ->timeout(60)
-                ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => $model,
-                    'messages' => [
-                        ['role' => 'system', 'content' => 'You are a conversion-focused social media marketing expert. Output only valid JSON.'],
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
-                    'temperature' => 0.7,
-                ]);
-
-            if ($response->successful()) {
-                return (string) $response->json('choices.0.message.content', '[]');
-            }
-
-            Log::warning('GrowthContentService OpenAI failed', ['status' => $response->status()]);
-        } catch (\Throwable $e) {
-            Log::warning('GrowthContentService OpenAI error', ['error' => $e->getMessage()]);
+        if ($result->error) {
+            Log::warning('GrowthContentService OpenAI failed', [
+                'status' => $result->httpStatus,
+                'error' => $result->error,
+            ]);
         }
 
-        return $this->fallbackGeneratedJson($prompt);
+        return [
+            'content' => $this->fallbackGeneratedJson($prompt),
+            'aiGenerated' => false,
+            'error' => $result->error ?? 'OpenAI unavailable',
+        ];
     }
 
     protected function fallbackGeneratedJson(string $prompt): string
@@ -307,10 +317,11 @@ class GrowthContentService
                 'title' => "Post {$i}",
                 'content' => "Discover what we offer! Message us on WhatsApp to learn more. (Post {$i})",
                 'hashtags' => ['business', 'growth', 'whatsapp'],
+                'contentType' => 'text',
             ];
         }
 
-        return json_encode($items);
+        return json_encode(['posts' => $items]);
     }
 
     /**
@@ -324,7 +335,14 @@ class GrowthContentService
         }
 
         $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
 
-        return is_array($decoded) ? $decoded : [];
+        if (isset($decoded['posts']) && is_array($decoded['posts'])) {
+            return $decoded['posts'];
+        }
+
+        return array_is_list($decoded) ? $decoded : [];
     }
 }

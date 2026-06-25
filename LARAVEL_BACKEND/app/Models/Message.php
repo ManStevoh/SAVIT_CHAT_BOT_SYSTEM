@@ -12,6 +12,9 @@ class Message extends Model
         'content',
         'message_type',
         'sender',
+        'reply_source',
+        'learning_feedback',
+        'learning_sample_id',
         'status',
         'whatsapp_message_id',
         'attachment_url',
@@ -23,5 +26,10 @@ class Message extends Model
     public function chat(): BelongsTo
     {
         return $this->belongsTo(Chat::class);
+    }
+
+    public function learningSample(): BelongsTo
+    {
+        return $this->belongsTo(ConversationLearningSample::class, 'learning_sample_id');
     }
 }

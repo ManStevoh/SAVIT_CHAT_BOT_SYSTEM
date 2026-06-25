@@ -35,9 +35,12 @@ class PlatformSetting extends Model
         'whatsapp_embedded_app_secret',
         'whatsapp_embedded_redirect_uri',
         'whatsapp_enable_coexist',
+        'whatsapp_embedded_signup_enabled',
+        'whatsapp_manual_connect_enabled',
         'openai_api_key',
         'openai_model',
         'openai_max_tokens',
+        'ai_learning_config',
         'session_timeout_minutes',
         'max_login_attempts',
         'password_min_length',
@@ -58,6 +61,8 @@ class PlatformSetting extends Model
         'allow_new_registrations' => 'boolean',
         'require_email_verification' => 'boolean',
         'whatsapp_enable_coexist' => 'boolean',
+        'whatsapp_embedded_signup_enabled' => 'boolean',
+        'whatsapp_manual_connect_enabled' => 'boolean',
         'smtp_port' => 'integer',
         'require_2fa' => 'boolean',
         'ip_allowlist_enabled' => 'boolean',
@@ -69,6 +74,7 @@ class PlatformSetting extends Model
         'notify_usage_alerts' => 'boolean',
         'notify_daily_summary' => 'boolean',
         'landing_trusted_companies' => 'array',
+        'ai_learning_config' => 'array',
     ];
 
     /** Hide secrets when serializing (e.g. for API GET); controller returns masked values. */

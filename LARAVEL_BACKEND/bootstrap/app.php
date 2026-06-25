@@ -39,6 +39,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new \App\Jobs\Growth\ExtractGrowthPatternsJob)->weeklyOn(1, '08:00');
         $schedule->job(new \App\Jobs\Growth\GenerateWeeklyBriefJob)->weeklyOn(1, '08:30');
         $schedule->job(new \App\Jobs\Growth\ScorePostPerformanceJob)->dailyAt('07:00');
+        $schedule->command('learning:prune-expired')->dailyAt('02:30');
+        $schedule->command('learning:sync-embeddings --missing-only')->weeklyOn(0, '03:30');
+        $schedule->command('products:sync-embeddings --missing-only')->weeklyOn(0, '04:00');
+        $schedule->command('ai:health-check --notify')->dailyAt('07:30');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -52,6 +52,9 @@ export interface Message {
   sender: 'customer' | 'bot' | 'agent'
   timestamp: string
   status: 'sent' | 'delivered' | 'read'
+  replySource?: string | null
+  learningFeedback?: number | null
+  learningSampleId?: string | null
 }
 
 export interface Order {
@@ -215,6 +218,7 @@ export interface User {
   id: string
   name: string
   email: string
+  phone?: string
   role: 'admin' | 'company_owner' | 'company_user'
   companyId?: string
   companyName?: string
@@ -275,6 +279,8 @@ export interface RevenueData {
 export interface AIUsageData {
   totalRequests: number
   totalTokens: number
+  totalCostUsd?: number
+  costChange?: number
   avgResponseTime: number
   successRate: number
   requestsChange: number
@@ -282,6 +288,14 @@ export interface AIUsageData {
   usageByDay: ChartDataPoint[]
   usageByCompany: { companyId: string; companyName: string; requests: number; tokens: number }[]
   modelUsage: { model: string; requests: number; tokens: number }[]
+  botRepliesBySource?: { source: string; count: number }[]
+  usageByCredentialSource?: {
+    credentialSource: string
+    requests: number
+    tokens: number
+    estimatedCostUsd: number
+    billedCostUsd: number
+  }[]
 }
 
 // Mock Data Examples
@@ -898,7 +912,7 @@ export interface GrowthAnalyticsData {
     contentTypeRevenue: { contentType: string; revenue: number }[]
   }
   funnel: { stage: string; value: number }[]
-  limits: { aiPostsUsed: number; aiPostsLimit: number; platformLimit: number }
+  limits: { aiPostsUsed: number; aiPostsLimit: number; aiImagesUsed?: number; aiImagesLimit?: number; platformLimit: number }
   intelligence?: {
     hasLearningProfile: boolean
     lastLearnedAt?: string | null
@@ -1034,7 +1048,7 @@ export const mockGrowthAnalytics: GrowthAnalyticsData = {
     { stage: 'orders', value: 12 },
     { stage: 'revenue', value: 180000 },
   ],
-  limits: { aiPostsUsed: 8, aiPostsLimit: 100, platformLimit: 3 },
+  limits: { aiPostsUsed: 8, aiPostsLimit: 100, aiImagesUsed: 2, aiImagesLimit: 50, platformLimit: 3 },
 }
 
 export const mockGrowthPosts: GrowthPost[] = [

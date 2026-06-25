@@ -3,42 +3,49 @@
 import { useLanding } from "@/lib/api-hooks"
 import { CompanyLogo, parseCompanyBrand } from "@/components/landing/company-logo"
 
-const FALLBACK_COMPANIES = [
-  "FoodHub",
-  "ShopEase",
-  "TechStore",
-  "FashionCo",
-  "QuickBite",
-  "HomeGoods",
-  "RetailPro",
-  "FreshMart",
-]
+const INTEGRATION_MARKS = ["WhatsApp Business API", "M-Pesa", "Stripe", "OpenAI", "Anthropic", "Gemini"]
 
 export function TrustedCompanies() {
   const { data } = useLanding()
-  const companies = data?.trustedCompanies?.length
-    ? data.trustedCompanies
-    : FALLBACK_COMPANIES
+  const hasRealLogos = Boolean(data?.trustedCompanies?.some((c) => {
+    const brand = parseCompanyBrand(c)
+    return Boolean(brand.logoUrl)
+  }))
 
-  const brands = companies.map(parseCompanyBrand)
-  const doubled = [...brands, ...brands]
+  if (hasRealLogos && data?.trustedCompanies?.length) {
+    const brands = data.trustedCompanies.map(parseCompanyBrand)
 
-  return (
-    <section className="border-y border-border/60 bg-muted/30 py-10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <p className="mb-8 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Trusted by growing businesses
-        </p>
-        <div className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
-          <div className="flex w-max animate-marquee items-center gap-6">
-            {doubled.map((brand, i) => (
-              <CompanyLogo
-                key={`${brand.name}-${i}`}
-                name={brand.name}
-                logoUrl={brand.logoUrl}
-              />
+    return (
+      <section className="landing-divider bg-muted/20 py-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <p className="mb-5 text-center text-sm text-muted-foreground">
+            Used by teams like
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {brands.map((brand) => (
+              <CompanyLogo key={brand.name} name={brand.name} logoUrl={brand.logoUrl} />
             ))}
           </div>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="landing-divider bg-muted/20 py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <p className="mb-5 text-center text-sm text-muted-foreground">
+          Built on the tools your business already uses
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {INTEGRATION_MARKS.map((name) => (
+            <span
+              key={name}
+              className="rounded-md border border-border/70 bg-card px-3 py-1.5 text-sm font-medium text-foreground/80"
+            >
+              {name}
+            </span>
+          ))}
         </div>
       </div>
     </section>

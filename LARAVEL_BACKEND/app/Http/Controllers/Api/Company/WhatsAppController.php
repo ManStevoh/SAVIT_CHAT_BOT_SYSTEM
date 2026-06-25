@@ -29,23 +29,59 @@ class WhatsAppController extends Controller
         ]);
     }
 
-    /**
-     * @deprecated Manual connect disabled — use embedded signup only.
-     */
     public function connect(Request $request): JsonResponse
     {
+        if (! WhatsAppPlatformConfig::isManualConnectEnabled()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Manual WhatsApp connection is disabled by the platform administrator.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'phoneNumberId' => 'required|string|max:100',
+            'accessToken' => 'required|string|max:2000',
+            'displayPhoneNumber' => 'nullable|string|max:30',
+            'whatsappBusinessAccountId' => 'nullable|string|max:100',
+        ]);
+
+        $user = $request->user();
+        $companyId = $user->company_id;
+        if (! $companyId) {
+            return response()->json(['success' => false, 'message' => 'No company.'], 403);
+        }
+
+        $result = $this->onboarding->completeManualConnect(
+            (int) $companyId,
+            $validated['phoneNumberId'],
+            $validated['accessToken'],
+            $validated['whatsappBusinessAccountId'] ?? null,
+            $validated['displayPhoneNumber'] ?? null,
+        );
+
+        $status = $result['success'] ? 200 : 422;
+        $account = $result['account'] ?? null;
+
         return response()->json([
-            'success' => false,
-            'message' => 'Manual WhatsApp connection is disabled. Use "Connect with Facebook" instead.',
-        ], 403);
+            'success' => $result['success'],
+            'message' => $result['message'] ?? null,
+            'phoneNumberId' => $result['phoneNumberId'] ?? $account?->phone_number_id,
+            'whatsappBusinessAccountId' => $account?->whatsapp_business_account_id,
+            'displayPhoneNumber' => $account?->display_phone_number,
+            'onboardingStatus' => $account?->onboarding_status,
+        ], $status);
     }
 
     public function completeEmbeddedSignup(Request $request): JsonResponse
     {
         if (! WhatsAppPlatformConfig::isEmbeddedSignupEnabled()) {
+            $message = WhatsAppPlatformConfig::hasEmbeddedSignupCredentials()
+                ? 'WhatsApp embedded signup is temporarily disabled by the platform administrator.'
+                : 'WhatsApp embedded signup is not configured. Contact your platform administrator.';
+
             return response()->json([
                 'success' => false,
-                'message' => 'WhatsApp embedded signup is not configured. Contact your platform administrator.',
+                'message' => $message,
             ], 503);
         }
 
@@ -126,6 +162,7 @@ class WhatsAppController extends Controller
             'phoneRegistered' => $account?->phone_registered_at !== null,
             'onboardingError' => $account?->onboarding_error,
             'embeddedSignupEnabled' => WhatsAppPlatformConfig::isEmbeddedSignupEnabled(),
+            'manualConnectEnabled' => WhatsAppPlatformConfig::isManualConnectEnabled(),
             'webhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
         ]);
     }

@@ -6,7 +6,9 @@ use App\Models\Company;
 use App\Models\Faq;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\KnowledgeChunk;
 use App\Support\MoneyFormatter;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -15,36 +17,60 @@ use Illuminate\Support\Facades\Storage;
  */
 class SystemPromptBuilder
 {
-    private const MAX_FAQS_IN_PROMPT = 25;
+    private const MAX_FAQS_IN_PROMPT = 40;
 
-    private const MAX_PRODUCTS_IN_PROMPT = 20;
+    private const MAX_PRODUCTS_IN_PROMPT = 30;
+
+    public function __construct(
+        private AiLearningConfig $learningConfig,
+        private KnowledgeChunkService $chunkService,
+    ) {}
 
     /**
-     * @param  array<int, array{question: string, answer: string}>  $learningSamples  Optional past Q&A to improve consistency
+     * @param  array<int, array{question: string, answer: string}>  $learningSamples
      */
-    public function build(Company $company, array $learningSamples = [], ?string $orderFlowContext = null): string
-    {
+    public function build(
+        Company $company,
+        array $learningSamples = [],
+        ?string $orderFlowContext = null,
+        ?string $customerMessage = null,
+        ?string $replyLanguage = null,
+    ): string {
         $settings = $company->settings;
         $tone = $settings?->ai_tone ?? 'friendly, professional, and clear';
         $name = $company->name;
+        $budget = $this->learningConfig->maxPromptTokens();
 
         $parts = [
-            "You represent {$name} in WhatsApp. Write as the owner would: warm, direct, and trustworthy. Sound human, not robotic.",
-            "Tone: {$tone}. Use short paragraphs or bullet lines when listing facts. Plain text only (no markdown, no **bold**).",
-            'Ground every factual claim in the sections below (business profile, knowledge base, products). If something is not covered, say you will confirm with the team instead of guessing.',
-            "Do not invent prices, fees, delivery areas, or product names. Use the product list when relevant. If the customer states what they want to buy, acknowledge it helpfully; do not only tell them to type 'prices' or 'catalog'.",
+            "You are the WhatsApp assistant for {$name}. You are the primary way customers get help — answer naturally in full sentences, like a knowledgeable team member.",
+            "Tone: {$tone}. Keep replies concise for WhatsApp (usually 2–5 short lines). Plain text only — no markdown, no **bold**, no bullet symbols unless listing products.",
         ];
 
+        if ($replyLanguage !== null && $replyLanguage !== '') {
+            $langName = app(\App\Services\Conversation\MessageLanguageDetector::class)->displayName($replyLanguage);
+            $parts[] = "Reply in {$langName} ({$replyLanguage}). Match the customer's language unless they switch languages.";
+        }
+
+        $parts = array_merge($parts, [
+            'Use the business profile, knowledge base, and product catalog below as your single source of truth. Synthesize answers in your own words — do not copy-paste robotically.',
+            'If information is missing, say you will confirm with the team. Never invent prices, stock, delivery zones, or policies.',
+            'When customers ask about hours, location, delivery, refunds, or orders, answer from the profile and knowledge base. If they want to buy, guide them: reply "order" or "2" to start, or "prices" / "1" for the numbered catalog.',
+            'Remember conversation context. If they thanked you or said ok, respond briefly and warmly without repeating the whole catalog.',
+            'For product recommendations, reference real items and prices from the catalog only.',
+        ]);
+
         $this->appendBusinessProfile($company, $parts);
-        $this->appendKnowledgeBase($company, $parts);
-        $this->appendProducts($company, $parts);
+        $this->appendKnowledgeBase($company, $parts, $customerMessage, $budget);
+        $this->appendProducts($company, $parts, $customerMessage, $budget);
         $this->appendLearningSamples($learningSamples, $parts);
 
         if ($orderFlowContext !== null && trim($orderFlowContext) !== '') {
             $parts[] = "\nCurrent situation (honor this; do not contradict numbered checkout instructions unless they ask to cancel or change topic):\n".trim($orderFlowContext);
         }
 
-        return implode("\n", $parts);
+        $prompt = implode("\n", $parts);
+
+        return $this->trimToTokenBudget($prompt, $budget);
     }
 
     private function appendBusinessProfile(Company $company, array &$parts): void
@@ -81,25 +107,33 @@ class SystemPromptBuilder
         $parts[] = "\n".implode("\n", $lines);
     }
 
-    private function appendKnowledgeBase(Company $company, array &$parts): void
+    private function appendKnowledgeBase(Company $company, array &$parts, ?string $customerMessage, int $budget): void
     {
         $faqs = Faq::where('company_id', $company->id)
             ->where('is_active', true)
-            ->orderBy('created_at')
-            ->limit(self::MAX_FAQS_IN_PROMPT)
             ->get();
 
         if ($faqs->isEmpty()) {
             return;
         }
 
+        $ranked = $this->rankByRelevance($faqs, $customerMessage, fn (Faq $faq) => $faq->question.' '.$faq->answer);
         $parts[] = "\nKnowledge base (use when relevant):";
-        foreach ($faqs as $faq) {
-            $parts[] = "Q: {$faq->question}\nA: {$faq->answer}";
+        $added = 0;
+        foreach ($ranked as $faq) {
+            $block = "Q: {$faq->question}\nA: {$faq->answer}";
+            if (TokenEstimator::estimate(implode("\n", $parts)."\n".$block) > $budget) {
+                break;
+            }
+            $parts[] = $block;
+            $added++;
+            if ($added >= self::MAX_FAQS_IN_PROMPT) {
+                break;
+            }
         }
     }
 
-    private function appendProducts(Company $company, array &$parts): void
+    private function appendProducts(Company $company, array &$parts, ?string $customerMessage, int $budget): void
     {
         $products = Product::where('company_id', $company->id)
             ->where('status', 'active')
@@ -112,33 +146,117 @@ class SystemPromptBuilder
                     ->with(['images' => fn ($iq) => $iq->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id')]),
             ])
             ->orderBy('name')
-            ->limit(self::MAX_PRODUCTS_IN_PROMPT)
             ->get();
 
         if ($products->isEmpty()) {
             return;
         }
 
+        $ranked = $this->rankByRelevance($products, $customerMessage, fn (Product $p) => $p->name.' '.($p->description ?? ''));
+        if ($customerMessage !== null && trim($customerMessage) !== '') {
+            $semanticIds = collect($this->chunkService->search(
+                (int) $company->id,
+                $customerMessage,
+                KnowledgeChunk::SOURCE_PRODUCT,
+                8,
+            ))->pluck('source_id')->map(fn ($id) => (int) $id)->all();
+            if ($semanticIds !== []) {
+                $ranked = $ranked->sortByDesc(fn (Product $p) => in_array((int) $p->id, $semanticIds, true) ? 1 : 0)->values();
+            }
+        }
         $company->loadMissing('settings');
         $ccy = $company->settings?->displayCurrencyCode() ?? 'USD';
         $parts[] = "\nProducts (do not invent; refer to catalog if they ask). All prices are in {$ccy}. Customers can order by number in WhatsApp:";
-        foreach ($products as $p) {
+
+        $added = 0;
+        foreach ($ranked as $p) {
+            $lines = [];
             if ($p->variants->where('status', 'active')->isNotEmpty()) {
                 $min = (float) $p->variants->where('status', 'active')->min('price');
                 $productImage = $this->resolvePrimaryImageUrl($p->images);
                 $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
-                $parts[] = '- '.$p->name.' (options; from '.MoneyFormatter::format($min, $ccy)."){$productImageSuffix}:";
+                $lines[] = '- '.$p->name.' (options; from '.MoneyFormatter::format($min, $ccy)."){$productImageSuffix}:";
                 foreach ($p->variants->where('status', 'active')->take(8) as $v) {
                     $variantImage = $this->resolvePrimaryImageUrl($v->images) ?? $productImage;
                     $variantImageSuffix = $variantImage ? " [image: {$variantImage}]" : '';
-                    $parts[] = '  • '.$v->label.': '.MoneyFormatter::format((float) $v->price, $ccy).$variantImageSuffix;
+                    $lines[] = '  • '.$v->label.': '.MoneyFormatter::format((float) $v->price, $ccy).$variantImageSuffix;
                 }
             } else {
                 $productImage = $this->resolvePrimaryImageUrl($p->images);
                 $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
-                $parts[] = '- '.$p->name.': '.MoneyFormatter::format((float) $p->price, $ccy).$productImageSuffix;
+                $lines[] = '- '.$p->name.': '.MoneyFormatter::format((float) $p->price, $ccy).$productImageSuffix;
+            }
+
+            $block = implode("\n", $lines);
+            if (TokenEstimator::estimate(implode("\n", $parts)."\n".$block) > $budget) {
+                break;
+            }
+            $parts[] = $block;
+            $added++;
+            if ($added >= self::MAX_PRODUCTS_IN_PROMPT) {
+                break;
             }
         }
+    }
+
+    /**
+     * @template T
+     * @param  Collection<int, T>  $items
+     * @param  callable(T): string  $textExtractor
+     * @return Collection<int, T>
+     */
+    private function rankByRelevance(Collection $items, ?string $customerMessage, callable $textExtractor): Collection
+    {
+        if ($customerMessage === null || trim($customerMessage) === '') {
+            return $items->take(self::MAX_FAQS_IN_PROMPT);
+        }
+
+        $queryWords = $this->significantWords(mb_strtolower($customerMessage));
+        if ($queryWords === []) {
+            return $items;
+        }
+
+        return $items->sortByDesc(function ($item) use ($textExtractor, $queryWords) {
+            $textWords = $this->significantWords(mb_strtolower($textExtractor($item)));
+            if ($textWords === []) {
+                return 0;
+            }
+
+            return count(array_intersect($queryWords, $textWords));
+        })->values();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function significantWords(string $text): array
+    {
+        $stop = ['a', 'an', 'the', 'to', 'of', 'in', 'on', 'for', 'is', 'are', 'was', 'were', 'i', 'you', 'we', 'they', 'and', 'or', 'what', 'how', 'when', 'where', 'why'];
+        $tokens = preg_split('/\s+/', trim(preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text)), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $out = [];
+        foreach ($tokens as $t) {
+            $t = mb_strtolower($t);
+            if (mb_strlen($t) < 2 || in_array($t, $stop, true)) {
+                continue;
+            }
+            $out[] = $t;
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    private function trimToTokenBudget(string $prompt, int $budget): string
+    {
+        if (TokenEstimator::estimate($prompt) <= $budget) {
+            return $prompt;
+        }
+
+        $lines = explode("\n", $prompt);
+        while ($lines !== [] && TokenEstimator::estimate(implode("\n", $lines)) > $budget) {
+            array_pop($lines);
+        }
+
+        return implode("\n", $lines);
     }
 
     private function resolvePrimaryImageUrl($images): ?string
@@ -154,7 +272,7 @@ class SystemPromptBuilder
     }
 
     /**
-     * @param  array<int, array{question: string, answer: string}>  $samples
+     * @param  array<int, array{id?: int, question: string, answer: string, score?: float, source?: string}>  $samples
      */
     private function appendLearningSamples(array $samples, array &$parts): void
     {
@@ -162,13 +280,25 @@ class SystemPromptBuilder
             return;
         }
 
-        $parts[] = "\nRecent similar exchanges (use as style/context reference when relevant):";
+        $parts[] = "\nSimilar past exchanges (hybrid retrieval — prefer when relevant to the current question):";
         foreach ($samples as $s) {
             $q = $s['question'] ?? '';
             $a = $s['answer'] ?? '';
-            if ($q !== '' && $a !== '') {
-                $parts[] = "Q: {$q}\nA: {$a}";
+            if ($q === '' || $a === '') {
+                continue;
             }
+            $meta = [];
+            if (isset($s['id'])) {
+                $meta[] = 'id='.$s['id'];
+            }
+            if (isset($s['score']) && $s['score'] > 0) {
+                $meta[] = 'relevance='.number_format((float) $s['score'], 2);
+            }
+            if (! empty($s['source'])) {
+                $meta[] = 'source='.$s['source'];
+            }
+            $tag = $meta !== [] ? ' ['.implode(', ', $meta).']' : '';
+            $parts[] = "Q{$tag}: {$q}\nA: {$a}";
         }
     }
 }

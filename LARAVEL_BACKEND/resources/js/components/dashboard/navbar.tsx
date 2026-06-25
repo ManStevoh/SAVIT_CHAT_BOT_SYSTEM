@@ -61,7 +61,7 @@ export function DashboardNavbar() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isAdmin = pathname?.startsWith("/admin") ?? false
-  const profileHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
+  const profileHref = isAdmin ? "/admin/account" : "/dashboard/account"
   const settingsHref = isAdmin ? "/admin/settings" : "/dashboard/settings"
 
   useEffect(() => {

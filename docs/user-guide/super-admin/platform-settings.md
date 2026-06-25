@@ -25,7 +25,7 @@ When email verification is **off** (default), registrations auto-verify and user
 
 ### WhatsApp (platform — configure once)
 
-Super admin sets up **one Meta app** for the entire platform. Companies never touch Meta Developer Console.
+Super admin sets up **one Meta app** for the entire platform. Companies connect via **Embedded Signup** (recommended) or **manual credentials** if you enable that option.
 
 | Setting | Description |
 |---------|-------------|
@@ -36,8 +36,15 @@ Super admin sets up **one Meta app** for the entire platform. Companies never to
 | Embedded App Secret | Used server-side to exchange OAuth codes |
 | OAuth redirect URI | Whitelist in Meta; default `{APP_URL}/dashboard/settings` |
 | Enable coexist | Allow numbers already on WhatsApp Business mobile app |
+| **Enable Embedded Signup** | Turn on **Connect with Facebook** for companies (off during Meta App Review) |
+| **Enable manual connection** | Allow companies to paste Phone Number ID + access token from Meta Developer Console |
 
 **Webhook URL (set in Meta once):** `https://your-domain.com/api/whatsapp/webhook`
+
+Status indicators in the UI:
+
+- **Credentials complete** — App ID, Config ID, and Secret are saved  
+- **Live for companies** — Embedded Signup toggle is on and credentials are complete  
 
 When a company completes **Connect with Facebook**, the platform automatically:
 

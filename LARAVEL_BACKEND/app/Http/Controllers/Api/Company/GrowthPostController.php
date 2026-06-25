@@ -10,6 +10,7 @@ use App\Services\Growth\AttributionService;
 use App\Services\Growth\ContentPredictionService;
 use App\Services\Growth\ContentTagger;
 use App\Services\Growth\GrowthContentService;
+use App\Services\Growth\GrowthImageGenerationService;
 use App\Services\Growth\GrowthLimitService;
 use App\Services\Growth\MetaSocialService;
 use Illuminate\Http\JsonResponse;
@@ -101,9 +102,14 @@ class GrowthPostController extends Controller
         ]);
 
         try {
-            $posts = $content->generatePosts($company, $validated);
+            $result = $content->generatePosts($company, $validated);
 
-            return response()->json(['success' => true, 'posts' => $posts]);
+            return response()->json([
+                'success' => true,
+                'posts' => $result->posts,
+                'aiGenerated' => $result->aiGenerated,
+                'aiError' => $result->aiError,
+            ]);
         } catch (\RuntimeException $e) {
             if (str_contains($e->getMessage(), 'limit reached')) {
                 GrowthLimitService::notifyIfLimitReached($company, 'ai_posts');
@@ -187,6 +193,34 @@ class GrowthPostController extends Controller
         return response()->json([
             'success' => true,
             'url' => $url,
+            'post' => $this->formatPost($post->fresh(['attributionLink', 'latestMetrics'])),
+        ]);
+    }
+
+    public function generateImage(Request $request, SocialPost $post, GrowthImageGenerationService $images): JsonResponse
+    {
+        $this->authorizePost($request, $post);
+
+        if ($post->status === 'published') {
+            return response()->json(['success' => false, 'message' => 'Cannot generate images for published posts.'], 422);
+        }
+
+        $validated = $request->validate([
+            'prompt' => 'nullable|string|max:2000',
+        ]);
+
+        $outcome = $images->generateForPost($post, $validated['prompt'] ?? null);
+
+        if (! $outcome['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $outcome['error'] ?? 'Image generation failed',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'url' => $outcome['url'],
             'post' => $this->formatPost($post->fresh(['attributionLink', 'latestMetrics'])),
         ]);
     }

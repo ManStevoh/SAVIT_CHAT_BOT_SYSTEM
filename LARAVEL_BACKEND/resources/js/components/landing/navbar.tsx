@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils"
 
 const navLinks = [
   { href: "#features", label: "Features" },
+  { href: "#use-cases", label: "Use cases" },
+  { href: "#growth", label: "Growth" },
   { href: "#pricing", label: "Pricing" },
-  { href: "#testimonials", label: "Customers" },
   { href: "#faq", label: "FAQ" },
 ]
 
@@ -20,7 +21,7 @@ export function LandingNavbar() {
   const { resolvedTheme, setTheme } = useTheme()
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl backdrop-saturate-150">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/70 bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center justify-between">
           <AppLogoAndName variant="navbar" />
@@ -59,7 +60,7 @@ export function LandingNavbar() {
               <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
                 <Link href="/login">Sign in</Link>
               </Button>
-              <Button size="sm" asChild className="rounded-lg shadow-sm">
+              <Button size="sm" asChild className="rounded-md wa-cta border-0 shadow-none">
                 <Link href="/register">Start free trial</Link>
               </Button>
             </div>

@@ -5,7 +5,6 @@ namespace App\Services\WhatsApp;
 use App\Models\WhatsAppAccount;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class WhatsAppOnboardingService
 {
@@ -59,6 +58,110 @@ class WhatsAppOnboardingService
             ];
         }
 
+        return $this->activateAccount(
+            $companyId,
+            $phoneNumberId,
+            $accessToken,
+            $wabaId !== '' ? $wabaId : null,
+            $displayPhone,
+            $qualityRating,
+        );
+    }
+
+    /**
+     * Connect using credentials from Meta Developer Console (Phone Number ID + permanent access token).
+     *
+     * @return array{success: bool, message?: string, account?: WhatsAppAccount, phoneNumberId?: string|null}
+     */
+    public function completeManualConnect(
+        int $companyId,
+        string $phoneNumberId,
+        string $accessToken,
+        ?string $wabaId,
+        ?string $displayPhone
+    ): array {
+        $phoneNumberId = trim($phoneNumberId);
+        $accessToken = trim($accessToken);
+
+        if ($phoneNumberId === '' || $accessToken === '') {
+            return [
+                'success' => false,
+                'message' => 'Phone Number ID and access token are required.',
+            ];
+        }
+
+        if ($this->isPhoneUsedByAnotherCompany($phoneNumberId, $companyId)) {
+            return [
+                'success' => false,
+                'message' => 'This phone number is already connected to another company on the platform.',
+            ];
+        }
+
+        $phoneData = $this->graph->verifyPhoneNumber($phoneNumberId, $accessToken);
+        if ($phoneData === null) {
+            return [
+                'success' => false,
+                'message' => 'Could not verify the access token with Meta. Check Phone Number ID and token permissions (whatsapp_business_messaging, whatsapp_business_management).',
+            ];
+        }
+
+        $wabaId = trim((string) ($wabaId ?? ''));
+        $displayPhone = $displayPhone ?? ($phoneData['display_phone_number'] ?? null);
+        $qualityRating = $phoneData['quality_rating'] ?? null;
+
+        if ($wabaId === '') {
+            $discovered = $this->graph->discoverPhoneData($accessToken);
+            $wabaId = (string) ($discovered['whatsappBusinessAccountId'] ?? '');
+            $displayPhone = $displayPhone ?? ($discovered['displayPhoneNumber'] ?? null);
+            $qualityRating = $qualityRating ?? ($discovered['qualityRating'] ?? null);
+        }
+
+        return $this->activateAccount(
+            $companyId,
+            $phoneNumberId,
+            $accessToken,
+            $wabaId !== '' ? $wabaId : null,
+            $displayPhone,
+            $qualityRating,
+        );
+    }
+
+    public function disconnect(WhatsAppAccount $account): array
+    {
+        $wabaId = (string) ($account->whatsapp_business_account_id ?? '');
+        $token = $account->access_token;
+
+        if ($wabaId !== '' && $token !== '') {
+            $result = $this->graph->unsubscribeWabaWebhooks($wabaId, $token);
+            if (! $result['ok']) {
+                Log::info('WhatsApp webhook unsubscribe returned non-success', [
+                    'waba_id' => $wabaId,
+                    'status' => $result['status'],
+                    'body' => $result['body'],
+                ]);
+            }
+        }
+
+        $account->update([
+            'status' => 'inactive',
+            'onboarding_status' => 'disconnected',
+            'disconnected_at' => now(),
+        ]);
+
+        return ['success' => true, 'message' => 'WhatsApp disconnected.'];
+    }
+
+    /**
+     * @return array{success: bool, message?: string, account?: WhatsAppAccount, phoneNumberId?: string|null}
+     */
+    protected function activateAccount(
+        int $companyId,
+        string $phoneNumberId,
+        string $accessToken,
+        ?string $wabaId,
+        ?string $displayPhone,
+        ?string $qualityRating,
+    ): array {
         $pin = $this->generateRegistrationPin();
 
         $account = WhatsAppAccount::updateOrCreate(
@@ -67,7 +170,7 @@ class WhatsAppOnboardingService
                 'phone_number_id' => $phoneNumberId,
                 'access_token' => $accessToken,
                 'display_phone_number' => $displayPhone,
-                'whatsapp_business_account_id' => $wabaId !== '' ? $wabaId : null,
+                'whatsapp_business_account_id' => $wabaId,
                 'status' => 'inactive',
                 'onboarding_status' => 'token_received',
                 'onboarding_error' => null,
@@ -78,7 +181,7 @@ class WhatsAppOnboardingService
             ]
         );
 
-        if ($wabaId !== '') {
+        if ($wabaId !== null && $wabaId !== '') {
             $subscribe = $this->graph->subscribeWabaWebhooks($wabaId, $accessToken);
             if ($subscribe['ok'] || $this->graph->isAlreadySubscribedError($subscribe)) {
                 $account->webhook_subscribed_at = now();
@@ -129,29 +232,13 @@ class WhatsAppOnboardingService
         ];
     }
 
-    public function disconnect(WhatsAppAccount $account): array
+    protected function isPhoneUsedByAnotherCompany(string $phoneNumberId, int $companyId): bool
     {
-        $wabaId = (string) ($account->whatsapp_business_account_id ?? '');
-        $token = $account->access_token;
-
-        if ($wabaId !== '' && $token !== '') {
-            $result = $this->graph->unsubscribeWabaWebhooks($wabaId, $token);
-            if (! $result['ok']) {
-                Log::info('WhatsApp webhook unsubscribe returned non-success', [
-                    'waba_id' => $wabaId,
-                    'status' => $result['status'],
-                    'body' => $result['body'],
-                ]);
-            }
-        }
-
-        $account->update([
-            'status' => 'inactive',
-            'onboarding_status' => 'disconnected',
-            'disconnected_at' => now(),
-        ]);
-
-        return ['success' => true, 'message' => 'WhatsApp disconnected.'];
+        return WhatsAppAccount::query()
+            ->where('phone_number_id', $phoneNumberId)
+            ->where('company_id', '!=', $companyId)
+            ->where('status', 'active')
+            ->exists();
     }
 
     protected function generateRegistrationPin(): string

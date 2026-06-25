@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AiRequestLog;
 use App\Models\Company;
 use App\Models\Message;
 use Illuminate\Http\JsonResponse;
@@ -22,41 +23,53 @@ class AIUsageController extends Controller
             default => 30,
         };
         $since = now()->subDays($days);
-
-        $totalRequests = Message::where('sender', 'bot')->where('created_at', '>=', $since)->count();
-        $totalTokens = $totalRequests * 150;
-        $avgResponseTime = 1.2;
-        $successRate = 99.2;
         $prevSince = now()->subDays($days * 2);
-        $prevRequests = Message::whereHas('chat')->where('sender', 'bot')->whereBetween('created_at', [$prevSince, $since])->count();
-        $requestsChange = $prevRequests > 0 ? round((($totalRequests - $prevRequests) / $prevRequests) * 100, 1) : 0;
-        $tokensChange = $requestsChange;
 
-        $labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        $logsQuery = AiRequestLog::query()->where('created_at', '>=', $since);
+
+        $totalRequests = (clone $logsQuery)->count();
+        $successfulRequests = (clone $logsQuery)->where('success', true)->count();
+        $totalTokens = (int) (clone $logsQuery)->sum('total_tokens');
+        $totalCostUsd = round((float) (clone $logsQuery)->sum('estimated_cost_usd'), 4);
+        $prevCost = round((float) AiRequestLog::whereBetween('created_at', [$prevSince, $since])->sum('estimated_cost_usd'), 4);
+        $costChange = $prevCost > 0
+            ? round((($totalCostUsd - $prevCost) / $prevCost) * 100, 1)
+            : 0;
+        $avgResponseTime = round(((clone $logsQuery)->avg('latency_ms') ?? 0) / 1000, 2);
+        $successRate = $totalRequests > 0
+            ? round(($successfulRequests / $totalRequests) * 100, 1)
+            : 100.0;
+
+        $prevRequests = AiRequestLog::whereBetween('created_at', [$prevSince, $since])->count();
+        $prevTokens = (int) AiRequestLog::whereBetween('created_at', [$prevSince, $since])->sum('total_tokens');
+        $requestsChange = $prevRequests > 0
+            ? round((($totalRequests - $prevRequests) / $prevRequests) * 100, 1)
+            : 0;
+        $tokensChange = $prevTokens > 0
+            ? round((($totalTokens - $prevTokens) / $prevTokens) * 100, 1)
+            : 0;
+
         $usageByDay = [];
         for ($i = $days - 1; $i >= 0; $i--) {
             $date = now()->subDays($i);
             $dayStart = $date->copy()->startOfDay();
             $dayEnd = $date->copy()->endOfDay();
-            $count = Message::whereHas('chat')->where('sender', 'bot')->whereBetween('created_at', [$dayStart, $dayEnd])->count();
-            $usageByDay[] = ['date' => $labels[$dayStart->dayOfWeek], 'value' => $count];
-        }
-        if ($days > 7) {
-            $byLabel = array_fill_keys($labels, 0);
-            foreach ($usageByDay as $p) {
-                $byLabel[$p['date']] += $p['value'];
-            }
-            $usageByDay = array_map(fn ($l) => ['date' => $l, 'value' => $byLabel[$l]], $labels);
+            $tokens = (int) AiRequestLog::whereBetween('created_at', [$dayStart, $dayEnd])->sum('total_tokens');
+            $usageByDay[] = [
+                'date' => $days <= 7 ? $dayStart->format('D') : $dayStart->format('M j'),
+                'value' => $tokens,
+            ];
         }
 
-        $usageByCompany = Message::where('messages.sender', 'bot')
-            ->where('messages.created_at', '>=', $since)
-            ->join('chats', 'chats.id', '=', 'messages.chat_id')
-            ->select('chats.company_id', DB::raw('COUNT(*) as requests'), DB::raw('COUNT(*) * 150 as tokens'))
-            ->groupBy('chats.company_id')
-            ->orderByDesc('requests')
+        $usageByCompany = AiRequestLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('company_id')
+            ->select('company_id', DB::raw('COUNT(*) as requests'), DB::raw('SUM(total_tokens) as tokens'))
+            ->groupBy('company_id')
+            ->orderByDesc('tokens')
             ->limit(20)
             ->get();
+
         $companyIds = $usageByCompany->pluck('company_id')->all();
         $companies = Company::whereIn('id', $companyIds)->get()->keyBy('id');
         $usageByCompanyData = $usageByCompany->map(fn ($r) => [
@@ -66,14 +79,63 @@ class AIUsageController extends Controller
             'tokens' => (int) $r->tokens,
         ])->values()->all();
 
-        $modelUsage = [
-            ['model' => 'GPT-4', 'requests' => (int) ($totalRequests * 0.4), 'tokens' => (int) ($totalTokens * 0.5)],
-            ['model' => 'GPT-3.5 Turbo', 'requests' => (int) ($totalRequests * 0.6), 'tokens' => (int) ($totalTokens * 0.5)],
-        ];
+        $modelUsage = AiRequestLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('model')
+            ->select('model', DB::raw('COUNT(*) as requests'), DB::raw('SUM(total_tokens) as tokens'))
+            ->groupBy('model')
+            ->orderByDesc('tokens')
+            ->get()
+            ->map(fn ($r) => [
+                'model' => $r->model,
+                'requests' => (int) $r->requests,
+                'tokens' => (int) $r->tokens,
+            ])
+            ->values()
+            ->all();
+
+        $botRepliesBySource = Message::query()
+            ->where('sender', 'bot')
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('reply_source')
+            ->select('reply_source', DB::raw('COUNT(*) as count'))
+            ->groupBy('reply_source')
+            ->orderByDesc('count')
+            ->get()
+            ->map(fn ($r) => [
+                'source' => $r->reply_source,
+                'count' => (int) $r->count,
+            ])
+            ->values()
+            ->all();
+
+        $usageByCredentialSource = AiRequestLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('credential_source')
+            ->select(
+                'credential_source',
+                DB::raw('COUNT(*) as requests'),
+                DB::raw('SUM(total_tokens) as tokens'),
+                DB::raw('SUM(estimated_cost_usd) as estimated_cost_usd'),
+                DB::raw('SUM(billed_cost_usd) as billed_cost_usd'),
+            )
+            ->groupBy('credential_source')
+            ->get()
+            ->map(fn ($r) => [
+                'credentialSource' => $r->credential_source,
+                'requests' => (int) $r->requests,
+                'tokens' => (int) $r->tokens,
+                'estimatedCostUsd' => round((float) $r->estimated_cost_usd, 4),
+                'billedCostUsd' => round((float) $r->billed_cost_usd, 4),
+            ])
+            ->values()
+            ->all();
 
         return response()->json([
             'totalRequests' => $totalRequests,
             'totalTokens' => $totalTokens,
+            'totalCostUsd' => $totalCostUsd,
+            'costChange' => $costChange,
             'avgResponseTime' => $avgResponseTime,
             'successRate' => $successRate,
             'requestsChange' => $requestsChange,
@@ -81,6 +143,8 @@ class AIUsageController extends Controller
             'usageByDay' => $usageByDay,
             'usageByCompany' => $usageByCompanyData,
             'modelUsage' => $modelUsage,
+            'botRepliesBySource' => $botRepliesBySource,
+            'usageByCredentialSource' => $usageByCredentialSource,
         ]);
     }
 }

@@ -17,7 +17,13 @@ import { getAdminWhatsAppConnections, type AdminWhatsAppConnection } from "@/lib
 
 export default function AdminWhatsAppPage() {
   const [connections, setConnections] = useState<AdminWhatsAppConnection[]>([])
-  const [platform, setPlatform] = useState<{ embeddedSignupEnabled: boolean; webhookUrl: string; graphVersion: string } | null>(null)
+  const [platform, setPlatform] = useState<{
+    embeddedSignupEnabled: boolean
+    embeddedSignupReady?: boolean
+    manualConnectEnabled?: boolean
+    webhookUrl: string
+    graphVersion: string
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,7 +64,16 @@ export default function AdminWhatsAppPage() {
             <CardTitle className="text-base">Platform Meta configuration</CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-2 text-muted-foreground">
-            <p>Embedded Signup: <strong className="text-foreground">{platform.embeddedSignupEnabled ? "Ready" : "Not configured"}</strong></p>
+            <p>
+              Embedded Signup:{" "}
+              <strong className="text-foreground">
+                {platform.embeddedSignupEnabled ? "Live" : platform.embeddedSignupReady ? "Configured (off)" : "Not configured"}
+              </strong>
+            </p>
+            <p>
+              Manual connection:{" "}
+              <strong className="text-foreground">{platform.manualConnectEnabled ? "Enabled" : "Disabled"}</strong>
+            </p>
             <p>Graph API: {platform.graphVersion}</p>
             <p className="break-all">Webhook: <code className="text-xs bg-muted px-1 rounded">{platform.webhookUrl}</code></p>
           </CardContent>

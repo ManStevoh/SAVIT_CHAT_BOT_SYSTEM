@@ -13,12 +13,14 @@ class Faq extends Model
         'answer',
         'category',
         'keywords',
+        'question_embedding',
         'is_active',
         'usage_count',
     ];
 
     protected $casts = [
         'keywords' => 'array',
+        'question_embedding' => 'array',
         'is_active' => 'boolean',
     ];
 

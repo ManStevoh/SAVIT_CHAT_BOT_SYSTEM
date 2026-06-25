@@ -8,15 +8,14 @@ import {
 } from "@/components/ui/accordion"
 import { useLanding } from "@/lib/api-hooks"
 import { SectionHeader } from "@/components/shared/section-header"
-import { FadeIn } from "@/components/shared/fade-in"
 
 const FALLBACK_FAQS = [
-  { id: "1", question: "How does the WhatsApp integration work?", answer: "We use the official WhatsApp Business API to connect your business number. The setup process takes about 10 minutes and requires your business to be verified on Facebook Business Manager. Once connected, all messages are routed through our platform." },
-  { id: "2", question: "Can I train the AI with my own data?", answer: "Absolutely! You can upload FAQs, product catalogs, pricing information, and business policies. Our AI learns from this data to provide accurate, contextual responses. You can also fine-tune responses based on customer interactions." },
-  { id: "3", question: "What happens when the AI can't answer a question?", answer: "When our AI encounters a question it can't confidently answer, it seamlessly hands off the conversation to a human agent. Your team receives a notification with the full conversation context, ensuring a smooth customer experience." },
-  { id: "4", question: "Is my customer data secure?", answer: "Security is our top priority. All data is encrypted in transit and at rest. We're SOC 2 compliant and GDPR ready. Your data is never used to train general AI models - your business data remains yours." },
-  { id: "5", question: "Can I integrate with my existing CRM or e-commerce platform?", answer: "Yes! We offer native integrations with popular platforms like Shopify, WooCommerce, Salesforce, and HubSpot. We also provide a comprehensive API for custom integrations." },
-  { id: "6", question: "What's included in the free trial?", answer: "The 14-day free trial includes full access to all features of the Growth plan. No credit card required to start. You can send up to 1,000 messages during the trial period." },
+  { id: "1", question: "How does the WhatsApp integration work?", answer: "We use the official WhatsApp Business Cloud API. Connect your Meta Business account, verify your number, and messages route through Savit Chat. Embedded signup is available when enabled by your platform admin." },
+  { id: "2", question: "Can I train the AI with my own data?", answer: "Yes. Add FAQs, product catalogs, and business policies in your dashboard. The AI uses this content plus conversation learning (when enabled) to reply in your brand voice." },
+  { id: "3", question: "What happens when the AI can't answer a question?", answer: "Conversations can be handed off to a human agent at any time. Your team sees full chat history, takes over in the inbox, and the bot pauses until you release the conversation." },
+  { id: "4", question: "Is my customer data secure?", answer: "Data is encrypted in transit (TLS) and stored securely. Each company's data is isolated in our multi-tenant architecture. You control your AI provider credentials and can review usage in the dashboard." },
+  { id: "5", question: "What payments do you support?", answer: "M-Pesa STK push for Kenyan customers and Stripe for card payments and subscriptions. Customers can pay directly inside the WhatsApp conversation flow." },
+  { id: "6", question: "What's included in the free trial?", answer: "The 14-day free trial gives you access to core platform features. No credit card is required to start. Plan limits apply based on the tier you choose after the trial." },
 ]
 
 export function FAQSection() {
@@ -24,18 +23,15 @@ export function FAQSection() {
   const faqs = data?.faqs?.length ? data.faqs : FALLBACK_FAQS
 
   return (
-    <section id="faq" className="section-padding surface-subtle border-t border-border/60">
+    <section id="faq" className="section-padding landing-divider">
       <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
-        <FadeIn>
-          <SectionHeader
-            label="FAQ"
-            title="Frequently asked questions"
-            description="Everything you need to know about Savit Chat."
-          />
-        </FadeIn>
+        <SectionHeader
+          label="FAQ"
+          title="Common questions"
+          description="Quick answers before you sign up."
+        />
 
-        <FadeIn delay={100}>
-          <Accordion type="single" collapsible className="w-full">
+        <Accordion type="single" collapsible className="w-full">
             {faqs.map((faq, index) => (
               <AccordionItem
                 key={faq.id}
@@ -51,7 +47,6 @@ export function FAQSection() {
               </AccordionItem>
             ))}
           </Accordion>
-        </FadeIn>
       </div>
     </section>
   )

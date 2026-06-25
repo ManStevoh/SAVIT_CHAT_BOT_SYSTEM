@@ -8,9 +8,11 @@ nav_order: 18
 
 **URL:** `/dashboard/settings` (WhatsApp tab)
 
-Connect your WhatsApp Business number in one click. **You do not need a Meta Developer account** — your platform administrator has already configured Meta for everyone.
+Connect your WhatsApp Business number via **Connect with Facebook** (recommended) or **manual credentials** if your platform administrator enabled that option.
 
-## How to connect
+## How to connect — Facebook (recommended)
+
+Requires super admin to enable **Embedded Signup**.
 
 1. Go to **Settings → WhatsApp Setup**
 2. Click **Connect with Facebook**
@@ -21,7 +23,18 @@ Connect your WhatsApp Business number in one click. **You do not need a Meta Dev
 
 When finished, status shows **Connected** with your display number.
 
-The platform automatically subscribes webhooks and registers your number — no manual tokens or webhook setup.
+## How to connect — Manual
+
+Requires super admin to enable **manual connection** (often available during platform setup).
+
+1. In [Meta Developer Console](https://developers.facebook.com) → your app → **WhatsApp → API Setup**, copy:
+   - **Phone number ID**
+   - **Permanent access token** (system user token with `whatsapp_business_messaging` + `whatsapp_business_management`)
+   - **WhatsApp Business Account ID** (optional but recommended)
+2. Go to **Settings → WhatsApp Setup** → **Manual connection**
+3. Paste the values and click **Connect manually**
+
+The platform verifies your token with Meta, subscribes webhooks, and registers your number automatically.
 
 ## Message templates
 
@@ -47,12 +60,14 @@ Click **Disconnect** to unsubscribe webhooks and deactivate the number. Chat his
 
 | Issue | Fix |
 |-------|-----|
-| "Embedded signup is not enabled" | Ask platform admin to complete Admin → Settings → Integrations |
-| Popup blocked | Allow popups for this site |
+| No connect options shown | Ask platform admin to enable Embedded Signup and/or manual connection in Admin → Settings → Integrations |
+| "Embedded signup is not enabled" | Use manual connection if enabled, or wait for admin to turn on Embedded Signup |
+| Manual token rejected | Regenerate token; confirm Phone Number ID matches; check token permissions |
+| Popup blocked | Allow popups for this site (Facebook flow only) |
 | OTP not received | Use a number that can receive SMS/voice; avoid numbers on another API provider |
 | Connected but no replies | Ensure queue worker runs; check AI auto-reply is on; verify subscription is active |
 | Template rejected | Read rejection reason; edit and resubmit |
 
 ## Security
 
-Access tokens are encrypted per company. If compromised, disconnect and reconnect via Facebook.
+Access tokens are encrypted per company. If compromised, disconnect and reconnect.

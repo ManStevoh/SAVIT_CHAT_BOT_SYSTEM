@@ -33,6 +33,7 @@ const navigationMain = [
 
 const navigationConfig = [
   { name: "Settings", href: "/admin/settings", icon: Settings, subtitle: "APIs, email, security" },
+  { name: "AI Models", href: "/admin/ai-models", icon: Bot, subtitle: "Providers, costs, defaults" },
   { name: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare, subtitle: "Company connections" },
   { name: "Payment Gateways", href: "/admin/payment-gateways", icon: Wallet, subtitle: "Stripe, M-Pesa" },
 ]
@@ -41,6 +42,7 @@ const navigationOther = [
   { name: "Testimonials", href: "/admin/testimonials", icon: Quote },
   { name: "Landing FAQ", href: "/admin/landing-faqs", icon: HelpCircle },
   { name: "AI Usage", href: "/admin/ai-usage", icon: Bot },
+  { name: "AI Learning", href: "/admin/ai-learning", icon: Bot },
   { name: "System Logs", href: "/admin/logs", icon: FileText },
 ]
 

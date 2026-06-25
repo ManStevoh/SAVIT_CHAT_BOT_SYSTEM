@@ -15,7 +15,9 @@ import type {
   GrowthPost,
 } from './mock-data'
 import { mockSubscriptions } from './mock-data'
-import { useMockApi, apiRequest } from './api-client'
+import { useMockApi, apiRequest, apiUrl } from './api-client'
+
+export { apiRequest, apiUrl, resolveBackendMediaUrl } from './api-client'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -205,6 +207,95 @@ export async function logout(): Promise<{ success: boolean }> {
   }
   try {
     return await apiRequest<{ success: boolean }>('/api/auth/logout', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface UpdateAccountProfileData {
+  name: string
+  email: string
+  phone?: string
+}
+
+export interface UpdateAccountPasswordData {
+  currentPassword: string
+  password: string
+  confirmPassword: string
+}
+
+/**
+ * Get the authenticated user's profile.
+ * Laravel: GET /api/auth/me
+ */
+export async function getAccountProfile(): Promise<User> {
+  if (useMockApi()) {
+    await delay(300)
+    return {
+      id: '1',
+      name: 'Demo Admin',
+      email: 'admin@example.com',
+      phone: '+254700000000',
+      role: 'admin',
+      status: 'active',
+      lastLogin: new Date().toISOString(),
+      createdAt: '2024-01-01',
+    }
+  }
+  const res = await apiRequest<{ user: User }>('/api/auth/me')
+  return res.user
+}
+
+/**
+ * Update the authenticated user's profile.
+ * Laravel: PUT /api/auth/profile
+ */
+export async function updateAccountProfile(
+  data: UpdateAccountProfileData
+): Promise<{ success: boolean; message?: string; user?: User }> {
+  if (useMockApi()) {
+    await delay(500)
+    return {
+      success: true,
+      message: 'Profile updated successfully.',
+      user: {
+        id: '1',
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        role: 'admin',
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        createdAt: '2024-01-01',
+      },
+    }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string; user?: User }>('/api/auth/profile', {
+      method: 'PUT',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Update the authenticated user's password.
+ * Laravel: PUT /api/auth/password
+ */
+export async function updateAccountPassword(
+  data: UpdateAccountPasswordData
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true, message: 'Password updated successfully.' }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>('/api/auth/password', {
+      method: 'PUT',
+      body: data,
+    })
   } catch (e) {
     return handleApiError(e)
   }
@@ -776,6 +867,12 @@ export interface UpdateSettingsData {
   whatsappNumber?: string
   aiGreeting?: string
   aiTone?: string
+  aiModelMode?: 'auto' | 'platform_default' | 'specific'
+  aiModelId?: string | null
+  aiReplyMode?: 'ai_first' | 'balanced'
+  aiCredentialMode?: 'platform' | 'company' | 'company_preferred'
+  defaultReplyLanguage?: string | null
+  replyInCustomerLanguage?: boolean
   fallbackMessage?: string
   awayMessage?: string
   timezone?: string
@@ -848,10 +945,28 @@ export interface ConnectWhatsAppPayload {
 }
 
 /**
- * @deprecated Manual connect removed — use completeWhatsAppEmbeddedSignup.
+ * Connect WhatsApp via Meta Cloud API credentials (Phone Number ID + permanent access token).
+ * Laravel: POST /api/company/whatsapp/connect
  */
-export async function connectWhatsApp(_payload: ConnectWhatsAppPayload): Promise<{ success: boolean; message?: string }> {
-  return { success: false, message: 'Manual WhatsApp connection is disabled. Use Connect with Facebook.' }
+export async function connectWhatsApp(payload: ConnectWhatsAppPayload): Promise<{
+  success: boolean
+  message?: string
+  phoneNumberId?: string | null
+  displayPhoneNumber?: string | null
+  onboardingStatus?: string | null
+}> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true, message: 'WhatsApp connected.', phoneNumberId: payload.phoneNumberId }
+  }
+  try {
+    return await apiRequest('/api/company/whatsapp/connect', {
+      method: 'POST',
+      body: payload,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
 }
 
 /** WhatsApp connection status from backend */
@@ -866,6 +981,7 @@ export interface WhatsAppStatus {
   phoneRegistered?: boolean
   onboardingError?: string | null
   embeddedSignupEnabled?: boolean
+  manualConnectEnabled?: boolean
   webhookUrl?: string | null
 }
 
@@ -963,6 +1079,168 @@ export async function deleteWhatsAppTemplate(id: string): Promise<{ success: boo
   }
 }
 
+export async function getWhatsAppCampaignAudience(segment?: 'all' | 'recent' | 'inactive' | 'ordered'): Promise<{ uniqueCustomers: number; segment?: string; note?: string }> {
+  if (useMockApi()) return { uniqueCustomers: 0 }
+  const path = segment ? `/api/company/whatsapp/campaign/audience?segment=${segment}` : '/api/company/whatsapp/campaign/audience'
+  return apiRequest(path)
+}
+
+export async function sendWhatsAppCampaign(data: {
+  mode: 'template' | 'image'
+  templateName?: string
+  languageCode?: string
+  bodyParameters?: string[]
+  imageUrl?: string
+  caption?: string
+  segment?: 'all' | 'recent' | 'inactive' | 'ordered'
+}): Promise<{ success: boolean; sent?: number; failed?: number; total?: number; message?: string; errors?: string[] }> {
+  if (useMockApi()) return { success: true, sent: 0, total: 0, message: 'Mock send.' }
+  try {
+    return await apiRequest('/api/company/whatsapp/campaign/send', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export type WhatsAppCampaignSegment = 'all' | 'recent' | 'inactive' | 'ordered'
+
+export interface WhatsAppCampaignRecord {
+  id: string
+  name: string
+  status: string
+  segment: WhatsAppCampaignSegment
+  templateName: string | null
+  languageCode: string
+  posterUrl: string | null
+  caption: string | null
+  totalRecipients: number
+  sentCount: number
+  failedCount: number
+  pendingCount?: number | null
+  startedAt?: string | null
+  completedAt?: string | null
+  errorSummary?: string | null
+  createdAt?: string
+}
+
+export interface WhatsAppCampaignGrowthPost {
+  id: string
+  title: string | null
+  content: string
+  platform: string
+  mediaUrls: string[]
+  status: string
+}
+
+export async function getWhatsAppCampaignLimits(): Promise<{ campaignsUsed: number; campaignsLimit: number; recipientsLimit: number }> {
+  if (useMockApi()) return { campaignsUsed: 0, campaignsLimit: 10, recipientsLimit: 1000 }
+  return apiRequest('/api/company/whatsapp/campaign/limits')
+}
+
+export async function listWhatsAppCampaigns(): Promise<WhatsAppCampaignRecord[]> {
+  if (useMockApi()) return []
+  return apiRequest('/api/company/whatsapp/campaigns')
+}
+
+export async function createWhatsAppCampaign(data: {
+  name?: string
+  segment?: WhatsAppCampaignSegment
+  templateName?: string
+  caption?: string
+  posterUrl?: string
+  socialPostId?: string
+}): Promise<{ success: boolean; campaign?: WhatsAppCampaignRecord; message?: string }> {
+  if (useMockApi()) return { success: true, campaign: { id: '1', name: 'Mock', status: 'draft', segment: 'all', templateName: null, languageCode: 'en', posterUrl: null, caption: null, totalRecipients: 0, sentCount: 0, failedCount: 0 } }
+  try {
+    const res = await apiRequest<{ campaign: WhatsAppCampaignRecord }>('/api/company/whatsapp/campaigns', { method: 'POST', body: data })
+    return { success: true, campaign: res.campaign }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateWhatsAppCampaign(
+  campaignId: string,
+  data: Partial<{
+    name: string
+    segment: WhatsAppCampaignSegment
+    templateName: string
+    caption: string
+    posterUrl: string
+    socialPostId: string
+  }>
+): Promise<{ success: boolean; campaign?: WhatsAppCampaignRecord; message?: string }> {
+  if (useMockApi()) return { success: true }
+  try {
+    const res = await apiRequest<{ campaign: WhatsAppCampaignRecord }>(`/api/company/whatsapp/campaigns/${campaignId}`, { method: 'PATCH', body: data })
+    return { success: true, campaign: res.campaign }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function getWhatsAppCampaign(campaignId: string): Promise<WhatsAppCampaignRecord> {
+  return apiRequest(`/api/company/whatsapp/campaigns/${campaignId}`)
+}
+
+export async function uploadWhatsAppCampaignPoster(
+  campaignId: string,
+  file: File
+): Promise<{ success: boolean; url?: string; campaign?: WhatsAppCampaignRecord; message?: string }> {
+  if (useMockApi()) return { success: true, url: 'https://example.com/poster.png' }
+  const form = new FormData()
+  form.append('image', file)
+  try {
+    const res = await apiRequest<{ url: string; campaign: WhatsAppCampaignRecord }>(`/api/company/whatsapp/campaigns/${campaignId}/poster`, { method: 'POST', body: form })
+    return { success: true, url: res.url, campaign: res.campaign }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function generateWhatsAppCampaignCaption(data: {
+  topic?: string
+  tone?: string
+  posterHint?: string
+}): Promise<{ success: boolean; caption?: string; message?: string }> {
+  if (useMockApi()) return { success: true, caption: 'Check out our latest offer — reply to order!' }
+  try {
+    return await apiRequest('/api/company/whatsapp/campaign/generate-caption', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function getWhatsAppCampaignGrowthPosts(): Promise<WhatsAppCampaignGrowthPost[]> {
+  if (useMockApi()) return []
+  return apiRequest('/api/company/whatsapp/campaign/growth-posts')
+}
+
+export async function sendWhatsAppCampaignWizard(campaignId: string): Promise<{ success: boolean; message?: string; campaign?: WhatsAppCampaignRecord }> {
+  if (useMockApi()) return { success: true, message: 'Queued' }
+  try {
+    const res = await apiRequest<{ message: string; campaign: WhatsAppCampaignRecord }>(`/api/company/whatsapp/campaigns/${campaignId}/send`, { method: 'POST', body: {} })
+    return { success: true, message: res.message, campaign: res.campaign }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function testWhatsAppCampaign(campaignId: string, phone: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) return { success: true, message: 'Test sent' }
+  try {
+    return await apiRequest(`/api/company/whatsapp/campaigns/${campaignId}/test`, { method: 'POST', body: { phone } })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function exportLearningSamples(): Promise<Blob> {
+  const res = await fetch(apiUrl('/api/company/learning/export'), { credentials: 'include' })
+  if (!res.ok) throw new Error('Export failed')
+  return res.blob()
+}
+
 export interface AdminWhatsAppConnection {
   id: string
   companyId: string
@@ -977,9 +1255,20 @@ export interface AdminWhatsAppConnection {
 
 export async function getAdminWhatsAppConnections(): Promise<{
   connections: AdminWhatsAppConnection[]
-  platform: { embeddedSignupEnabled: boolean; webhookUrl: string; graphVersion: string }
+  platform: {
+    embeddedSignupEnabled: boolean
+    embeddedSignupReady?: boolean
+    manualConnectEnabled?: boolean
+    webhookUrl: string
+    graphVersion: string
+  }
 }> {
-  if (useMockApi()) return { connections: [], platform: { embeddedSignupEnabled: false, webhookUrl: '', graphVersion: 'v22.0' } }
+  if (useMockApi()) {
+    return {
+      connections: [],
+      platform: { embeddedSignupEnabled: false, manualConnectEnabled: true, webhookUrl: '', graphVersion: 'v22.0' },
+    }
+  }
   return apiRequest('/api/admin/whatsapp/connections', { method: 'GET' })
 }
 
@@ -1565,6 +1854,30 @@ export async function adminImpersonateCompany(companyId: string): Promise<{
   }
 }
 
+export interface AiLearningConfig {
+  learningEnabled?: boolean
+  defaultLearnFromChats?: boolean
+  allowCompanyOverride?: boolean
+  maxSamplesPerCompany?: number
+  promptSampleLimit?: number
+  retentionDays?: number
+  piiRedactionEnabled?: boolean
+  storeFaqExchanges?: boolean
+  storeAgentReplies?: boolean
+  faqEmbeddingsEnabled?: boolean
+  learningEmbeddingsEnabled?: boolean
+  faqSemanticMinScore?: number
+  learningSemanticMinScore?: number
+  faqDirectMinScore?: number
+  minReplyLength?: number
+  maxPromptTokens?: number
+  embeddingModelKey?: string
+  requireLearningReview?: boolean
+  autoDetectLanguage?: boolean
+  fallbackLanguage?: string
+  aiCostMarkupPercent?: number
+}
+
 export interface PlatformSettings {
   platformName?: string | null
   primaryColor?: string | null
@@ -1593,8 +1906,11 @@ export interface PlatformSettings {
   whatsappEmbeddedAppSecret?: string | null
   whatsappEmbeddedRedirectUri?: string | null
   whatsappEnableCoexist?: boolean
+  whatsappEmbeddedSignupEnabled?: boolean
+  whatsappManualConnectEnabled?: boolean
   whatsappWebhookUrl?: string | null
   whatsappEmbeddedSignupReady?: boolean
+  whatsappEmbeddedSignupActive?: boolean
   openaiApiKey?: string | null
   openaiModel?: string | null
   openaiMaxTokens?: number | null
@@ -1611,6 +1927,7 @@ export interface PlatformSettings {
   notifyUsageAlerts?: boolean
   notifyDailySummary?: boolean
   landingTrustedCompanies?: string[]
+  aiLearningConfig?: AiLearningConfig
 }
 
 export interface UpdatePlatformSettingsData {
@@ -1641,6 +1958,8 @@ export interface UpdatePlatformSettingsData {
   whatsappEmbeddedAppSecret?: string
   whatsappEmbeddedRedirectUri?: string
   whatsappEnableCoexist?: boolean
+  whatsappEmbeddedSignupEnabled?: boolean
+  whatsappManualConnectEnabled?: boolean
   openaiApiKey?: string
   openaiModel?: string
   openaiMaxTokens?: number
@@ -1657,6 +1976,7 @@ export interface UpdatePlatformSettingsData {
   notifyUsageAlerts?: boolean
   notifyDailySummary?: boolean
   landingTrustedCompanies?: string[]
+  aiLearningConfig?: AiLearningConfig
 }
 
 /** Public app branding (name, logo, colors) for theme/invoices. GET /api/app-branding */
@@ -1672,6 +1992,178 @@ export interface AppBranding {
  * Get platform settings (admin only)
  * Laravel: GET /api/admin/settings
  */
+export interface AdminAiLearningStats {
+  config: AiLearningConfig
+  stats: {
+    totalLearningSamples: number
+    pendingReviewSamples?: number
+    companiesWithSamples: number
+    activeFaqs: number
+    faqsWithEmbeddings: number
+    embeddingCoveragePercent: number
+    approvedLearningSamples?: number
+    learningSamplesWithEmbeddings?: number
+    learningEmbeddingCoveragePercent?: number
+    learningQuality?: { deadSamples: number; lowQualitySamples: number }
+    samplesBySource: Record<string, number>
+    topCompaniesBySamples: Array<{ companyId: string; companyName: string; samples: number }>
+    oldestSampleAt?: string | null
+    newestSampleAt?: string | null
+  }
+}
+
+export async function getAdminAiLearningStats(): Promise<AdminAiLearningStats> {
+  return apiRequest<AdminAiLearningStats>('/api/admin/ai-learning/stats')
+}
+
+export async function purgeAiLearningSamples(data: {
+  confirm: string
+  companyId?: number
+}): Promise<{ success: boolean; deleted?: number; message?: string }> {
+  try {
+    return await apiRequest('/api/admin/ai-learning/purge', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function pruneExpiredAiLearningSamples(): Promise<{ success: boolean; deleted?: number; message?: string }> {
+  try {
+    return await apiRequest('/api/admin/ai-learning/prune-expired', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncFaqEmbeddingsAdmin(companyId?: number): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest('/api/admin/ai-learning/sync-faq-embeddings', {
+      method: 'POST',
+      body: companyId ? { companyId } : {},
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncLearningEmbeddingsAdmin(companyId?: number): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest('/api/admin/ai-learning/sync-learning-embeddings', {
+      method: 'POST',
+      body: companyId ? { companyId } : {},
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncProductEmbeddingsAdmin(companyId?: number): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest('/api/admin/ai-learning/sync-product-embeddings', {
+      method: 'POST',
+      body: companyId ? { companyId } : {},
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function submitMessageLearningFeedback(
+  chatId: string,
+  messageId: string,
+  feedback: -1 | 1,
+): Promise<{ success: boolean; message?: string; learningFeedback?: number }> {
+  try {
+    return await apiRequest(`/api/company/chats/${chatId}/messages/${messageId}/learning-feedback`, {
+      method: 'POST',
+      body: { feedback },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface AiLearningSampleRow {
+  id: string
+  companyId: string
+  companyName: string
+  customerMessage: string
+  assistantReply: string
+  source: string
+  status: string
+  language?: string | null
+  createdAt?: string
+  reviewNotes?: string | null
+}
+
+export async function listAiLearningSamples(params?: {
+  status?: string
+  companyId?: number
+  perPage?: number
+}): Promise<{ samples: AiLearningSampleRow[]; meta: { currentPage: number; lastPage: number; total: number } }> {
+  const q = new URLSearchParams()
+  if (params?.status) q.set('status', params.status)
+  if (params?.companyId) q.set('companyId', String(params.companyId))
+  if (params?.perPage) q.set('perPage', String(params.perPage))
+  const suffix = q.toString() ? `?${q}` : ''
+  return apiRequest(`/api/admin/ai-learning/samples${suffix}`)
+}
+
+export async function reviewAiLearningSample(
+  id: string,
+  data: { action: 'approve' | 'reject'; reviewNotes?: string; assistantReply?: string },
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest(`/api/admin/ai-learning/samples/${id}/review`, { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface CompanyAiProviderRow {
+  slug: string
+  name: string
+  apiKeyConfigured: boolean
+  apiBaseUrl?: string | null
+  isEnabled: boolean
+  effectiveKeySource: 'platform' | 'company'
+}
+
+export async function getCompanyAiProviders(): Promise<{
+  credentialMode: string
+  effectiveCredentialMode?: string
+  aiPlanCapabilities?: {
+    plan: string
+    allowedModelModes: string[]
+    allowByok: boolean
+    allowedCredentialModes: string[]
+    aiCostLimitUsd?: number | null
+  }
+  providers: CompanyAiProviderRow[]
+}> {
+  return apiRequest('/api/company/ai-providers')
+}
+
+export async function updateCompanyAiProvider(
+  slug: string,
+  data: { apiKey?: string; apiBaseUrl?: string; isEnabled?: boolean; credentialMode?: string },
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest(`/api/company/ai-providers/${slug}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function getCompanyAiUsage(period = '30d'): Promise<{
+  summary: Record<string, unknown>
+  byUseCase: Array<{ useCase: string; requests: number; tokens: number }>
+  byCredentialSource?: Array<{ source: string; requests: number; billedCostUsd: number }>
+  learningEmbeddingCoveragePercent?: number
+}> {
+  return apiRequest(`/api/company/ai-usage?period=${encodeURIComponent(period)}`)
+}
+
 export async function getPlatformSettings(): Promise<PlatformSettings> {
   if (useMockApi()) {
     await delay(300)
@@ -1889,7 +2381,7 @@ export async function generateSmartGrowthContent(data: {
   count?: number
   platform?: string
   topic?: string
-}): Promise<{ success: boolean; posts?: GrowthPost[]; message?: string }> {
+}): Promise<{ success: boolean; posts?: GrowthPost[]; message?: string; aiGenerated?: boolean; aiError?: string }> {
   if (useMockApi()) {
     await delay(1200)
     return { success: true, posts: [] }
@@ -1954,7 +2446,7 @@ export async function generateGrowthContent(data: {
   topic?: string
   audience?: string
   tone?: string
-}): Promise<{ success: boolean; posts?: GrowthPost[]; message?: string }> {
+}): Promise<{ success: boolean; posts?: GrowthPost[]; message?: string; aiGenerated?: boolean; aiError?: string }> {
   if (useMockApi()) {
     await delay(1200)
     return { success: true, posts: [] }
@@ -2025,6 +2517,25 @@ export async function uploadGrowthPostImage(
     const res = await apiRequest<{ url: string }>(`/api/company/growth/posts/${postId}/image`, {
       method: 'POST',
       body: form,
+    })
+    return { success: true, url: res.url }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function generateGrowthPostImage(
+  postId: string,
+  prompt?: string
+): Promise<{ success: boolean; url?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(2000)
+    return { success: true, url: 'https://example.com/ai-poster.png' }
+  }
+  try {
+    const res = await apiRequest<{ url: string }>(`/api/company/growth/posts/${postId}/generate-image`, {
+      method: 'POST',
+      body: prompt ? { prompt } : {},
     })
     return { success: true, url: res.url }
   } catch (e) {

@@ -49,6 +49,8 @@ class WhatsAppConnectionController extends Controller
             'connections' => $data->values()->all(),
             'platform' => [
                 'embeddedSignupEnabled' => WhatsAppPlatformConfig::isEmbeddedSignupEnabled(),
+                'embeddedSignupReady' => WhatsAppPlatformConfig::hasEmbeddedSignupCredentials(),
+                'manualConnectEnabled' => WhatsAppPlatformConfig::isManualConnectEnabled(),
                 'webhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
                 'graphVersion' => WhatsAppPlatformConfig::GRAPH_VERSION,
                 'enableCoexist' => WhatsAppPlatformConfig::enableCoexist(),

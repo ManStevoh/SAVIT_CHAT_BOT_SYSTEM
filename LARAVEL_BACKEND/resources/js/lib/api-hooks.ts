@@ -441,11 +441,28 @@ export interface CompanySettings {
   whatsappNumber?: string
   aiGreeting?: string
   aiTone?: string
+  aiModelMode?: 'auto' | 'platform_default' | 'specific'
+  aiModelId?: string | null
+  aiReplyMode?: 'ai_first' | 'balanced'
+  aiCredentialMode?: 'platform' | 'company' | 'company_preferred'
+  defaultReplyLanguage?: string | null
+  replyInCustomerLanguage?: boolean
+  effectiveAiModelMode?: string
+  effectiveAiCredentialMode?: string
+  aiPlanCapabilities?: {
+    plan: string
+    allowedModelModes: string[]
+    allowByok: boolean
+    allowedCredentialModes: string[]
+    aiCostLimitUsd?: number | null
+  }
   fallbackMessage?: string
   awayMessage?: string
   timezone?: string
   workingHours?: Record<string, string>
   learnFromConversations?: boolean
+  learnFromConversationsEditable?: boolean
+  aiLearningEnabled?: boolean
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
@@ -873,6 +890,42 @@ export function useAdminAIUsage(period?: string) {
       }
       await delay(1000)
       return mockAIUsage
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+/**
+ * Fetch AI learning / knowledge stats (admin only)
+ * API Endpoint: GET /api/admin/ai-learning/stats
+ */
+export function useAdminAiLearning() {
+  return useSWR<import('@/lib/api-actions').AdminAiLearningStats>(
+    'admin-ai-learning',
+    async () => {
+      if (!useMockApi()) {
+        const { getAdminAiLearningStats } = await import('@/lib/api-actions')
+        return getAdminAiLearningStats()
+      }
+      await delay(400)
+      return {
+        config: {
+          learningEnabled: true,
+          retentionDays: 365,
+          maxSamplesPerCompany: 200,
+          piiRedactionEnabled: true,
+        },
+        stats: {
+          totalLearningSamples: 0,
+          pendingReviewSamples: 0,
+          companiesWithSamples: 0,
+          activeFaqs: 0,
+          faqsWithEmbeddings: 0,
+          embeddingCoveragePercent: 0,
+          samplesBySource: {},
+          topCompaniesBySamples: [],
+        },
+      }
     },
     { revalidateOnFocus: false }
   )

@@ -91,14 +91,25 @@ class SubscriptionController extends Controller
         $planLimits = PlanLimitService::getLimitsForPlan($plan);
 
         $growth = GrowthLimitService::usageSummary($company);
+        $aiUsage = app(\App\Services\AI\AiBillingService::class)->usageSummary($company);
 
         $items = [
             ['name' => 'Messages', 'used' => $messageCount, 'limit' => $planLimits['messages']],
             ['name' => 'Team members', 'used' => $teamCount, 'limit' => $planLimits['team']],
         ];
 
+        if ($aiUsage['platformCostLimitUsd'] !== null) {
+            $items[] = [
+                'name' => 'Platform AI spend (USD)',
+                'used' => (int) round($aiUsage['platformBilledCostUsd'] * 100),
+                'limit' => (int) round($aiUsage['platformCostLimitUsd'] * 100),
+                'unit' => 'cents',
+            ];
+        }
+
         if ($growth['growthEnabled']) {
             $items[] = ['name' => 'AI posts (this month)', 'used' => $growth['aiPostsUsed'], 'limit' => $growth['aiPostsLimit']];
+            $items[] = ['name' => 'AI images (this month)', 'used' => $growth['aiImagesUsed'], 'limit' => $growth['aiImagesLimit']];
             $items[] = ['name' => 'Social platforms', 'used' => $growth['platformsConnected'], 'limit' => $growth['platformLimit']];
         }
 
@@ -107,6 +118,7 @@ class SubscriptionController extends Controller
         return response()->json([
             'items' => $items,
             'growth' => $growth,
+            'aiUsage' => $aiUsage,
             'warnings' => $warnings,
             'upgradeUrl' => rtrim(config('app.frontend_url', config('app.url')), '/').'/dashboard/subscription',
         ]);

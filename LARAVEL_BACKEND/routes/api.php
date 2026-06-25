@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AiLearningAdminController;
 use App\Http\Controllers\Api\Admin\AIUsageController;
+use App\Http\Controllers\Api\Admin\AiConfigController;
 use App\Http\Controllers\Api\Admin\CompanyController;
 use App\Http\Controllers\Api\Admin\ImpersonateController;
 use App\Http\Controllers\Api\Admin\LandingFaqController;
@@ -14,9 +16,13 @@ use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\WhatsAppConnectionController;
 use App\Http\Controllers\Api\AppBrandingController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Company\AiModelController;
+use App\Http\Controllers\Api\Company\CompanyAiProviderController;
+use App\Http\Controllers\Api\Company\CompanyAiUsageController;
 use App\Http\Controllers\Api\Company\AnalyticsController;
 use App\Http\Controllers\Api\Company\ChatController;
 use App\Http\Controllers\Api\Company\ChatMessageController;
+use App\Http\Controllers\Api\Company\WhatsAppCampaignController;
 use App\Http\Controllers\Api\Company\CustomerController;
 use App\Http\Controllers\Api\Admin\GrowthPortfolioController;
 use App\Http\Controllers\Api\Admin\SystemHealthController;
@@ -81,7 +87,12 @@ Route::prefix('auth')->group(function () {
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
         Route::post('resend-verification', [AuthController::class, 'resendVerification']);
     });
-    Route::post('logout', [AuthController::class, 'logout'])->middleware(['auth:sanctum', 'user.active']);
+    Route::middleware(['auth:sanctum', 'user.active'])->group(function () {
+        Route::get('me', [AuthController::class, 'me']);
+        Route::put('profile', [AuthController::class, 'updateProfile']);
+        Route::put('password', [AuthController::class, 'updatePassword']);
+        Route::post('logout', [AuthController::class, 'logout']);
+    });
 });
 
 // Company (auth required; subscription must be active except for subscription/checkout routes)
@@ -90,6 +101,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);
     Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
+    Route::post('chats/{chatId}/messages/{messageId}/learning-feedback', [ChatMessageController::class, 'learningFeedback']);
     Route::get('orders', [OrderController::class, 'index']);
     Route::get('orders/{order}', [OrderController::class, 'show']);
     Route::post('orders', [OrderController::class, 'store']);
@@ -132,6 +144,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('growth/posts/{post}/schedule', [GrowthPostController::class, 'schedule']);
     Route::post('growth/posts/{post}/publish', [GrowthPostController::class, 'publish']);
     Route::post('growth/posts/{post}/image', [GrowthPostController::class, 'uploadImage']);
+    Route::post('growth/posts/{post}/generate-image', [GrowthPostController::class, 'generateImage']);
     Route::get('growth/posts/{post}/share-package', [GrowthPostController::class, 'sharePackage']);
     Route::delete('growth/posts/{post}', [GrowthPostController::class, 'destroy']);
     Route::get('growth/social-accounts', [GrowthSocialController::class, 'index']);
@@ -173,6 +186,10 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::get('settings', [SettingsController::class, 'show']);
     Route::put('settings', [SettingsController::class, 'update']);
+    Route::get('ai-models', [AiModelController::class, 'index']);
+    Route::get('ai-providers', [CompanyAiProviderController::class, 'index']);
+    Route::put('ai-providers/{slug}', [CompanyAiProviderController::class, 'update']);
+    Route::get('ai-usage', [CompanyAiUsageController::class, 'index']);
     Route::get('whatsapp/status', [WhatsAppController::class, 'status']);
     Route::post('whatsapp/connect', [WhatsAppController::class, 'connect']);
     Route::get('whatsapp/numbers', [WhatsAppController::class, 'numbers']);
@@ -183,6 +200,19 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('whatsapp/templates', [WhatsAppTemplateController::class, 'store']);
     Route::post('whatsapp/templates/sync', [WhatsAppTemplateController::class, 'sync']);
     Route::delete('whatsapp/templates/{template}', [WhatsAppTemplateController::class, 'destroy']);
+    Route::get('whatsapp/campaign/limits', [WhatsAppCampaignController::class, 'limits']);
+    Route::get('whatsapp/campaign/audience', [WhatsAppCampaignController::class, 'audience']);
+    Route::get('whatsapp/campaign/growth-posts', [WhatsAppCampaignController::class, 'growthPosts']);
+    Route::post('whatsapp/campaign/generate-caption', [WhatsAppCampaignController::class, 'generateCaption']);
+    Route::post('whatsapp/campaign/send', [WhatsAppCampaignController::class, 'send']);
+    Route::get('whatsapp/campaigns', [WhatsAppCampaignController::class, 'index']);
+    Route::post('whatsapp/campaigns', [WhatsAppCampaignController::class, 'store']);
+    Route::get('whatsapp/campaigns/{campaign}', [WhatsAppCampaignController::class, 'show']);
+    Route::patch('whatsapp/campaigns/{campaign}', [WhatsAppCampaignController::class, 'update']);
+    Route::post('whatsapp/campaigns/{campaign}/poster', [WhatsAppCampaignController::class, 'uploadPoster']);
+    Route::post('whatsapp/campaigns/{campaign}/send', [WhatsAppCampaignController::class, 'sendCampaign']);
+    Route::post('whatsapp/campaigns/{campaign}/test', [WhatsAppCampaignController::class, 'testSend']);
+    Route::get('learning/export', [\App\Http\Controllers\Api\Company\LearningExportController::class, 'export']);
     Route::post('export', [ExportController::class, 'export']);
     Route::get('export/download/{filename}', [ExportController::class, 'download']);
     Route::post('import/products', [ImportController::class, 'importProducts']);
@@ -211,12 +241,26 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::patch('users/{user}', [UserController::class, 'updateStatus']);
     Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
     Route::get('subscriptions', [App\Http\Controllers\Api\Admin\SubscriptionController::class, 'index']);
+    Route::patch('subscriptions/{subscription}', [App\Http\Controllers\Api\Admin\SubscriptionController::class, 'update']);
     Route::get('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'index']);
     Route::post('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'store']);
     Route::put('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'update']);
     Route::delete('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'destroy']);
     Route::get('revenue', [RevenueController::class, 'index']);
     Route::get('ai-usage', [AIUsageController::class, 'index']);
+    Route::get('ai-learning/stats', [AiLearningAdminController::class, 'stats']);
+    Route::get('ai-learning/samples', [AiLearningAdminController::class, 'listSamples']);
+    Route::post('ai-learning/samples/{sample}/review', [AiLearningAdminController::class, 'reviewSample']);
+    Route::post('ai-learning/purge', [AiLearningAdminController::class, 'purgeSamples']);
+    Route::post('ai-learning/prune-expired', [AiLearningAdminController::class, 'pruneExpired']);
+    Route::post('ai-learning/sync-faq-embeddings', [AiLearningAdminController::class, 'syncFaqEmbeddings']);
+    Route::post('ai-learning/sync-learning-embeddings', [AiLearningAdminController::class, 'syncLearningEmbeddings']);
+    Route::post('ai-learning/sync-product-embeddings', [AiLearningAdminController::class, 'syncProductEmbeddings']);
+    Route::get('ai-config', [AiConfigController::class, 'index']);
+    Route::put('ai-config/providers/{provider}', [AiConfigController::class, 'updateProvider']);
+    Route::post('ai-config/models', [AiConfigController::class, 'storeModel']);
+    Route::put('ai-config/models/{model}', [AiConfigController::class, 'updateModel']);
+    Route::delete('ai-config/models/{model}', [AiConfigController::class, 'destroyModel']);
     Route::get('logs', [LogController::class, 'index']);
     Route::get('payment-gateways', [PaymentGatewayController::class, 'index']);
     Route::put('payment-gateways/{slug}', [PaymentGatewayController::class, 'update']);

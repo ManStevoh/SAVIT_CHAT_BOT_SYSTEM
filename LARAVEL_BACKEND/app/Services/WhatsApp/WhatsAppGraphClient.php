@@ -74,6 +74,19 @@ class WhatsAppGraphClient
         }
     }
 
+    public function verifyPhoneNumber(string $phoneNumberId, string $accessToken): ?array
+    {
+        $result = $this->get($phoneNumberId, $accessToken, [
+            'fields' => 'id,display_phone_number,verified_name,quality_rating',
+        ]);
+
+        if (! $result['ok'] || ! is_array($result['data'])) {
+            return null;
+        }
+
+        return $result['data'];
+    }
+
     public function discoverPhoneData(string $accessToken): array
     {
         $result = $this->get('me/whatsapp_business_accounts', $accessToken, [

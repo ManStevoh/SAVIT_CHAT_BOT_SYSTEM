@@ -17,10 +17,12 @@ class Product extends Model
         'image',
         'stock',
         'status',
+        'catalog_embedding',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'catalog_embedding' => 'array',
     ];
 
     public function company(): BelongsTo

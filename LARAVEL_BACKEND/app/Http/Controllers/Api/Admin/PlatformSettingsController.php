@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PlatformSetting;
+use App\Services\AI\AiLearningConfig;
 use App\Services\MailService;
 use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Http\JsonResponse;
@@ -56,8 +57,11 @@ class PlatformSettingsController extends Controller
             'whatsappEmbeddedAppSecret' => $this->maskSecret($settings, 'whatsapp_embedded_app_secret'),
             'whatsappEmbeddedRedirectUri' => $data['whatsapp_embedded_redirect_uri'] ?? null,
             'whatsappEnableCoexist' => (bool) ($data['whatsapp_enable_coexist'] ?? false),
+            'whatsappEmbeddedSignupEnabled' => (bool) ($data['whatsapp_embedded_signup_enabled'] ?? true),
+            'whatsappManualConnectEnabled' => (bool) ($data['whatsapp_manual_connect_enabled'] ?? true),
             'whatsappWebhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
-            'whatsappEmbeddedSignupReady' => WhatsAppPlatformConfig::isEmbeddedSignupEnabled(),
+            'whatsappEmbeddedSignupReady' => WhatsAppPlatformConfig::hasEmbeddedSignupCredentials(),
+            'whatsappEmbeddedSignupActive' => WhatsAppPlatformConfig::isEmbeddedSignupEnabled(),
             'openaiApiKey' => $this->maskSecret($settings, 'openai_api_key'),
             'openaiModel' => $data['openai_model'] ?? null,
             'openaiMaxTokens' => isset($data['openai_max_tokens']) ? (int) $data['openai_max_tokens'] : null,
@@ -74,6 +78,7 @@ class PlatformSettingsController extends Controller
             'notifyUsageAlerts' => (bool) ($data['notify_usage_alerts'] ?? true),
             'notifyDailySummary' => (bool) ($data['notify_daily_summary'] ?? true),
             'landingTrustedCompanies' => $data['landing_trusted_companies'] ?? [],
+            'aiLearningConfig' => array_merge(AiLearningConfig::defaults(), is_array($data['ai_learning_config'] ?? null) ? $data['ai_learning_config'] : []),
         ];
         return response()->json($out);
     }
@@ -120,6 +125,8 @@ class PlatformSettingsController extends Controller
             'whatsappEmbeddedAppSecret' => 'nullable|string|max:500',
             'whatsappEmbeddedRedirectUri' => 'nullable|string|max:500',
             'whatsappEnableCoexist' => 'sometimes|boolean',
+            'whatsappEmbeddedSignupEnabled' => 'sometimes|boolean',
+            'whatsappManualConnectEnabled' => 'sometimes|boolean',
             'openaiApiKey' => 'nullable|string|max:500',
             'openaiModel' => 'nullable|string|max:100',
             'openaiMaxTokens' => 'nullable|integer|min:1|max:4096',
@@ -137,6 +144,28 @@ class PlatformSettingsController extends Controller
             'notifyDailySummary' => 'sometimes|boolean',
             'landingTrustedCompanies' => 'nullable|array',
             'landingTrustedCompanies.*' => 'string|max:255',
+            'aiLearningConfig' => 'sometimes|array',
+            'aiLearningConfig.learningEnabled' => 'sometimes|boolean',
+            'aiLearningConfig.defaultLearnFromChats' => 'sometimes|boolean',
+            'aiLearningConfig.allowCompanyOverride' => 'sometimes|boolean',
+            'aiLearningConfig.maxSamplesPerCompany' => 'sometimes|integer|min:10|max:2000',
+            'aiLearningConfig.promptSampleLimit' => 'sometimes|integer|min:1|max:25',
+            'aiLearningConfig.retentionDays' => 'sometimes|integer|min:7|max:1825',
+            'aiLearningConfig.piiRedactionEnabled' => 'sometimes|boolean',
+            'aiLearningConfig.storeFaqExchanges' => 'sometimes|boolean',
+            'aiLearningConfig.storeAgentReplies' => 'sometimes|boolean',
+            'aiLearningConfig.faqEmbeddingsEnabled' => 'sometimes|boolean',
+            'aiLearningConfig.learningEmbeddingsEnabled' => 'sometimes|boolean',
+            'aiLearningConfig.faqSemanticMinScore' => 'sometimes|numeric|min:0.5|max:0.99',
+            'aiLearningConfig.learningSemanticMinScore' => 'sometimes|numeric|min:0.5|max:0.99',
+            'aiLearningConfig.faqDirectMinScore' => 'sometimes|numeric|min:50|max:100',
+            'aiLearningConfig.minReplyLength' => 'sometimes|integer|min:5|max:500',
+            'aiLearningConfig.maxPromptTokens' => 'sometimes|integer|min:2000|max:128000',
+            'aiLearningConfig.embeddingModelKey' => 'sometimes|string|max:120',
+            'aiLearningConfig.requireLearningReview' => 'sometimes|boolean',
+            'aiLearningConfig.autoDetectLanguage' => 'sometimes|boolean',
+            'aiLearningConfig.fallbackLanguage' => 'sometimes|string|max:10',
+            'aiLearningConfig.aiCostMarkupPercent' => 'sometimes|numeric|min:0|max:100',
         ]);
 
         $settings = PlatformSetting::firstOrNew([]);
@@ -167,6 +196,8 @@ class PlatformSettingsController extends Controller
             'whatsappEmbeddedAppSecret' => 'whatsapp_embedded_app_secret',
             'whatsappEmbeddedRedirectUri' => 'whatsapp_embedded_redirect_uri',
             'whatsappEnableCoexist' => 'whatsapp_enable_coexist',
+            'whatsappEmbeddedSignupEnabled' => 'whatsapp_embedded_signup_enabled',
+            'whatsappManualConnectEnabled' => 'whatsapp_manual_connect_enabled',
             'openaiApiKey' => 'openai_api_key',
             'openaiModel' => 'openai_model',
             'openaiMaxTokens' => 'openai_max_tokens',
@@ -207,8 +238,17 @@ class PlatformSettingsController extends Controller
             $settings->app_logo = $path;
         }
 
+        if (array_key_exists('aiLearningConfig', $validated)) {
+            $settings->ai_learning_config = array_merge(
+                AiLearningConfig::defaults(),
+                is_array($settings->ai_learning_config) ? $settings->ai_learning_config : [],
+                $validated['aiLearningConfig'],
+            );
+        }
+
         $settings->save();
         WhatsAppPlatformConfig::clearCache();
+        AiLearningConfig::clearCache();
 
         return response()->json([
             'success' => true,

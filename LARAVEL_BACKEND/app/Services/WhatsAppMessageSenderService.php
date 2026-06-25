@@ -304,4 +304,75 @@ class WhatsAppMessageSenderService
 
         return ['success' => false, 'error' => $errorMessage];
     }
+
+    /**
+     * Send an approved WhatsApp message template (marketing/utility).
+     *
+     * @param  array<int, string>  $bodyParameters
+     * @return array{success: bool, message_id?: string, error?: string}
+     */
+    public function sendTemplate(
+        WhatsAppAccount $account,
+        string $to,
+        string $templateName,
+        string $languageCode = 'en',
+        array $bodyParameters = [],
+        ?string $headerImageUrl = null,
+    ): array {
+        $to = preg_replace('/\D/', '', $to);
+        if ($to === '') {
+            return ['success' => false, 'error' => 'Invalid recipient phone number'];
+        }
+
+        $template = [
+            'name' => $templateName,
+            'language' => ['code' => $languageCode],
+        ];
+
+        $components = [];
+        if ($headerImageUrl) {
+            $components[] = [
+                'type' => 'header',
+                'parameters' => [[
+                    'type' => 'image',
+                    'image' => ['link' => $headerImageUrl],
+                ]],
+            ];
+        }
+        if ($bodyParameters !== []) {
+            $components[] = [
+                'type' => 'body',
+                'parameters' => array_map(
+                    fn (string $text) => ['type' => 'text', 'text' => mb_substr($text, 0, 1024)],
+                    $bodyParameters,
+                ),
+            ];
+        }
+        if ($components !== []) {
+            $template['components'] = $components;
+        }
+
+        $url = $this->graphUrl().'/'.$account->phone_number_id.'/messages';
+        $response = Http::withToken($account->access_token)
+            ->timeout(20)
+            ->post($url, [
+                'messaging_product' => 'whatsapp',
+                'to' => $to,
+                'type' => 'template',
+                'template' => $template,
+            ]);
+
+        if ($response->successful()) {
+            return ['success' => true, 'message_id' => $response->json('messages.0.id')];
+        }
+
+        $errorMessage = $response->json('error.message') ?? $response->body();
+        Log::warning('WhatsApp template send failed', [
+            'template' => $templateName,
+            'to' => $to,
+            'error' => $errorMessage,
+        ]);
+
+        return ['success' => false, 'error' => $errorMessage];
+    }
 }

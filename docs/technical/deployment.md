@@ -185,6 +185,16 @@ curl https://savitchat.savitglobalsolutions.com/api/plans
 
 See [GitHub Pages Setup](../GITHUB_PAGES_SETUP.md).
 
+## Automated deploy (CI/CD)
+
+Production deploy is automated via **GitHub Actions** (not Vercel):
+
+```
+Local → git push main → GitHub Actions → SSH/rsync → savitchat.savitglobalsolutions.com
+```
+
+See **[CI/CD Pipeline](ci-cd.md)** for one-time SSH + secrets setup and the `scripts/deploy-from-local.ps1` helper.
+
 ## Rollback
 
 ```bash

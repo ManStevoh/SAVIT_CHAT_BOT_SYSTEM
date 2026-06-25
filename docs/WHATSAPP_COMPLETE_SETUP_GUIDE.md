@@ -209,10 +209,17 @@ URL: `/admin/settings` → **Integrations** tab.
 | Meta App Secret (token exchange) | Same app secret | Server exchanges OAuth `code` |
 | OAuth redirect URI | `https://your-domain.com/dashboard/settings` | Must be whitelisted in Meta |
 | Enable coexist | On only if needed | For WhatsApp Business app numbers |
+| **Enable Embedded Signup** | Off during setup / App Review | Turn on when Meta is approved |
+| **Enable manual connection** | On (recommended during setup) | Lets companies paste Phone Number ID + token |
 
 Click **Save Integrations**.
 
-The UI shows **Embedded signup ready: Yes** when App ID, Config ID, and Secret are set.
+The UI shows:
+
+- **Credentials complete: Yes** — App ID, Config ID, and Secret are set  
+- **Live for companies: Yes/No** — Embedded Signup toggle + credentials  
+
+**While Meta App Review is pending:** keep Embedded Signup **off**, manual connection **on**, enter webhook verify token + Meta App Secret, then test with manual connect.
 
 ### B3: Admin → WhatsApp monitor
 
@@ -242,31 +249,45 @@ Prefer **Admin UI** (stored in database). Env fallbacks in `LARAVEL_BACKEND/.env
 
 ## 5. Part C — How a business connects (company user)
 
-Companies **never** open Meta Developer Console.
+Companies can connect in two ways (super admin controls which are available):
 
-### Step C1: Register on Savit
+### Option A — Connect with Facebook (Embedded Signup)
 
-1. Go to `/register`.
-2. Create company account.
-3. Subscribe to a plan (`/dashboard/subscription`) — **Savit billing**, not Meta.
+Requires **Enable Embedded Signup** = on in Admin → Settings → Integrations.
 
-### Step C2: Connect WhatsApp
+1. Go to `/register` and create a company account.
+2. Subscribe to a plan (`/dashboard/subscription`) — **Savit billing**, not Meta.
+3. **Dashboard → Settings → WhatsApp Setup** → **Connect with Facebook**
+4. Complete Meta popup (WABA + phone + OTP)
+5. Add payment method to WABA in Meta when prompted
 
-1. **Dashboard → Settings → WhatsApp Setup** tab.
-2. Click **Connect with Facebook**.
-3. Meta popup:
-   - Log in with Facebook
-   - Accept WhatsApp / Meta terms
-   - Select or create **WhatsApp Business Account (WABA)**
-   - Enter business phone number
-   - Complete **SMS or voice OTP**
-   - Set display name (shown to customers)
-4. Popup closes; Savit shows **Connected** with phone number.
+### Option B — Manual connection
+
+Requires **Enable manual connection** = on (default). Useful when Embedded Signup is off during platform setup or App Review.
+
+1. In Meta Developer Console → WhatsApp → **API Setup**, copy **Phone number ID** and generate a **permanent access token** (system user recommended).
+2. **Dashboard → Settings → WhatsApp Setup** → **Manual connection** form
+3. Paste Phone Number ID, access token, and optionally WABA ID
+4. Click **Connect manually**
+
+The platform webhook URL is shown on the form. Backend verifies the token, subscribes webhooks, and registers the phone — same as Embedded Signup.
+
+### Embedded Signup popup (detail)
+
+When using **Connect with Facebook**, the Meta popup will:
+
+- Log in with Facebook
+- Accept WhatsApp / Meta terms
+- Select or create **WhatsApp Business Account (WABA)**
+- Enter business phone number and complete **SMS or voice OTP**
+- Set display name (shown to customers)
+
+Popup closes; Savit shows **Connected** with phone number.
 
 ### What Savit does automatically (backend)
 
-1. Receives OAuth `code` from Meta JS SDK
-2. Exchanges code for **per-company business access token**
+1. Receives OAuth `code` from Meta JS SDK (Embedded Signup) or validates manual token
+2. Exchanges code for **per-company business access token** (Embedded Signup only)
 3. `POST /{WABA_ID}/subscribed_apps` — subscribe webhooks for that business
 4. `POST /{PHONE_NUMBER_ID}/register` — register number for Cloud API
 5. Stores encrypted token in `whatsapp_accounts` table
@@ -446,6 +467,7 @@ Configured in **Admin → Plans** and billed via Stripe/M-Pesa. This is **indepe
 | Connected but no inbound messages | Webhook not verified in Meta | Re-verify callback URL + token |
 | Webhook 403 in logs | Wrong `meta_app_secret` | Match App Dashboard secret |
 | No AI reply | Queue worker not running | `php artisan queue:work` |
+| “AI usage limit reached” | Platform AI budget exceeded | Company adds BYOK key or upgrades plan |
 | “Subscription expired” | Savit plan lapsed | Renew at `/dashboard/subscription` |
 | Phone register failed | Number on another BSP | Use different number or coexist |
 | Template rejected | Meta policy | Read rejection reason; edit template |
@@ -476,22 +498,104 @@ Configured in **Admin → Plans** and billed via Stripe/M-Pesa. This is **indepe
 
 ---
 
-## 14. Quick reference card
+## 14. Quick start — AI poster + WhatsApp campaign (~10 min)
+
+Use this after WhatsApp is connected and you have at least one **approved Meta template with an IMAGE header** (for marketing outside the 24-hour window).
+
+### Super admin (once)
+
+1. **Gemini / Nano Banana key** (AI posters) — either:
+   - **Admin → AI Models → Google Gemini** → paste API key from [Google AI Studio](https://aistudio.google.com/apikey), enable provider  
+   - **or** set in server `.env`: `GEMINI_API_KEY=...` (optional: `GEMINI_IMAGE_MODEL=gemini-2.5-flash-image`)
+2. **OpenAI key** (captions + chat) — **Admin → Settings → Integrations** → OpenAI API key  
+3. Run migrations and queue worker on the server:
+
+```bash
+cd LARAVEL_BACKEND
+php artisan migrate
+php artisan queue:work --sleep=3 --tries=3
+```
+
+`queue:work` is required for AI auto-replies **and** queued WhatsApp campaign sends.
+
+### Company — create poster in Growth
+
+1. **Dashboard → Growth → Content**
+2. Generate or create a **draft** post with **platform: WhatsApp**
+3. Click **Generate poster (AI)** (or **Add image** to upload your own)
+4. **Approve** the draft (optional: **Copy post + link** for a share package with tracking URL)
+
+### Company — send via campaign wizard (recommended)
+
+1. **Dashboard → WhatsApp Campaigns** (sidebar)
+2. **Creative** — poster is already on the Growth post, or upload / pick from Growth here; use **Generate caption with AI**
+3. **Audience** — pick segment (all, active 30d, inactive, ordered); check recipient count vs plan limit
+4. **Template** — select approved template with **IMAGE header**; **Test send** to your phone
+5. **Send campaign** — messages are queued (~1/sec)
+
+Meta template example: name `promo_poster_v1`, category MARKETING, **header: Image**, body: `{{1}}` (your caption).
+
+### Company — alternative: share package (not mass send)
+
+1. On the Growth post, click **Copy post + link**
+2. Paste into WhatsApp manually or share the tracking URL  
+3. Does **not** blast all customers — use the **Campaign wizard** for segments
+
+### Limits (typical)
+
+| Feature | Starter | Professional |
+|---------|---------|--------------|
+| AI images / month | 10 | 50 |
+| WhatsApp campaigns / month | 2 | 10 |
+| Recipients / campaign | 100 | 1,000 |
+
+---
+
+## 15. Quick reference card
 
 ```
 SUPER ADMIN (once):
   Meta: Business verify → Create Business app → WhatsApp product
         → App Review → Tech Provider → Embedded Signup v4
         → Webhook: https://YOUR_DOMAIN/api/whatsapp/webhook
-  Savit: Admin → Settings → Integrations (all Meta fields)
+  Savit: Admin → Settings → Integrations (Meta fields + toggles)
+         Embedded Signup OFF + Manual ON during App Review
          Admin → WhatsApp (monitor)
 
 COMPANY (each):
   Register → Subscribe (Savit) → Settings → WhatsApp
-  → Connect with Facebook → OTP → Add card in Meta WABA
-  → Test "Hi" message
+  → Connect with Facebook (when enabled) OR Manual connect (Phone ID + token)
+  → Add card in Meta WABA → Test "Hi" message
 
 BILLING:
   Savit plan = you (Stripe/M-Pesa)
   WhatsApp conversations = Meta (company's WABA card)
+  Platform AI spend limits = starter $5 / pro $50 per month (BYOK exempt)
+
+AI (super admin):
+  Settings → Integrations → AI knowledge & learning
+  AI Learning dashboard → review queue, FAQ/learning/product embeddings, quality stats
+  AI Usage → platform vs BYOK billing split
+  php artisan ai:health-check --notify (daily; embedding coverage alerts)
+
+AI (company):
+  Settings → AI → model, language, BYOK, usage split, learning coverage
+  Chats → thumbs up/down on bot replies (trains memory quality)
+  Settings → AI → Download learning samples CSV (GDPR export)
+
+Campaigns (company):
+  Dashboard → WhatsApp Campaigns (wizard: poster + AI caption + segment + template)
+  Settings → WhatsApp → Message templates (sync/create from Meta; need IMAGE header for posters)
+  Settings → WhatsApp → WhatsApp campaigns (legacy quick-send; wizard preferred)
+  Growth → Content → Generate poster (AI) or Add image → Copy post + link (manual share)
+  Customers can reply 👍/👎 on WhatsApp to rate last bot answer
+
+AI images (super admin):
+  Admin → AI Models → Google Gemini → API key (or GEMINI_API_KEY in .env)
+
+Post-deploy / weekly maintenance:
+  php artisan learning:sync-embeddings --missing-only
+  php artisan faqs:sync-embeddings
+  php artisan products:sync-embeddings --missing-only
 ```
+

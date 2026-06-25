@@ -44,21 +44,22 @@ class GrowthOptimizerService
                 break;
             }
 
-            $posts = $this->content->generatePosts($company, [
+            $result = $this->content->generatePosts($company, [
                 'count' => $count,
                 'platform' => $platform,
                 'topic' => str_replace('_', ' ', $tag).' content for WhatsApp conversions',
                 'tone' => $this->toneForTag($tag),
             ]);
 
-            $allPosts = array_merge($allPosts, $posts);
+            $allPosts = array_merge($allPosts, $result->posts);
         }
 
         if (empty($allPosts) && GrowthLimitService::canGenerateAiContent($company)) {
-            $allPosts = $this->content->generateFromWinners($company, [
+            $winnerResult = $this->content->generateFromWinners($company, [
                 'count' => min(3, (int) ($plan['totalPosts'] ?? 3)),
                 'platform' => $platform,
             ]);
+            $allPosts = $winnerResult->posts;
         }
 
         return ['plan' => $plan, 'posts' => $allPosts];

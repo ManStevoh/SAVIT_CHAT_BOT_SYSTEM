@@ -14,6 +14,12 @@ class CompanySetting extends Model
         'whatsapp_number',
         'ai_greeting',
         'ai_tone',
+        'ai_model_mode',
+        'ai_model_id',
+        'ai_reply_mode',
+        'ai_credential_mode',
+        'default_reply_language',
+        'reply_in_customer_language',
         'fallback_message',
         'away_message',
         'timezone',
@@ -41,6 +47,7 @@ class CompanySetting extends Model
         'order_payment_stripe_config' => 'array',
         'working_hours' => 'array',
         'learn_from_conversations' => 'boolean',
+        'reply_in_customer_language' => 'boolean',
     ];
 
     /** Whether company has its own M-Pesa config for order payments (shortcode + passkey). */
@@ -67,6 +74,11 @@ class CompanySetting extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function aiModel(): BelongsTo
+    {
+        return $this->belongsTo(AiModel::class);
     }
 
     /** ISO 4217 code for catalog and chat price display (e.g. USD, KES, EGP). */

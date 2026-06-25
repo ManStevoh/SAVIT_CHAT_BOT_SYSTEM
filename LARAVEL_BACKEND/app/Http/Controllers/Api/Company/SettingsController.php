@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Company;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\CompanySetting;
+use App\Services\AI\AiLearningConfig;
+use App\Services\PlanLimitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -19,6 +21,9 @@ class SettingsController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
         $settings = $company->settings()->first();
+        $learningConfig = app(AiLearningConfig::class);
+        $plan = PlanLimitService::getCurrentPlanSlug($company);
+
         return response()->json([
             'companyName' => $company->name,
             'email' => $company->email,
@@ -28,11 +33,23 @@ class SettingsController extends Controller
             'whatsappNumber' => $settings?->whatsapp_number,
             'aiGreeting' => $settings?->ai_greeting,
             'aiTone' => $settings?->ai_tone,
+            'aiModelMode' => $settings?->ai_model_mode ?? 'auto',
+            'effectiveAiModelMode' => PlanLimitService::effectiveAiModelMode($company),
+            'aiModelId' => $settings?->ai_model_id ? (string) $settings->ai_model_id : null,
+            'aiReplyMode' => $settings?->ai_reply_mode ?? config('conversation.default_reply_mode', 'ai_first'),
+            'aiCredentialMode' => $settings?->ai_credential_mode ?? 'platform',
+            'effectiveAiCredentialMode' => PlanLimitService::effectiveCredentialMode($company),
+            'aiPlanCapabilities' => PlanLimitService::aiPlanCapabilities($plan),
+            'defaultReplyLanguage' => $settings?->default_reply_language,
+            'replyInCustomerLanguage' => ($settings?->reply_in_customer_language ?? true) !== false,
             'fallbackMessage' => $settings?->fallback_message,
             'awayMessage' => $settings?->away_message,
             'timezone' => $settings?->timezone ?? 'UTC',
             'workingHours' => $settings?->working_hours,
-            'learnFromConversations' => ($settings?->learn_from_conversations ?? true) !== false,
+            'learnFromConversations' => $learningConfig->companyLearnFromChatsEnabled($company),
+            'learnFromConversationsEditable' => $learningConfig->isLearningEnabled()
+                && (bool) ($learningConfig->all()['allowCompanyOverride'] ?? true),
+            'aiLearningEnabled' => $learningConfig->isLearningEnabled(),
             'autoReplyEnabled' => (bool) ($settings?->auto_reply_enabled ?? false),
             'notificationsEnabled' => (bool) ($settings?->notifications_enabled ?? false),
             'ordersAcceptMpesa' => (bool) ($settings?->orders_accept_mpesa ?? false),
@@ -75,6 +92,12 @@ class SettingsController extends Controller
             'whatsappNumber' => 'nullable|string|max:50',
             'aiGreeting' => 'nullable|string',
             'aiTone' => 'nullable|string|max:255',
+            'aiModelMode' => 'sometimes|string|in:auto,platform_default,specific',
+            'aiModelId' => 'nullable|required_if:aiModelMode,specific|integer|exists:ai_models,id',
+            'aiReplyMode' => 'sometimes|string|in:ai_first,balanced',
+            'aiCredentialMode' => 'sometimes|string|in:platform,company,company_preferred',
+            'defaultReplyLanguage' => 'nullable|string|max:10',
+            'replyInCustomerLanguage' => 'sometimes|boolean',
             'fallbackMessage' => 'nullable|string',
             'awayMessage' => 'nullable|string',
             'timezone' => 'nullable|string|max:50',
@@ -133,6 +156,43 @@ class SettingsController extends Controller
         if (array_key_exists('aiTone', $companyValidated)) {
             $settings->ai_tone = $companyValidated['aiTone'];
         }
+        if (array_key_exists('aiModelMode', $companyValidated)) {
+            $plan = PlanLimitService::getCurrentPlanSlug($company);
+            if (! PlanLimitService::isAiModelModeAllowed($plan, $companyValidated['aiModelMode'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your plan does not allow this AI model selection. Upgrade to Professional or Enterprise.',
+                    'code' => 'plan_ai_model_restricted',
+                ], 422);
+            }
+            $settings->ai_model_mode = $companyValidated['aiModelMode'];
+            if ($companyValidated['aiModelMode'] !== 'specific') {
+                $settings->ai_model_id = null;
+            }
+        }
+        if (array_key_exists('aiModelId', $companyValidated) && ($settings->ai_model_mode ?? 'auto') === 'specific') {
+            $settings->ai_model_id = $companyValidated['aiModelId'];
+        }
+        if (array_key_exists('aiReplyMode', $companyValidated)) {
+            $settings->ai_reply_mode = $companyValidated['aiReplyMode'];
+        }
+        if (array_key_exists('aiCredentialMode', $companyValidated)) {
+            $plan = PlanLimitService::getCurrentPlanSlug($company);
+            if (! PlanLimitService::isCredentialModeAllowed($plan, $companyValidated['aiCredentialMode'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bring-your-own API keys require Professional or Enterprise.',
+                    'code' => 'plan_byok_restricted',
+                ], 422);
+            }
+            $settings->ai_credential_mode = $companyValidated['aiCredentialMode'];
+        }
+        if (array_key_exists('defaultReplyLanguage', $companyValidated)) {
+            $settings->default_reply_language = $companyValidated['defaultReplyLanguage'];
+        }
+        if (array_key_exists('replyInCustomerLanguage', $companyValidated)) {
+            $settings->reply_in_customer_language = $companyValidated['replyInCustomerLanguage'];
+        }
         if (array_key_exists('fallbackMessage', $companyValidated)) {
             $settings->fallback_message = $companyValidated['fallbackMessage'];
         }
@@ -146,7 +206,11 @@ class SettingsController extends Controller
             $settings->working_hours = $companyValidated['workingHours'];
         }
         if (array_key_exists('learnFromConversations', $companyValidated)) {
-            $settings->learn_from_conversations = $companyValidated['learnFromConversations'];
+            $learningConfig = app(AiLearningConfig::class);
+            if ($learningConfig->isLearningEnabled()
+                && ($learningConfig->all()['allowCompanyOverride'] ?? true)) {
+                $settings->learn_from_conversations = $companyValidated['learnFromConversations'];
+            }
         }
         if (array_key_exists('autoReplyEnabled', $companyValidated)) {
             $settings->auto_reply_enabled = $companyValidated['autoReplyEnabled'];

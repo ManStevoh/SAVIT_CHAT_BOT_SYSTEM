@@ -74,6 +74,7 @@ class ProductController extends Controller
         }
 
         $product->load($this->productRelations());
+        $this->syncProductEmbeddings($product);
 
         return response()->json([
             'success' => true,
@@ -222,6 +223,7 @@ class ProductController extends Controller
         }
 
         $product->load($this->productRelations());
+        $this->syncProductEmbeddings($product);
 
         return response()->json([
             'success' => true,
@@ -497,5 +499,18 @@ class ProductController extends Controller
                 ->orderBy('id')
                 ->with(['images' => fn ($iq) => $iq->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id')]),
         ];
+    }
+
+    private function syncProductEmbeddings(Product $product): void
+    {
+        if ($product->status !== 'active') {
+            return;
+        }
+
+        try {
+            app(\App\Services\AI\KnowledgeChunkService::class)->syncProduct($product);
+        } catch (\Throwable) {
+            // Non-blocking — weekly sync command will backfill
+        }
     }
 }

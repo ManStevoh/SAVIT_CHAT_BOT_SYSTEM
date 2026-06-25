@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
+use App\Models\Company;
+use App\Models\ConversationLearningSample;
 use App\Models\Message;
+use App\Services\Conversation\ConversationLearningRecorder;
+use App\Services\ConversationLearningService;
 use App\Services\WhatsAppMessageSenderService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -32,12 +36,15 @@ class ChatMessageController extends Controller
             'sender' => $m->sender,
             'timestamp' => Carbon::parse($m->created_at)->format('g:i A'),
             'status' => $m->status,
+            'replySource' => $m->reply_source,
+            'learningFeedback' => $m->learning_feedback,
+            'learningSampleId' => $m->learning_sample_id ? (string) $m->learning_sample_id : null,
         ]);
 
         return response()->json($data);
     }
 
-    public function store(Request $request, string $chatId): JsonResponse
+    public function store(Request $request, string $chatId, ConversationLearningRecorder $learningRecorder): JsonResponse
     {
         $request->validate([
             'content' => 'nullable|string',
@@ -134,11 +141,61 @@ class ChatMessageController extends Controller
             'agent_handling_at' => now(),
         ]);
 
+        if ($text !== '') {
+            $lastCustomer = Message::query()
+                ->where('chat_id', $chat->id)
+                ->where('sender', 'customer')
+                ->orderByDesc('created_at')
+                ->value('content');
+            if (is_string($lastCustomer) && trim($lastCustomer) !== '') {
+                $company = Company::find($user->company_id);
+                if ($company) {
+                    $learningRecorder->recordAgentExchange($company, $lastCustomer, $text, (int) $chat->id);
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => $whatsappSent ? 'Message sent.' : 'Message saved but not delivered via WhatsApp.',
             'whatsappSent' => $whatsappSent,
             'whatsappError' => $whatsappError,
+        ]);
+    }
+
+    public function learningFeedback(
+        Request $request,
+        string $chatId,
+        string $messageId,
+        ConversationLearningService $learningService,
+    ): JsonResponse {
+        $validated = $request->validate([
+            'feedback' => 'required|integer|in:-1,1',
+        ]);
+
+        $user = $request->user();
+        $chat = Chat::where('id', $chatId)->where('company_id', $user->company_id)->firstOrFail();
+        $message = Message::where('id', $messageId)
+            ->where('chat_id', $chat->id)
+            ->where('sender', 'bot')
+            ->firstOrFail();
+
+        $message->update(['learning_feedback' => (int) $validated['feedback']]);
+
+        if ($message->learning_sample_id) {
+            $sample = ConversationLearningSample::query()
+                ->where('id', $message->learning_sample_id)
+                ->where('company_id', $user->company_id)
+                ->first();
+            if ($sample) {
+                $learningService->applyFeedback($sample, (int) $validated['feedback']);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Feedback recorded.',
+            'learningFeedback' => (int) $validated['feedback'],
         ]);
     }
 }

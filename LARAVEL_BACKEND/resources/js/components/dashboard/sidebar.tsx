@@ -16,6 +16,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Megaphone,
 } from "lucide-react"
 import { useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
@@ -29,6 +30,7 @@ export const dashboardNavigation = [
   { name: "FAQ Automation", href: "/dashboard/faq", icon: HelpCircle },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Growth Engine", href: "/dashboard/growth", icon: Rocket },
+  { name: "WhatsApp Campaigns", href: "/dashboard/whatsapp/campaigns", icon: Megaphone },
   { name: "Subscription", href: "/dashboard/subscription", icon: CreditCard },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ]

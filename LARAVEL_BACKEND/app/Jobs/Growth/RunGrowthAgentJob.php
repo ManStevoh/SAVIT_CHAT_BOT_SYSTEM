@@ -90,10 +90,16 @@ class RunGrowthAgentJob implements ShouldQueue
 
         $input = array_merge($run->input ?? [], ['count' => $count]);
         if ($run->input['fromWinners'] ?? false) {
-            return $contentService->generateFromWinners($company, $input);
+            $result = $contentService->generateFromWinners($company, $input);
+        } else {
+            $result = $contentService->generatePosts($company, $input);
         }
 
-        return $contentService->generatePosts($company, $input);
+        return [
+            'posts' => $result->posts,
+            'aiGenerated' => $result->aiGenerated,
+            'aiError' => $result->aiError,
+        ];
     }
 
     protected function runStrategyAgent(Company $company, GrowthInsightService $insightService): array

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -37,18 +38,26 @@ function mpesaSecretKey(field: "passkey" | "consumer_secret") {
 }
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
 import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers } from "@/lib/api-hooks"
+import { apiRequest } from "@/lib/api-client"
 import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode } from "@/lib/format-currency"
 import { useSWRConfig } from "swr"
 import {
   updateSettings,
+  getCompanyAiProviders,
+  updateCompanyAiProvider,
+  getCompanyAiUsage,
+  exportLearningSamples,
   getWhatsAppStatus,
   disconnectWhatsApp,
+  connectWhatsApp,
   getWhatsAppEmbeddedConfig,
   completeWhatsAppEmbeddedSignup,
   listWhatsAppTemplates,
   createWhatsAppTemplate,
   syncWhatsAppTemplates,
   deleteWhatsAppTemplate,
+  getWhatsAppCampaignAudience,
+  sendWhatsAppCampaign,
   type WhatsAppStatus,
   type WhatsAppTemplate,
 } from "@/lib/api-actions"
@@ -110,10 +119,21 @@ export default function SettingsPage() {
   const [waLoading, setWaLoading] = useState(false)
   const [waMessage, setWaMessage] = useState<string | null>(null)
   const [waEmbeddedLoading, setWaEmbeddedLoading] = useState(false)
+  const [waManualLoading, setWaManualLoading] = useState(false)
+  const [waManualPhoneNumberId, setWaManualPhoneNumberId] = useState("")
+  const [waManualAccessToken, setWaManualAccessToken] = useState("")
+  const [waManualWabaId, setWaManualWabaId] = useState("")
+  const [waManualDisplayPhone, setWaManualDisplayPhone] = useState("")
   const [waTemplates, setWaTemplates] = useState<WhatsAppTemplate[]>([])
   const [tplName, setTplName] = useState("")
   const [tplBody, setTplBody] = useState("")
   const [tplCategory, setTplCategory] = useState<"utility" | "marketing" | "authentication">("utility")
+  const [campaignAudience, setCampaignAudience] = useState(0)
+  const [campaignSegment, setCampaignSegment] = useState<"all" | "recent" | "inactive" | "ordered">("all")
+  const [campaignTemplate, setCampaignTemplate] = useState("")
+  const [campaignImageUrl, setCampaignImageUrl] = useState("")
+  const [campaignCaption, setCampaignCaption] = useState("")
+  const [campaignSending, setCampaignSending] = useState(false)
   const [tplLoading, setTplLoading] = useState(false)
 
   const loadWhatsAppTemplates = async () => {
@@ -199,8 +219,9 @@ export default function SettingsPage() {
     if (activeTab === "whatsapp") {
       loadWhatsAppStatus()
       loadWhatsAppTemplates()
+      getWhatsAppCampaignAudience(campaignSegment).then((a) => setCampaignAudience(a.uniqueCustomers)).catch(() => {})
     }
-  }, [activeTab])
+  }, [activeTab, campaignSegment])
 
   const handleWhatsAppDisconnect = async () => {
     setWaMessage(null)
@@ -208,6 +229,30 @@ export default function SettingsPage() {
     const result = await disconnectWhatsApp()
     setWaMessage(result.message ?? (result.success ? "Disconnected." : "Failed."))
     loadWhatsAppStatus()
+  }
+
+  const handleManualConnect = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setWaMessage(null)
+    setWaManualLoading(true)
+    try {
+      const result = await connectWhatsApp({
+        phoneNumberId: waManualPhoneNumberId.trim(),
+        accessToken: waManualAccessToken.trim(),
+        whatsappBusinessAccountId: waManualWabaId.trim() || undefined,
+        displayPhoneNumber: waManualDisplayPhone.trim() || undefined,
+      })
+      setWaMessage(result.message ?? (result.success ? "WhatsApp connected." : "Connection failed."))
+      if (result.success) {
+        setWaManualAccessToken("")
+        await loadWhatsAppStatus()
+        await loadWhatsAppTemplates()
+      }
+    } catch (err) {
+      setWaMessage(err instanceof Error ? err.message : "Manual connection failed.")
+    } finally {
+      setWaManualLoading(false)
+    }
   }
 
   const handleEmbeddedSignup = async () => {
@@ -301,11 +346,39 @@ export default function SettingsPage() {
     'You are a friendly and helpful customer service assistant for a restaurant. Be polite, professional, and helpful.'
   )
   const [aiTone, setAiTone] = useState('balanced')
+  const [aiModelMode, setAiModelMode] = useState<'auto' | 'platform_default' | 'specific'>('auto')
+  const [aiModelId, setAiModelId] = useState<string>('')
+  const [aiReplyMode, setAiReplyMode] = useState<'ai_first' | 'balanced'>('ai_first')
+  const [availableAiModels, setAvailableAiModels] = useState<Array<{
+    id: string
+    displayName: string
+    provider: string
+    inputCostPerMillion: number
+    outputCostPerMillion: number
+  }>>([])
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false)
   const [learnFromConversations, setLearnFromConversations] = useState(true)
+  const [learnFromConversationsEditable, setLearnFromConversationsEditable] = useState(true)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [aiSaving, setAiSaving] = useState(false)
   const [aiMessage, setAiMessage] = useState<string | null>(null)
+  const [aiCredentialMode, setAiCredentialMode] = useState<'platform' | 'company' | 'company_preferred'>('platform')
+  const [openaiApiKey, setOpenaiApiKey] = useState('')
+  const [openaiKeyConfigured, setOpenaiKeyConfigured] = useState(false)
+  const [aiUsageSummary, setAiUsageSummary] = useState<Record<string, unknown> | null>(null)
+  const [aiUsageExtras, setAiUsageExtras] = useState<{
+    byCredentialSource?: Array<{ source: string; requests: number; billedCostUsd: number }>
+    learningEmbeddingCoveragePercent?: number
+  } | null>(null)
+  const [byokSaving, setByokSaving] = useState(false)
+  const [replyInCustomerLanguage, setReplyInCustomerLanguage] = useState(true)
+  const [defaultReplyLanguage, setDefaultReplyLanguage] = useState('')
+  const [aiPlanCapabilities, setAiPlanCapabilities] = useState<{
+    allowedModelModes: string[]
+    allowByok: boolean
+    allowedCredentialModes: string[]
+    plan?: string
+  } | null>(null)
 
   // Load initial values from GET /api/company/settings when available
   useEffect(() => {
@@ -336,8 +409,34 @@ export default function SettingsPage() {
         const t = settings.aiTone.trim().toLowerCase()
         if (t === 'formal' || t === 'balanced' || t === 'casual') setAiTone(t)
       }
+      if (settings.aiModelMode) setAiModelMode(settings.aiModelMode)
+      if (settings.aiModelId) setAiModelId(settings.aiModelId)
+      if (settings.aiReplyMode === 'ai_first' || settings.aiReplyMode === 'balanced') {
+        setAiReplyMode(settings.aiReplyMode)
+      }
+      if (settings.aiCredentialMode === 'platform' || settings.aiCredentialMode === 'company' || settings.aiCredentialMode === 'company_preferred') {
+        setAiCredentialMode(settings.aiCredentialMode)
+      }
+      if (settings.replyInCustomerLanguage != null) {
+        setReplyInCustomerLanguage(settings.replyInCustomerLanguage)
+      }
+      if (settings.defaultReplyLanguage != null) {
+        setDefaultReplyLanguage(settings.defaultReplyLanguage)
+      }
+      if (settings.aiPlanCapabilities) {
+        setAiPlanCapabilities(settings.aiPlanCapabilities)
+      }
+      if (settings.effectiveAiModelMode && settings.aiModelMode !== settings.effectiveAiModelMode) {
+        setAiModelMode(settings.effectiveAiModelMode as 'auto' | 'platform_default' | 'specific')
+        if (settings.effectiveAiModelMode !== 'specific') {
+          setAiModelId('')
+        }
+      }
       if (settings.autoReplyEnabled != null) setAutoReplyEnabled(settings.autoReplyEnabled)
       if (settings.learnFromConversations != null) setLearnFromConversations(settings.learnFromConversations)
+      if (settings.learnFromConversationsEditable != null) {
+        setLearnFromConversationsEditable(settings.learnFromConversationsEditable)
+      }
       if (settings.notificationsEnabled != null) setNotificationsEnabled(settings.notificationsEnabled)
       const mpc = settings.orderPaymentMpesaConfig
       if (mpc) {
@@ -368,6 +467,55 @@ export default function SettingsPage() {
     }
   }, [settings])
 
+  useEffect(() => {
+    apiRequest<{ models: Array<{ id: string; displayName: string; provider: string; inputCostPerMillion: number; outputCostPerMillion: number }> }>(
+      '/api/company/ai-models'
+    )
+      .then((data) => setAvailableAiModels(data.models ?? []))
+      .catch(() => setAvailableAiModels([]))
+  }, [])
+
+  useEffect(() => {
+    getCompanyAiProviders()
+      .then((data) => {
+        if (data.credentialMode) {
+          setAiCredentialMode(data.credentialMode as 'platform' | 'company' | 'company_preferred')
+        }
+        if (data.aiPlanCapabilities) {
+          setAiPlanCapabilities(data.aiPlanCapabilities)
+        }
+        const openai = data.providers?.find((p) => p.slug === 'openai')
+        setOpenaiKeyConfigured(!!openai?.apiKeyConfigured)
+      })
+      .catch(() => {})
+    getCompanyAiUsage('30d')
+      .then((data) => {
+        setAiUsageSummary(data.summary)
+        setAiUsageExtras({
+          byCredentialSource: data.byCredentialSource,
+          learningEmbeddingCoveragePercent: data.learningEmbeddingCoveragePercent,
+        })
+      })
+      .catch(() => {
+        setAiUsageSummary(null)
+        setAiUsageExtras(null)
+      })
+  }, [])
+
+  const handleByokSave = async () => {
+    setByokSaving(true)
+    const payload: { credentialMode: string; apiKey?: string } = { credentialMode: aiCredentialMode }
+    if (openaiApiKey.trim()) payload.apiKey = openaiApiKey.trim()
+    const result = await updateCompanyAiProvider('openai', payload)
+    setByokSaving(false)
+    if (result.success) {
+      setOpenaiApiKey('')
+      setOpenaiKeyConfigured(true)
+      getCompanyAiUsage('30d').then((data) => setAiUsageSummary(data.summary)).catch(() => {})
+    }
+    setAiMessage(result.success ? 'API key settings saved.' : (result.message ?? 'Failed to save API key.'))
+  }
+
   const handleAiSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setAiMessage(null)
@@ -375,6 +523,11 @@ export default function SettingsPage() {
     const result = await updateSettings({
       aiGreeting: aiGreeting.trim(),
       aiTone: aiTone.trim(),
+      aiModelMode,
+      aiModelId: aiModelMode === 'specific' && aiModelId ? aiModelId : null,
+      aiReplyMode,
+      replyInCustomerLanguage,
+      defaultReplyLanguage: defaultReplyLanguage.trim() || null,
       autoReplyEnabled,
       learnFromConversations,
       notificationsEnabled,
@@ -637,7 +790,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>WhatsApp Business</CardTitle>
               <CardDescription>
-                Connect your WhatsApp number in one click. Your platform administrator has already configured Meta — you only need to sign in with Facebook and verify your number.
+                Connect via Facebook (recommended) or paste Meta API credentials manually if your administrator enabled that option.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -680,11 +833,7 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-5">
-                  {!waStatus?.embeddedSignupEnabled ? (
-                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground">
-                      WhatsApp signup is not configured yet. Ask your platform administrator to complete Meta Embedded Signup in Admin → Settings → Integrations.
-                    </div>
-                  ) : (
+                  {waStatus?.embeddedSignupEnabled && (
                     <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
                       <p className="text-sm font-medium text-foreground">Connect with Facebook</p>
                       <p className="text-sm text-muted-foreground">
@@ -695,13 +844,80 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                   )}
+
+                  {waStatus?.manualConnectEnabled && (
+                    <div className="rounded-lg border border-border p-4 space-y-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">Manual connection</p>
+                        <p className="text-sm text-muted-foreground">
+                          Paste credentials from Meta Developer Console → WhatsApp → API Setup (Phone number ID and permanent access token).
+                          {waStatus?.webhookUrl && (
+                            <> Platform webhook URL: <code className="text-xs">{waStatus.webhookUrl}</code></>
+                          )}
+                        </p>
+                      </div>
+                      <form onSubmit={handleManualConnect} className="space-y-3">
+                        <Field>
+                          <FieldLabel htmlFor="waManualPhoneNumberId">Phone Number ID</FieldLabel>
+                          <Input
+                            id="waManualPhoneNumberId"
+                            value={waManualPhoneNumberId}
+                            onChange={(e) => setWaManualPhoneNumberId(e.target.value)}
+                            placeholder="From Meta → WhatsApp → API Setup"
+                            required
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="waManualAccessToken">Permanent access token</FieldLabel>
+                          <Input
+                            id="waManualAccessToken"
+                            type="password"
+                            value={waManualAccessToken}
+                            onChange={(e) => setWaManualAccessToken(e.target.value)}
+                            placeholder="System user or permanent token"
+                            required
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="waManualWabaId">WhatsApp Business Account ID (optional)</FieldLabel>
+                          <Input
+                            id="waManualWabaId"
+                            value={waManualWabaId}
+                            onChange={(e) => setWaManualWabaId(e.target.value)}
+                            placeholder="Recommended for webhook subscription"
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="waManualDisplayPhone">Display phone number (optional)</FieldLabel>
+                          <Input
+                            id="waManualDisplayPhone"
+                            value={waManualDisplayPhone}
+                            onChange={(e) => setWaManualDisplayPhone(e.target.value)}
+                            placeholder="+254712345678"
+                          />
+                        </Field>
+                        <Button type="submit" disabled={waManualLoading}>
+                          {waManualLoading ? "Connecting…" : "Connect manually"}
+                        </Button>
+                      </form>
+                    </div>
+                  )}
+
+                  {!waStatus?.embeddedSignupEnabled && !waStatus?.manualConnectEnabled && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground">
+                      WhatsApp connection is not available yet. Ask your platform administrator to enable Embedded Signup or manual connection in Admin → Settings → Integrations.
+                    </div>
+                  )}
+
                   <div className="rounded-lg border border-border p-4 space-y-2">
                     <p className="text-sm font-medium text-foreground">Before you connect</p>
                     <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
-                      <li>Use a number that can receive SMS or voice OTP.</li>
+                      <li>Use a number that can receive SMS or voice OTP (Embedded Signup) or is already on Cloud API (manual).</li>
                       <li>Do not use a number already linked to another WhatsApp API provider.</li>
                       <li>Add a payment method to your WhatsApp Business account in Meta when prompted (required for messaging).</li>
-                      <li>Finish all Meta popup steps without closing the window.</li>
+                      {waStatus?.embeddedSignupEnabled && (
+                        <li>Finish all Meta popup steps without closing the window.</li>
+                      )}
                     </ul>
                   </div>
                 </div>
@@ -801,6 +1017,86 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
+
+          {waStatus?.connected && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>WhatsApp campaigns</CardTitle>
+                <CardDescription>
+                  Send an approved template or poster image to customers who chatted with you. Marketing outside the 24h window requires approved templates.{" "}
+                  <Link href="/dashboard/whatsapp/campaigns" className="underline font-medium text-primary">Open campaign wizard</Link>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Field>
+                  <FieldLabel>Audience segment</FieldLabel>
+                  <Select value={campaignSegment} onValueChange={(v) => setCampaignSegment(v as typeof campaignSegment)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All customers</SelectItem>
+                      <SelectItem value="recent">Active (last 30 days)</SelectItem>
+                      <SelectItem value="inactive">Inactive (30+ days)</SelectItem>
+                      <SelectItem value="ordered">Customers with orders</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <p className="text-sm text-muted-foreground">
+                  Audience: {campaignAudience} unique customer phone numbers
+                </p>
+                <Field>
+                  <FieldLabel>Approved template</FieldLabel>
+                  <Select value={campaignTemplate} onValueChange={setCampaignTemplate}>
+                    <SelectTrigger><SelectValue placeholder="Select template" /></SelectTrigger>
+                    <SelectContent>
+                      {waTemplates.filter((t) => t.status === "approved").map((t) => (
+                        <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Button
+                  type="button"
+                  disabled={campaignSending || !campaignTemplate}
+                  onClick={async () => {
+                    setCampaignSending(true)
+                    const res = await sendWhatsAppCampaign({ mode: "template", templateName: campaignTemplate, segment: campaignSegment })
+                    setCampaignSending(false)
+                    setWaMessage(res.message ?? null)
+                  }}
+                >
+                  {campaignSending ? "Sending…" : `Send template to segment (${campaignAudience})`}
+                </Button>
+                <div className="border-t pt-4 space-y-3">
+                  <Field>
+                    <FieldLabel>Poster image URL</FieldLabel>
+                    <Input value={campaignImageUrl} onChange={(e) => setCampaignImageUrl(e.target.value)} placeholder="https://…" />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Caption (optional)</FieldLabel>
+                    <Textarea value={campaignCaption} onChange={(e) => setCampaignCaption(e.target.value)} rows={2} />
+                  </Field>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={campaignSending || !campaignImageUrl}
+                    onClick={async () => {
+                      setCampaignSending(true)
+                      const res = await sendWhatsAppCampaign({
+                        mode: "image",
+                        imageUrl: campaignImageUrl,
+                        caption: campaignCaption || undefined,
+                        segment: campaignSegment,
+                      })
+                      setCampaignSending(false)
+                      setWaMessage(res.message ?? null)
+                    }}
+                  >
+                    Send poster to segment ({campaignAudience})
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* AI Settings — PUT /api/company/settings */}
@@ -819,16 +1115,62 @@ export default function SettingsPage() {
                 )}
                 <Field>
                   <FieldLabel htmlFor="aiModel">AI Model</FieldLabel>
-                  <Select value="platform" disabled>
+                  <Select
+                    value={aiModelMode === 'specific' && aiModelId ? `model:${aiModelId}` : aiModelMode}
+                    onValueChange={(v) => {
+                      if (v === 'auto' || v === 'platform_default') {
+                        setAiModelMode(v)
+                        setAiModelId('')
+                      } else if (v.startsWith('model:')) {
+                        setAiModelMode('specific')
+                        setAiModelId(v.replace('model:', ''))
+                      }
+                    }}
+                  >
                     <SelectTrigger id="aiModel">
-                      <SelectValue placeholder="Platform default" />
+                      <SelectValue placeholder="Select model strategy" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="platform">Platform default (OpenAI)</SelectItem>
+                      {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('auto') && (
+                        <SelectItem value="auto">Auto (best value — picks lowest-cost enabled model)</SelectItem>
+                      )}
+                      {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('platform_default') && (
+                        <SelectItem value="platform_default">Platform default</SelectItem>
+                      )}
+                      {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('specific') && availableAiModels.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Specific model (Enterprise)</SelectLabel>
+                          {availableAiModels.map((m) => (
+                            <SelectItem key={m.id} value={`model:${m.id}`}>
+                              {m.displayName} ({m.provider}) — ${m.inputCostPerMillion.toFixed(2)}/${m.outputCostPerMillion.toFixed(2)} per 1M
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    The chat model is set in platform admin settings, not per company.
+                    {aiPlanCapabilities?.plan === 'starter'
+                      ? 'Starter plan uses Auto model selection only. Upgrade for platform default or a specific model.'
+                      : aiPlanCapabilities?.plan === 'professional'
+                        ? 'Professional: Auto or platform default. Upgrade to Enterprise to pick a specific model.'
+                        : 'Auto selects the cheapest configured model with a valid API key.'}
+                  </p>
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="aiReplyMode">Reply routing</FieldLabel>
+                  <Select value={aiReplyMode} onValueChange={(v) => setAiReplyMode(v as 'ai_first' | 'balanced')}>
+                    <SelectTrigger id="aiReplyMode">
+                      <SelectValue placeholder="Select routing mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ai_first">AI-first (recommended) — AI answers questions; FAQs inform the model</SelectItem>
+                      <SelectItem value="balanced">Balanced — keyword shortcuts and direct FAQ matches before AI</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    AI-first uses your knowledge base and products in the system prompt. Canned replies are only used when AI is unavailable.
                   </p>
                 </Field>
 
@@ -870,10 +1212,38 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-foreground">Learn from conversations</p>
-                      <p className="text-sm text-muted-foreground">Use past chats to improve consistency</p>
+                      <p className="font-medium text-foreground">Reply in customer&apos;s language</p>
+                      <p className="text-sm text-muted-foreground">When off, use the default language below</p>
                     </div>
-                    <Switch checked={learnFromConversations} onCheckedChange={setLearnFromConversations} />
+                    <Switch checked={replyInCustomerLanguage} onCheckedChange={setReplyInCustomerLanguage} />
+                  </div>
+
+                  {!replyInCustomerLanguage && (
+                    <Field>
+                      <FieldLabel>Default reply language</FieldLabel>
+                      <Input
+                        value={defaultReplyLanguage}
+                        onChange={(e) => setDefaultReplyLanguage(e.target.value)}
+                        placeholder="en"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">ISO code, e.g. en, sw, ar, fr</p>
+                    </Field>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">Learn from conversations</p>
+                      <p className="text-sm text-muted-foreground">
+                        {learnFromConversationsEditable
+                          ? "Use past WhatsApp AI exchanges to improve reply consistency"
+                          : "Controlled by platform administrator"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={learnFromConversations}
+                      onCheckedChange={setLearnFromConversations}
+                      disabled={!learnFromConversationsEditable}
+                    />
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -889,6 +1259,105 @@ export default function SettingsPage() {
                   {aiSaving ? 'Saving…' : 'Save AI Settings'}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Learning memory (GDPR)</CardTitle>
+              <CardDescription>Export conversation learning samples stored for your company</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const blob = await exportLearningSamples()
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement("a")
+                    a.href = url
+                    a.download = `learning-samples-${new Date().toISOString().slice(0, 10)}.csv`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  } catch {
+                    setAiMessage("Export failed.")
+                  }
+                }}
+              >
+                Download learning samples CSV
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Your AI API keys (BYOK)</CardTitle>
+              <CardDescription>
+                {aiPlanCapabilities?.allowByok
+                  ? 'Use your own OpenAI key to avoid platform AI spend limits. Platform keys are used when mode is Platform or Company preferred.'
+                  : 'Available on Professional and Enterprise plans. Upgrade to add your own OpenAI API key.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!aiPlanCapabilities?.allowByok ? (
+                <p className="text-sm text-muted-foreground">
+                  Your {aiPlanCapabilities?.plan ?? 'current'} plan uses platform AI keys only ($
+                  {aiPlanCapabilities && 'aiCostLimitUsd' in aiPlanCapabilities ? String((aiPlanCapabilities as { aiCostLimitUsd?: number }).aiCostLimitUsd ?? 5) : '5'}
+                  /mo included).
+                </p>
+              ) : (
+                <>
+              {aiUsageSummary && (
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>
+                    This period: {String(aiUsageSummary.totalRequests ?? 0)} requests · platform billed $
+                    {String(aiUsageSummary.platformBilledCostUsd ?? 0)}
+                    {aiUsageSummary.platformCostLimitUsd != null
+                      ? ` / $${String(aiUsageSummary.platformCostLimitUsd)} limit`
+                      : ''}
+                  </p>
+                  {aiUsageExtras?.learningEmbeddingCoveragePercent != null && (
+                    <p>Learning memory embedding coverage: {aiUsageExtras.learningEmbeddingCoveragePercent}%</p>
+                  )}
+                  {(aiUsageExtras?.byCredentialSource ?? []).map((row) => (
+                    <p key={row.source}>
+                      {row.source}: {row.requests} requests · ${row.billedCostUsd.toFixed(4)} billed
+                    </p>
+                  ))}
+                </div>
+              )}
+              <Field>
+                <FieldLabel>Credential mode</FieldLabel>
+                <Select value={aiCredentialMode} onValueChange={(v) => setAiCredentialMode(v as typeof aiCredentialMode)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="platform">Platform keys only</SelectItem>
+                    {(aiPlanCapabilities?.allowedCredentialModes ?? []).includes('company_preferred') && (
+                      <SelectItem value="company_preferred">My key first, then platform</SelectItem>
+                    )}
+                    {(aiPlanCapabilities?.allowedCredentialModes ?? []).includes('company') && (
+                      <SelectItem value="company">My keys only (required)</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel>OpenAI API key</FieldLabel>
+                <Input
+                  type="password"
+                  value={openaiApiKey}
+                  onChange={(e) => setOpenaiApiKey(e.target.value)}
+                  placeholder={openaiKeyConfigured ? '•••••••• (configured — enter to replace)' : 'sk-…'}
+                />
+              </Field>
+              <Button type="button" onClick={handleByokSave} disabled={byokSaving}>
+                {byokSaving ? 'Saving…' : 'Save API key settings'}
+              </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
