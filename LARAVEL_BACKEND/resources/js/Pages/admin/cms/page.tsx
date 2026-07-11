@@ -64,3 +64,9 @@ function ImageField({
   const [uploading, setUploading] = useState(false)
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const res = await uploadCmsImage(file)
+    setUploading(false)
+    if (res.success && res.url) {
