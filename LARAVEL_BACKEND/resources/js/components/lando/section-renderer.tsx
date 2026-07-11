@@ -190,3 +190,7 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
         />
       )
 
+    default:
+      return null
+  }
+}
