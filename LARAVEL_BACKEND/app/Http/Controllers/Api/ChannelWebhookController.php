@@ -10,3 +10,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
+class ChannelWebhookController extends Controller
+{
+    /**
+     * Generic email ingest webhook (SendGrid/Mailgun-style JSON body).
+     */
+    public function email(
