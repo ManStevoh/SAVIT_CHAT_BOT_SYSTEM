@@ -58,3 +58,5 @@ class VerifyEnterprisePlatformCommand extends Command
         $this->error('Some checks failed. Run: php artisan migrate && php artisan db:seed --class=EnterprisePlatformSeeder');
 
         return self::FAILURE;
+    }
+}
