@@ -94,3 +94,9 @@ Legacy code may still use `OpenAiClient` or `AiGateway` — both route through `
 
 | Mode | Applies to |
 |------|------------|
+| Company **specific** chat model | `chat` capability only (customer-facing) |
+| Platform **reasoning / vision / stt** slots | Agent brain, tools, vision, voice — always orchestrator-controlled |
+| **auto** | Cheapest enabled model for capability |
+| **platform_default** | Row with `is_platform_default=true` per capability |
+
+Admin: **Settings → AI Models** (`/admin/ai-models`) — set platform default per capability.
