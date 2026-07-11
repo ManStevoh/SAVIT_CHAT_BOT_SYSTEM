@@ -22,3 +22,9 @@ class BillingPayment extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    public function subscription(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class);
+    }
+}
