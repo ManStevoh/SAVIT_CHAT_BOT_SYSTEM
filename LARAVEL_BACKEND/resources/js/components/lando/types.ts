@@ -46,3 +46,7 @@ export interface AdminCmsPage {
     title: string
     metaTitle?: string | null
     metaDescription?: string | null
+    isPublished: boolean
+  }
+  sections: AdminCmsSection[]
+}
