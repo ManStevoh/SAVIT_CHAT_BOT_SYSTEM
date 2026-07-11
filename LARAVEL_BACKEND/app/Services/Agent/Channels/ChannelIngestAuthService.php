@@ -46,3 +46,9 @@ final class ChannelIngestAuthService
         }
 
         return Company::with('settings')->find($companyId);
+    }
+
+    private function extractSecret(Request $request): ?string
+    {
+        $header = $request->header('X-Channel-Ingest-Secret')
+            ?? $request->header('X-Ingest-Secret');
