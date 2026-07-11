@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Services\Agent\Intelligence;
 
@@ -82,3 +82,68 @@ final class IntelligenceOutcomeService
 
             IntelligenceOutcome::firstOrCreate(
                 [
+                    'company_id' => $company->id,
+                    'source_type' => $sourceType,
+                    'source_id' => $sourceId,
+                    'recommendation_key' => $this->recommendationKey($text),
+                ],
+                [
+                    'recommended_action' => mb_substr($text, 0, 2000),
+                    'outcome' => 'pending',
+                ],
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $metrics
+     */
+    public function record(
+        Company $company,
+        User $user,
+        string $sourceType,
+        int $sourceId,
+        string $recommendedAction,
+        string $outcome,
+        ?string $notes = null,
+        array $metrics = [],
+    ): IntelligenceOutcome {
+        $outcome = in_array($outcome, ['positive', 'neutral', 'negative', 'pending'], true)
+            ? $outcome
+            : 'pending';
+
+        $record = IntelligenceOutcome::updateOrCreate(
+            [
+                'company_id' => $company->id,
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+                'recommendation_key' => $this->recommendationKey($recommendedAction),
+            ],
+            [
+                'recommended_action' => mb_substr($recommendedAction, 0, 2000),
+                'outcome' => $outcome,
+                'notes' => $notes ? mb_substr($notes, 0, 2000) : null,
+                'metrics' => $metrics !== [] ? $metrics : null,
+                'recorded_by' => $user->id,
+                'measured_at' => now(),
+            ],
+        );
+
+        $case = InvestigationCase::where('company_id', $company->id)
+            ->where('owner_analytics_investigation_id', $sourceType === 'investigation' ? $sourceId : null)
+            ->where('status', 'open')
+            ->latest('id')
+            ->first();
+
+        if ($case && $outcome !== 'pending') {
+            app(InvestigationCaseService::class)->advanceStep($case, 'outcome_tracking', 'completed');
+        }
+
+        return $record;
+    }
+
+    private function recommendationKey(string $action): string
+    {
+        return substr(hash('sha256', mb_strtolower(trim($action))), 0, 16);
+    }
+}
