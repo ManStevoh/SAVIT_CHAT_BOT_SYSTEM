@@ -58,3 +58,9 @@ class MarketplaceController extends Controller
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
         }
+
+        if (! $marketplace->uninstall($company, $moduleKey)) {
+            return response()->json(['message' => 'Module not installed.'], 404);
+        }
+
+        return response()->json([
