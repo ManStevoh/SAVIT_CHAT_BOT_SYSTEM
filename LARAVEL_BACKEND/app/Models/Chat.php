@@ -10,6 +10,8 @@ class Chat extends Model
 {
     protected $fillable = [
         'company_id',
+        'channel',
+        'channel_user_id',
         'social_post_id',
         'attribution_link_id',
         'customer_name',
