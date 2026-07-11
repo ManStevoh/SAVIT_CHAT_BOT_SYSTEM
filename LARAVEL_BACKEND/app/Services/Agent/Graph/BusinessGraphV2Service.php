@@ -46,3 +46,9 @@ final class BusinessGraphV2Service
                         'category',
                         crc32($product->category) & 0x7FFFFFFF,
                         $product->category,
+                    );
+                    $stats['nodes']++;
+                    if ($this->link($company, $node->id, $catNode->id, 'in_category')) {
+                        $stats['edges']++;
+                    }
+                }
