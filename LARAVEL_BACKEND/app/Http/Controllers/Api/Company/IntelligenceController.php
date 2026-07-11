@@ -166,3 +166,9 @@ class IntelligenceController extends Controller
         }
 
 
+
+        $validated = $request->validate([
+
+            'source_type' => 'required|string|in:investigation,reasoning,approval,brief,opportunity',
+
+            'source_id' => 'required|integer|min:1',
