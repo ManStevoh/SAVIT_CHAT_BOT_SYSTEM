@@ -82,3 +82,9 @@ export function LandoTestimonials({
     </section>
   )
 }
+
+export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBadge?: string }) {
+  const { data: plans, isLoading } = usePlans()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [busy, setBusy] = useState<string | null>(null)
+
