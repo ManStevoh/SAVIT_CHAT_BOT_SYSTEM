@@ -10,3 +10,9 @@ use Symfony\Component\HttpFoundation\Response;
 class AuthenticateApiKey
 {
     public function __construct(
+        protected ApiKeyService $apiKeys,
+    ) {}
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        $header = $request->header('Authorization', '');
