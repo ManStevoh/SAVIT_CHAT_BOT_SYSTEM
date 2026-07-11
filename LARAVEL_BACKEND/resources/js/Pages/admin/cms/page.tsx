@@ -628,3 +628,9 @@ export default function AdminCmsPage() {
             <TabsTrigger key={p.slug} value={p.slug} className="text-xs sm:text-sm">
               {p.label}
             </TabsTrigger>
+          ))}
+        </TabsList>
+        {PAGE_SLUGS.map((p) => (
+          <TabsContent key={p.slug} value={p.slug} className="mt-6">
+            <PageEditor slug={p.slug} />
+          </TabsContent>
