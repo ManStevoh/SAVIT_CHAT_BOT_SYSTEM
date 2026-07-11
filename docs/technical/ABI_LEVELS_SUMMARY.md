@@ -124,3 +124,9 @@ Owner goal
 2. **Settings → AI → Agent commerce mode ON**
 3. Optional: **Business DNA** (Luxury brand / Friendly café / Custom)
 4. Open **Cognitive AI** → ask a business question → **Reason**
+5. Open **Executive AI** → morning brief, approvals, opportunities
+
+---
+
+## Verification
+
