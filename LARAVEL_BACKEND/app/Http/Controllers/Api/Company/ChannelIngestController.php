@@ -22,3 +22,9 @@ class ChannelIngestController extends Controller
             'channelUserId' => 'required|string|max:120',
             'message' => 'required|string|max:5000',
             'customerName' => 'nullable|string|max:120',
+            'customerEmail' => 'nullable|string|max:200',
+        ]);
+
+        $result = $ingest->ingest(
+            $company,
+            $validated['channel'],
