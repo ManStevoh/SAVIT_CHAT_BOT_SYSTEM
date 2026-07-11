@@ -232,3 +232,9 @@ export function LandoFaqSection({
             </AccordionItem>
           ))}
         </Accordion>
+      </div>
+    </section>
+  )
+}
+
+export function LandoAboutHero({
