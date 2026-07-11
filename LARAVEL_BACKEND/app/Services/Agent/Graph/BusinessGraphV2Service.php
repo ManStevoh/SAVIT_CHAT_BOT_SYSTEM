@@ -70,3 +70,9 @@ final class BusinessGraphV2Service
                     $company,
                     BusinessGraphNode::TYPE_PRODUCT,
                     'product',
+                    (int) $rel->related_product_id,
+                    'Product #'.$rel->related_product_id,
+                );
+                if ($this->link($company, $from->id, $to->id, $rel->relationship_type)) {
+                    $stats['edges']++;
+                }
