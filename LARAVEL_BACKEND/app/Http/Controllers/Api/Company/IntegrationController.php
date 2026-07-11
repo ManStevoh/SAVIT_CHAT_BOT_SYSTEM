@@ -76,3 +76,9 @@ class IntegrationController extends Controller
         }
 
         CompanyIntegration::where('company_id', $company->id)
+            ->where('connector_type', $connectorType)
+            ->delete();
+
+        return response()->json(['success' => true]);
+    }
+
