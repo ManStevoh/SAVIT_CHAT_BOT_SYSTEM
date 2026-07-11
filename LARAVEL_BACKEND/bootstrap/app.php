@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
             'subscription.active' => \App\Http\Middleware\EnsureSubscriptionActive::class,
             'user.active' => \App\Http\Middleware\EnsureUserActive::class,
         ]);
@@ -35,9 +36,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new \App\Jobs\Growth\ProcessCrmFollowUpsJob)->hourly();
         $schedule->job(new \App\Jobs\Agent\ProcessAgentProactiveEventsJob)->hourly();
         $schedule->job(new \App\Jobs\Agent\GenerateDailyCommerceBriefJob)->dailyAt('07:00');
+        $schedule->job(new \App\Jobs\Agent\RunConsciousnessSenseCycleJob)->everyFiveMinutes();
         $schedule->job(new \App\Jobs\Agent\RunBackgroundThinkingJob)->hourly();
         $schedule->job(new \App\Jobs\Agent\CrossBusinessLearningJob)->dailyAt('04:30');
         $schedule->job(new \App\Jobs\Agent\EvaluateCommerceExperimentsJob)->dailyAt('05:30');
+        $schedule->job(new \App\Jobs\Platform\DispatchDomainEventsJob)->everyMinute();
+        $schedule->job(new \App\Jobs\Platform\ProcessTrialTransitionsJob)->dailyAt('02:00');
         $schedule->job(new \App\Jobs\Growth\GeneratePortfolioRecommendationsJob)->weeklyOn(1, '07:00');
         $schedule->job(new \App\Jobs\Growth\PrunePortfolioRecommendationsJob)->weeklyOn(0, '03:00');
         $schedule->job(new \App\Jobs\Growth\SyncGrowthIntegrationsJob)->dailyAt('05:00');
