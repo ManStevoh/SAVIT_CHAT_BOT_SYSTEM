@@ -238,3 +238,9 @@ export function LandoFaqSection({
 }
 
 export function LandoAboutHero({
+  title,
+  description,
+  imageUrl,
+  imageAlt = "",
+}: {
+  title: string
