@@ -130,3 +130,9 @@ export function LandoIntroCard({
     </section>
   )
 }
+
+export function LandoFeatureBlock({
+  label,
+  title,
+  description,
+  ctaText,
