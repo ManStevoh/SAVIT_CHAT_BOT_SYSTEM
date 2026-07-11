@@ -46,3 +46,9 @@ class VerifyEnterprisePlatformCommand extends Command
         $toolCount = count($registry->all());
         $this->line(sprintf('  [OK] Agent tools: %d', $toolCount));
 
+        $this->newLine();
+        if ($allPass) {
+            $this->info('All enterprise platform checks passed.');
+            $this->line('Run: php artisan test --filter=EnterprisePlatform');
+            $this->line('Run: php artisan test --filter=CommerceAgent');
+
