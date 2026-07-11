@@ -172,3 +172,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
       return (
         <LandoTeam
           title={str(content.title)}
+          description={str(content.description)}
+          members={arr(content.members)}
+        />
+      )
+
+    case "cta":
