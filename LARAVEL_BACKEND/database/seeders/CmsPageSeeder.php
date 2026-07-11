@@ -310,3 +310,9 @@ class CmsPageSeeder extends Seeder
                                 ['name' => 'Hannah Mika', 'role' => 'CEO', 'imageUrl' => '/images/lando/team-ceo.png'],
                                 ['name' => 'Daniel Peter', 'role' => 'CTO', 'imageUrl' => '/images/lando/team-cto.png'],
                                 ['name' => 'Lars Mikkel', 'role' => 'Head of Operations', 'imageUrl' => '/images/lando/team-operations.png'],
+                                ['name' => 'Denis Forner', 'role' => 'Head of Product', 'imageUrl' => '/images/lando/team-product.png'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
