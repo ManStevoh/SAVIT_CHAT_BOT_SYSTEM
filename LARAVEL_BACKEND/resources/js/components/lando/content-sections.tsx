@@ -214,3 +214,9 @@ export function LandoFaqSection({
   faqs = [],
 }: {
   title?: string
+  faqs?: Array<{ id: string; question: string; answer: string }>
+}) {
+  if (faqs.length === 0) return null
+
+  return (
+    <section className="bg-[#f3f4f6] py-16 lg:py-24">
