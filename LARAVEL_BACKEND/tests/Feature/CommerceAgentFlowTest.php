@@ -231,12 +231,19 @@ class CommerceAgentFlowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('agentCommerceEnabled', false)
             ->assertJsonPath('agentProactiveEnabled', false)
-            ->assertJsonStructure(['agentBusinessGoalCatalog']);
+            ->assertJsonStructure(['agentBusinessGoalCatalog', 'businessDna', 'businessDnaPresets']);
 
         $this->putJson('/api/company/settings', [
             'agentCommerceEnabled' => true,
             'agentProactiveEnabled' => true,
             'agentBusinessGoals' => ['increase_revenue', 'reduce_refunds', 'invalid_goal'],
+            'businessDna' => [
+                'tone' => 'luxury and calm',
+                'values' => ['quality', 'discretion'],
+                'risk_tolerance' => 'low',
+                'service_philosophy' => 'White-glove experience',
+                'communication_style' => 'Refined and understated',
+            ],
         ])->assertOk()->assertJsonPath('success', true);
 
         $this->assertDatabaseHas('company_settings', [
@@ -247,6 +254,14 @@ class CommerceAgentFlowTest extends TestCase
 
         $settings = CompanySetting::where('company_id', $company->id)->first();
         $this->assertSame(['increase_revenue', 'reduce_refunds'], $settings->agent_business_goals);
+        $this->assertSame('luxury and calm', $settings->business_dna['tone'] ?? null);
+        $this->assertSame(['quality', 'discretion'], $settings->business_dna['values'] ?? null);
+
+        $this->putJson('/api/company/settings', [
+            'businessDna' => null,
+        ])->assertOk();
+
+        $this->assertNull(CompanySetting::where('company_id', $company->id)->first()->business_dna);
     }
 
     public function test_search_products_tool_finds_product_and_audits_invocation(): void
