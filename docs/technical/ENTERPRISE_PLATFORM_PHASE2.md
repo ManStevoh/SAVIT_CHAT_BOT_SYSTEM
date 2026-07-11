@@ -76,3 +76,9 @@ Already shipped in ABI foundation (`audit_events`, `AuditService`). Phase 2 wire
 
 ## Verification commands
 
+```bash
+php artisan migrate
+php artisan db:seed --class=EnterprisePlatformSeeder
+php artisan platform:verify
+php artisan agent:verify
+php artisan test --filter=EnterprisePlatform
