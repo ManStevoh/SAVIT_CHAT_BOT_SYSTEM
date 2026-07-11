@@ -10,3 +10,9 @@ class DomainEvent extends Model
     protected $fillable = [
         'company_id',
         'event_type',
+        'payload',
+        'status',
+        'attempts',
+        'dispatched_at',
+        'last_error',
+    ];
