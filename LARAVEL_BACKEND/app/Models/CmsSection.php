@@ -28,3 +28,5 @@ class CmsSection extends Model
     public function page(): BelongsTo
     {
         return $this->belongsTo(CmsPage::class, 'cms_page_id');
+    }
+}
