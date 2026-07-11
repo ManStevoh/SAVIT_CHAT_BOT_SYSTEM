@@ -544,3 +544,9 @@ function SortableSectionList({
 
 function PageEditor({ slug }: { slug: string }) {
   const { data, isLoading, mutate } = useAdminCmsPage(slug)
+  const { toast } = useToast()
+  const [metaTitle, setMetaTitle] = useState("")
+  const [metaDescription, setMetaDescription] = useState("")
+
+  useEffect(() => {
+    if (data) {
