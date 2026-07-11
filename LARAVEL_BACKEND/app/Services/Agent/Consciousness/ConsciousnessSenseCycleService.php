@@ -22,3 +22,9 @@ final class ConsciousnessSenseCycleService
     /**
      * @return array<string, int|bool>
      */
+    public function sense(Company $company): array
+    {
+        $company->loadMissing('settings');
+        if (! ($company->settings?->agent_commerce_enabled ?? false)) {
+            return ['skipped' => true];
+        }
