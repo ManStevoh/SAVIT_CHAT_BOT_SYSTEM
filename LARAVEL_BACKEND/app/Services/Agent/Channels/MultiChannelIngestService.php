@@ -94,3 +94,9 @@ final class MultiChannelIngestService
 
         return $channel.':'.Str::slug($channelUserId);
     }
+
+    private function defaultName(string $channel, string $channelUserId): string
+    {
+        return match ($channel) {
+            ChatChannel::WEB_WIDGET => 'Web visitor',
+            ChatChannel::EMAIL => 'Email contact',
