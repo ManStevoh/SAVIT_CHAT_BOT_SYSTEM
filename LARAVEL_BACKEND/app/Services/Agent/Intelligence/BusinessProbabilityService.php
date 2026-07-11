@@ -34,3 +34,9 @@ final class BusinessProbabilityService
         $uniqueBuyers90 = (int) (clone $paidOrders)->distinct('customer_phone')->count('customer_phone');
         $repeatBuyers = (int) Order::where('company_id', $companyId)
             ->where('payment_status', 'paid')
+            ->where('created_at', '>=', $since90)
+            ->selectRaw('customer_phone, COUNT(*) as c')
+            ->groupBy('customer_phone')
+            ->having('c', '>', 1)
+            ->get()
+            ->count();
