@@ -22,3 +22,9 @@ class MarketplaceController extends Controller
             'installed' => $marketplace->installedForCompany($company),
         ]);
     }
+
+    public function install(Request $request, string $moduleKey, MarketplaceModuleService $marketplace): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
