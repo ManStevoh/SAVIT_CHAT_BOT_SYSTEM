@@ -10,3 +10,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
+class ProcessTrialTransitionsJob implements ShouldQueue
+{
+    use Queueable;
+
+    public function handle(
+        DomainEventDispatcher $events,
