@@ -34,3 +34,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        Schema::dropIfExists('cms_sections');
+        Schema::dropIfExists('cms_pages');
+    }
+};
