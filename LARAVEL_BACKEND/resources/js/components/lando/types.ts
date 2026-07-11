@@ -16,3 +16,9 @@ export interface CmsPageData {
     slug: string
     title: string
     metaTitle?: string | null
+    metaDescription?: string | null
+  }
+  sections: CmsSection[]
+  testimonials?: Array<{
+    id: string
+    name: string
