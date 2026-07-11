@@ -292,3 +292,9 @@ function SectionEditor({
               <Field
                 label={`Step ${i + 1} description`}
                 value={step.description}
+                onChange={(v) => {
+                  const next = [...steps]
+                  next[i] = { ...next[i], description: v }
+                  set("steps", next)
+                }}
+                multiline
