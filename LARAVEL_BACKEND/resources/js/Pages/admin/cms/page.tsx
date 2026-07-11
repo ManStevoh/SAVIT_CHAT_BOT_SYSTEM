@@ -130,3 +130,9 @@ function SectionEditor({
     setEnabled(checked)
     await updateCmsSection(slug, section.key, { isEnabled: checked })
     onSaved()
+  }
+
+  const renderFields = () => {
+    const key = section.key
+
+    if (key === "navbar") {
