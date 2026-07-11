@@ -424,3 +424,9 @@ function SectionEditor({
       )
     }
 
+    return (
+      <Textarea
+        value={JSON.stringify(content, null, 2)}
+        onChange={(e) => {
+          try {
+            setContent(JSON.parse(e.target.value))
