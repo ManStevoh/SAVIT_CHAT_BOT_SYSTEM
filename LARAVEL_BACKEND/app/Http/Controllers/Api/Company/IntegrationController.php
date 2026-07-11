@@ -100,3 +100,9 @@ class IntegrationController extends Controller
         $integration = CompanyIntegration::where('company_id', $company->id)
             ->where('connector_type', $validated['connectorType'])
             ->first();
+
+        if (! $integration) {
+            return response()->json(['message' => 'Connector not connected.'], 422);
+        }
+
+        $result = $registry->sync($company, $validated['connectorType'], $integration->config ?? []);
