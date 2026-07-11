@@ -82,3 +82,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           secondaryCtaHref={str(content.secondaryCtaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
+        />
+      )
+
+    case "trusted_companies": {
+      const companies = arr<{ name: string; logoUrl?: string }>(content.companies)
+      const fromApi = pageData.trustedCompanies
