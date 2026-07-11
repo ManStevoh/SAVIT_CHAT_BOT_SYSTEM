@@ -28,3 +28,9 @@ class RunConsciousnessSenseCycleJob implements ShouldQueue
 
         if ($this->companyId) {
             $query->where('id', $this->companyId);
+        }
+
+        foreach ($query->with('settings')->cursor() as $company) {
+            $sense->sense($company);
+        }
+    }
