@@ -304,3 +304,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 | Status | **Roadmap** |
 
 **Adjacent:** `TeamController` lists users. Dashboard is owner/team ops, not HR portal.
+
+---
+
+### Vendor Portal
+
+**Vision:** Suppliers update inventory, upload invoices, accept POs, track payments, communicate.
