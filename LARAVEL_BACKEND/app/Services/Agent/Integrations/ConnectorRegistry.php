@@ -196,3 +196,9 @@ final class ConnectorRegistry
 
     {
 
+        return match ($type) {
+
+            'crm_webhook' => $this->dispatchCrmEvent($config, [
+
+                'event' => 'sync_ping',
+
