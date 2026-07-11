@@ -16,3 +16,9 @@ class BillingPayment extends Model
         'amount' => 'float',
         'metadata' => 'array',
         'paid_at' => 'datetime',
+    ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
