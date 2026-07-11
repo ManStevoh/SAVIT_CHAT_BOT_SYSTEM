@@ -100,3 +100,7 @@ Items 1–7 below have **v1 foundations shipped**. See [ENTERPRISE_PLATFORM_PHAS
 1. ~~**Subscription Engine**~~ — entitlements DB + meters + trial job ✅ v1
 2. ~~**Billing Engine**~~ — billing_payments ledger ✅ v1
 3. ~~**Notification Center**~~ — templates + dispatcher ✅ v1
+4. ~~**Permission Engine**~~ — policy rules CRUD + approval ABAC ✅ v1
+5. ~~**Audit Center**~~ — audit_events wired ✅ v1
+6. ~~**Event Bus v1**~~ — domain_events + outbox ✅ v1
+7. ~~**API Platform v1**~~ — API keys + webhooks ✅ v1
