@@ -22,3 +22,9 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
 
   return (
     <div className="lando-page min-h-screen bg-[#f3f4f6]">
+      <LandoNavbar
+        links={(navbarContent.links as CmsLink[]) ?? []}
+        loginLabel={String(navbarContent.loginLabel ?? "Log in")}
+        loginHref={String(navbarContent.loginHref ?? "/login")}
+        signupLabel={String(navbarContent.signupLabel ?? "Sign up")}
+        signupHref={String(navbarContent.signupHref ?? "/register")}
