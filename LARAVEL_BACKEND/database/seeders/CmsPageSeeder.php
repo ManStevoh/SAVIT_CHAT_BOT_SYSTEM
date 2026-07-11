@@ -142,3 +142,9 @@ class CmsPageSeeder extends Seeder
                     ],
                     [
                         'section_key' => 'feature_2',
+                        'label' => 'Feature block 2',
+                        'sort_order' => 5,
+                        'content' => [
+                            'label' => 'PAY IN CHAT',
+                            'title' => 'Get paid without leaving WhatsApp',
+                            'description' => 'M-Pesa STK push and Stripe card payments built into the conversation. Customers browse, order, and pay in one thread — no redirects, no friction.',
