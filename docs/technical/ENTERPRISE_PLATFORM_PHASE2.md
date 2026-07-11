@@ -10,3 +10,9 @@ Phase 2 extends existing subscription, billing, and notification plumbing withou
 
 ### 2a — Subscription entitlements
 
+| Component | Path |
+|-----------|------|
+| DB column | `plans.entitlements` (JSON) |
+| Overrides | `company_entitlement_overrides` |
+| Usage meters | `usage_meters` |
+| Resolver | `EntitlementService` |
