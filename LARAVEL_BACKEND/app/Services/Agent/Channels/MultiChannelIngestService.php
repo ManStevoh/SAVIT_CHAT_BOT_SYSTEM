@@ -106,3 +106,9 @@ final class MultiChannelIngestService
     }
 
     private function looksLikePhone(string $value): bool
+    {
+        $digits = preg_replace('/\D+/', '', $value) ?: '';
+
+        return strlen($digits) >= 8 && strlen($digits) <= 15;
+    }
+}
