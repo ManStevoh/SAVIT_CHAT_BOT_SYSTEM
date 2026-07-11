@@ -418,3 +418,9 @@ final class ConnectorRegistry
 
             return ['success' => false, 'message' => 'Webhook URL required.'];
 
+        }
+
+
+
+        try {
+
