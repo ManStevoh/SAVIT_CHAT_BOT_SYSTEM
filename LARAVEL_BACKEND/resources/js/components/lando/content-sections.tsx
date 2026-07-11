@@ -304,3 +304,9 @@ export function LandoTeam({
     <section className="bg-[#f3f4f6] py-16 lg:py-24">
       <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
         {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
+        {description && <p className="mt-3 text-gray-600">{description}</p>}
+        <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {members.map((m) => (
+            <div key={m.name}>
+              {m.imageUrl ? (
+                <img
