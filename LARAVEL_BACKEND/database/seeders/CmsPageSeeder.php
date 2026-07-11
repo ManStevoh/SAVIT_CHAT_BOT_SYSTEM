@@ -352,3 +352,9 @@ class CmsPageSeeder extends Seeder
                             'successMessage' => 'Thank you! We will get back to you shortly.',
                         ],
                     ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'Call to action',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'Get started with Essem Chat today',
