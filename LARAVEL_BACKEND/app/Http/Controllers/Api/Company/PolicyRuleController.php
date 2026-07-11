@@ -88,3 +88,7 @@ class PolicyRuleController extends Controller
         $rule = CompanyPolicyRule::where('company_id', $company->id)->findOrFail($id);
         $audit->log('policy_rule.deleted', CompanyPolicyRule::class, $rule->id, $rule->toArray(), null, $company->id, $request->user());
         $rule->delete();
+
+        return response()->json(['success' => true]);
+    }
+}
