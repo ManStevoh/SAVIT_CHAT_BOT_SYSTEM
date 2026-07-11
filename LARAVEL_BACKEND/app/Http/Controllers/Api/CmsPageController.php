@@ -46,3 +46,9 @@ class CmsPageController extends Controller
                 ->map(fn ($f) => [
                     'id' => (string) $f->id,
                     'question' => $f->question,
+                    'answer' => $f->answer,
+                ])->values()->all();
+        }
+
+        if (in_array('trusted_companies', $enabledKeys, true)) {
+            $settings = PlatformSetting::first();
