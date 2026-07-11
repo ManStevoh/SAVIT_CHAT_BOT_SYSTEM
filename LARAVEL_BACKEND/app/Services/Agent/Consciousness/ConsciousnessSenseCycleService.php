@@ -16,3 +16,9 @@ final class ConsciousnessSenseCycleService
     public function __construct(
         protected UnifiedCompanyBrainService $brain,
         protected BusinessTimelineService $timeline,
+        protected CommerceEventDetector $events,
+    ) {}
+
+    /**
+     * @return array<string, int|bool>
+     */
