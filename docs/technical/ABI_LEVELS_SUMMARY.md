@@ -70,3 +70,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 
 | Gap | Levels | Notes |
 |-----|--------|-------|
+| Full business ontology expansion | 1 | |
+| Multi-source investigation depth | 2–3 | Case files shipped — deepen external probes |
+| ML-calibrated Bayesian models | 4 | Heuristic scores shipped — train on outcomes |
+| Multi-year capital / hiring / branch models | 6, 10 | |
+| Full org chart approval UI | 7 | Policy engine v1 shipped |
+| Entity trust (suppliers, couriers) | 8 | |
