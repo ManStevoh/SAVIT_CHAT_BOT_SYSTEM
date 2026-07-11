@@ -58,3 +58,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 | **Unified decision API** | `IntelligenceReasoningService`, `POST /intelligence/reason` |
 | **Investigation cases** | `investigation_cases`, `GET /intelligence/cases` |
 | **Outcome tracking** | `intelligence_outcomes`, `POST /intelligence/outcomes` |
+| **Audit center (v1)** | `audit_events` + `AuditService` (respects `audit_logging_enabled`) |
+| **Event bus (v1)** | `domain_events` + `DispatchDomainEventsJob` |
+| **Approval routing** | `CompanyPolicyService` + `company_policy_rules` |
+| **Owner dashboards** | `/dashboard/executive`, `/dashboard/cognitive` |
+| Agent commerce + DNA | Settings → AI → Agent commerce ON + Business DNA |
+
