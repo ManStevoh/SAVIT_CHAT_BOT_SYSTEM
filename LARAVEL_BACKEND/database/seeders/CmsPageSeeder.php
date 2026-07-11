@@ -10,3 +10,9 @@ use Illuminate\Database\Seeder;
 
 class CmsPageSeeder extends Seeder
 {
+    public function run(): void
+    {
+        $heroImage = '/images/lando/lando-hero.png';
+        $aboutTeamImage = '/images/lando/lando-about-team.png';
+
+        $pages = [
