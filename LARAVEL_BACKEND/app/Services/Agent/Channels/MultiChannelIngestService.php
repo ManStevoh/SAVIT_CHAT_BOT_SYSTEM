@@ -82,3 +82,9 @@ final class MultiChannelIngestService
         return ['chat' => $chat->fresh(), 'message' => $message, 'queued' => $queued];
     }
 
+    private function resolvePhone(string $channel, string $channelUserId, ?string $email): string
+    {
+        if ($this->looksLikePhone($channelUserId)) {
+            return preg_replace('/\D+/', '', $channelUserId) ?: $channelUserId;
+        }
+
