@@ -160,3 +160,9 @@ function SectionEditor({
           <Field label="Copyright" value={str("copyright")} onChange={(v) => set("copyright", v)} multiline />
           <LinkListEditor
             label="Site links"
+            links={(content.navLinks as CmsLink[]) ?? []}
+            onChange={(links) => set("navLinks", links)}
+          />
+          <LinkListEditor
+            label="Social links"
+            links={(content.socialLinks as CmsLink[]) ?? []}
