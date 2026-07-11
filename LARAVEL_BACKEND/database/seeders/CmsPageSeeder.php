@@ -256,3 +256,9 @@ class CmsPageSeeder extends Seeder
                         'section_key' => 'cta',
                         'label' => 'Call to action',
                         'sort_order' => 5,
+                        'content' => [
+                            'title' => 'Get started with Essem Chat today',
+                            'description' => 'Start optimizing your WhatsApp sales today.',
+                            'ctaText' => 'Sign up now',
+                            'ctaHref' => '/register',
+                        ],
