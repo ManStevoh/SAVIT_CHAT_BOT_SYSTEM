@@ -64,3 +64,9 @@ final class OwnerMorningBriefPushService
 
         $brief->update(['pushed_to_owner_at' => now()]);
 
+        return true;
+    }
+
+    public function resolveOwnerPhone(Company $company): string
+    {
+        $company->loadMissing('settings');
