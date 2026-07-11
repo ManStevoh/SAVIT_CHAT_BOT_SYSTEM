@@ -70,3 +70,9 @@ Already shipped in ABI foundation (`audit_events`, `AuditService`). Phase 2 wire
 | Middleware | `api.key` → `AuthenticateApiKey` |
 | v1 routes | `GET /api/v1/company/health`, `GET /api/v1/company/orders` |
 | Webhooks | `POST /api/company/api-platform/webhooks` |
+| Management | `GET/POST/DELETE /api/company/api-platform/keys` |
+
+---
+
+## Verification commands
+
