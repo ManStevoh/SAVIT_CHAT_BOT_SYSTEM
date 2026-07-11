@@ -280,3 +280,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 **Vision:** Kanban, Gantt, tasks, dependencies, milestones, time tracking, files.
 
 | Status | **Roadmap** |
+
+**Build spec:** `projects`, `boards`, `columns`, `tasks`, `task_dependencies`, `time_entries` — link tasks to orders/customers via entity refs.
+
+---
+
+### 12. Customer Portal
