@@ -202,3 +202,9 @@ notification_schedules      — delayed/batch sends
 **Evidence:** No `Form`, `FormField`, `FormSubmission` models. Only static React forms + Laravel `validate()`.
 
 **Build spec**
+
+```
+forms                       — company_id, name, schema JSON, status
+form_versions               — immutable published versions
+form_submissions            — encrypted PII fields, source, chat_id link
+form_logic                  — conditional rules engine (safe DSL, no eval)
