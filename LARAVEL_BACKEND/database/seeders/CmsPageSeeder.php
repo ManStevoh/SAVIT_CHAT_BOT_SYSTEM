@@ -208,3 +208,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Hero',
                         'sort_order' => 1,
                         'content' => [
+                            'title' => 'Pricing',
+                            'description' => "Our pricing is not expensive, but it's not cheap either — it's exactly what it should be.",
+                        ],
+                    ],
+                    [
+                        'section_key' => 'pricing_plans',
