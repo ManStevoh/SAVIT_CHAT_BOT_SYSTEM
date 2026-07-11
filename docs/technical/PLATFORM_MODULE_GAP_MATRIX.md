@@ -76,3 +76,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 |---|--------|--------|---------|
 | 31 | Industry Packs | 🟡 | Industry field + agent DNA; no pack installer |
 | 32 | Offline Capability | ⬜ | Not started |
+| 33 | White-Label | ⬜ | Platform branding only |
+| 34 | BI Layer | 🟡 | Executive AI; no custom KPIs |
+| 35 | Ecosystem | ⬜ | Architecture defined in blueprint |
+
+## Counts
+
