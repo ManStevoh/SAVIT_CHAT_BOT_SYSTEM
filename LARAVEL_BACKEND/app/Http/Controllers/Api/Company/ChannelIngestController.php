@@ -46,3 +46,9 @@ class ChannelIngestController extends Controller
         $company = $request->user()->company;
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $company->loadMissing('settings');
+        $settings = $company->settings;
+        $baseUrl = rtrim(config('app.url'), '/');
+
