@@ -154,3 +154,9 @@ final class ConnectorRegistry
 
      * @param  array<string, mixed>  $config
 
+     * @return array{success: bool, message?: string}
+
+     */
+
+    public function connect(Company $company, string $type, array $config): array
+
