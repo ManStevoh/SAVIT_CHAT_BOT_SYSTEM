@@ -226,3 +226,9 @@ class IntelligenceController extends Controller
         if (in_array($status, ['pending', 'positive', 'neutral', 'negative'], true)) {
             $query->where('outcome', $status);
         }
+
+        return response()->json(['outcomes' => $query->get()]);
+    }
+
+}
+
