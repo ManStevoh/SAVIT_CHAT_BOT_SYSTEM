@@ -202,3 +202,9 @@ export function LandoHowToJoin({
   return (
     <section id="how-to-join" className="bg-[#f3f4f6] py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-3xl bg-white p-8 shadow-sm lg:p-12">
+          <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+            <div>
+              {imageUrl && (
+                <img src={imageUrl} alt={imageAlt} className="mb-8 max-h-48 w-full object-contain" />
+              )}
