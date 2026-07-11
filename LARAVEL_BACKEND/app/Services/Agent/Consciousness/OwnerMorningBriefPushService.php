@@ -112,3 +112,9 @@ final class OwnerMorningBriefPushService
 
         return mb_substr(implode("\n", $lines), 0, (int) config('agent.max_output_chars', 1200));
     }
+
+    private function normalizePhone(string $phone): string
+    {
+        return preg_replace('/\D+/', '', $phone) ?? '';
+    }
+}
