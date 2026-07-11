@@ -10,3 +10,9 @@ use App\Services\WhatsAppMessageSenderService;
 use Illuminate\Support\Facades\Log;
 
 /**
+ * Phase 9 — push daily commerce brief to owner via WhatsApp.
+ */
+final class OwnerMorningBriefPushService
+{
+    public function __construct(
+        protected WhatsAppMessageSenderService $waSender,
