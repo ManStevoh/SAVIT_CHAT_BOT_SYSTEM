@@ -358,3 +358,9 @@ export function LandoContactSection({
 }) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [message, setMessage] = useState("")
+  const [sent, setSent] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
