@@ -70,3 +70,9 @@ export function LandoNavbar({
             className="rounded-lg p-2 text-black md:hidden"
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+      </div>
+
