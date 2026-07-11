@@ -172,3 +172,9 @@ final class BusinessGraphV2Service
 
         return [
             'stats' => [
+                'nodes' => BusinessGraphNode::where('company_id', $company->id)->count(),
+                'edges' => BusinessGraphEdge::where('company_id', $company->id)->count(),
+            ],
+            'nodes' => $nodes->map(fn (BusinessGraphNode $n) => [
+                'id' => $n->id,
+                'type' => $n->node_type,
