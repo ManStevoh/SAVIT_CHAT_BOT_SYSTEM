@@ -70,3 +70,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 | 29 | Event Bus | 🟡 | **domain_events outbox + fan-out job** — full platform event catalog pending |
 | 30 | Developer Platform | ⬜ | No marketplace/apps |
 
+## Ecosystem
+
+| # | Module | Status | Top gap |
+|---|--------|--------|---------|
+| 31 | Industry Packs | 🟡 | Industry field + agent DNA; no pack installer |
+| 32 | Offline Capability | ⬜ | Not started |
