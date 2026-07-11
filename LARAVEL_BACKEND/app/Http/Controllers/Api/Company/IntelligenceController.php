@@ -196,3 +196,9 @@ class IntelligenceController extends Controller
             (int) $validated['source_id'],
 
             $validated['recommended_action'],
+
+            $validated['outcome'],
+
+            $validated['notes'] ?? null,
+
+            $validated['metrics'] ?? [],
