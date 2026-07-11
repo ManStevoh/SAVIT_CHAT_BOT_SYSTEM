@@ -28,3 +28,9 @@ final class BusinessProbabilityService
         $orderCount90 = (int) (clone $paidOrders)->count();
         $orderCount30 = (int) Order::where('company_id', $companyId)
             ->where('payment_status', 'paid')
+            ->where('created_at', '>=', $since30)
+            ->count();
+
+        $uniqueBuyers90 = (int) (clone $paidOrders)->distinct('customer_phone')->count('customer_phone');
+        $repeatBuyers = (int) Order::where('company_id', $companyId)
+            ->where('payment_status', 'paid')
