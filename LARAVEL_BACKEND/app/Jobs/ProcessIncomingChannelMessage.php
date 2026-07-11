@@ -46,3 +46,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
             $company,
             $chat,
             $this->customerPhone ?? $chat->customer_phone,
+            $this->customerName ?? $chat->customer_name,
+            $this->messageText,
+        );
+
+        if ($reply === null || trim((string) ($reply['reply'] ?? '')) === '') {
+            return;
