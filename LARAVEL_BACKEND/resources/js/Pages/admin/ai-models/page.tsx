@@ -97,7 +97,7 @@ export default function AdminAiModelsPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">AI Models & Providers</h1>
         <p className="text-muted-foreground">
-          Configure OpenAI, Claude, Gemini, and OpenAI-compatible APIs. Costs are per 1M tokens (USD).
+          Configure providers and assign platform defaults per capability: reasoning, fast chat, vision, embeddings, speech, and images.
         </p>
       </div>
 
