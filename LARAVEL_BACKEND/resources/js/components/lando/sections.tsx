@@ -118,3 +118,9 @@ export function LandoIntroCard({
               {ctaText && ctaHref && (
                 <Button asChild className="mt-8 h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]">
                   <Link href={ctaHref}>{ctaText}</Link>
+                </Button>
+              )}
+            </div>
+            {imageUrl && (
+              <img src={imageUrl} alt={imageAlt} className="mx-auto max-h-72 w-full object-contain" />
+            )}
