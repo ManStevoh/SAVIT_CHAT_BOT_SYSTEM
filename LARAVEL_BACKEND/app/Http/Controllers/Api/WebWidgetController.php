@@ -124,3 +124,6 @@ class WebWidgetController extends Controller
 
     }
 
+}
+
+
