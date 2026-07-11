@@ -10,3 +10,9 @@ class WebhookDelivery extends Model
     protected $fillable = [
         'webhook_endpoint_id', 'company_id', 'event_type', 'attempt', 'response_code',
         'status', 'payload', 'error', 'delivered_at',
+    ];
+
+    protected $casts = [
+        'payload' => 'array',
+        'delivered_at' => 'datetime',
+    ];
