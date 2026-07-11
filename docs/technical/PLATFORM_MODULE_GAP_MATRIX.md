@@ -46,3 +46,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 ## Operations
 
 | # | Module | Status | Top gap |
+|---|--------|--------|---------|
+| 6 | Delivery Management | 🟡 | Order status only; no fleet/GPS/POD |
+| 8 | Asset Management | ⬜ | Not started |
+
+## Governance
+
