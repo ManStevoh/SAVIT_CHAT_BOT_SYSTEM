@@ -46,3 +46,9 @@ export function LandoHeroSection({
             <div className="mt-8 flex flex-wrap gap-3">
               {primaryCtaText && primaryCtaHref && (
                 <Button
+                  asChild
+                  className="h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]"
+                >
+                  <Link href={primaryCtaHref}>{primaryCtaText}</Link>
+                </Button>
+              )}
