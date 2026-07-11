@@ -220,3 +220,9 @@ function SectionEditor({
     }
 
     if (key === "trusted_companies") {
+      return (
+        <div className="space-y-3">
+          <Field label="Section title" value={str("title")} onChange={(v) => set("title", v)} multiline />
+          <Field
+            label="Companies (one per line)"
+            value={((content.companies as Array<{ name: string }>) ?? []).map((c) => c.name).join("\n")}
