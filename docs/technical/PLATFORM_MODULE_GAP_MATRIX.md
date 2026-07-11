@@ -10,3 +10,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 |--------|---------|
 | ✅ | Implemented (production path) |
 | 🟡 | Partial (adjacent code, major gaps) |
+| ⬜ | Roadmap (not built) |
+
+## Monetization & billing
+
+| # | Module | Status | Top gap |
+|---|--------|--------|---------|
