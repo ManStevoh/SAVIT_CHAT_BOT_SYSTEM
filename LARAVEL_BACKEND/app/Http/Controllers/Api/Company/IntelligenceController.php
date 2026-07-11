@@ -178,3 +178,9 @@ class IntelligenceController extends Controller
             'outcome' => 'required|string|in:positive,neutral,negative,pending',
 
             'notes' => 'nullable|string|max:2000',
+
+            'metrics' => 'nullable|array',
+
+        ]);
+
+
