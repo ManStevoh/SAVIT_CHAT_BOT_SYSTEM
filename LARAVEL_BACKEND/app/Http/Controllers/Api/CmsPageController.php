@@ -70,3 +70,9 @@ class CmsPageController extends Controller
                 'sortOrder' => (int) $s->sort_order,
                 'content' => $s->content ?? [],
             ])->values()->all(),
+            ...$extras,
+        ]);
+    }
+
+    public function global(): JsonResponse
+    {
