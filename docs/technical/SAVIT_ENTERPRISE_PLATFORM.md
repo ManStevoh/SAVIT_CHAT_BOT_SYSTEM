@@ -616,3 +616,9 @@ The AI agent is only as capable as the platform it runs on. **Subscription + bil
 ---
 
 ## Dependency graph
+
+```mermaid
+flowchart TB
+  subgraph p1 [Phase 1 - Built]
+    MT[Multi-tenant]
+    WA[WhatsApp]
