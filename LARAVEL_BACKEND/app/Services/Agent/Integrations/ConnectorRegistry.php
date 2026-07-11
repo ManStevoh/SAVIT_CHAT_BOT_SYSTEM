@@ -406,3 +406,9 @@ final class ConnectorRegistry
 
      * @return array{success: bool, message?: string}
 
+     */
+
+    private function dispatchCrmEvent(array $config, array $payload): array
+
+    {
+
