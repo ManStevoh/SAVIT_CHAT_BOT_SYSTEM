@@ -238,3 +238,9 @@ class CmsPageSeeder extends Seeder
                                 ],
                                 [
                                     'name' => 'Enterprise',
+                                    'features' => ['Everything in Growth', 'Unlimited numbers', 'Custom AI training', 'Dedicated manager', 'SLA guarantee', 'On-premise option'],
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
