@@ -688,3 +688,9 @@ Before marking any module **Implemented**, require:
 **Platform verify commands (today):**
 
 ```bash
+php artisan agent:verify          # 20 tools, AI schema
+php artisan test --filter=CommerceAgent   # 72 tests
+# Future:
+php artisan platform:verify       # subscription, billing, audit schema
+```
+
