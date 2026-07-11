@@ -100,3 +100,9 @@ final class BusinessGraphV2Service
             ->where('payment_status', 'paid')
             ->orderByDesc('created_at')
             ->limit(100)
+            ->get(['id', 'order_number', 'customer_phone', 'total'])
+            ->each(function (Order $order) use ($company, &$stats) {
+                $orderNode = $this->upsertNode(
+                    $company,
+                    BusinessGraphNode::TYPE_ORDER,
+                    'order',
