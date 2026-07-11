@@ -16,3 +16,9 @@ class CommerceAgentEventController extends Controller
         $company = $request->user()->company;
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $validated = $request->validate([
+            'status' => 'nullable|string|in:open,alerted,handled,skipped,no_chat',
+            'type' => 'nullable|string|max:40',
+        ]);
