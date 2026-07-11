@@ -28,3 +28,9 @@ final class ConnectorRegistry
 
      * @return list<array<string, mixed>>
 
+     */
+
+    public function catalog(): array
+
+    {
+
