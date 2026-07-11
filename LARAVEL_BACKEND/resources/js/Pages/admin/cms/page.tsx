@@ -352,3 +352,9 @@ function SectionEditor({
       )
     }
 
+    if (key === "legal_content") {
+      return (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+            <Field label="Last updated" value={str("lastUpdated")} onChange={(v) => set("lastUpdated", v)} />
