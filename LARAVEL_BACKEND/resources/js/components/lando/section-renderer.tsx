@@ -22,3 +22,9 @@ import {
 
 type Content = Record<string, unknown>
 
+function str(v: unknown, fallback = ""): string {
+  return typeof v === "string" ? v : fallback
+}
+
+function arr<T>(v: unknown): T[] {
+  return Array.isArray(v) ? (v as T[]) : []
