@@ -10,3 +10,9 @@ export interface CmsSection {
   sortOrder: number
   content: Record<string, unknown>
 }
+
+export interface CmsPageData {
+  page: {
+    slug: string
+    title: string
+    metaTitle?: string | null
