@@ -262,3 +262,9 @@ export function LandoAboutHero({
 }
 
 export function LandoMission({ title, description }: { title: string; description?: string }) {
+  return (
+    <section className="border-t border-gray-200 bg-[#f3f4f6] py-16 text-center">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
+        {description && <p className="mt-6 text-base leading-relaxed text-gray-600">{description}</p>}
+      </div>
