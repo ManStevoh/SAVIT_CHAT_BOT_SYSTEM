@@ -310,3 +310,9 @@ final class ConnectorRegistry
 
             return ['success' => false, 'message' => 'Valid webhook_url required.'];
 
+        }
+
+
+
+        return $this->dispatchCrmEvent($config, ['event' => 'connection_test']);
+
