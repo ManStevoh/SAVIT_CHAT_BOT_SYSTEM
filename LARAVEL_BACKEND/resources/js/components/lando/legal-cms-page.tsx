@@ -34,3 +34,9 @@ export function LegalCmsPage({ slug, fallbackTitle, fallbackBody }: LegalCmsPage
           </p>
         )}
 
+        {isLoading && !hasCmsBody ? (
+          <p className="text-sm text-gray-500">Loading…</p>
+        ) : hasCmsBody ? (
+          <div dangerouslySetInnerHTML={{ __html: content.body as string }} />
+        ) : (
+          fallbackBody
