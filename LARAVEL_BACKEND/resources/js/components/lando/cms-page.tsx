@@ -40,3 +40,9 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
       <Head>
         <title>{metaTitle}</title>
         {metaDescription && <meta name="description" content={metaDescription} />}
+      </Head>
+
+      <div className="lando-page min-h-screen bg-[#f3f4f6]">
+        <LandoNavbar
+          links={navLinks}
+          loginLabel={String(navbarContent.loginLabel ?? "Log in")}
