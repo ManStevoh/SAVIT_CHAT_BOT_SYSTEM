@@ -40,3 +40,9 @@ final class BusinessGraphV2Service
                 $stats['nodes']++;
 
                 if ($product->category) {
+                    $catNode = $this->upsertNode(
+                        $company,
+                        BusinessGraphNode::TYPE_CATEGORY,
+                        'category',
+                        crc32($product->category) & 0x7FFFFFFF,
+                        $product->category,
