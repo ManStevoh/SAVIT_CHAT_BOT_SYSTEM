@@ -136,3 +136,9 @@ function SectionEditor({
     const key = section.key
 
     if (key === "navbar") {
+      const navLinks = (content.links as CmsLink[]) ?? []
+      return (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Login label" value={str("loginLabel")} onChange={(v) => set("loginLabel", v)} />
+          <Field label="Login link" value={str("loginHref")} onChange={(v) => set("loginHref", v)} />
+          <Field label="Sign up label" value={str("signupLabel")} onChange={(v) => set("signupLabel", v)} />
