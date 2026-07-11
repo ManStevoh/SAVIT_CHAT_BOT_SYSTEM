@@ -28,3 +28,9 @@ export function LandoHeroSection({
   return (
     <section className="lando-hero bg-[#f3f4f6] pt-28 pb-16 lg:pt-32 lg:pb-24">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
+        <div>
+          {kicker && (
+            <p className="mb-4 text-xs font-semibold tracking-widest text-gray-500 uppercase">
+              — {kicker}
+            </p>
+          )}
