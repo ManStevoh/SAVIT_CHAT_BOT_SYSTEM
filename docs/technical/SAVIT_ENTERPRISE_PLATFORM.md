@@ -22,3 +22,9 @@ This document maps **every operational platform module** in the SAVIT vision to 
 
 ## Status legend
 
+| Status | Meaning |
+|--------|---------|
+| **Implemented** | End-to-end feature with API/UI/tests in production paths |
+| **Partial** | Adjacent capability exists; missing core engine or enterprise depth |
+| **Roadmap** | Designed direction; no production implementation |
+
