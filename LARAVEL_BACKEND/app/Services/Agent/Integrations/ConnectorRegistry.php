@@ -118,3 +118,9 @@ final class ConnectorRegistry
 
                 'description' => 'POST customer/order events to your CRM webhook URL.',
 
+            ],
+
+            [
+
+                'type' => 'erp_inventory',
+
