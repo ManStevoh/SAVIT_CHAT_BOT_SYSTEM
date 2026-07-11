@@ -34,3 +34,9 @@ class CmsAdminController extends Controller
 
         return response()->json([
             'page' => [
+                'id' => (string) $page->id,
+                'slug' => $page->slug,
+                'title' => $page->title,
+                'metaTitle' => $page->meta_title,
+                'metaDescription' => $page->meta_description,
+                'isPublished' => (bool) $page->is_published,
