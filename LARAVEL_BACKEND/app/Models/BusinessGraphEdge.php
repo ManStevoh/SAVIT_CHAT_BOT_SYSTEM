@@ -10,3 +10,9 @@ class BusinessGraphEdge extends Model
     protected $fillable = [
         'company_id',
         'from_node_id',
+        'to_node_id',
+        'edge_type',
+        'metadata',
+    ];
+
+    protected function casts(): array
