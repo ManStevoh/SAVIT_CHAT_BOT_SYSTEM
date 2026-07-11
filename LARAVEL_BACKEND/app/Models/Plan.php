@@ -13,6 +13,7 @@ class Plan extends Model
         'price_amount',
         'description',
         'features',
+        'entitlements',
         'popular',
         'cta',
         'sort_order',
@@ -27,6 +28,7 @@ class Plan extends Model
         'price_amount' => 'decimal:2',
         'popular' => 'boolean',
         'features' => 'array',
+        'entitlements' => 'array',
         'is_free' => 'boolean',
         'has_trial' => 'boolean',
     ];
