@@ -460,3 +460,6 @@ class CmsPageSeeder extends Seeder
                     'is_active' => true,
                 ]);
             }
+        }
+    }
+}
