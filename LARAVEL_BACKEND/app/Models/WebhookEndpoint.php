@@ -22,3 +22,8 @@ class WebhookEndpoint extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(WebhookDelivery::class);
+    }
+}
