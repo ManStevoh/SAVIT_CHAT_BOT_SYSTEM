@@ -28,3 +28,8 @@ class MarketplaceModule extends Model
         'is_active' => 'boolean',
     ];
 
+    public function installations(): HasMany
+    {
+        return $this->hasMany(CompanyModuleInstallation::class, 'module_key', 'module_key');
+    }
+}
