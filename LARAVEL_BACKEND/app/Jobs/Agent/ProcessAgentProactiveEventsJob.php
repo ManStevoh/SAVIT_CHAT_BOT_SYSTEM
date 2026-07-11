@@ -56,7 +56,7 @@ class ProcessAgentProactiveEventsJob implements ShouldQueue
             if (config('agent.events.detection_enabled', true)) {
                 $eventDetector->detectForCompany($company);
             }
-            $this->processAbandonedCarts((int) $companyId, $proactive, $waSender);
+            $this->processAbandonedCarts((int) $companyId, $proactive, $waSender, app(CommerceExperimentService::class));
             $this->processReorderPredictions((int) $companyId, $waSender, $intentChains);
             $eventHandler->handleOpenEvents((int) $companyId, (int) config('agent.proactive.max_outreach_per_run', 15));
             $eventHandler->handleOwnerAlerts((int) $companyId, 10);
