@@ -82,3 +82,9 @@ class IntelligenceController extends Controller
 
 
         return response()->json(['reasoning' => $result], 201);
+
+    }
+
+
+
+    public function cases(Request $request): JsonResponse
