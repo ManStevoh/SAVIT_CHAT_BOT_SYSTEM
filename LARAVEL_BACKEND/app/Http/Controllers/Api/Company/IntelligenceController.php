@@ -100,3 +100,9 @@ class IntelligenceController extends Controller
         }
 
 
+
+        $cases = InvestigationCase::where('company_id', $company->id)
+
+            ->orderByDesc('created_at')
+
+            ->limit(30)
