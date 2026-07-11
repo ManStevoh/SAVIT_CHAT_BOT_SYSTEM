@@ -250,3 +250,9 @@ document_workflows          — draft → sent → signed → archived
 
 **Evidence:** `Chat` model is **customer WhatsApp only** (`customer_phone`). No channels, DMs, or entity cards.
 
+**Build spec**
+
+```
+internal_channels           — public/private, company_id
+internal_messages           — thread, mentions, attachments
+internal_entity_refs        — polymorphic links to Order, Customer, Product, etc.
