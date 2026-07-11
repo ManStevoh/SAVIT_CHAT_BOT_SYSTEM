@@ -628,3 +628,9 @@ flowchart TB
 
   subgraph p2 [Phase 2 - Foundation]
     SUB[Subscription Engine]
+    BILL[Billing Engine]
+    NOTIF[Notification Center]
+    PERM[Permission Engine]
+    AUDIT[Audit Center]
+    BUS[Event Bus]
+  end
