@@ -124,3 +124,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                 "relative rounded-2xl bg-white p-8 shadow-sm",
                 plan.popular && "ring-2 ring-[#2563eb]"
               )}
+            >
+              {plan.popular && (
+                <span className="absolute -top-3 right-6 rounded-full bg-[#2563eb] px-3 py-1 text-xs font-medium text-white">
+                  {popularBadge}
+                </span>
+              )}
