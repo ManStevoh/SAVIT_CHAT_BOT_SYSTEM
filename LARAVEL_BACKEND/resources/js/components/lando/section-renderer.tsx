@@ -46,3 +46,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
             title={str(content.title)}
             description={str(content.description)}
             imageUrl={str(content.imageUrl)}
+            imageAlt={str(content.imageAlt)}
+            nameLabel={str(content.nameLabel, "Name")}
+            namePlaceholder={str(content.namePlaceholder)}
+            emailLabel={str(content.emailLabel, "Email")}
+            emailPlaceholder={str(content.emailPlaceholder)}
+            messageLabel={str(content.messageLabel, "Message")}
