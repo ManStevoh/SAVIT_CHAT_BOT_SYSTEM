@@ -34,3 +34,9 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
     pageData?.sections
       .filter((s) => s.isEnabled)
       .sort((a, b) => a.sortOrder - b.sortOrder) ?? []
+
+  return (
+    <>
+      <Head>
+        <title>{metaTitle}</title>
+        {metaDescription && <meta name="description" content={metaDescription} />}
