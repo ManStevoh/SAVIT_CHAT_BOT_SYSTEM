@@ -478,3 +478,9 @@ function SortableSectionList({
   onSaved,
 }: {
   slug: string
+  sections: AdminCmsSection[]
+  onSaved: () => void
+}) {
+  const { toast } = useToast()
+  const [items, setItems] = useState(sections)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
