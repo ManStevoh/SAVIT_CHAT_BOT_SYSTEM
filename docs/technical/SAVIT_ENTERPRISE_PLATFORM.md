@@ -196,3 +196,9 @@ notification_schedules      — delayed/batch sends
 ### 5. Form Builder
 
 **Vision:** Drag-and-drop forms — warranty claims, returns, surveys, registrations, job applications, service requests; conditional logic.
+
+| Status | **Roadmap** |
+
+**Evidence:** No `Form`, `FormField`, `FormSubmission` models. Only static React forms + Laravel `validate()`.
+
+**Build spec**
