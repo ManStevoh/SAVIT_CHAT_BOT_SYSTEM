@@ -448,3 +448,9 @@ function SectionEditor({
             {dragHandle}
             <Switch checked={enabled} onCheckedChange={toggleEnabled} />
             <div className="min-w-0">
+              <p className="font-medium truncate">{section.label}</p>
+              <p className="text-xs text-muted-foreground">{section.key}</p>
+            </div>
+          </div>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm">
