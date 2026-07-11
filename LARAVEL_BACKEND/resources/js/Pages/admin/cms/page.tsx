@@ -208,3 +208,9 @@ function SectionEditor({
           <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
           <Field label="Primary CTA text" value={str("primaryCtaText")} onChange={(v) => set("primaryCtaText", v)} />
           <Field label="Primary CTA link" value={str("primaryCtaHref")} onChange={(v) => set("primaryCtaHref", v)} />
+          {slug === "home" && (
+            <>
+              <Field label="Secondary CTA text" value={str("secondaryCtaText")} onChange={(v) => set("secondaryCtaText", v)} />
+              <Field label="Secondary CTA link" value={str("secondaryCtaHref")} onChange={(v) => set("secondaryCtaHref", v)} />
+            </>
+          )}
