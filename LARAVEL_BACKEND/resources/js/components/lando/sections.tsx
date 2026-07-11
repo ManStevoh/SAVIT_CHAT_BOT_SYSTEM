@@ -160,3 +160,9 @@ export function LandoFeatureBlock({
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           {imagePosition === "left" && image}
           <div className={cn(imagePosition === "right" ? "lg:order-1" : "lg:order-2")}>
+            {label && (
+              <p className="mb-3 text-xs font-bold tracking-widest text-gray-500 uppercase">{label}</p>
+            )}
+            <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
+            {description && <p className="mt-4 text-base leading-relaxed text-gray-600">{description}</p>}
+            {ctaText && ctaHref && (
