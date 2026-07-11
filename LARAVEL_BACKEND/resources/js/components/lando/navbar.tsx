@@ -112,3 +112,9 @@ export function LandoNavbar({
                 {signupLabel}
               </Link>
             </Button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  )
+}
