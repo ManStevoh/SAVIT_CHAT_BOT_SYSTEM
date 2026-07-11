@@ -22,3 +22,9 @@ final class BusinessProbabilityService
         $since90 = now()->subDays(90);
 
         $paidOrders = Order::where('company_id', $companyId)
+            ->where('payment_status', 'paid')
+            ->where('created_at', '>=', $since90);
+
+        $orderCount90 = (int) (clone $paidOrders)->count();
+        $orderCount30 = (int) Order::where('company_id', $companyId)
+            ->where('payment_status', 'paid')
