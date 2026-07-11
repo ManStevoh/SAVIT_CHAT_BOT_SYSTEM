@@ -52,3 +52,9 @@ final class MultiChannelIngestService
             ]);
         } else {
             $chat->update([
+                'customer_name' => $name,
+                'last_message' => mb_substr($messageText, 0, 500),
+                'last_message_at' => now(),
+                'unread_count' => (int) $chat->unread_count + 1,
+            ]);
+        }
