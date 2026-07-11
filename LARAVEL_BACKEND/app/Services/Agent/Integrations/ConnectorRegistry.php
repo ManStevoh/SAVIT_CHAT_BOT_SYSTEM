@@ -52,3 +52,9 @@ final class ConnectorRegistry
 
             [
 
+                'type' => 'delivery_status',
+
+                'name' => 'Delivery status',
+
+                'category' => 'logistics',
+
