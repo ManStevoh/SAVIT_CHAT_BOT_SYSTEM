@@ -244,3 +244,9 @@ export function LandoAboutHero({
   imageAlt = "",
 }: {
   title: string
+  description?: string
+  imageUrl?: string
+  imageAlt?: string
+}) {
+  return (
+    <section className="bg-[#f3f4f6] pt-28 pb-12 text-center lg:pt-32">
