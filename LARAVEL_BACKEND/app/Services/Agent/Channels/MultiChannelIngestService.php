@@ -70,3 +70,9 @@ final class MultiChannelIngestService
         if ($company->settings?->auto_reply_enabled && $company->settings?->agent_commerce_enabled) {
             ProcessIncomingChannelMessage::dispatch(
                 $company->id,
+                $chat->id,
+                $message->id,
+                $messageText,
+                $name,
+                $phone,
+            );
