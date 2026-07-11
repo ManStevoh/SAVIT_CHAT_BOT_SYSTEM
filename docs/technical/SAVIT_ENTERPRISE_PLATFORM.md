@@ -568,3 +568,9 @@ All new modules must meet these **global SaaS standards** before marking **Imple
 | `SystemLog` | Platform errors |
 | `AgentTrustLog` | AI decisions |
 | `audit_events` (new) | User actions |
+| `ai:health-check` | AI pipeline |
+| OpenTelemetry (roadmap) | Distributed traces |
+
+---
+
+## Phased roadmap (recommended)
