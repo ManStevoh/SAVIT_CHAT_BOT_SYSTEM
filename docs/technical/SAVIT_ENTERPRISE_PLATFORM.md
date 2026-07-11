@@ -478,3 +478,9 @@ event_outbox                — transactional outbox pattern for reliability
 | Status | **Roadmap** |
 
 **Adjacent:** Agent tool registry (20 tools) is an internal plugin pattern. No third-party app install, sandbox, or revenue share.
+
+**Build spec:** `marketplace_apps`, `app_installations`, `app_permissions`, OAuth for apps, webhook subscriptions per app.
+
+---
+
+### 31. Industry Packs
