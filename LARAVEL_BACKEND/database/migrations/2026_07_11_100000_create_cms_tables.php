@@ -22,3 +22,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('cms_page_id')->constrained('cms_pages')->cascadeOnDelete();
             $table->string('section_key');
+            $table->string('label');
+            $table->boolean('is_enabled')->default(true);
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->json('content')->nullable();
+            $table->timestamps();
+
