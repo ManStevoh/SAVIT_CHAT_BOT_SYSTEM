@@ -418,3 +418,9 @@ function SectionEditor({
             size="sm"
             onClick={() => set("members", [...members, { name: "", role: "", imageUrl: "" }])}
           >
+            Add team member
+          </Button>
+        </div>
+      )
+    }
+
