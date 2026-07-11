@@ -46,3 +46,9 @@ class IntelligenceController extends Controller
         }
 
 
+
+        $validated = $request->validate([
+
+            'goal' => 'required|string|max:1000',
+
+            'period' => 'nullable|string|in:7d,30d,90d',
