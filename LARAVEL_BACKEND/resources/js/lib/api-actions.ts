@@ -14,6 +14,8 @@ import type {
   Subscription,
   GrowthPost,
 } from './mock-data'
+import type { BusinessDnaSettings } from './api-hooks'
+import type { IntelligenceReasoningResult } from './api-hooks'
 import { mockSubscriptions } from './mock-data'
 import { useMockApi, apiRequest, apiUrl } from './api-client'
 
@@ -880,7 +882,13 @@ export interface UpdateSettingsData {
   learnFromConversations?: boolean
   agentCommerceEnabled?: boolean
   agentProactiveEnabled?: boolean
+  agentVoiceReplyEnabled?: boolean
+  agentMorningBriefWhatsappEnabled?: boolean
+  ownerWhatsappPhone?: string | null
   agentBusinessGoals?: string[]
+  businessDna?: BusinessDnaSettings | null
+  digitalTwin?: Record<string, string> | null
+  agentCouncilEnabled?: boolean
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
@@ -1003,8 +1011,6 @@ export interface WhatsAppEmbeddedConfig {
   metaBillingModel?: 'tech_provider' | 'solution_partner'
   requiresMetaPaymentMethod?: boolean
   platformBillingReady?: boolean
-}
-  webhookUrl?: string | null
 }
 
 export interface WhatsAppTemplate {
@@ -2888,6 +2894,230 @@ export async function createCommerceExperiment(data: {
 export async function evaluateCommerceExperiment(id: number): Promise<{ success: boolean; message?: string }> {
   try {
     await apiRequest(`/api/company/commerce-experiments/${id}/evaluate`, { method: 'POST' })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function recordIntelligenceOutcome(data: {
+  source_type: 'investigation' | 'reasoning' | 'approval'
+  source_id: number
+  recommended_action: string
+  outcome: 'positive' | 'neutral' | 'negative' | 'pending'
+  notes?: string
+}): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest('/api/company/intelligence/outcomes', { method: 'POST', body: data })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function reasonIntelligence(data: {
+  goal: string
+  period?: string
+  constraints?: string[]
+  simulate?: boolean
+  include_plan?: boolean
+}): Promise<{ success: boolean; reasoning?: IntelligenceReasoningResult; message?: string }> {
+  try {
+    const res = await apiRequest<{ reasoning: IntelligenceReasoningResult }>(
+      '/api/company/intelligence/reason',
+      { method: 'POST', body: data }
+    )
+    return { success: true, reasoning: res.reasoning }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function detectCommerceEvents(): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest('/api/company/commerce-events/detect', { method: 'POST' })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function processCommerceAlerts(): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest('/api/company/commerce-events/process-alerts', { method: 'POST' })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function acknowledgeCommerceEvent(id: number): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest(`/api/company/commerce-events/${id}/acknowledge`, { method: 'POST' })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function runCommerceSpecialistPipeline(): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest('/api/company/commerce-specialists/run', { method: 'POST', body: {} })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function refreshCompanyBrain(): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest('/api/company/company-brain/refresh', { method: 'POST' })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function investigateOwnerAnalytics(data: {
+  question: string
+  period?: '7d' | '30d' | '90d'
+}): Promise<{ success: boolean; investigation?: Record<string, unknown>; message?: string }> {
+  try {
+    const res = await apiRequest<{ investigation: Record<string, unknown> }>(
+      '/api/company/owner-analytics/investigate',
+      { method: 'POST', body: data }
+    )
+    return { success: true, investigation: res.investigation }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function connectCommerceIntegration(data: {
+  connectorType: string
+  config?: Record<string, string>
+}): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await apiRequest<{ success: boolean; message?: string }>(
+      '/api/company/integrations/connect',
+      { method: 'POST', body: data }
+    )
+    return { success: res.success, message: res.message }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncCommerceIntegration(connectorType: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await apiRequest<{ success: boolean; message?: string }>(
+      '/api/company/integrations/sync',
+      { method: 'POST', body: { connectorType } }
+    )
+    return { success: res.success, message: res.message }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function disconnectCommerceIntegration(connectorType: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest(`/api/company/integrations/${connectorType}`, { method: 'DELETE' })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncBusinessTimeline(): Promise<{ success: boolean; synced?: number; message?: string }> {
+  try {
+    const res = await apiRequest<{ synced: number }>('/api/company/business-timeline/sync', { method: 'POST' })
+    return { success: true, synced: res.synced }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function syncBusinessGraph(): Promise<{ success: boolean; stats?: { nodes: number; edges: number }; message?: string }> {
+  try {
+    const res = await apiRequest<{ stats: { nodes: number; edges: number } }>('/api/company/business-graph/sync', {
+      method: 'POST',
+    })
+    return { success: true, stats: res.stats }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function startOnboardingInterview(): Promise<{
+  success: boolean
+  sessionId?: string
+  message?: string
+  complete?: boolean
+}> {
+  try {
+    const res = await apiRequest<{ sessionId: string; message: string; complete: boolean }>(
+      '/api/company/onboarding-interview/start',
+      { method: 'POST' }
+    )
+    return { success: true, ...res }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function respondOnboardingInterview(data: {
+  sessionId: string
+  message: string
+}): Promise<{ success: boolean; message?: string; complete?: boolean; extracted?: Record<string, unknown> }> {
+  try {
+    const res = await apiRequest<{ message: string; complete: boolean; extracted?: Record<string, unknown> }>(
+      '/api/company/onboarding-interview/respond',
+      { method: 'POST', body: data }
+    )
+    return { success: true, ...res }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function searchBusinessMemory(data: {
+  query: string
+  limit?: number
+}): Promise<{ success: boolean; data?: import('@/lib/api-hooks').MemorySearchResponse; message?: string }> {
+  try {
+    const res = await apiRequest<import('@/lib/api-hooks').MemorySearchResponse>('/api/company/memory-search', {
+      method: 'POST',
+      body: data,
+    })
+    return { success: true, data: res }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function installMarketplaceModule(
+  moduleKey: string,
+  config?: { webhook_base_url?: string; webhook_secret?: string }
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest(`/api/company/marketplace/modules/${encodeURIComponent(moduleKey)}/install`, {
+      method: 'POST',
+      body: config ? { config } : {},
+    })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function uninstallMarketplaceModule(
+  moduleKey: string
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest(`/api/company/marketplace/modules/${encodeURIComponent(moduleKey)}/install`, {
+      method: 'DELETE',
+    })
     return { success: true }
   } catch (e) {
     return handleApiError(e)
