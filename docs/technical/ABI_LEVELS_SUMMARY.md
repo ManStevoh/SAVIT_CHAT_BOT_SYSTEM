@@ -16,3 +16,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 
 **SAVIT is not “full ABI.”** It is a **production AI operating system** with **decision-intelligence APIs** and **honest partial foundations** across Levels 1–20.
 
+---
+
+## At a glance
+
+| Level | Name | Status | Strongest evidence today |
+|-------|------|--------|--------------------------|
