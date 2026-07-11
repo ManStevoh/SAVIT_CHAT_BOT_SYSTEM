@@ -112,3 +112,9 @@ final class BusinessGraphV2Service
                 );
                 $stats['nodes']++;
 
+                if ($order->customer_phone) {
+                    $phone = preg_replace('/\D+/', '', $order->customer_phone) ?: $order->customer_phone;
+                    $customerNode = $this->upsertNode(
+                        $company,
+                        BusinessGraphNode::TYPE_CUSTOMER,
+                        'customer_phone',
