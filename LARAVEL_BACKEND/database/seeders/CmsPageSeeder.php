@@ -160,3 +160,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'How to join',
                         'sort_order' => 6,
                         'content' => [
+                            'title' => 'How to join our community',
+                            'description' => 'Just 3 simple steps to start selling on WhatsApp.',
+                            'ctaText' => 'Sign up now',
+                            'ctaHref' => '/register',
+                            'imageUrl' => $heroImage,
+                            'imageAlt' => 'Getting started',
