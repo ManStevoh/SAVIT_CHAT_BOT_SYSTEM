@@ -298,3 +298,9 @@ export function LandoTeam({
   description?: string
   members?: Array<{ name: string; role: string; imageUrl?: string }>
 }) {
+  if (members.length === 0) return null
+
+  return (
+    <section className="bg-[#f3f4f6] py-16 lg:py-24">
+      <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
+        {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
