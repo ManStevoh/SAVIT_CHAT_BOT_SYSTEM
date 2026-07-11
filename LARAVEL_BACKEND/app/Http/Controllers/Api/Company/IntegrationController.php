@@ -94,3 +94,9 @@ class IntegrationController extends Controller
         ]);
 
         if (! $registry->has($validated['connectorType'])) {
+            return response()->json(['message' => 'Unknown connector type.'], 422);
+        }
+
+        $integration = CompanyIntegration::where('company_id', $company->id)
+            ->where('connector_type', $validated['connectorType'])
+            ->first();
