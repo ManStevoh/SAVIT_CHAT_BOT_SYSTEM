@@ -286,3 +286,9 @@ final class ConnectorRegistry
 
 
 
+        return ['success' => true, 'message' => "{$label} connector registered — use sync to test quote endpoint."];
+
+    }
+
+
+
