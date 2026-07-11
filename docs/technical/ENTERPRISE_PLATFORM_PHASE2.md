@@ -16,3 +16,9 @@ Phase 2 extends existing subscription, billing, and notification plumbing withou
 | Overrides | `company_entitlement_overrides` |
 | Usage meters | `usage_meters` |
 | Resolver | `EntitlementService` |
+| Back-compat | `PlanLimitService` delegates to `EntitlementService` |
+| Meter increment | `ProcessIncomingWhatsAppMessage` → `UsageMeterService` |
+| Trial expiry | `ProcessTrialTransitionsJob` (daily 02:00) |
+
+**Seed:** `php artisan db:seed --class=EnterprisePlatformSeeder`
+
