@@ -286,3 +286,9 @@ export function LandoEfficiency({ title }: { title: string }) {
         </h2>
       </div>
     </section>
+  )
+}
+
+export function LandoTeam({
+  title,
+  description,
