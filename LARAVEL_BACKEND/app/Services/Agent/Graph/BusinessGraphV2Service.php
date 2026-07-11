@@ -202,3 +202,9 @@ final class BusinessGraphV2Service
         string $label,
         array $metadata = [],
     ): BusinessGraphNode {
+        return BusinessGraphNode::updateOrCreate(
+            [
+                'company_id' => $company->id,
+                'node_type' => $nodeType,
+                'ref_type' => $refType,
+                'ref_id' => $refId,
