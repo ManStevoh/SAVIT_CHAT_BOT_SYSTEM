@@ -10,3 +10,9 @@ class MarketplaceModule extends Model
 {
     protected $fillable = [
         'module_key',
+        'name',
+        'description',
+        'category',
+        'publisher',
+        'required_plan',
+        'prompt_addon',
