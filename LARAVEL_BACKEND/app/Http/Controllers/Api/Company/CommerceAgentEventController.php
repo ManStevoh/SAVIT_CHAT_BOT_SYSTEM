@@ -76,3 +76,9 @@ class CommerceAgentEventController extends Controller
         $company = $request->user()->company;
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $alerted = $handler->handleOwnerAlerts((int) $company->id, 20);
+
+        return response()->json(['alerted' => $alerted]);
+    }
