@@ -16,3 +16,9 @@ class MemorySearchController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
 
+        $validated = $request->validate([
+            'query' => 'required|string|min:2|max:500',
+            'limit' => 'sometimes|integer|min:1|max:30',
+        ]);
+
+        return response()->json($search->search(
