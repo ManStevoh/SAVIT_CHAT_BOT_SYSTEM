@@ -18,6 +18,7 @@ import {
   Wallet,
   Quote,
   HelpCircle,
+  Layout,
 } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
@@ -39,6 +40,7 @@ const navigationConfig = [
 ]
 
 const navigationOther = [
+  { name: "Website CMS", href: "/admin/cms", icon: Layout },
   { name: "Testimonials", href: "/admin/testimonials", icon: Quote },
   { name: "Landing FAQ", href: "/admin/landing-faqs", icon: HelpCircle },
   { name: "AI Usage", href: "/admin/ai-usage", icon: Bot },
