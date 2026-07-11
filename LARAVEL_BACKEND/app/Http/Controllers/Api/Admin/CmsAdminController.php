@@ -112,3 +112,9 @@ class CmsAdminController extends Controller
                 'label' => $section->label,
                 'isEnabled' => (bool) $section->is_enabled,
                 'sortOrder' => (int) $section->sort_order,
+                'content' => $section->content ?? [],
+            ],
+        ]);
+    }
+
+    public function uploadImage(Request $request): JsonResponse
