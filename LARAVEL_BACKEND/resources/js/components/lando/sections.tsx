@@ -184,3 +184,9 @@ export function LandoFeatureBlock({
 
 export function LandoHowToJoin({
   title,
+  description,
+  ctaText,
+  ctaHref,
+  imageUrl,
+  imageAlt = "",
+  steps = [],
