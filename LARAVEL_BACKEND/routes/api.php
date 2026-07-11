@@ -14,18 +14,28 @@ use App\Http\Controllers\Api\Admin\RevenueController;
 use App\Http\Controllers\Api\Admin\TestimonialController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\WhatsAppConnectionController;
-use App\Http\Controllers\Api\AppBrandingController;
+use App\Http\Controllers\Api\AgentSdkController;
+use App\Http\Controllers\Api\ChannelWebhookController;
+use App\Http\Controllers\Api\WebWidgetController;
+use App\Http\Controllers\Api\Company\ChannelIngestController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\Company\AiModelController;
+use App\Http\Controllers\Api\Company\AgentTrustLogController;
+use App\Http\Controllers\Api\Company\CommerceAgentEventController;
 use App\Http\Controllers\Api\Company\CommerceSpecialistController;
 use App\Http\Controllers\Api\Company\CompanyBrainController;
 use App\Http\Controllers\Api\Company\CognitiveAiController;
 use App\Http\Controllers\Api\Company\ExecutiveAiController;
+use App\Http\Controllers\Api\Company\IntegrationController;
+use App\Http\Controllers\Api\Company\KnowledgeVectorController;
+use App\Http\Controllers\Api\Company\IntelligenceController;
+use App\Http\Controllers\Api\Company\BusinessGraphController;
+use App\Http\Controllers\Api\Company\BusinessTimelineController;
 use App\Http\Controllers\Api\Company\CommerceBriefController;
 use App\Http\Controllers\Api\Company\CommerceExperimentController;
 use App\Http\Controllers\Api\Company\CompanyAiProviderController;
 use App\Http\Controllers\Api\Company\CompanyAiUsageController;
-use App\Http\Controllers\Api\Company\AnalyticsController;
+use App\Http\Controllers\Api\Company\ApiPlatformController;
+use App\Http\Controllers\Api\Company\ApiV1Controller;
 use App\Http\Controllers\Api\Company\ChatController;
 use App\Http\Controllers\Api\Company\ChatMessageController;
 use App\Http\Controllers\Api\Company\WhatsAppCampaignController;
@@ -45,9 +55,13 @@ use App\Http\Controllers\Api\Company\GrowthPostController;
 use App\Http\Controllers\Api\Company\GrowthSocialController;
 use App\Http\Controllers\Api\Company\FaqController;
 use App\Http\Controllers\Api\Company\ImportController;
-use App\Http\Controllers\Api\Company\MpesaCheckoutController;
-use App\Http\Controllers\Api\Company\PaystackCheckoutController;
+use App\Http\Controllers\Api\Company\MemorySearchController;
+use App\Http\Controllers\Api\Company\MarketplaceController;
+use App\Http\Controllers\Api\Company\MissionControlController;
+use App\Http\Controllers\Api\Company\OnboardingInterviewController;
+use App\Http\Controllers\Api\Company\PolicyRuleController;
 use App\Http\Controllers\Api\Company\NotificationController;
+use App\Http\Controllers\Api\Company\OrderController;
 use App\Http\Controllers\Api\Company\OwnerAnalyticsController;
 use App\Http\Controllers\Api\Company\ProductController;
 use App\Http\Controllers\Api\Company\SettingsController;
@@ -99,6 +113,25 @@ Route::prefix('auth')->group(function () {
         Route::put('password', [AuthController::class, 'updatePassword']);
         Route::post('logout', [AuthController::class, 'logout']);
     });
+});
+
+// Public web widget (token auth per company)
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('public/web-widget/config', [WebWidgetController::class, 'config']);
+    Route::post('public/web-widget/message', [WebWidgetController::class, 'message']);
+    Route::get('agent-sdk/v1/manifest', [AgentSdkController::class, 'manifest']);
+});
+
+// Channel webhooks (ingest secret per company)
+Route::middleware('throttle:120,1')->prefix('webhooks/channels/{companyId}')->group(function () {
+    Route::post('email', [ChannelWebhookController::class, 'email']);
+    Route::match(['GET', 'POST'], 'instagram-dm', [ChannelWebhookController::class, 'instagramDm']);
+});
+
+// Company API v1 (API key auth)
+Route::prefix('v1/company')->middleware('api.key')->group(function () {
+    Route::get('health', [ApiV1Controller::class, 'health']);
+    Route::get('orders', [ApiV1Controller::class, 'orders']);
 });
 
 // Company (auth required; subscription must be active except for subscription/checkout routes)
@@ -205,12 +238,54 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('cognitive-ai/strategic-memories', [CognitiveAiController::class, 'strategicMemories']);
     Route::post('cognitive-ai/plans', [CognitiveAiController::class, 'createPlan']);
     Route::post('cognitive-ai/simulate', [CognitiveAiController::class, 'simulate']);
+    Route::post('intelligence/reason', [IntelligenceController::class, 'reason']);
+    Route::get('intelligence/cases', [IntelligenceController::class, 'cases']);
+    Route::get('intelligence/cases/{id}', [IntelligenceController::class, 'showCase']);
+    Route::post('intelligence/outcomes', [IntelligenceController::class, 'recordOutcome']);
+    Route::get('intelligence/outcomes', [IntelligenceController::class, 'outcomes']);
+    Route::get('policy-rules', [PolicyRuleController::class, 'index']);
+    Route::post('policy-rules', [PolicyRuleController::class, 'store']);
+    Route::patch('policy-rules/{id}', [PolicyRuleController::class, 'update']);
+    Route::delete('policy-rules/{id}', [PolicyRuleController::class, 'destroy']);
+    Route::get('api-platform/keys', [ApiPlatformController::class, 'listApiKeys']);
+    Route::post('api-platform/keys', [ApiPlatformController::class, 'createApiKey']);
+    Route::delete('api-platform/keys/{id}', [ApiPlatformController::class, 'revokeApiKey']);
+    Route::get('api-platform/webhooks', [ApiPlatformController::class, 'listWebhooks']);
+    Route::post('api-platform/webhooks', [ApiPlatformController::class, 'createWebhook']);
+    Route::get('api-platform/billing-history', [ApiPlatformController::class, 'billingHistory']);
     Route::get('commerce-specialists/runs', [CommerceSpecialistController::class, 'index']);
     Route::post('commerce-specialists/run', [CommerceSpecialistController::class, 'runPipeline']);
+    Route::get('commerce-events', [CommerceAgentEventController::class, 'index']);
+    Route::get('commerce-events/owner-alerts', [CommerceAgentEventController::class, 'ownerAlerts']);
+    Route::post('commerce-events/detect', [CommerceAgentEventController::class, 'detect']);
+    Route::post('commerce-events/process-alerts', [CommerceAgentEventController::class, 'processAlerts']);
+    Route::post('commerce-events/{id}/acknowledge', [CommerceAgentEventController::class, 'acknowledge']);
+    Route::get('integrations', [IntegrationController::class, 'index']);
+    Route::post('integrations/connect', [IntegrationController::class, 'connect']);
+    Route::post('integrations/sync', [IntegrationController::class, 'sync']);
+    Route::delete('integrations/{connectorType}', [IntegrationController::class, 'disconnect']);
+    Route::get('knowledge/vector-status', [KnowledgeVectorController::class, 'status']);
     Route::get('company-brain', [CompanyBrainController::class, 'show']);
     Route::post('company-brain/refresh', [CompanyBrainController::class, 'refresh']);
     Route::get('owner-analytics/investigations', [OwnerAnalyticsController::class, 'index']);
     Route::post('owner-analytics/investigate', [OwnerAnalyticsController::class, 'investigate']);
+    Route::get('mission-control', [MissionControlController::class, 'index']);
+    Route::get('mission-control/explainability/{id}', [MissionControlController::class, 'explainability']);
+    Route::get('agent-trust-logs', [AgentTrustLogController::class, 'index']);
+    Route::post('memory-search', [MemorySearchController::class, 'search']);
+    Route::get('business-timeline', [BusinessTimelineController::class, 'index']);
+    Route::post('business-timeline/sync', [BusinessTimelineController::class, 'sync']);
+    Route::get('business-graph', [BusinessGraphController::class, 'show']);
+    Route::post('business-graph/sync', [BusinessGraphController::class, 'sync']);
+    Route::post('business-graph/nodes', [BusinessGraphController::class, 'storeNode']);
+    Route::post('onboarding-interview/start', [OnboardingInterviewController::class, 'start']);
+    Route::post('onboarding-interview/respond', [OnboardingInterviewController::class, 'respond']);
+    Route::get('channels', [ChannelIngestController::class, 'channels']);
+    Route::post('channels/ingest', [ChannelIngestController::class, 'ingest']);
+    Route::post('channels/regenerate-tokens', [ChannelIngestController::class, 'regenerateTokens']);
+    Route::get('marketplace/modules', [MarketplaceController::class, 'catalog']);
+    Route::post('marketplace/modules/{moduleKey}/install', [MarketplaceController::class, 'install']);
+    Route::delete('marketplace/modules/{moduleKey}/install', [MarketplaceController::class, 'uninstall']);
     Route::get('ai-models', [AiModelController::class, 'index']);
     Route::get('ai-providers', [CompanyAiProviderController::class, 'index']);
     Route::put('ai-providers/{slug}', [CompanyAiProviderController::class, 'update']);
@@ -282,6 +357,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::post('ai-learning/sync-learning-embeddings', [AiLearningAdminController::class, 'syncLearningEmbeddings']);
     Route::post('ai-learning/sync-product-embeddings', [AiLearningAdminController::class, 'syncProductEmbeddings']);
     Route::get('ai-config', [AiConfigController::class, 'index']);
+    Route::get('ai-config/orchestration', [AiConfigController::class, 'orchestration']);
     Route::put('ai-config/providers/{provider}', [AiConfigController::class, 'updateProvider']);
     Route::post('ai-config/models', [AiConfigController::class, 'storeModel']);
     Route::put('ai-config/models/{model}', [AiConfigController::class, 'updateModel']);
