@@ -16,3 +16,9 @@ interface LandoHeroProps {
 
 export function LandoHeroSection({
   kicker,
+  title,
+  description,
+  primaryCtaText,
+  primaryCtaHref,
+  secondaryCtaText,
+  secondaryCtaHref,
