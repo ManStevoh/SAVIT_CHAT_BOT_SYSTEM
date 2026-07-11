@@ -58,3 +58,9 @@ export function LandoTestimonials({
   if (testimonials.length === 0) return null
 
   return (
+    <section className="bg-[#f3f4f6] py-16 lg:py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
+          {description && <p className="mt-3 text-gray-600">{description}</p>}
+        </div>
