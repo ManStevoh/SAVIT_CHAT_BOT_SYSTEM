@@ -34,3 +34,9 @@ class CommerceAgentEventController extends Controller
         }
 
         $events = $query->limit(50)->get()->map(fn ($e) => $this->formatEvent($e));
+
+        return response()->json(['events' => $events]);
+    }
+
+    public function ownerAlerts(Request $request): JsonResponse
+    {
