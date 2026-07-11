@@ -166,3 +166,9 @@ class CmsPageSeeder extends Seeder
                             'ctaHref' => '/register',
                             'imageUrl' => $heroImage,
                             'imageAlt' => 'Getting started',
+                            'steps' => [
+                                ['title' => 'Step 1', 'description' => 'Create your account and connect your WhatsApp Business number.'],
+                                ['title' => 'Step 2', 'description' => 'Add your products, FAQs, and payment methods — we guide you through setup.'],
+                                ['title' => 'Step 3', 'description' => 'Go live! AI handles replies while your team takes over when needed.'],
+                            ],
+                        ],
