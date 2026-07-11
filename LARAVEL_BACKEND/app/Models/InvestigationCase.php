@@ -16,3 +16,9 @@ class InvestigationCase extends Model
         'steps',
         'metadata',
         'closed_at',
+    ];
+
+    protected $casts = [
+        'steps' => 'array',
+        'metadata' => 'array',
+        'closed_at' => 'datetime',
