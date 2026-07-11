@@ -22,3 +22,9 @@ class ProcessTrialTransitionsJob implements ShouldQueue
             ->where('end_date', '<', now()->toDateString())
             ->get();
 
+        foreach ($expiredTrials as $subscription) {
+            $plan = Plan::where('slug', $subscription->plan)->first();
+            $action = $plan?->trial_elapsed_action ?? 'downgrade';
+
+            if ($action === 'downgrade') {
+                $subscription->update(['status' => 'expired', 'plan' => 'starter']);
