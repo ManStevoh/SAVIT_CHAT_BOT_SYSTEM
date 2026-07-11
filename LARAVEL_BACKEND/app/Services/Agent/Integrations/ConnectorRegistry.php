@@ -130,3 +130,9 @@ final class ConnectorRegistry
 
                 'status_label' => 'Read-only pull',
 
+                'description' => 'Pull stock levels from ERP endpoint (manual sync).',
+
+            ],
+
+        ];
+
