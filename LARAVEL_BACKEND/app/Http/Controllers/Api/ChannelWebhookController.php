@@ -64,3 +64,9 @@ class ChannelWebhookController extends Controller
         ChannelIngestAuthService $auth,
         ChannelReplyDispatcher $dispatcher,
         int $companyId,
+    ): JsonResponse|Response
+    {
+        if ($request->isMethod('GET')) {
+            return $this->verifyMetaWebhook($request);
+        }
+
