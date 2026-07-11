@@ -190,3 +190,9 @@ export function LandoHowToJoin({
   imageUrl,
   imageAlt = "",
   steps = [],
+}: {
+  title: string
+  description?: string
+  ctaText?: string
+  ctaHref?: string
+  imageUrl?: string
