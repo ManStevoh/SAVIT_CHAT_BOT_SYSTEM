@@ -34,3 +34,9 @@ class BusinessGraphNode extends Model
     protected function casts(): array
     {
         return ['metadata' => 'array'];
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
