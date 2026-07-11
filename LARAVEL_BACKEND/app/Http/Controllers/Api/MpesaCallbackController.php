@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\MailService;
 use App\Services\OrderPaymentService;
+use App\Services\Platform\BillingLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -18,7 +19,8 @@ class MpesaCallbackController extends Controller
 {
     public function __construct(
         protected MailService $mailService,
-        protected OrderPaymentService $orderPaymentService
+        protected OrderPaymentService $orderPaymentService,
+        protected BillingLedgerService $billingLedger,
     ) {}
 
     /**
@@ -121,7 +123,7 @@ class MpesaCallbackController extends Controller
 
         Subscription::where('company_id', $company->id)->where('status', 'active')->update(['status' => 'cancelled']);
 
-        Subscription::create([
+        $subscription = Subscription::create([
             'company_id' => $company->id,
             'plan' => $plan->slug,
             'status' => 'active',
@@ -132,6 +134,18 @@ class MpesaCallbackController extends Controller
             'payment_method' => 'mpesa',
             'external_payment_id' => $transactionId ?: ('mpesa_'.$checkoutRequestId),
         ]);
+
+        $this->billingLedger->record(
+            'mpesa',
+            'mpesa_'.$checkoutRequestId,
+            $amount,
+            $company->id,
+            $subscription->id,
+            'KES',
+            'subscription',
+            $transactionId ?: null,
+            ['plan' => $plan->slug],
+        );
 
         Cache::forget('mpesa_pending:'.$checkoutRequestId);
 
