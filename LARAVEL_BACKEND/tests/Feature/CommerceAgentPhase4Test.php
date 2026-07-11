@@ -93,7 +93,7 @@ class CommerceAgentPhase4Test extends TestCase
     public function test_tool_registry_has_eighteen_tools(): void
     {
         $names = array_map(fn ($t) => $t->name(), app(AgentToolRegistry::class)->all());
-        $this->assertCount(18, $names);
+        $this->assertCount(20, $names);
         $this->assertContains('check_mpesa_payment', $names);
         $this->assertContains('get_shipping_quote', $names);
         $this->assertContains('check_calendar_availability', $names);
