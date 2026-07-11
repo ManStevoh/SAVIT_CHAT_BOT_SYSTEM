@@ -124,3 +124,9 @@ export function LandoIntroCard({
             {imageUrl && (
               <img src={imageUrl} alt={imageAlt} className="mx-auto max-h-72 w-full object-contain" />
             )}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
