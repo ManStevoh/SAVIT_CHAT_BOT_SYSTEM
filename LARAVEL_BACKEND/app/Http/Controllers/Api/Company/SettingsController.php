@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Services\Agent\BusinessGoalService;
+use App\Services\Agent\Cognitive\BusinessDnaService;
+use App\Services\Agent\Company\CompanyDigitalTwinService;
 use App\Services\AI\AiLearningConfig;
 use App\Services\PlanLimitService;
 use Illuminate\Http\JsonResponse;
@@ -24,8 +26,13 @@ class SettingsController extends Controller
         $settings = $company->settings()->first();
         $learningConfig = app(AiLearningConfig::class);
         $plan = PlanLimitService::getCurrentPlanSlug($company);
+        $dnaService = app(BusinessDnaService::class);
+        $twinService = app(CompanyDigitalTwinService::class);
+        $storedDna = $settings?->business_dna;
+        $storedTwin = $settings?->digital_twin;
 
         return response()->json([
+            'companyId' => $company->id,
             'companyName' => $company->name,
             'email' => $company->email,
             'phone' => $company->phone,
@@ -56,6 +63,24 @@ class SettingsController extends Controller
             'agentProactiveEnabled' => (bool) ($settings?->agent_proactive_enabled ?? false),
             'agentBusinessGoals' => $settings?->agent_business_goals ?? app(BusinessGoalService::class)->enabledKeys($company),
             'agentBusinessGoalCatalog' => app(BusinessGoalService::class)->catalog(),
+            'businessDna' => $dnaService->resolve($company),
+            'businessDnaCustom' => is_array($storedDna) && $storedDna !== [],
+            'businessDnaPresets' => config('agent.cognitive.business_dna_presets', []),
+            'digitalTwin' => $twinService->getTwin($company),
+            'digitalTwinCustom' => is_array($storedTwin) && $storedTwin !== [],
+            'digitalTwinFields' => config('agent.company.digital_twin_fields', []),
+            'agentCouncilEnabled' => (bool) ($settings?->agent_council_enabled ?? false),
+            'agentVoiceReplyEnabled' => (bool) ($settings?->agent_voice_reply_enabled ?? false),
+            'agentMorningBriefWhatsappEnabled' => (bool) ($settings?->agent_morning_brief_whatsapp_enabled ?? false),
+            'ownerWhatsappPhone' => $settings?->owner_whatsapp_phone,
+            'consciousnessLastSensedAt' => $settings?->consciousness_last_sensed_at?->toIso8601String(),
+            'webWidgetToken' => $settings?->web_widget_token,
+            'channelIngestSecret' => $settings?->channel_ingest_secret,
+            'channelWebhookUrls' => [
+                'email' => rtrim(config('app.url'), '/').'/api/webhooks/channels/'.$company->id.'/email',
+                'instagramDm' => rtrim(config('app.url'), '/').'/api/webhooks/channels/'.$company->id.'/instagram-dm',
+            ],
+            'widgetScriptUrl' => rtrim(config('app.url'), '/').'/widget/savit-chat.js',
             'notificationsEnabled' => (bool) ($settings?->notifications_enabled ?? false),
             'ordersAcceptMpesa' => (bool) ($settings?->orders_accept_mpesa ?? false),
             'ordersAcceptStripe' => (bool) ($settings?->orders_accept_stripe ?? false),
@@ -111,8 +136,27 @@ class SettingsController extends Controller
             'learnFromConversations' => 'sometimes|boolean',
             'agentCommerceEnabled' => 'sometimes|boolean',
             'agentProactiveEnabled' => 'sometimes|boolean',
+            'agentVoiceReplyEnabled' => 'sometimes|boolean',
+            'agentMorningBriefWhatsappEnabled' => 'sometimes|boolean',
+            'ownerWhatsappPhone' => 'sometimes|nullable|string|max:32',
             'agentBusinessGoals' => 'sometimes|nullable|array',
             'agentBusinessGoals.*' => 'string|max:80',
+            'businessDna' => 'sometimes|nullable|array',
+            'businessDna.tone' => 'nullable|string|max:200',
+            'businessDna.values' => 'nullable|array',
+            'businessDna.values.*' => 'string|max:80',
+            'businessDna.risk_tolerance' => 'nullable|string|in:low,medium,high',
+            'businessDna.service_philosophy' => 'nullable|string|max:500',
+            'businessDna.escalation_culture' => 'nullable|string|max:500',
+            'businessDna.communication_style' => 'nullable|string|max:300',
+            'digitalTwin' => 'sometimes|nullable|array',
+            'digitalTwin.mission' => 'nullable|string|max:500',
+            'digitalTwin.brand_voice' => 'nullable|string|max:300',
+            'digitalTwin.sales_strategy' => 'nullable|string|max:500',
+            'digitalTwin.pricing_rules' => 'nullable|string|max:500',
+            'digitalTwin.competitors' => 'nullable|string|max:500',
+            'digitalTwin.target_customers' => 'nullable|string|max:500',
+            'agentCouncilEnabled' => 'sometimes|boolean',
             'autoReplyEnabled' => 'sometimes|boolean',
             'notificationsEnabled' => 'sometimes|boolean',
             'ordersAcceptMpesa' => 'sometimes|boolean',
@@ -230,12 +274,60 @@ class SettingsController extends Controller
         if (array_key_exists('agentProactiveEnabled', $companyValidated)) {
             $settings->agent_proactive_enabled = $companyValidated['agentProactiveEnabled'];
         }
+        if (array_key_exists('agentVoiceReplyEnabled', $companyValidated)) {
+            $settings->agent_voice_reply_enabled = $companyValidated['agentVoiceReplyEnabled'];
+        }
+        if (array_key_exists('agentMorningBriefWhatsappEnabled', $companyValidated)) {
+            $settings->agent_morning_brief_whatsapp_enabled = $companyValidated['agentMorningBriefWhatsappEnabled'];
+        }
+        if (array_key_exists('ownerWhatsappPhone', $companyValidated)) {
+            $phone = $companyValidated['ownerWhatsappPhone'];
+            $settings->owner_whatsapp_phone = is_string($phone) && trim($phone) !== '' ? trim($phone) : null;
+        }
         if (array_key_exists('agentBusinessGoals', $companyValidated)) {
             $catalog = array_keys(app(BusinessGoalService::class)->catalog());
             $goals = is_array($companyValidated['agentBusinessGoals'])
                 ? array_values(array_intersect($companyValidated['agentBusinessGoals'], $catalog))
                 : null;
             $settings->agent_business_goals = $goals;
+        }
+        if (array_key_exists('businessDna', $companyValidated)) {
+            $dna = $companyValidated['businessDna'];
+            if ($dna === null || $dna === []) {
+                $settings->business_dna = null;
+            } else {
+                $settings->business_dna = array_filter([
+                    'tone' => isset($dna['tone']) ? trim((string) $dna['tone']) : null,
+                    'values' => isset($dna['values']) && is_array($dna['values'])
+                        ? array_values(array_filter(array_map('trim', $dna['values'])))
+                        : null,
+                    'risk_tolerance' => $dna['risk_tolerance'] ?? null,
+                    'service_philosophy' => isset($dna['service_philosophy'])
+                        ? trim((string) $dna['service_philosophy']) : null,
+                    'escalation_culture' => isset($dna['escalation_culture'])
+                        ? trim((string) $dna['escalation_culture']) : null,
+                    'communication_style' => isset($dna['communication_style'])
+                        ? trim((string) $dna['communication_style']) : null,
+                ], fn ($v) => $v !== null && $v !== []);
+            }
+        }
+        if (array_key_exists('agentCouncilEnabled', $companyValidated)) {
+            $settings->agent_council_enabled = $companyValidated['agentCouncilEnabled'];
+        }
+        if (array_key_exists('digitalTwin', $companyValidated)) {
+            $twin = $companyValidated['digitalTwin'];
+            if ($twin === null || $twin === []) {
+                $settings->digital_twin = null;
+            } else {
+                $settings->digital_twin = array_filter([
+                    'mission' => isset($twin['mission']) ? trim((string) $twin['mission']) : null,
+                    'brand_voice' => isset($twin['brand_voice']) ? trim((string) $twin['brand_voice']) : null,
+                    'sales_strategy' => isset($twin['sales_strategy']) ? trim((string) $twin['sales_strategy']) : null,
+                    'pricing_rules' => isset($twin['pricing_rules']) ? trim((string) $twin['pricing_rules']) : null,
+                    'competitors' => isset($twin['competitors']) ? trim((string) $twin['competitors']) : null,
+                    'target_customers' => isset($twin['target_customers']) ? trim((string) $twin['target_customers']) : null,
+                ], fn ($v) => $v !== null && $v !== '');
+            }
         }
         if (array_key_exists('notificationsEnabled', $companyValidated)) {
             $settings->notifications_enabled = $companyValidated['notificationsEnabled'];
