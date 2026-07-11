@@ -4,3 +4,9 @@
 
 This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part G](AI_ABI_PLATFORM.md).
 
+---
+
+## Headline
+
+| | Count |
+|---|------|
