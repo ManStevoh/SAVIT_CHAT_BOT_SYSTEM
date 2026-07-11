@@ -442,3 +442,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 ### 28. Calendar
 
 **Vision:** Unified calendar — meetings, orders, deliveries, tasks, campaigns, birthdays, subscriptions, maintenance.
+
+| Status | **Partial** |
+
+**Evidence:** `working_hours` on `CompanySetting`; `CalendarAvailabilityService` for agent tool. No events CRUD or calendar UI/API.
+
+**Build spec:** `calendar_events` polymorphic source; iCal feed; conflict detection; timezone per company.
