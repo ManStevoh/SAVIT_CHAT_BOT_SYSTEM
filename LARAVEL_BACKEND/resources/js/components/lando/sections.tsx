@@ -178,3 +178,9 @@ export function LandoFeatureBlock({
           {imagePosition === "right" && image}
         </div>
       </div>
+    </section>
+  )
+}
+
+export function LandoHowToJoin({
+  title,
