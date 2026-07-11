@@ -112,3 +112,9 @@ export function LandoIntroCard({
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-3xl bg-white p-8 shadow-sm lg:p-12">
           <div className="grid items-center gap-10 lg:grid-cols-2">
+            <div>
+              <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
+              {description && <p className="mt-4 text-base text-gray-600 sm:text-lg">{description}</p>}
+              {ctaText && ctaHref && (
+                <Button asChild className="mt-8 h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]">
+                  <Link href={ctaHref}>{ctaText}</Link>
