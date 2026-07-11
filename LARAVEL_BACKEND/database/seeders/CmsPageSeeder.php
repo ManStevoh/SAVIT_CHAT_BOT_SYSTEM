@@ -172,3 +172,9 @@ class CmsPageSeeder extends Seeder
                                 ['title' => 'Step 3', 'description' => 'Go live! AI handles replies while your team takes over when needed.'],
                             ],
                         ],
+                    ],
+                    [
+                        'section_key' => 'testimonials',
+                        'label' => 'Testimonials',
+                        'sort_order' => 7,
+                        'content' => [
