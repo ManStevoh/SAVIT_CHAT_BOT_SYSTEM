@@ -28,3 +28,9 @@ class CmsAdminController extends Controller
     public function showPage(string $slug): JsonResponse
     {
         $page = CmsPage::where('slug', $slug)->with('sections')->first();
+        if (! $page) {
+            return response()->json(['message' => 'Page not found'], 404);
+        }
+
+        return response()->json([
+            'page' => [
