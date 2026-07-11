@@ -10,3 +10,9 @@ use Illuminate\Http\Request;
 class KnowledgeVectorController extends Controller
 {
     public function status(Request $request, KnowledgeChunkService $chunks): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
