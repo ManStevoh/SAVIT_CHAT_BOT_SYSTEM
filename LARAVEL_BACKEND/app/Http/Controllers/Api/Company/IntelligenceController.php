@@ -106,3 +106,9 @@ class IntelligenceController extends Controller
             ->orderByDesc('created_at')
 
             ->limit(30)
+
+            ->get();
+
+
+
+        return response()->json(['cases' => $cases]);
