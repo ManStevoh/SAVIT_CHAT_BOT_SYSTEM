@@ -64,3 +64,8 @@ class MarketplaceController extends Controller
         }
 
         return response()->json([
+            'success' => true,
+            'installed' => $marketplace->installedForCompany($company),
+        ]);
+    }
+}
