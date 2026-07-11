@@ -16,3 +16,9 @@ class KnowledgeVectorController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
 
+        return response()->json([
+            'vectorSearch' => $chunks->vectorSearchStatus(),
+            'chunkCount' => \App\Models\KnowledgeChunk::where('company_id', $company->id)->count(),
+        ]);
+    }
+}
