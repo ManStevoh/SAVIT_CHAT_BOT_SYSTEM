@@ -67,6 +67,7 @@ class CommerceAgentPhase3Test extends TestCase
         CompanySetting::create([
             'company_id' => $company->id,
             'agent_commerce_enabled' => true,
+            'agent_council_enabled' => true,
             'agent_proactive_enabled' => true,
             'auto_reply_enabled' => true,
         ]);
@@ -84,7 +85,7 @@ class CommerceAgentPhase3Test extends TestCase
 
     public function test_tool_registry_has_eighteen_tools(): void
     {
-        $this->assertCount(18, app(AgentToolRegistry::class)->all());
+        $this->assertCount(20, app(AgentToolRegistry::class)->all());
         $names = array_map(fn ($t) => $t->name(), app(AgentToolRegistry::class)->all());
         $this->assertContains('get_product_relationships', $names);
         $this->assertContains('check_delivery_status', $names);
