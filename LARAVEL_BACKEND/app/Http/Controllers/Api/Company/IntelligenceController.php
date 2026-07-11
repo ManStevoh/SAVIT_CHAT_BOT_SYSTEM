@@ -58,3 +58,9 @@ class IntelligenceController extends Controller
             'constraints' => 'nullable|array',
 
             'constraints.*' => 'string|max:300',
+
+            'context' => 'nullable|array',
+
+            'simulate' => 'nullable|boolean',
+
+            'scenario_type' => 'nullable|string|max:80',
