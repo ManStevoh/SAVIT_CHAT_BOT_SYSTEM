@@ -142,3 +142,9 @@ class IntelligenceController extends Controller
 
 
         return response()->json([
+
+            'case' => $detail['case'],
+
+            'investigation' => $detail['investigation'],
+
+        ]);
