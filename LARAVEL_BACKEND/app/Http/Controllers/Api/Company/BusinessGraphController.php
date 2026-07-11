@@ -28,3 +28,9 @@ class BusinessGraphController extends Controller
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
         }
+
+        $stats = $graph->syncFromCompany($company);
+
+        return response()->json(['stats' => $stats], 201);
+    }
+
