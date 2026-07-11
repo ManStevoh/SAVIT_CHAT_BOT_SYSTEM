@@ -40,3 +40,9 @@ class CmsPageController extends Controller
         }
 
         if (in_array('faq', $enabledKeys, true)) {
+            $extras['faqs'] = LandingFaq::where('is_active', true)
+                ->orderBy('sort_order')->orderBy('id')
+                ->get()
+                ->map(fn ($f) => [
+                    'id' => (string) $f->id,
+                    'question' => $f->question,
