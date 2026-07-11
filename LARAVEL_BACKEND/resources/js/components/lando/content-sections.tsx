@@ -226,3 +226,9 @@ export function LandoFaqSection({
           {faqs.map((faq) => (
             <AccordionItem key={faq.id} value={faq.id} className="border-gray-300">
               <AccordionTrigger className="text-left font-medium text-black hover:no-underline">
+                {faq.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">{faq.answer}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
