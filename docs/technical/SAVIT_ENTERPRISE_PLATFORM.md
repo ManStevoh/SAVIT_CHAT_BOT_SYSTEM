@@ -100,3 +100,9 @@ Each module: **vision → status → what exists → gaps → build spec (global
 4. No usage metering ledger for overage billing.
 
 **Build spec (global standards)**
+
+```
+subscription_plans          — entitlements JSON (messages, seats, modules, flags)
+subscription_entitlements   — resolved effective entitlements per company
+usage_meters                — meter_key, period, consumed, limit
+usage_events                — append-only usage records (idempotent)
