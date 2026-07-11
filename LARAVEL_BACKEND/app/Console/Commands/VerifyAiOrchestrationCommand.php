@@ -28,3 +28,9 @@ class VerifyAiOrchestrationCommand extends Command
             AiModel::CAPABILITY_STT,
         ];
 
+        $ok = true;
+        foreach ($requiredCapabilities as $cap) {
+            $hasDefault = AiModel::where('capability', $cap)
+                ->where('is_platform_default', true)
+                ->where('is_enabled', true)
+                ->exists();
