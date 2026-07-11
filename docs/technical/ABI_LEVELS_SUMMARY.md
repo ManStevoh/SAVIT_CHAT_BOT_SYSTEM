@@ -40,3 +40,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 | 16 | Knowledge evolution | **Implemented** | LLM reflection → operating guides |
 | 17 | Ethical guardrails | **Partial** | Governance, approvals, confidence escalate |
 | 18 | Digital business genome | **Partial** | DNA + digital_twin JSON; no full genome UI |
+| 19 | Intelligence API | **Implemented** | **`POST /api/company/intelligence/reason`** |
+| 20 | Intelligence loop | **Partial** | **Outcome tracking API** + domain event outbox |
+
+---
+
+## Strong today (ship with confidence)
