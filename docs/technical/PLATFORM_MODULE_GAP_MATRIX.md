@@ -22,3 +22,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 ## Communications
 
 | # | Module | Status | Top gap |
+|---|--------|--------|---------|
+| 20 | Notification Center | 🟡 | **Templates + dispatcher + delivery log** — SMS/push absent |
+
+## Content & collaboration
+
+| # | Module | Status | Top gap |
