@@ -640,3 +640,9 @@ flowchart TB
     FORM[Form Builder]
     SRCH[Search Engine]
     CPORT[Customer Portal]
+  end
+
+  subgraph p4 [Phase 4 - Workforce]
+    ICHAT[Internal Chat]
+    PM[Project Management]
+    DEL[Delivery Mgmt]
