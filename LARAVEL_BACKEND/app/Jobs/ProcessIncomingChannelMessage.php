@@ -34,3 +34,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
     {
         $company = Company::with(['settings', 'whatsappAccount'])->find($this->companyId);
         $chat = Chat::find($this->chatId);
+        if (! $company || ! $chat || ! CommerceAgentReplyService::isEnabledForCompany($company)) {
+            return;
+        }
+
+        if (! ($company->settings?->auto_reply_enabled ?? false)) {
+            return;
