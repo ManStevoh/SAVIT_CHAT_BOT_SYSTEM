@@ -370,3 +370,9 @@ final class ConnectorRegistry
 
 
 
+        try {
+
+            $response = Http::timeout(8)->get($url);
+
+            if (! $response->successful()) {
+
