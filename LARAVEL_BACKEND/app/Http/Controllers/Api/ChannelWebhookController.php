@@ -100,3 +100,9 @@ class ChannelWebhookController extends Controller
             'chatId' => $result['chatId'],
             'queued' => $result['queued'],
         ], 202);
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     */
+    private function processMetaInstagramPayload(array $body, \App\Models\Company $company, ChannelReplyDispatcher $dispatcher): JsonResponse
