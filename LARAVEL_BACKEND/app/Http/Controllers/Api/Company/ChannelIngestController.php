@@ -70,3 +70,9 @@ class ChannelIngestController extends Controller
 
     public function regenerateTokens(Request $request): JsonResponse
     {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $settings = $company->settings;
