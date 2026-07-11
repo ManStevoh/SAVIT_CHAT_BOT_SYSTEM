@@ -274,3 +274,9 @@ final class ConnectorRegistry
 
         if ($url === '' || ! filter_var($url, FILTER_VALIDATE_URL)) {
 
+            return ['success' => false, 'message' => "{$label} api_url required."];
+
+        }
+
+        if ($key === '') {
+
