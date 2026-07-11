@@ -118,3 +118,9 @@ partner_accounts            — reseller markup, commission, white-label scope
 ---
 
 ### 19. Billing Engine
+
+**Vision:** Invoices, payments, refunds, tax, credits, proration, revenue reports.
+
+| Sub-capability | Status | Evidence |
+|----------------|--------|----------|
+| Invoices (subscription) | **Partial** | Stripe passthrough `SubscriptionController::invoices()`; no local `invoices` table |
