@@ -16,3 +16,9 @@ This document maps **every operational platform module** in the SAVIT vision to 
 - [AI Phase 5 OS](AI_PHASE5_OS.md) — executive dashboard, approvals, voice, A/B experiments
 - [Enterprise Platform Phase 2](ENTERPRISE_PLATFORM_PHASE2.md) — entitlements, billing ledger, API keys (v1 shipped)
 
+**Framing:** SAVIT is not only an AI product. It is a **multi-tenant business operating system** where AI agents need rich operational data, permissions, billing, and events to act safely at scale.
+
+---
+
+## Status legend
+
