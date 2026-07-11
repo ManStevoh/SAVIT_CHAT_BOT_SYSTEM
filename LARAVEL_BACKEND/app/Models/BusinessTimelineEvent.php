@@ -22,3 +22,9 @@ class BusinessTimelineEvent extends Model
 
     protected function casts(): array
     {
+        return [
+            'payload' => 'array',
+            'importance' => 'integer',
+            'occurred_at' => 'datetime',
+        ];
+    }
