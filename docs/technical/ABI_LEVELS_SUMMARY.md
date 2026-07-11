@@ -148,3 +148,4 @@ php artisan route:list --path=intelligence
 - [AI_ABI_PLATFORM.md](AI_ABI_PLATFORM.md) — master reference
 - [AI_COGNITIVE_OS.md](AI_COGNITIVE_OS.md) — cognitive layer detail
 - [AI_PHASE5_OS.md](AI_PHASE5_OS.md) — executive UI, approvals
+- [SAVIT_DIGITAL_NERVOUS_SYSTEM.md](SAVIT_DIGITAL_NERVOUS_SYSTEM.md) — vision map
