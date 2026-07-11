@@ -22,3 +22,9 @@ Phase 2 extends existing subscription, billing, and notification plumbing withou
 
 **Seed:** `php artisan db:seed --class=EnterprisePlatformSeeder`
 
+### 2b — Billing ledger
+
+| Component | Path |
+|-----------|------|
+| Table | `billing_payments` (idempotent on `gateway` + `external_event_id`) |
+| Service | `BillingLedgerService` |
