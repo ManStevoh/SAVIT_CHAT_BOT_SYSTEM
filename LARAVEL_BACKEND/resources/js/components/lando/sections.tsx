@@ -76,3 +76,9 @@ export function LandoHeroSection({
         )}
       </div>
     </section>
+  )
+}
+
+export function LandoPageHero({ title, description }: { title: string; description?: string }) {
+  return (
+    <section className="bg-[#f3f4f6] pt-28 pb-12 text-center lg:pt-32">
