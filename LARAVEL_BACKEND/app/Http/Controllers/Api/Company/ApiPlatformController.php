@@ -64,3 +64,9 @@ class ApiPlatformController extends Controller
         $key = CompanyApiKey::where('company_id', $company->id)->findOrFail($id);
         $apiKeys->revoke($key, $request->user());
 
+        return response()->json(['success' => true]);
+    }
+
+    public function listWebhooks(Request $request): JsonResponse
+    {
+        $company = $request->user()->company;
