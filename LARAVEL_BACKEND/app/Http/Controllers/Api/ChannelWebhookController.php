@@ -94,3 +94,9 @@ class ChannelWebhookController extends Controller
             $validated['senderUsername'] ? '@'.$validated['senderUsername'] : null,
             syncReply: false,
         );
+
+        return response()->json([
+            'accepted' => true,
+            'chatId' => $result['chatId'],
+            'queued' => $result['queued'],
+        ], 202);
