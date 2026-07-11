@@ -562,3 +562,9 @@ All new modules must meet these **global SaaS standards** before marking **Imple
 | Multi-region (future) | Stateless API; object storage for files |
 
 ### Observability
+
+| Tool | Use |
+|------|-----|
+| `SystemLog` | Platform errors |
+| `AgentTrustLog` | AI decisions |
+| `audit_events` (new) | User actions |
