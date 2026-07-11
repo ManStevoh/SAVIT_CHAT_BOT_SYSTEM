@@ -298,3 +298,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 ---
 
 ### 4. Employee Portal
+
+**Vision:** Tasks, payslips, leave, training, approvals, expenses, performance.
+
+| Status | **Roadmap** |
+
+**Adjacent:** `TeamController` lists users. Dashboard is owner/team ops, not HR portal.
