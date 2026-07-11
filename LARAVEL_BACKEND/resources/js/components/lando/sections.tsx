@@ -232,3 +232,9 @@ export function LandoHowToJoin({
 }
 
 export function LandoCtaSection({
+  title,
+  description,
+  ctaText,
+  ctaHref,
+  imageUrl,
+  imageAlt = "",
