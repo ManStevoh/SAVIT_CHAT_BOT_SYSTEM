@@ -28,3 +28,9 @@ final class BusinessGraphV2Service
             ->where('status', 'active')
             ->limit(500)
             ->get(['id', 'name', 'category', 'stock'])
+            ->each(function (Product $product) use ($company, &$stats) {
+                $node = $this->upsertNode(
+                    $company,
+                    BusinessGraphNode::TYPE_PRODUCT,
+                    'product',
+                    (int) $product->id,
