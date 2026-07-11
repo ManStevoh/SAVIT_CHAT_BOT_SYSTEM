@@ -94,3 +94,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           : (fromApi ?? []).map((c) =>
               typeof c === "string" ? { name: c, logoUrl: "" } : c
             )
+      return <LandoTrustedCompanies title={str(content.title)} companies={merged} />
+    }
+
+    case "intro_card":
+      return (
+        <LandoIntroCard
