@@ -46,3 +46,9 @@ export function LinkListEditor({
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange([...links, { label: "", href: "" }])}
