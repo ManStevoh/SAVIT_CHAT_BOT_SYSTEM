@@ -352,3 +352,9 @@ export function LandoContactSection({
   emailLabel?: string
   emailPlaceholder?: string
   messageLabel?: string
+  messagePlaceholder?: string
+  submitText?: string
+  successMessage?: string
+}) {
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
