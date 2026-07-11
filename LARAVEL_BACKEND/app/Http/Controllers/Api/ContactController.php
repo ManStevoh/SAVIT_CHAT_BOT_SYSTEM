@@ -34,3 +34,7 @@ class ContactController extends Controller
                 // Still accept the submission if mail fails in dev
             }
         }
+
+        return response()->json(['success' => true]);
+    }
+}
