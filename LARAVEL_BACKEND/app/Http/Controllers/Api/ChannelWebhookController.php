@@ -142,3 +142,5 @@ class ChannelWebhookController extends Controller
         }
 
         return response('Forbidden', 403);
+    }
+}
