@@ -16,3 +16,9 @@ class BusinessGraphNode extends Model
 
     public const TYPE_CAMPAIGN = 'campaign';
 
+    public const TYPE_SUPPLIER = 'supplier';
+
+    public const TYPE_WAREHOUSE = 'warehouse';
+
+    public const TYPE_CATEGORY = 'category';
+
