@@ -358,3 +358,9 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 2,
                         'content' => [
                             'title' => 'Get started with Essem Chat today',
+                            'description' => 'Start optimizing your WhatsApp sales today.',
+                            'ctaText' => 'Sign up now',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
