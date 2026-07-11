@@ -94,3 +94,9 @@ class CommerceAgentEventController extends Controller
         $event->update(['status' => 'acknowledged', 'handled_at' => now()]);
 
         return response()->json(['event' => $this->formatEvent($event->fresh())]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatEvent(CommerceAgentEvent $event): array
