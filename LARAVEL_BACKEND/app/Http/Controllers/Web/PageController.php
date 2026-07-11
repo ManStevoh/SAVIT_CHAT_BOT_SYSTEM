@@ -83,6 +83,31 @@ class PageController extends Controller
         return Inertia::render('dashboard/executive/page');
     }
 
+    public function dashboardCognitive(): Response
+    {
+        return Inertia::render('dashboard/cognitive/page');
+    }
+
+    public function dashboardAgentOps(): Response
+    {
+        return Inertia::render('dashboard/agent-ops/page');
+    }
+
+    public function dashboardBusinessIntelligence(): Response
+    {
+        return Inertia::render('dashboard/business-intelligence/page');
+    }
+
+    public function dashboardMissionControl(): Response
+    {
+        return Inertia::render('dashboard/mission-control/page');
+    }
+
+    public function dashboardMarketplace(): Response
+    {
+        return Inertia::render('dashboard/marketplace/page');
+    }
+
     public function dashboardWhatsAppCampaigns(): Response
     {
         return Inertia::render('dashboard/whatsapp/campaigns/page');
