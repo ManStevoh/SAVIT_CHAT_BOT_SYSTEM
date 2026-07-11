@@ -16,3 +16,9 @@ class MarketplaceModule extends Model
         'publisher',
         'required_plan',
         'prompt_addon',
+        'tools',
+        'manifest',
+        'is_active',
+        'sort_order',
+    ];
+
