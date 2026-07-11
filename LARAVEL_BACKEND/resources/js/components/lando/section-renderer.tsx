@@ -52,3 +52,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
             emailLabel={str(content.emailLabel, "Email")}
             emailPlaceholder={str(content.emailPlaceholder)}
             messageLabel={str(content.messageLabel, "Message")}
+            messagePlaceholder={str(content.messagePlaceholder)}
+            submitText={str(content.submitText, "Send message")}
+            successMessage={str(content.successMessage)}
+          />
+        )
+      }
