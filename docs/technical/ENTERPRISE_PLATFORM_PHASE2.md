@@ -136,3 +136,9 @@ Outbound webhooks receive HMAC-SHA256 signed JSON with headers:
 | Full permissions table beyond policy rules | Roadmap |
 | OpenAPI YAML publish | Roadmap |
 | Gateway refund reversal (agent refund = DB only) | Roadmap |
+
+---
+
+## Related docs
+
+- [SAVIT_ENTERPRISE_PLATFORM.md](SAVIT_ENTERPRISE_PLATFORM.md) — full 35-module blueprint
