@@ -40,3 +40,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 | # | Module | Status | Top gap |
 |---|--------|--------|---------|
 | 12 | Customer Portal | ⬜ | WhatsApp-only customer UX |
+| 4 | Employee Portal | ⬜ | Team list only |
+| — | Vendor Portal | ⬜ | Not started |
+
+## Operations
+
+| # | Module | Status | Top gap |
