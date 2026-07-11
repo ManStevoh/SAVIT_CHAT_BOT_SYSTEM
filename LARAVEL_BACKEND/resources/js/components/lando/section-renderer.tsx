@@ -4,3 +4,9 @@ import {
   LandoPageHero,
   LandoIntroCard,
   LandoFeatureBlock,
+  LandoHowToJoin,
+  LandoCtaSection,
+} from "./sections"
+import {
+  LandoTrustedCompanies,
+  LandoTestimonials,
