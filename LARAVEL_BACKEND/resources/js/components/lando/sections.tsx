@@ -70,3 +70,9 @@ export function LandoHeroSection({
             <img
               src={imageUrl}
               alt={imageAlt}
+              className="max-h-[420px] w-full max-w-md object-contain"
+            />
+          </div>
+        )}
+      </div>
+    </section>
