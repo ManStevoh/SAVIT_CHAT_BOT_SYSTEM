@@ -28,3 +28,9 @@ final class IntelligenceOutcomeService
                 'company_id' => $company->id,
                 'source_type' => 'investigation',
                 'source_id' => $investigationId,
+                'recommendation_key' => $this->recommendationKey('review_findings'),
+                'recommended_action' => 'Review investigation findings and validate top hypothesis with fresh data.',
+                'outcome' => 'pending',
+            ]);
+        }
+    }
