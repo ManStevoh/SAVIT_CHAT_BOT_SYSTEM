@@ -3,18 +3,19 @@
 namespace App\Services\Conversation;
 
 use App\Models\Company;
+use App\Services\AI\AiOrchestrator;
+use App\Services\AI\AiUseCase;
 use App\Services\AI\OpenAIConversationBuilder;
-use App\Services\AI\OpenAiClient;
 use App\Services\AI\ReplyGuardService;
 
 /**
- * Generates guarded OpenAI WhatsApp replies with a single retry on failure.
+ * Generates guarded WhatsApp replies via the AI orchestration layer (fast vs full chat).
  */
 final class WhatsAppAiReplyGenerator
 {
     public function __construct(
         protected OpenAIConversationBuilder $conversationBuilder,
-        protected OpenAiClient $openAiClient,
+        protected AiOrchestrator $orchestrator,
         protected ReplyGuardService $replyGuard,
         protected ConversationLearningRecorder $learningRecorder,
     ) {}
@@ -28,22 +29,24 @@ final class WhatsAppAiReplyGenerator
     ): ?string {
         $messages = $this->conversationBuilder->build($company, $message, $customerName, $chatId, $orderFlowContext);
 
-        $result = $this->openAiClient->chatCompletion(
+        $result = $this->orchestrator->chat(
             messages: $messages,
-            useCase: OpenAiClient::USE_CASE_WHATSAPP,
-            companyId: $company->id,
+            company: $company,
+            useCase: AiUseCase::WHATSAPP,
             chatId: $chatId,
             timeoutSeconds: 25,
+            latestUserMessage: $message,
         );
 
         if (! $result->success || $result->content === null) {
-            $result = $this->openAiClient->chatCompletion(
+            $result = $this->orchestrator->chat(
                 messages: $messages,
-                useCase: OpenAiClient::USE_CASE_WHATSAPP,
-                companyId: $company->id,
+                company: $company,
+                useCase: AiUseCase::WHATSAPP,
                 chatId: $chatId,
                 temperature: 0.4,
                 timeoutSeconds: 30,
+                latestUserMessage: $message,
             );
         }
 
