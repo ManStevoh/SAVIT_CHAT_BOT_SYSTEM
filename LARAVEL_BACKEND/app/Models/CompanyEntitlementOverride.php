@@ -10,3 +10,9 @@ class CompanyEntitlementOverride extends Model
     protected $fillable = ['company_id', 'overrides', 'notes'];
 
     protected $casts = [
+        'overrides' => 'array',
+    ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
