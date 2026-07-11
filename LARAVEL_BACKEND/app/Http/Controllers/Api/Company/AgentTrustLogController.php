@@ -34,3 +34,7 @@ class AgentTrustLogController extends Controller
                 'explainability' => $log->explainability,
                 'createdAt' => $log->created_at?->toIso8601String(),
             ]);
+
+        return response()->json(['logs' => $logs]);
+    }
+}
