@@ -94,3 +94,9 @@ class CmsAdminController extends Controller
         ]);
 
         if (array_key_exists('isEnabled', $validated)) {
+            $section->is_enabled = (bool) $validated['isEnabled'];
+        }
+        if (array_key_exists('sortOrder', $validated)) {
+            $section->sort_order = (int) $validated['sortOrder'];
+        }
+        if (array_key_exists('content', $validated)) {
