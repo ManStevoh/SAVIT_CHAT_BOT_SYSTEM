@@ -256,3 +256,9 @@ export function LandoCtaSection({
             <div>
               <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
               {description && <p className="mt-3 text-gray-600">{description}</p>}
+              {ctaText && ctaHref && (
+                <Button asChild className="mt-8 h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]">
+                  <Link href={ctaHref}>{ctaText}</Link>
+                </Button>
+              )}
+            </div>
