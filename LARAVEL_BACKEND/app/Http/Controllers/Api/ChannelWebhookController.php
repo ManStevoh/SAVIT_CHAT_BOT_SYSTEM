@@ -46,3 +46,9 @@ class ChannelWebhookController extends Controller
             mb_substr($text, 0, 5000),
             $validated['fromName'] ?? null,
             $validated['from'],
+            syncReply: false,
+        );
+
+        return response()->json([
+            'accepted' => true,
+            'chatId' => $result['chatId'],
