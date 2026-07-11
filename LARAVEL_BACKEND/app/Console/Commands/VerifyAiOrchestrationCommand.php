@@ -58,3 +58,7 @@ class VerifyAiOrchestrationCommand extends Command
         }
 
         $this->warn('Some capability defaults missing — run migrations and set platform defaults in Admin → AI Models.');
+
+        return self::FAILURE;
+    }
+}
