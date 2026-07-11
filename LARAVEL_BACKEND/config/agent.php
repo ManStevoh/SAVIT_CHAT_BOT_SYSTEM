@@ -61,6 +61,14 @@ return [
         'operating_guide_limit' => 8,
         'low_stock_threshold' => (int) env('AGENT_LOW_STOCK_THRESHOLD', 5),
         'reorder_threshold_ratio' => 0.85,
+        'digital_twin_fields' => [
+            'mission' => 'Mission statement',
+            'brand_voice' => 'Brand voice',
+            'sales_strategy' => 'Sales strategy',
+            'pricing_rules' => 'Pricing rules',
+            'competitors' => 'Key competitors',
+            'target_customers' => 'Target customers',
+        ],
     ],
 
     /*
@@ -70,6 +78,15 @@ return [
     */
     'platform' => [
         'background_thinking_delay_minutes' => (int) env('AGENT_BG_THINKING_DELAY', 50),
+        'approval_policies' => [
+            'issue_order_refund' => [
+                'requires_role' => 'company_owner',
+                'max_amount_company_user' => 0,
+            ],
+            'send_whatsapp_campaign' => [
+                'requires_role' => 'company_owner',
+            ],
+        ],
         'tool_risk_levels' => [
             'search_products' => 'low',
             'search_faq' => 'low',
@@ -150,6 +167,7 @@ return [
     */
     'vision' => [
         'enabled' => (bool) env('AGENT_VISION_ENABLED', true),
+        'send_product_image_on_match' => (bool) env('AGENT_VISION_SEND_PRODUCT_IMAGE', true),
     ],
 
     'brain' => [
@@ -180,6 +198,9 @@ return [
     'voice' => [
         'enabled' => (bool) env('AGENT_VOICE_ENABLED', true),
         'whisper_model' => env('AGENT_WHISPER_MODEL', 'whisper-1'),
+        'tts_voice' => env('AGENT_TTS_VOICE', 'alloy'),
+        'tts_format' => env('AGENT_TTS_FORMAT', 'mp3'),
+        'tts_max_chars' => (int) env('AGENT_TTS_MAX_CHARS', 800),
     ],
 
     'learning' => [
@@ -198,6 +219,28 @@ return [
     'cognitive' => [
         'confidence_auto_respond' => (float) env('AGENT_CONFIDENCE_AUTO', 0.7),
         'confidence_clarify' => (float) env('AGENT_CONFIDENCE_CLARIFY', 0.45),
+        'business_dna_presets' => [
+            'luxury_brand' => [
+                'label' => 'Luxury brand',
+                'description' => 'Refined, discreet, white-glove — same facts, elevated tone',
+                'tone' => 'luxury and calm',
+                'values' => ['quality', 'discretion', 'craftsmanship'],
+                'risk_tolerance' => 'low',
+                'service_philosophy' => 'White-glove experience; never rush the customer; under-promise delivery',
+                'escalation_culture' => 'Escalate VIP complaints and high-value orders to the owner immediately',
+                'communication_style' => 'Refined, understated, never slang; short elegant sentences',
+            ],
+            'friendly_cafe' => [
+                'label' => 'Friendly café',
+                'description' => 'Warm, chatty, hospitable — like a neighborhood barista',
+                'tone' => 'warm and chatty',
+                'values' => ['hospitality', 'freshness', 'community'],
+                'risk_tolerance' => 'medium',
+                'service_philosophy' => 'Make guests feel at home; suggest pairings; celebrate regulars',
+                'escalation_culture' => 'Manager handles food quality complaints; keep the tone friendly',
+                'communication_style' => 'Conversational, appetizing descriptions, light warmth',
+            ],
+        ],
         'business_dna_defaults' => [
             'retail' => [
                 'tone' => 'helpful and efficient',
@@ -254,6 +297,69 @@ return [
                 'description' => 'Bundling frequently co-purchased items often increases average order value.',
                 'industries' => ['retail', 'restaurant'],
             ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Business Timeline + Graph v2 (Phase 5 nervous system)
+    |--------------------------------------------------------------------------
+    */
+    'timeline' => [
+        'sync_on_background' => (bool) env('AGENT_TIMELINE_SYNC_BG', true),
+    ],
+    'graph' => [
+        'sync_on_background' => (bool) env('AGENT_GRAPH_SYNC_BG', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Multi-channel ingest (web widget, email, Instagram DM)
+    |--------------------------------------------------------------------------
+    */
+    'channels' => [
+        'instagram_webhook_verify_token' => env('INSTAGRAM_WEBHOOK_VERIFY_TOKEN', ''),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Consciousness v2 — 5-minute sense cycle + owner morning brief push
+    |--------------------------------------------------------------------------
+    */
+    'consciousness' => [
+        'sense_enabled' => (bool) env('AGENT_CONSCIOUSNESS_SENSE_ENABLED', true),
+        'brain_max_age_minutes' => (int) env('AGENT_CONSCIOUSNESS_BRAIN_MAX_AGE', 5),
+        'timeline_sync_limit' => (int) env('AGENT_CONSCIOUSNESS_TIMELINE_LIMIT', 30),
+    ],
+
+    'morning_brief' => [
+        'whatsapp_push_after_generate' => (bool) env('AGENT_MORNING_BRIEF_WHATSAPP_PUSH', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | AI Marketplace — installable modules + third-party agent SDK
+    |--------------------------------------------------------------------------
+    */
+    'marketplace' => [
+        'restrict_tools_when_installed' => (bool) env('AGENT_MARKETPLACE_RESTRICT_TOOLS', true),
+        'core_tools' => [
+            'search_products',
+            'search_faq',
+            'search_knowledge',
+            'get_customer_profile',
+            'search_orders',
+            'get_catalog',
+            'get_business_info',
+            'remember_customer',
+            'trace_customer_graph',
+            'transfer_to_human',
+            'process_order_message',
+        ],
+        'plan_rank' => [
+            'starter' => 1,
+            'professional' => 2,
+            'enterprise' => 3,
         ],
     ],
 ];
