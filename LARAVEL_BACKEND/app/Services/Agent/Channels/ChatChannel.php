@@ -10,3 +10,9 @@ final class ChatChannel
     public const WHATSAPP = 'whatsapp';
 
     public const WEB_WIDGET = 'web_widget';
+
+    public const EMAIL = 'email';
+
+    public const INSTAGRAM_DM = 'instagram_dm';
+
+    /** @return list<string> */
