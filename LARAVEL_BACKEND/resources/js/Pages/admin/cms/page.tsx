@@ -316,3 +316,9 @@ function SectionEditor({
     }
 
     if (key === "compare_features") {
+      return (
+        <Field
+          label="Feature columns (JSON)"
+          value={JSON.stringify(content.columns ?? [], null, 2)}
+          onChange={(v) => {
+            try {
