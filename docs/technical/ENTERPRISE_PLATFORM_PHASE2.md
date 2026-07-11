@@ -124,3 +124,9 @@ Outbound webhooks receive HMAC-SHA256 signed JSON with headers:
 - `X-Savit-Event`
 - `X-Savit-Delivery-Id`
 
+---
+
+## Honest gaps (Phase 3+)
+
+| Gap | Status |
+|-----|--------|
