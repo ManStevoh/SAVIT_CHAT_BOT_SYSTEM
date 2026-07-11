@@ -1555,6 +1555,79 @@ export async function deleteLandingFaq(faqId: string): Promise<{ success: boolea
   }
 }
 
+// ============================================
+// ADMIN CMS
+// ============================================
+
+export async function updateCmsPage(
+  slug: string,
+  data: { title?: string; metaTitle?: string; metaDescription?: string; isPublished?: boolean }
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/cms/pages/${slug}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function updateCmsSection(
+  slug: string,
+  sectionKey: string,
+  data: { isEnabled?: boolean; sortOrder?: number; content?: Record<string, unknown> }
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/cms/pages/${slug}/sections/${sectionKey}`, {
+      method: 'PUT',
+      body: data,
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function reorderCmsSections(
+  slug: string,
+  orders: Array<{ key: string; sortOrder: number }>
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/cms/pages/${slug}/sections-reorder`, {
+      method: 'PUT',
+      body: { orders },
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function uploadCmsImage(file: File): Promise<{ success: boolean; url?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, url: URL.createObjectURL(file) }
+  }
+  try {
+    const form = new FormData()
+    form.append('image', file)
+    return await apiRequest<{ success: boolean; url: string }>('/api/admin/cms/upload-image', {
+      method: 'POST',
+      body: form,
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
 /**
  * Create Stripe Checkout Session (company user). Returns redirect URL.
  * Laravel: POST /api/company/checkout
