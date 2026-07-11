@@ -220,3 +220,9 @@ export function LandoHowToJoin({
               {steps.map((step) => (
                 <div key={step.title} className="py-6 first:pt-0 last:pb-0">
                   <h3 className="text-lg font-bold text-black">{step.title}</h3>
+                  <p className="mt-2 text-gray-600">{step.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
