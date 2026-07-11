@@ -34,3 +34,9 @@ This document maps **every operational platform module** in the SAVIT vision to 
 
 | Category | Modules | Implemented | Partial | Roadmap |
 |----------|---------|-------------|---------|---------|
+| Monetization | Subscription + Billing | 0 | 2 | 0 |
+| Communications | Notification Center | 0 | 1 | 0 |
+| Content & docs | Form + Document Builder | 0 | 1 | 1 |
+| Collaboration | Internal Chat, Wiki, PM | 0 | 1 | 2 |
+| Portals | Customer, Employee, Vendor | 0 | 0 | 3 |
+| Operations | Delivery, Assets | 0 | 1 | 1 |
