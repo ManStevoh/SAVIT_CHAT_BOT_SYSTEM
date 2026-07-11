@@ -520,3 +520,9 @@ event_outbox                — transactional outbox pattern for reliability
 **Vision:** KPI definitions, custom metrics, branch benchmarking, scheduled executive reports, goal tracking, forecasting.
 
 | Status | **Partial** |
+
+**Evidence:** Executive AI, owner analytics, `BusinessHealthScore`, `ForecastService` (cognitive), growth portfolio. No user-defined KPIs or branch comparison.
+
+---
+
+### 35. Ecosystem
