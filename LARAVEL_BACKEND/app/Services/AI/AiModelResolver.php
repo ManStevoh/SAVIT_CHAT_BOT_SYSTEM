@@ -18,16 +18,45 @@ class AiModelResolver
         private CompanyAiCredentialService $credentials,
     ) {}
 
-    public function resolve(?Company $company, string $capability = AiModel::CAPABILITY_CHAT): ?ResolvedAiModel
-    {
-        $providers = $this->providersWithModels();
+    public function resolve(
+        ?Company $company,
+        string $capability = AiModel::CAPABILITY_CHAT,
+        ?string $useCase = null,
+    ): ?ResolvedAiModel {
+        $routing = $this->routingForUseCase($useCase);
+        if ($routing !== null) {
+            $capability = $routing['capability'] ?? $capability;
+        }
 
-        if ($company) {
+        $providers = $this->providersWithModels();
+        $dedicated = ($routing['dedicated'] ?? false)
+            || AiModel::isDedicatedOrchestrationCapability($capability);
+
+        if ($routing !== null && ! empty($routing['model_key'])) {
+            $hinted = $this->resolveByModelKey(
+                (string) $routing['model_key'],
+                $capability,
+                $providers,
+                $company,
+                'use_case_hint',
+            );
+            if ($hinted !== null) {
+                return $hinted;
+            }
+        }
+
+        if ($company && ! $dedicated) {
             $settings = $company->settings;
             $mode = PlanLimitService::effectiveAiModelMode($company);
 
             if ($mode === 'specific' && $settings?->ai_model_id) {
-                $resolved = $this->resolveModelId((int) $settings->ai_model_id, $capability, $providers, 'company_specific', $company);
+                $resolved = $this->resolveModelId(
+                    (int) $settings->ai_model_id,
+                    $capability,
+                    $providers,
+                    'company_specific',
+                    $company,
+                );
                 if ($resolved !== null) {
                     return $resolved;
                 }
@@ -40,16 +69,43 @@ class AiModelResolver
             }
         }
 
-        if ($company && PlanLimitService::effectiveAiModelMode($company) === 'auto') {
-            $resolved = $this->resolveAuto($capability, $providers, $company);
+        $prefer = $routing['prefer'] ?? null;
+
+        if ($company && ! $dedicated && PlanLimitService::effectiveAiModelMode($company) === 'auto') {
+            $resolved = $this->resolveAuto($capability, $providers, $company, $prefer);
             if ($resolved !== null) {
                 return $resolved;
             }
         }
 
-        return $this->resolvePlatformDefault($capability, $providers, $company)
-            ?? $this->resolveAuto($capability, $providers, $company)
+        $resolved = $this->resolvePlatformDefault($capability, $providers, $company);
+        if ($resolved !== null) {
+            return $resolved;
+        }
+
+        return $this->resolveAuto($capability, $providers, $company, $prefer)
             ?? $this->resolveLegacyFallback($capability, $company);
+    }
+
+    /**
+     * @return array{capability?: string, prefer?: string, model_key?: string, dedicated?: bool}|null
+     */
+    public function routingForUseCase(?string $useCase): ?array
+    {
+        if ($useCase === null || $useCase === '') {
+            return null;
+        }
+
+        $routing = config("ai.use_cases.{$useCase}");
+
+        return is_array($routing) ? $routing : null;
+    }
+
+    public function capabilityForUseCase(?string $useCase, string $fallback = AiModel::CAPABILITY_CHAT): string
+    {
+        $routing = $this->routingForUseCase($useCase);
+
+        return $routing['capability'] ?? $fallback;
     }
 
     /**
@@ -68,6 +124,31 @@ class AiModelResolver
     /**
      * @param  \Illuminate\Support\Collection<int, AiProvider>  $providers
      */
+    protected function resolveByModelKey(
+        string $modelKey,
+        string $capability,
+        $providers,
+        ?Company $company,
+        string $source,
+    ): ?ResolvedAiModel {
+        foreach ($providers as $provider) {
+            if (! $this->providerIsReady($provider, $company)) {
+                continue;
+            }
+            $model = $provider->models->first(fn (AiModel $m) => $m->model_key === $modelKey
+                && $m->capability === $capability
+                && $m->is_enabled);
+            if ($model) {
+                return $this->wrap($provider, $model, $source, $company);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, AiProvider>  $providers
+     */
     protected function resolveModelId(int $modelId, string $capability, $providers, string $source, ?Company $company): ?ResolvedAiModel
     {
         foreach ($providers as $provider) {
@@ -79,6 +160,19 @@ class AiModelResolver
                 && $m->is_enabled);
             if ($model) {
                 return $this->wrap($provider, $model, $source, $company);
+            }
+        }
+
+        // Company picked a chat model — allow chat capability row when requesting chat only
+        if ($capability === AiModel::CAPABILITY_CHAT) {
+            foreach ($providers as $provider) {
+                if (! $this->providerIsReady($provider, $company)) {
+                    continue;
+                }
+                $model = $provider->models->first(fn (AiModel $m) => $m->id === $modelId && $m->is_enabled);
+                if ($model && in_array($model->capability, [AiModel::CAPABILITY_CHAT, AiModel::CAPABILITY_FAST_CHAT], true)) {
+                    return $this->wrap($provider, $model, $source, $company);
+                }
             }
         }
 
@@ -102,13 +196,18 @@ class AiModelResolver
             }
         }
 
+        // Fallback: chat slot can use fast_chat default if no chat default exists
+        if ($capability === AiModel::CAPABILITY_CHAT) {
+            return $this->resolvePlatformDefault(AiModel::CAPABILITY_FAST_CHAT, $providers, $company);
+        }
+
         return null;
     }
 
     /**
      * @param  \Illuminate\Support\Collection<int, AiProvider>  $providers
      */
-    protected function resolveAuto(string $capability, $providers, ?Company $company): ?ResolvedAiModel
+    protected function resolveAuto(string $capability, $providers, ?Company $company, ?string $prefer = null): ?ResolvedAiModel
     {
         $candidates = [];
         foreach ($providers as $provider) {
@@ -125,10 +224,18 @@ class AiModelResolver
         }
 
         if ($candidates === []) {
+            if ($capability === AiModel::CAPABILITY_CHAT) {
+                return $this->resolveAuto(AiModel::CAPABILITY_FAST_CHAT, $providers, $company, $prefer);
+            }
+
             return null;
         }
 
-        usort($candidates, fn ($a, $b) => $a['score'] <=> $b['score']);
+        if ($prefer === 'quality') {
+            usort($candidates, fn ($a, $b) => $b['score'] <=> $a['score']);
+        } else {
+            usort($candidates, fn ($a, $b) => $a['score'] <=> $b['score']);
+        }
 
         $pick = $candidates[0];
 
@@ -159,12 +266,21 @@ class AiModelResolver
         }
 
         $platform = PlatformSetting::first();
-        $modelKey = $platform?->openai_model
-            ?? $platform?->ai_model
-            ?? config('openai.model', 'gpt-4o-mini');
+        $recommended = config("ai.recommended_defaults.{$capability}");
+        $modelKey = is_string($recommended) ? $recommended : null;
+
+        if ($modelKey === null) {
+            $modelKey = $platform?->openai_model
+                ?? $platform?->ai_model
+                ?? config('openai.model', 'gpt-4o-mini');
+        }
 
         if ($capability === AiModel::CAPABILITY_EMBEDDING) {
             $modelKey = $this->learningConfig->embeddingModelKey();
+        }
+
+        if ($capability === AiModel::CAPABILITY_STT) {
+            $modelKey = config('agent.voice.whisper_model', 'whisper-1');
         }
 
         $model = AiModel::firstOrCreate(
