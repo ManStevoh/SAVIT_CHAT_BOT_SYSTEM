@@ -466,3 +466,9 @@ function SectionEditor({
               Save section
             </Button>
           </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  )
+}
+
