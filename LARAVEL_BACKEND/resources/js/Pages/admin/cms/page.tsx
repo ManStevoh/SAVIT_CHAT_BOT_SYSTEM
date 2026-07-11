@@ -184,3 +184,9 @@ function SectionEditor({
           <Field label="Image alt text" value={str("imageAlt")} onChange={(v) => set("imageAlt", v)} />
         </div>
       )
+    }
+
+    if (key === "hero" && slug === "contact") {
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
