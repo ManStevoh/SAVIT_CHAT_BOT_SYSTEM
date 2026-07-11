@@ -190,3 +190,9 @@ notification_schedules      — delayed/batch sends
 
 - **Reliability:** Queue-backed; retry with exponential backoff; dead-letter table.
 - **Compliance:** Opt-out per channel; SMS/WhatsApp template approval tracking.
+
+---
+
+### 5. Form Builder
+
+**Vision:** Drag-and-drop forms — warranty claims, returns, surveys, registrations, job applications, service requests; conditional logic.
