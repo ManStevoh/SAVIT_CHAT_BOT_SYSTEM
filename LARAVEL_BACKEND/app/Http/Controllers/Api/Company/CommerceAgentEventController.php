@@ -64,3 +64,9 @@ class CommerceAgentEventController extends Controller
         }
 
         $created = $detector->detectForCompany($company);
+
+        return response()->json([
+            'detected' => count($created),
+            'events' => collect($created)->map(fn ($e) => $this->formatEvent($e)),
+        ], 201);
+    }
