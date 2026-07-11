@@ -178,3 +178,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
       )
 
     case "cta":
+      return (
+        <LandoCtaSection
+          title={str(content.title)}
+          description={str(content.description)}
+          ctaText={str(content.ctaText)}
+          ctaHref={str(content.ctaHref)}
