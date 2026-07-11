@@ -5,65 +5,33 @@ namespace App\Services;
 use App\Models\Company;
 use App\Models\Message;
 use App\Models\Subscription;
+use App\Services\Platform\EntitlementService;
 use Carbon\Carbon;
 
 /**
  * Centralized plan limits for messages, team, AI model access, and BYOK.
+ * Delegates entitlements to EntitlementService (DB-backed plans.entitlements).
  */
 final class PlanLimitService
 {
-    /**
-     * Plan slug => limits.
-     *
-     * ai_model_modes: auto | platform_default | specific
-     * allow_byok: whether company may use own API keys
-     * credential_modes: platform | company_preferred | company (subset when BYOK allowed)
-     */
-    private const DEFAULTS = [
-        'starter' => [
-            'messages' => 5000,
-            'team' => 3,
-            'ai_cost_usd' => 5.0,
-            'ai_model_modes' => ['auto'],
-            'allow_byok' => false,
-            'credential_modes' => ['platform'],
-        ],
-        'professional' => [
-            'messages' => 50000,
-            'team' => 10,
-            'ai_cost_usd' => 50.0,
-            'ai_model_modes' => ['auto', 'platform_default'],
-            'allow_byok' => true,
-            'credential_modes' => ['platform', 'company_preferred'],
-        ],
-        'enterprise' => [
-            'messages' => 500000,
-            'team' => 50,
-            'ai_cost_usd' => null,
-            'ai_model_modes' => ['auto', 'platform_default', 'specific'],
-            'allow_byok' => true,
-            'credential_modes' => ['platform', 'company_preferred', 'company'],
-        ],
-    ];
+    private static function entitlements(): EntitlementService
+    {
+        return app(EntitlementService::class);
+    }
 
     public static function getMessageLimitForPlan(string $plan): int
     {
-        $limits = self::DEFAULTS[$plan] ?? self::DEFAULTS['starter'];
-
-        return (int) $limits['messages'];
+        return (int) (self::getLimitsForPlan($plan)['messages'] ?? 5000);
     }
 
     public static function getTeamLimitForPlan(string $plan): int
     {
-        $limits = self::DEFAULTS[$plan] ?? self::DEFAULTS['starter'];
-
-        return (int) $limits['team'];
+        return (int) (self::getLimitsForPlan($plan)['team'] ?? 3);
     }
 
     public static function getAiCostLimitForPlan(string $plan): ?float
     {
-        $limits = self::DEFAULTS[$plan] ?? self::DEFAULTS['starter'];
-        $value = $limits['ai_cost_usd'] ?? null;
+        $value = self::getLimitsForPlan($plan)['ai_cost_usd'] ?? null;
 
         return $value === null ? null : (float) $value;
     }
@@ -105,9 +73,6 @@ final class PlanLimitService
         return in_array($mode, self::getAllowedCredentialModes($plan), true);
     }
 
-    /**
-     * Effective model mode after plan policy (may differ from stored setting on downgraded plans).
-     */
     public static function effectiveAiModelMode(Company $company): string
     {
         $company->loadMissing('settings');
@@ -122,9 +87,6 @@ final class PlanLimitService
         return $allowed[0] ?? 'auto';
     }
 
-    /**
-     * Effective credential mode after plan policy.
-     */
     public static function effectiveCredentialMode(Company $company): string
     {
         $company->loadMissing('settings');
@@ -155,43 +117,34 @@ final class PlanLimitService
 
     public static function getMessagesUsedInCurrentPeriod(Company $company): int
     {
-        $subscription = Subscription::where('company_id', $company->id)
-            ->orderByDesc('end_date')
-            ->first();
-
-        $start = $subscription
-            ? Carbon::parse($subscription->start_date)->startOfDay()
-            : now()->startOfMonth();
-        $end = $subscription
-            ? Carbon::parse($subscription->end_date)->endOfDay()
-            : now()->endOfMonth();
+        $period = self::entitlements()->currentBillingPeriod($company);
 
         return Message::whereHas('chat', fn ($q) => $q->where('company_id', $company->id))
-            ->whereBetween('created_at', [$start, $end])
+            ->whereBetween('created_at', [$period['start'], $period['end']])
             ->count();
     }
 
     public static function getCurrentPlanSlug(Company $company): string
     {
-        $subscription = Subscription::where('company_id', $company->id)
-            ->orderByDesc('end_date')
-            ->first();
-
-        return $subscription?->plan ?? 'starter';
+        return self::entitlements()->currentPlanSlug($company);
     }
 
     public static function isWithinMessageLimit(Company $company): bool
     {
         $used = self::getMessagesUsedInCurrentPeriod($company);
-        $plan = self::getCurrentPlanSlug($company);
-        $limit = self::getMessageLimitForPlan($plan);
+        $limit = self::entitlements()->messageLimit($company);
 
         return $used < $limit;
+    }
+
+    public static function canAddTeamMember(Company $company): bool
+    {
+        return self::entitlements()->canAddTeamMember($company);
     }
 
     /** @return array<string, mixed> */
     public static function getLimitsForPlan(string $plan): array
     {
-        return self::DEFAULTS[$plan] ?? self::DEFAULTS['starter'];
+        return self::entitlements()->limitsForPlanSlug($plan);
     }
 }
