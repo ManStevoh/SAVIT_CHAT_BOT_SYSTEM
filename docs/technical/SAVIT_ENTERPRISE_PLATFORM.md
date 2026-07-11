@@ -64,3 +64,9 @@ These are the substrate every other module must plug into.
 | CRM / customers | **Partial** | `Customer` derived from chats/orders; no full CRM pipeline |
 | Team (basic) | **Partial** | `TeamController`, roles `admin` / `company_owner` / `company_user` |
 | Plans & subscriptions (basic) | **Partial** | `Plan`, `Subscription`, Stripe recurring; M-Pesa/Paystack manual month |
+| AI commerce agent | **Implemented** | 20 tools, orchestrator, memory, proactive outreach |
+| Growth engine | **Implemented** | Social posts, attribution, portfolio analytics |
+| Executive AI | **Implemented** | Dashboard, approvals, morning brief, opportunities |
+
+---
+
