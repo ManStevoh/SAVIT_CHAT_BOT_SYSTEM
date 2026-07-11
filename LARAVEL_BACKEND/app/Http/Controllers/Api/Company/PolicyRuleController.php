@@ -46,3 +46,9 @@ class PolicyRuleController extends Controller
 
         $rule = CompanyPolicyRule::create(array_merge($validated, [
             'company_id' => $company->id,
+            'is_active' => $validated['is_active'] ?? true,
+        ]));
+
+        $audit->log('policy_rule.created', CompanyPolicyRule::class, $rule->id, null, $rule->toArray(), $company->id, $request->user());
+
+        return response()->json(['rule' => $rule], 201);
