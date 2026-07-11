@@ -22,3 +22,9 @@ class AgentTrustLogController extends Controller
             ->orderByDesc('created_at')
             ->limit($limit)
             ->get()
+            ->map(fn (AgentTrustLog $log) => [
+                'id' => $log->id,
+                'actionType' => $log->action_type,
+                'goal' => $log->goal,
+                'reasoningSummary' => $log->reasoning_summary,
+                'confidence' => $log->confidence !== null ? (float) $log->confidence : null,
