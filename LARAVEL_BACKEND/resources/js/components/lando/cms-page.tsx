@@ -70,3 +70,9 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
             />
           ))}
 
+        <LandoFooter
+          copyright={String(footerContent.copyright ?? "")}
+          navLinks={(footerContent.navLinks as CmsLink[]) ?? []}
+          socialLinks={(footerContent.socialLinks as CmsLink[]) ?? []}
+          legalLinks={(footerContent.legalLinks as CmsLink[]) ?? []}
+        />
