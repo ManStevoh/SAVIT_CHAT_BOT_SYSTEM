@@ -46,3 +46,9 @@ class WebWidgetController extends Controller
 
         }
 
+
+
+        $company->loadMissing('settings');
+
+
+
