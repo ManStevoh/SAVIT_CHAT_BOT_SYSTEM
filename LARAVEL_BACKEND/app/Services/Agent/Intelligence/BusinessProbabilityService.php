@@ -16,3 +16,9 @@ final class BusinessProbabilityService
      * @return array{buy: float, churn: float, refund: float, factors: array<string, mixed>}
      */
     public function computeForCompany(Company $company): array
+    {
+        $companyId = (int) $company->id;
+        $since30 = now()->subDays(30);
+        $since90 = now()->subDays(90);
+
+        $paidOrders = Order::where('company_id', $companyId)
