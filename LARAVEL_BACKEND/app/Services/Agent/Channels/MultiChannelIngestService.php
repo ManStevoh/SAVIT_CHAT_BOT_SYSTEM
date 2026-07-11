@@ -88,3 +88,9 @@ final class MultiChannelIngestService
             return preg_replace('/\D+/', '', $channelUserId) ?: $channelUserId;
         }
 
+        if ($email && $this->looksLikePhone($email)) {
+            return preg_replace('/\D+/', '', $email) ?: $email;
+        }
+
+        return $channel.':'.Str::slug($channelUserId);
+    }
