@@ -592,3 +592,9 @@ function PageEditor({ slug }: { slug: string }) {
                 </a>
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold">Sections</h3>
