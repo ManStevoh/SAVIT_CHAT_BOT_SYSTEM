@@ -28,3 +28,9 @@ class CommerceAgentEventController extends Controller
 
         if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
+        }
+        if (! empty($validated['type'])) {
+            $query->where('event_type', $validated['type']);
+        }
+
+        $events = $query->limit(50)->get()->map(fn ($e) => $this->formatEvent($e));
