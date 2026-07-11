@@ -15,7 +15,7 @@ final class ExecutivePlanningService
      */
     public function createPlan(Company $company, string $goalStatement): array
     {
-        $breakdown = $this->breakdownForGoal($goalStatement);
+        $breakdown = $this->planBreakdown($goalStatement);
         $kpiTargets = $breakdown['kpi_targets'] ?? [];
 
         $plan = ExecutivePlan::create([
@@ -27,6 +27,16 @@ final class ExecutivePlanningService
         ]);
 
         return ['plan' => $plan, 'breakdown' => $breakdown];
+    }
+
+    /**
+     * Plan breakdown without persisting — used by Intelligence API.
+     *
+     * @return array<string, mixed>
+     */
+    public function planBreakdown(string $goal): array
+    {
+        return $this->breakdownForGoal($goal);
     }
 
     /**
