@@ -286,3 +286,9 @@ function SectionEditor({
                 onChange={(v) => {
                   const next = [...steps]
                   next[i] = { ...next[i], title: v }
+                  set("steps", next)
+                }}
+              />
+              <Field
+                label={`Step ${i + 1} description`}
+                value={step.description}
