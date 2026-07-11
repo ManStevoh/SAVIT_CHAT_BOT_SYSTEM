@@ -34,3 +34,9 @@ export function LandoNavbar({
           <AppLogoAndName variant="navbar" className="font-bold text-black" />
         </Link>
 
+        <div className="hidden md:flex md:items-center md:gap-8">
+          {links.map((link) => {
+            const isActive = activePath === link.href
+            return (
+              <Link
+                key={link.href}
