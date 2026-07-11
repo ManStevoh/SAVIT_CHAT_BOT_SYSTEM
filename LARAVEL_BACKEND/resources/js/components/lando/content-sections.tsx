@@ -292,3 +292,9 @@ export function LandoEfficiency({ title }: { title: string }) {
 export function LandoTeam({
   title,
   description,
+  members = [],
+}: {
+  title?: string
+  description?: string
+  members?: Array<{ name: string; role: string; imageUrl?: string }>
+}) {
