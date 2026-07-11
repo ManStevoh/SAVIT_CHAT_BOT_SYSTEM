@@ -40,3 +40,9 @@ class ApiPlatformController extends Controller
             'scopes.*' => 'string|max:40',
         ]);
 
+        $result = $apiKeys->create(
+            $company,
+            $request->user(),
+            $validated['name'],
+            $validated['scopes'] ?? ['read'],
+        );
