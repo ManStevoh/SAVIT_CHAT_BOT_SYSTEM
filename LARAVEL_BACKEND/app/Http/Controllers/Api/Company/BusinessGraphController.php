@@ -46,3 +46,9 @@ class BusinessGraphController extends Controller
                 BusinessGraphNode::TYPE_SUPPLIER,
                 BusinessGraphNode::TYPE_WAREHOUSE,
                 BusinessGraphNode::TYPE_CAMPAIGN,
+                BusinessGraphNode::TYPE_CATEGORY,
+            ]),
+            'label' => 'required|string|max:255',
+            'metadata' => 'sometimes|array',
+        ]);
+
