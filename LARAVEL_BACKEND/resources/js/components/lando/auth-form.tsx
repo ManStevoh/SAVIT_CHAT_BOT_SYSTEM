@@ -16,3 +16,9 @@ export function LandoAuthHeader({
   className?: string
 }) {
   return (
+    <div className={cn("mb-8", className)}>
+      <h1 className="text-3xl font-bold text-black sm:text-4xl">{title}</h1>
+      {description && <p className="mt-2 text-base text-gray-600">{description}</p>}
+    </div>
+  )
+}
