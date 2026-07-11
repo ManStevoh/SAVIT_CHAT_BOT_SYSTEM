@@ -40,3 +40,9 @@ final class MultiChannelIngestService
 
         if (! $chat) {
             $chat = Chat::create([
+                'company_id' => $company->id,
+                'channel' => $channel,
+                'channel_user_id' => $channelUserId,
+                'customer_name' => $name,
+                'customer_phone' => $phone,
+                'status' => 'active',
