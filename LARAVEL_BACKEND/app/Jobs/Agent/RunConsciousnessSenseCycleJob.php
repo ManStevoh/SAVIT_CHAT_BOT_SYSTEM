@@ -22,3 +22,9 @@ class RunConsciousnessSenseCycleJob implements ShouldQueue
             return;
         }
 
+        $query = Company::query()
+            ->where('status', 'active')
+            ->whereHas('settings', fn ($q) => $q->where('agent_commerce_enabled', true));
+
+        if ($this->companyId) {
+            $query->where('id', $this->companyId);
