@@ -82,3 +82,9 @@ php artisan db:seed --class=EnterprisePlatformSeeder
 php artisan platform:verify
 php artisan agent:verify
 php artisan test --filter=EnterprisePlatform
+php artisan test --filter=CommerceAgent
+php artisan route:list --path=api-platform
+php artisan route:list --path=v1/company
+```
+
+---
