@@ -34,3 +34,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 | 10 | Resource allocation | **Roadmap** | No capital optimizer |
 | 11 | Organizational memory | **Partial** | Org + strategic memories, operating guides |
 | 12 | Multi-business intelligence | **Partial** | Platform patterns (#35); no group/ecosystem AI |
+| 13 | Autonomous departments | **Implemented** | Sales/Support/Inventory specialists + debate |
+| 14 | Digital board | **Partial** | Debate + brief + simulate; no board sessions |
+| 15 | Adaptive personalities | **Implemented** | Business DNA in Settings + cognitive pipeline |
+| 16 | Knowledge evolution | **Implemented** | LLM reflection → operating guides |
+| 17 | Ethical guardrails | **Partial** | Governance, approvals, confidence escalate |
+| 18 | Digital business genome | **Partial** | DNA + digital_twin JSON; no full genome UI |
