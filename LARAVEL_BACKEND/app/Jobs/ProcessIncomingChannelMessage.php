@@ -64,3 +64,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
 
         $chat->update([
             'last_message' => mb_substr((string) $reply['reply'], 0, 500),
+            'last_message_at' => now(),
+            'ai_handled' => true,
+        ]);
+
+        if ($chat->channel === ChatChannel::WHATSAPP && $company->whatsappAccount?->isActive()) {
+            try {
