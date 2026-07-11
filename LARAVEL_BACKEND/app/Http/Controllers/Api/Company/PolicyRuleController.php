@@ -28,3 +28,9 @@ class PolicyRuleController extends Controller
     {
         $company = $request->user()->company;
         if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        if ($request->user()->role !== 'company_owner') {
+            return response()->json(['message' => 'Only company owner can manage policies.'], 403);
+        }
