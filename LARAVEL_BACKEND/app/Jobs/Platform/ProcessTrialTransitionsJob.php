@@ -40,3 +40,9 @@ class ProcessTrialTransitionsJob implements ShouldQueue
                     'owner_email' => $company->email,
                 ]);
 
+                $events->dispatch('subscription.expired', [
+                    'subscription_id' => $subscription->id,
+                    'plan' => $subscription->plan,
+                ], $company->id);
+            }
+
