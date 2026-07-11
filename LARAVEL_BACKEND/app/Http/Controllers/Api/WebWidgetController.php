@@ -76,3 +76,9 @@ class WebWidgetController extends Controller
 
             'widgetToken' => 'required|string|max:64',
 
+            'visitorId' => 'required|string|max:120',
+
+            'message' => 'required|string|max:2000',
+
+            'name' => 'nullable|string|max:120',
+
