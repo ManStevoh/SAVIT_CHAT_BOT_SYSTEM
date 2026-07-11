@@ -22,3 +22,9 @@ final class ChannelReplyDispatcher
         Company $company,
         string $channel,
         string $channelUserId,
+        string $messageText,
+        ?string $customerName = null,
+        ?string $customerEmail = null,
+        bool $syncReply = false,
+    ): array {
+        $result = $this->ingest->ingest(
