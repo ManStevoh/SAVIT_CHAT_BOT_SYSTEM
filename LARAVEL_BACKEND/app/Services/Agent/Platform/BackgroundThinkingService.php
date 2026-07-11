@@ -5,6 +5,8 @@ namespace App\Services\Agent\Platform;
 use App\Models\Chat;
 use App\Models\Company;
 use App\Services\Agent\Brain\UnifiedCompanyBrainService;
+use App\Services\Agent\Graph\BusinessGraphV2Service;
+use App\Services\Agent\Timeline\BusinessTimelineService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -17,6 +19,8 @@ final class BackgroundThinkingService
         protected OpportunityDetectionService $opportunities,
         protected ExecutiveBriefService $executive,
         protected UnifiedCompanyBrainService $companyBrain,
+        protected BusinessTimelineService $timeline,
+        protected BusinessGraphV2Service $graph,
     ) {}
 
     public function processCompany(Company $company): array
@@ -30,6 +34,13 @@ final class BackgroundThinkingService
         $opps = $this->opportunities->detectForCompany($company);
         if (config('agent.brain.enabled', true)) {
             $this->companyBrain->refreshIfStale($company, (int) config('agent.brain.snapshot_max_age_minutes', 60));
+        }
+
+        if (config('agent.timeline.sync_on_background', true)) {
+            $this->timeline->syncFromCompany($company, 50);
+        }
+        if (config('agent.graph.sync_on_background', true)) {
+            $this->graph->syncFromCompany($company);
         }
 
         return [
