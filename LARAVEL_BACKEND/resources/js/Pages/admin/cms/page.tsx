@@ -148,3 +148,9 @@ function SectionEditor({
               label="Navigation links"
               links={navLinks}
               onChange={(links) => set("links", links)}
+            />
+          </div>
+        </div>
+      )
+    }
+
