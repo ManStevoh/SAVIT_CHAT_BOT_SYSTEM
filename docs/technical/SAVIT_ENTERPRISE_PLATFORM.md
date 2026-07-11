@@ -658,3 +658,9 @@ flowchart TB
   SUB --> BILL
   BILL --> NOTIF
   PERM --> AI
+  BUS --> NOTIF
+  BUS --> SRCH
+  AUDIT --> BILL
+  SUB --> CPORT
+  DOC --> BILL
+  FORM --> BUS
