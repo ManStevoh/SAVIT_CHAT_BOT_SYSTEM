@@ -136,3 +136,9 @@ final class BusinessGraphV2Service
      */
     public function addManualNode(
         Company $company,
+        string $nodeType,
+        string $label,
+        array $metadata = [],
+    ): BusinessGraphNode {
+        return $this->upsertNode(
+            $company,
