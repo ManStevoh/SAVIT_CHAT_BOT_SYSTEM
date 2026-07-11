@@ -352,3 +352,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 ```
 audit_events                — actor, action, entity, old_values, new_values, ip, user_agent
 audit_retention_policies    — per entity type, GDPR export
+```
+
+- **Standards:** Immutable append-only; WORM storage option; SIEM export (JSON Lines).
+
+---
+
