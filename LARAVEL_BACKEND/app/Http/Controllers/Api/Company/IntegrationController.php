@@ -10,3 +10,9 @@ use Illuminate\Http\Request;
 
 class IntegrationController extends Controller
 {
+    public function index(Request $request, ConnectorRegistry $registry): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
