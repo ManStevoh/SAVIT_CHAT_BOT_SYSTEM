@@ -88,3 +88,9 @@ export function LandoNavbar({
             return (
               <Link
                 key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "block rounded-lg px-3 py-2 text-sm font-medium",
+                  isActive ? "bg-white text-[#2563eb]" : "text-black hover:bg-white/70"
+                )}
