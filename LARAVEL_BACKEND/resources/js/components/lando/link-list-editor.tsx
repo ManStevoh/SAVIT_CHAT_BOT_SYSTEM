@@ -34,3 +34,9 @@ export function LinkListEditor({
             value={link.href}
             onChange={(e) => update(i, "href", e.target.value)}
             placeholder="/path"
+            className="text-sm"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
