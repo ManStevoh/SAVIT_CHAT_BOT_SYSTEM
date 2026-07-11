@@ -64,3 +64,9 @@ final class ConnectorRegistry
 
             ],
 
+            [
+
+                'type' => 'shipping_quote',
+
+                'name' => 'Shipping quote API (generic)',
+
