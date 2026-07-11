@@ -340,3 +340,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 **Vision:** Who did what, when, where, old/new value, IP, device, approval — enterprise critical.
 
 | Status | **Partial** |
+
+**Evidence:**
+
+- `SystemLog` + admin logs UI
+- `AgentTrustLog` — AI decisions only
+- `audit_logging_enabled` in `PlatformSetting` — **toggle only, not wired**
