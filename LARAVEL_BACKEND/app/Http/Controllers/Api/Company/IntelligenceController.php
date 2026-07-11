@@ -202,3 +202,9 @@ class IntelligenceController extends Controller
             $validated['notes'] ?? null,
 
             $validated['metrics'] ?? [],
+
+        );
+
+
+
+        return response()->json(['outcome' => $record], 201);
