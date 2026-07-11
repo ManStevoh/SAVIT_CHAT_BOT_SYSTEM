@@ -166,3 +166,9 @@ function SectionEditor({
           <LinkListEditor
             label="Social links"
             links={(content.socialLinks as CmsLink[]) ?? []}
+            onChange={(links) => set("socialLinks", links)}
+          />
+          <LinkListEditor
+            label="Legal links"
+            links={(content.legalLinks as CmsLink[]) ?? []}
+            onChange={(links) => set("legalLinks", links)}
