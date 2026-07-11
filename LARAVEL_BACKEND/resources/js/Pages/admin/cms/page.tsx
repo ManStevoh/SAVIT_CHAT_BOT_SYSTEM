@@ -382,3 +382,9 @@ function SectionEditor({
           <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
           <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} />
           {members.map((m, i) => (
+            <div key={i} className="rounded border p-3 grid gap-2 sm:grid-cols-2">
+              <Field
+                label="Name"
+                value={m.name}
+                onChange={(v) => {
+                  const next = [...members]
