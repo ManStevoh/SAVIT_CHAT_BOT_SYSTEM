@@ -394,3 +394,9 @@ export function LandoContactSection({
           {sent ? (
             <p className="mt-8 rounded-lg bg-green-50 p-4 text-green-800">{successMessage}</p>
           ) : (
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-black">{nameLabel}</label>
+                <input
+                  required
+                  value={name}
