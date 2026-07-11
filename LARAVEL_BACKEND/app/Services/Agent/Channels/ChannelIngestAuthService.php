@@ -28,3 +28,9 @@ final class ChannelIngestAuthService
             return null;
         }
 
+        if (! hash_equals((string) $settings->channel_ingest_secret, $secret)) {
+            return null;
+        }
+
+        return Company::with('settings')->find($companyId);
+    }
