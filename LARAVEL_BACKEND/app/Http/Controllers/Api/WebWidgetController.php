@@ -16,3 +16,9 @@ use App\Services\Agent\Channels\ChatChannel;
 
 use Illuminate\Http\JsonResponse;
 
+use Illuminate\Http\Request;
+
+
+
+class WebWidgetController extends Controller
+
