@@ -28,3 +28,9 @@ export function LinkListEditor({
             value={link.label}
             onChange={(e) => update(i, "label", e.target.value)}
             placeholder="Label"
+            className="text-sm"
+          />
+          <Input
+            value={link.href}
+            onChange={(e) => update(i, "href", e.target.value)}
+            placeholder="/path"
