@@ -34,3 +34,9 @@ class ChannelWebhookController extends Controller
             'messageId' => 'nullable|string|max:200',
         ]);
 
+        $text = trim($validated['body']);
+        if (! empty($validated['subject'])) {
+            $text = 'Subject: '.$validated['subject']."\n\n".$text;
+        }
+
+        $result = $dispatcher->ingestAndReply(
