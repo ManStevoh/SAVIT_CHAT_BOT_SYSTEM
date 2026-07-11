@@ -10,3 +10,9 @@ class AuditEvent extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'company_id',
+        'user_id',
+        'actor_type',
+        'action',
+        'subject_type',
+        'subject_id',
