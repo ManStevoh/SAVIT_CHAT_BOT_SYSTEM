@@ -106,3 +106,9 @@ class ChannelWebhookController extends Controller
      * @param  array<string, mixed>  $body
      */
     private function processMetaInstagramPayload(array $body, \App\Models\Company $company, ChannelReplyDispatcher $dispatcher): JsonResponse
+    {
+        $processed = 0;
+        foreach ($body['entry'] ?? [] as $entry) {
+            foreach ($entry['messaging'] ?? [] as $event) {
+                $senderId = (string) ($event['sender']['id'] ?? '');
+                $text = (string) ($event['message']['text'] ?? '');
