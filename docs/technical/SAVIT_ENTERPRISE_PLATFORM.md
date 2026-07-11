@@ -694,3 +694,9 @@ php artisan test --filter=CommerceAgent   # 72 tests
 php artisan platform:verify       # subscription, billing, audit schema
 ```
 
+---
+
+## Related documents
+
+| Document | Scope |
+|----------|-------|
