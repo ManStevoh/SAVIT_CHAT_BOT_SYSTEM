@@ -388,3 +388,9 @@ export function LandoContactSection({
         {imageUrl && (
           <img src={imageUrl} alt={imageAlt} className="max-h-[400px] w-full object-contain" />
         )}
+        <div>
+          <h1 className="text-4xl font-bold text-black sm:text-5xl">{title}</h1>
+          {description && <p className="mt-4 text-gray-600">{description}</p>}
+          {sent ? (
+            <p className="mt-8 rounded-lg bg-green-50 p-4 text-green-800">{successMessage}</p>
+          ) : (
