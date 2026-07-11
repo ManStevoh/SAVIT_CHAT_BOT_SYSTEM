@@ -280,3 +280,9 @@ export function LandoEfficiency({ title }: { title: string }) {
         <h2 className="text-4xl font-bold leading-tight text-black sm:text-5xl lg:text-6xl">
           {lines.map((line, i) => (
             <span key={i} className="block">
+              {line}
+            </span>
+          ))}
+        </h2>
+      </div>
+    </section>
