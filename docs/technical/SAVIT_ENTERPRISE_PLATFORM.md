@@ -166,3 +166,9 @@ revenue_snapshots           — daily MRR/ARR/churn aggregates (materialized)
 | Email | **Implemented** | `MailService` — subscription, orders, messages, expiry |
 | In-app | **Implemented** | `CompanyNotification`, `CompanyInAppNotificationService`, API |
 | WhatsApp (customer) | **Implemented** | Commerce channel — not owner notification hub |
+| SMS | **Roadmap** | No provider integration |
+| Push (web/mobile) | **Roadmap** | No FCM/OneSignal |
+| Voice | **Roadmap** | Owner voice *commands* exist (Phase 5); not outbound voice alerts |
+| Rules / templates | **Partial** | Blade/email strings inline; admin notify toggles **stored but unused** |
+| Scheduling | **Partial** | `subscription:expiry-reminders` cron only |
+
