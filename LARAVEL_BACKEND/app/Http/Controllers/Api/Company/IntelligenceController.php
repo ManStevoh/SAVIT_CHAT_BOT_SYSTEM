@@ -214,3 +214,9 @@ class IntelligenceController extends Controller
     public function outcomes(Request $request): JsonResponse
     {
         $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $status = $request->query('status', 'pending');
+        $query = IntelligenceOutcome::where('company_id', $company->id)
