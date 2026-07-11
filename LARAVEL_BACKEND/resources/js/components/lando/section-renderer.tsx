@@ -130,3 +130,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           title={str(content.title)}
           description={str(content.description)}
           ctaText={str(content.ctaText)}
+          ctaHref={str(content.ctaHref)}
+          imageUrl={str(content.imageUrl)}
+          imageAlt={str(content.imageAlt)}
+          steps={arr(content.steps)}
+        />
+      )
