@@ -10,3 +10,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 
 | | Count |
 |---|------|
+| **Implemented** (production-ready surface) | **6** levels |
+| **Partial** (real foundation, missing depth/UI/product) | **13** levels |
+| **Roadmap** (not built) | **1** level |
+
+**SAVIT is not “full ABI.”** It is a **production AI operating system** with **decision-intelligence APIs** and **honest partial foundations** across Levels 1–20.
+
