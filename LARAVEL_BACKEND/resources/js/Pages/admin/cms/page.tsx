@@ -304,3 +304,9 @@ function SectionEditor({
         </div>
       )
     }
+
+    if (key === "testimonials" || key === "faq" || key === "pricing_plans") {
+      return (
+        <p className="text-sm text-muted-foreground">
+          {key === "testimonials" && "Manage testimonial cards in Admin → Testimonials."}
+          {key === "faq" && "Manage FAQ items in Admin → Landing FAQ."}
