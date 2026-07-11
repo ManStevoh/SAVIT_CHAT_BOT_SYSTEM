@@ -100,3 +100,9 @@ class CmsAdminController extends Controller
             $section->sort_order = (int) $validated['sortOrder'];
         }
         if (array_key_exists('content', $validated)) {
+            $section->content = $validated['content'];
+        }
+        $section->save();
+
+        return response()->json([
+            'success' => true,
