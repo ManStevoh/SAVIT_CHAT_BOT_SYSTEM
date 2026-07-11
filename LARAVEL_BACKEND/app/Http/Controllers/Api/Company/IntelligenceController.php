@@ -28,3 +28,9 @@ use Illuminate\Http\Request;
  * ABI Level 19 — Decision Intelligence API.
 
  */
+
+class IntelligenceController extends Controller
+
+{
+
+    public function reason(Request $request, IntelligenceReasoningService $intelligence): JsonResponse
