@@ -592,3 +592,9 @@ Phase 2 — Operations             🟡 v1 SHIPPED (2026-07-11)
   └── 2h API Platform v1         ✅ API keys + v1 orders + outbound webhooks
 
 Phase 3 — Platform surfaces
+  Document Builder, Form Builder, Search Engine, Calendar, Analytics Studio
+  Integration Hub connectors (accounting, POS)
+  Customer Portal v1 (orders + invoices)
+
+Phase 4 — Workforce & supply chain
+  Internal Chat, Project Management, Employee Portal, Vendor Portal
