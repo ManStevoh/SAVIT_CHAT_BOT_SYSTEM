@@ -70,3 +70,9 @@ class CmsPageSeeder extends Seeder
                                 ['label' => 'Privacy Policy', 'href' => '/privacy'],
                                 ['label' => 'Terms Of Service', 'href' => '/terms'],
                             ],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'home',
