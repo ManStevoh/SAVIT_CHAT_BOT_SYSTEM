@@ -58,3 +58,9 @@ final class ConnectorRegistry
 
                 'category' => 'logistics',
 
+                'status_label' => 'Implemented',
+
+                'description' => 'Order delivery status from platform orders table.',
+
+            ],
+
