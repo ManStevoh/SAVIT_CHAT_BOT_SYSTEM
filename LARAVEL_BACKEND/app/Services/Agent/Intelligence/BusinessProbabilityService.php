@@ -52,3 +52,9 @@ final class BusinessProbabilityService
 
         $repeatRate = $uniqueBuyers90 > 0 ? $repeatBuyers / $uniqueBuyers90 : 0.0;
         $velocity = min(1.0, $orderCount30 / max(1, $orderCount90) * 1.5);
+        $refundRate = $orderCount90 > 0 ? $refundCount / $orderCount90 : 0.05;
+        $engagement = min(1.0, $activeChats / max(5, $uniqueBuyers90));
+
+        $buy = $this->clamp(0.25 + ($repeatRate * 0.35) + ($velocity * 0.25) + ($engagement * 0.15));
+        $churn = $this->clamp(0.65 - ($repeatRate * 0.3) - ($engagement * 0.25) - ($velocity * 0.1));
+        $refund = $this->clamp(0.08 + ($refundRate * 0.7));
