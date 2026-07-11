@@ -16,3 +16,9 @@ interface LandoNavbarProps {
   signupHref?: string
   activePath?: string
 }
+
+export function LandoNavbar({
+  links = [],
+  loginLabel = "Log in",
+  loginHref = "/login",
+  signupLabel = "Sign up",
