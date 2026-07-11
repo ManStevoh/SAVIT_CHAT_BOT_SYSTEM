@@ -76,3 +76,9 @@ function ImageField({
       toast({ title: res.message ?? "Upload failed", variant: "destructive" })
     }
   }
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <div className="flex gap-2">
+        <Input value={value} onChange={(e) => onChange(e.target.value)} className="text-sm" placeholder="/images/..." />
