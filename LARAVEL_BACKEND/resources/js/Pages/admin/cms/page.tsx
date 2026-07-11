@@ -100,3 +100,9 @@ function SectionEditor({
   onSaved,
   dragHandle,
 }: {
+  slug: string
+  section: AdminCmsSection
+  onSaved: () => void
+  dragHandle?: React.ReactNode
+}) {
+  const { toast } = useToast()
