@@ -142,3 +142,9 @@ final class ConnectorRegistry
 
     public function has(string $type): bool
 
+    {
+
+        return collect($this->catalog())->contains(fn ($c) => $c['type'] === $type);
+
+    }
+
