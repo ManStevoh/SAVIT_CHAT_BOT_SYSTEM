@@ -232,3 +232,5 @@ final class BusinessGraphV2Service
         );
 
         return true;
+    }
+}
