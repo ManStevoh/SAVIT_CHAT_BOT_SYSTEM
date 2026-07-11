@@ -22,3 +22,9 @@ class CmsAdminController extends Controller
             'isPublished' => (bool) $p->is_published,
         ]);
 
+        return response()->json($pages->values()->all());
+    }
+
+    public function showPage(string $slug): JsonResponse
+    {
+        $page = CmsPage::where('slug', $slug)->with('sections')->first();
