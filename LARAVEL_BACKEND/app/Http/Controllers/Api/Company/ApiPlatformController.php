@@ -28,3 +28,9 @@ class ApiPlatformController extends Controller
     }
 
     public function createApiKey(Request $request, ApiKeyService $apiKeys): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company || $request->user()->role !== 'company_owner') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
