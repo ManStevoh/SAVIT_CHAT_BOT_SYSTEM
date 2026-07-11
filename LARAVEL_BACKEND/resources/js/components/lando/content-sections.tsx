@@ -382,3 +382,9 @@ export function LandoContactSection({
     }
   }
 
+  return (
+    <section className="bg-[#f3f4f6] pt-28 pb-16 lg:pt-32 lg:pb-24">
+      <div className="mx-auto grid max-w-6xl items-start gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+        {imageUrl && (
+          <img src={imageUrl} alt={imageAlt} className="max-h-[400px] w-full object-contain" />
+        )}
