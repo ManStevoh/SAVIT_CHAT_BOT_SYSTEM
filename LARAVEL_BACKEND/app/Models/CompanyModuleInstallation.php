@@ -16,3 +16,9 @@ class CompanyModuleInstallation extends Model
     ];
 
     protected $casts = [
+        'config' => 'array',
+        'installed_at' => 'datetime',
+    ];
+
+    public function company(): BelongsTo
+    {
