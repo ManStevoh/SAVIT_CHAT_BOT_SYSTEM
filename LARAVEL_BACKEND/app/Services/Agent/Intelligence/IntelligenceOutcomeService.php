@@ -22,3 +22,9 @@ final class IntelligenceOutcomeService
         }
 
         $this->seedActions($company, 'investigation', $investigationId, $actions);
+
+        if (IntelligenceOutcome::where('company_id', $company->id)->where('source_id', $investigationId)->where('source_type', 'investigation')->count() === 0) {
+            IntelligenceOutcome::create([
+                'company_id' => $company->id,
+                'source_type' => 'investigation',
+                'source_id' => $investigationId,
