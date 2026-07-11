@@ -454,3 +454,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 ### 29. Event Bus
 
 **Vision:** Every action creates an event → inventory, payment, notification, analytics, webhook, automation.
+
+| Status | **Partial** |
+
+**Evidence:** `CommerceEventDetector` + `commerce_agent_events` — **commerce-agent domain only**, not platform-wide. Laravel queues used ad hoc.
+
+**Build spec**
