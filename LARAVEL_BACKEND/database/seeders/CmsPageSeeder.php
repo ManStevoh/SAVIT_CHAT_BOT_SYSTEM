@@ -124,3 +124,9 @@ class CmsPageSeeder extends Seeder
                             'imageUrl' => $heroImage,
                             'imageAlt' => 'Platform overview',
                         ],
+                    ],
+                    [
+                        'section_key' => 'feature_1',
+                        'label' => 'Feature block 1',
+                        'sort_order' => 4,
+                        'content' => [
