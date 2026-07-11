@@ -16,3 +16,9 @@ final class IntelligenceOutcomeService
     {
         $actions = $recommendedActions;
         if ($actions === [] && $rawRecommendations !== []) {
+            foreach ($rawRecommendations as $rec) {
+                $actions[] = ['action' => (string) $rec, 'source' => 'investigation'];
+            }
+        }
+
+        $this->seedActions($company, 'investigation', $investigationId, $actions);
