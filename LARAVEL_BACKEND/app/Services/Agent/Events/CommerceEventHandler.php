@@ -7,6 +7,7 @@ use App\Models\CommerceAgentEvent;
 use App\Models\Message;
 use App\Models\WhatsAppAccount;
 use App\Services\Agent\AgentProactiveMessageService;
+use App\Services\Platform\NotificationDispatcher;
 use App\Services\WhatsAppMessageSenderService;
 use Illuminate\Support\Facades\Log;
 
@@ -18,6 +19,7 @@ final class CommerceEventHandler
     public function __construct(
         protected AgentProactiveMessageService $proactive,
         protected WhatsAppMessageSenderService $waSender,
+        protected NotificationDispatcher $notifications,
     ) {}
 
     public function handleOpenEvents(int $companyId, int $maxPerRun = 15): int
@@ -70,6 +72,18 @@ final class CommerceEventHandler
         $alerted = 0;
         foreach ($events as $event) {
             app(\App\Services\CompanyInAppNotificationService::class)->recordAgentEventAlert($company, $event);
+
+            $templateKey = match ($event->event_type) {
+                'low_stock' => 'alert.low_stock',
+                'sales_drop' => 'alert.sales_drop',
+                default => 'alert.commerce',
+            };
+            $payload = $event->payload ?? [];
+            $this->notifications->dispatch($company, $templateKey, array_merge($payload, [
+                'summary' => (string) ($payload['summary'] ?? $payload['message'] ?? $event->event_type),
+                'owner_email' => $company->email,
+            ]));
+
             $event->update(['status' => 'alerted', 'handled_at' => now()]);
             $alerted++;
         }
