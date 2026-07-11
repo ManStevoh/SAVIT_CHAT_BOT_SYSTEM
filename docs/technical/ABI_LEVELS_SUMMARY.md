@@ -136,3 +136,9 @@ php artisan platform:verify
 php artisan test --filter=CommerceAgent
 php artisan test --filter=EnterprisePlatform
 php artisan route:list --path=intelligence
+```
+
+**Tests:** `CommerceAgentIntelligenceTest` + `CommerceAgentPlatformFoundationTest` (80 CommerceAgent) + `EnterprisePlatformPhase2Test` (9) — **89 total passing**.
+
+---
+
