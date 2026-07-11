@@ -16,3 +16,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 
 | # | Module | Status | Top gap |
 |---|--------|--------|---------|
+| 18 | Subscription Engine | 🟡 | **DB entitlements + usage meters + trial job** — coupons/seats UI pending |
+| 19 | Billing Engine | 🟡 | **Local billing_payments ledger** — tax/proration/gateway refunds pending |
+
+## Communications
+
+| # | Module | Status | Top gap |
