@@ -118,3 +118,9 @@ Owner goal
 
 ---
 
+## Enable checklist (owners)
+
+1. **Settings → AI → Auto-reply ON**
+2. **Settings → AI → Agent commerce mode ON**
+3. Optional: **Business DNA** (Luxury brand / Friendly café / Custom)
+4. Open **Cognitive AI** → ask a business question → **Reason**
