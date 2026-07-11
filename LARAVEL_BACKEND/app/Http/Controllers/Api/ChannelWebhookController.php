@@ -112,3 +112,9 @@ class ChannelWebhookController extends Controller
             foreach ($entry['messaging'] ?? [] as $event) {
                 $senderId = (string) ($event['sender']['id'] ?? '');
                 $text = (string) ($event['message']['text'] ?? '');
+                if ($senderId === '' || $text === '') {
+                    continue;
+                }
+                $dispatcher->ingestAndReply(
+                    $company,
+                    ChatChannel::INSTAGRAM_DM,
