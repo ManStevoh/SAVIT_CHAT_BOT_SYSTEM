@@ -94,3 +94,9 @@ class CmsPageSeeder extends Seeder
                             'secondaryCtaHref' => '#how-to-join',
                             'imageUrl' => $heroImage,
                             'imageAlt' => 'WhatsApp commerce platform illustration',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'trusted_companies',
+                        'label' => 'Trusted companies',
+                        'sort_order' => 2,
