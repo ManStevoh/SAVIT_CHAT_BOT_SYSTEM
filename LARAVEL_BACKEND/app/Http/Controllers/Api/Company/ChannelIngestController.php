@@ -10,3 +10,9 @@ use Illuminate\Support\Str;
 
 class ChannelIngestController extends Controller
 {
+    public function ingest(Request $request, \App\Services\Agent\Channels\MultiChannelIngestService $ingest): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
