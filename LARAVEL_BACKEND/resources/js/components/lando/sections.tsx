@@ -58,3 +58,9 @@ export function LandoHeroSection({
                   variant="outline"
                   className="h-11 rounded-lg border-black bg-white px-6 text-black hover:bg-gray-50"
                 >
+                  <Link href={secondaryCtaHref}>{secondaryCtaText}</Link>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
