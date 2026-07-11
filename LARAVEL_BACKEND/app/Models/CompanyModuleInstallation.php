@@ -10,3 +10,9 @@ class CompanyModuleInstallation extends Model
     protected $fillable = [
         'company_id',
         'module_key',
+        'status',
+        'config',
+        'installed_at',
+    ];
+
+    protected $casts = [
