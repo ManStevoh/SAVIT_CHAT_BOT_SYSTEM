@@ -106,3 +106,9 @@ Owner goal
   → probability scores (business_probability_scores)
 ```
 
+**Also available:**
+
+- `GET /api/company/intelligence/cases` — investigation case files
+- `POST /api/company/intelligence/outcomes` — record recommendation outcomes
+
+- `GET /api/company/executive-ai/dashboard` — morning decisions, approvals
