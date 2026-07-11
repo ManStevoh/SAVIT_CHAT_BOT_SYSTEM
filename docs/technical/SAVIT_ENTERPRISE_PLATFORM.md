@@ -484,3 +484,9 @@ event_outbox                — transactional outbox pattern for reliability
 ---
 
 ### 31. Industry Packs
+
+**Vision:** Retail, pharmacy, schools, healthcare, restaurants, hotels, construction, manufacturing, agriculture, SACCOs, NGOs — modules, templates, workflows, terminology.
+
+| Status | **Partial** |
+
+**Evidence:** `company.industry` field; `config/agent.php` `business_dna_defaults` and `skill_modules` per industry; no pack installer.
