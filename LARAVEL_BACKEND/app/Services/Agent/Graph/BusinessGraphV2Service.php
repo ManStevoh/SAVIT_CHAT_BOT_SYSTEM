@@ -214,3 +214,9 @@ final class BusinessGraphV2Service
                 'metadata' => $metadata,
             ],
         );
+    }
+
+    private function link(Company $company, int $fromId, int $toId, string $edgeType): bool
+    {
+        if ($fromId === $toId) {
+            return false;
