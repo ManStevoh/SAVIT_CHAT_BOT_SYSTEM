@@ -76,3 +76,9 @@ final class IntelligenceOutcomeService
                 continue;
             }
 
+            if ($text === '') {
+                continue;
+            }
+
+            IntelligenceOutcome::firstOrCreate(
+                [
