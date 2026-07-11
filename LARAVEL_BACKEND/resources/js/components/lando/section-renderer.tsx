@@ -112,3 +112,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
     case "feature_1":
     case "feature_2":
       return (
+        <LandoFeatureBlock
+          label={str(content.label)}
+          title={str(content.title)}
+          description={str(content.description)}
+          ctaText={str(content.ctaText)}
+          ctaHref={str(content.ctaHref)}
