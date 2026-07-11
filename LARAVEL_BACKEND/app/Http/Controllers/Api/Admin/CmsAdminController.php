@@ -88,3 +88,9 @@ class CmsAdminController extends Controller
             ->firstOrFail();
 
         $validated = $request->validate([
+            'isEnabled' => 'sometimes|boolean',
+            'sortOrder' => 'sometimes|integer|min:0',
+            'content' => 'sometimes|array',
+        ]);
+
+        if (array_key_exists('isEnabled', $validated)) {
