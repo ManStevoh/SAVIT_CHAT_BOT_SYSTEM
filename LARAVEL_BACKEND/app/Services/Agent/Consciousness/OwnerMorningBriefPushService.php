@@ -58,3 +58,9 @@ final class OwnerMorningBriefPushService
                 'company_id' => $company->id,
                 'brief_id' => $brief->id,
             ]);
+
+            return false;
+        }
+
+        $brief->update(['pushed_to_owner_at' => now()]);
+
