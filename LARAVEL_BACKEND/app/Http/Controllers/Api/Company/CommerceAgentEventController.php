@@ -22,3 +22,9 @@ class CommerceAgentEventController extends Controller
             'status' => 'nullable|string|in:open,alerted,handled,skipped,no_chat',
             'type' => 'nullable|string|max:40',
         ]);
+
+        $query = CommerceAgentEvent::where('company_id', $company->id)
+            ->orderByDesc('created_at');
+
+        if (! empty($validated['status'])) {
+            $query->where('status', $validated['status']);
