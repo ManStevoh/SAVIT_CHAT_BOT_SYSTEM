@@ -16,3 +16,9 @@ interface LegalLayoutProps {
 
 export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutProps) {
   const { data: globalData } = useCmsGlobal()
+  const globalSections = globalData?.sections ?? []
+  const navbarContent = getSectionContent(globalSections, "navbar")
+  const footerContent = getSectionContent(globalSections, "footer")
+
+  return (
+    <div className="lando-page min-h-screen bg-[#f3f4f6]">
