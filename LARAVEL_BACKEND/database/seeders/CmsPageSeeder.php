@@ -370,3 +370,9 @@ class CmsPageSeeder extends Seeder
                 'title' => 'Privacy Policy',
                 'meta_title' => 'Privacy Policy — Essem Chat',
                 'meta_description' => 'How Essem Chat collects, uses, and protects your data.',
+                'sections' => [
+                    [
+                        'section_key' => 'legal_content',
+                        'label' => 'Legal content',
+                        'sort_order' => 1,
+                        'content' => [
