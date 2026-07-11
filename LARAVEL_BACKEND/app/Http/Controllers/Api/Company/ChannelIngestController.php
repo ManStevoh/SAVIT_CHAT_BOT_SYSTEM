@@ -34,3 +34,9 @@ class ChannelIngestController extends Controller
             $validated['customerEmail'] ?? null,
         );
 
+        return response()->json([
+            'chatId' => $result['chat']->id,
+            'messageId' => $result['message']->id,
+            'queued' => $result['queued'],
+        ], 201);
+    }
