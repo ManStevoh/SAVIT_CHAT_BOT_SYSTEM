@@ -682,3 +682,9 @@ Before marking any module **Implemented**, require:
 - [ ] Emitted on Event Bus (where applicable)
 - [ ] Documented in this registry + API reference
 - [ ] `php artisan test` feature tests green
+- [ ] No secrets in code; env-driven config
+- [ ] Rate limits on public endpoints
+
+**Platform verify commands (today):**
+
+```bash
