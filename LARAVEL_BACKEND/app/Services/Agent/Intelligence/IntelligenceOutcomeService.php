@@ -58,3 +58,9 @@ final class IntelligenceOutcomeService
         }
 
         $this->seedActions($company, 'opportunity', $opportunityId, [
+            ['action' => $action, 'source' => 'opportunity'],
+        ]);
+    }
+
+    /**
+     * @param  list<array{action?: string, source?: string}|string>  $actions
