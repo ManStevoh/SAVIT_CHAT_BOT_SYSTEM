@@ -22,3 +22,9 @@
 
 ### pgvector production enablement
 
+Set `AI_PGVECTOR_ENABLED=true` on PostgreSQL with `vector` extension. Until then, JSON + in-memory cosine is correct for current catalog sizes.
+
+### Deep carrier integrations
+
+DHL/Sendy adapters test quote endpoints — full rate shopping, label printing, and tracking webhooks are separate projects.
+
