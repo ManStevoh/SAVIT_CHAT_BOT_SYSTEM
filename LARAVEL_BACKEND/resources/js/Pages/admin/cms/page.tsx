@@ -430,3 +430,9 @@ function SectionEditor({
         onChange={(e) => {
           try {
             setContent(JSON.parse(e.target.value))
+          } catch {
+            /* ignore */
+          }
+        }}
+        rows={8}
+        className="font-mono text-xs"
