@@ -130,3 +130,9 @@ class ChannelWebhookController extends Controller
         return response()->json(['accepted' => true, 'processed' => $processed], 200);
     }
 
+    private function verifyMetaWebhook(Request $request): Response
+    {
+        $mode = $request->query('hub_mode');
+        $token = $request->query('hub_verify_token');
+        $challenge = $request->query('hub_challenge');
+        $expected = config('agent.channels.instagram_webhook_verify_token', '');
