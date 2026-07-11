@@ -532,3 +532,9 @@ function SortableSectionList({
                 className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
                 aria-label="Drag to reorder"
               >
+                <GripVertical className="h-4 w-4" />
+              </button>
+            }
+          />
+        </div>
+      ))}
