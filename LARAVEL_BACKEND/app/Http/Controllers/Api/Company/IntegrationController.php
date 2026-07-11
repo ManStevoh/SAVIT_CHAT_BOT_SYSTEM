@@ -52,3 +52,9 @@ class IntegrationController extends Controller
         $result = $registry->connect($company, $validated['connectorType'], $validated['config'] ?? []);
 
         $integration = CompanyIntegration::updateOrCreate(
+            ['company_id' => $company->id, 'connector_type' => $validated['connectorType']],
+            [
+                'status' => ($result['success'] ?? false) ? 'active' : 'error',
+                'config' => $validated['config'] ?? [],
+                'last_sync_at' => ($result['success'] ?? false) ? now() : null,
+                'last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? 'Connection failed'),
