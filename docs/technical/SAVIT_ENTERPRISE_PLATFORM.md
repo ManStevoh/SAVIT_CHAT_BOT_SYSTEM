@@ -208,3 +208,9 @@ forms                       — company_id, name, schema JSON, status
 form_versions               — immutable published versions
 form_submissions            — encrypted PII fields, source, chat_id link
 form_logic                  — conditional rules engine (safe DSL, no eval)
+```
+
+- **Security:** CSRF, rate limits, CAPTCHA on public forms, field-level encryption for PII.
+- **AI integration:** Agent can pre-fill from `customer_memories`; submissions → event bus.
+
+---
