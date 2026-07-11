@@ -16,3 +16,9 @@ use Illuminate\Support\Facades\DB;
  */
 final class BusinessGraphV2Service
 {
+    /**
+     * Sync graph nodes/edges from live company data.
+     */
+    public function syncFromCompany(Company $company): array
+    {
+        $stats = ['nodes' => 0, 'edges' => 0];
