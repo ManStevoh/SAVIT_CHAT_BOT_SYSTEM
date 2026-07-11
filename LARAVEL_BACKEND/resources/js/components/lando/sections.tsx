@@ -82,3 +82,9 @@ export function LandoHeroSection({
 export function LandoPageHero({ title, description }: { title: string; description?: string }) {
   return (
     <section className="bg-[#f3f4f6] pt-28 pb-12 text-center lg:pt-32">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <h1 className="text-4xl font-bold text-black sm:text-5xl">{title}</h1>
+        {description && (
+          <p className="mx-auto mt-4 max-w-xl text-base text-gray-600 sm:text-lg">{description}</p>
+        )}
+      </div>
