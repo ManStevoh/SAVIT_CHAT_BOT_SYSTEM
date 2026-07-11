@@ -82,3 +82,9 @@ class PolicyRuleController extends Controller
     {
         $company = $request->user()->company;
         if (! $company || $request->user()->role !== 'company_owner') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $rule = CompanyPolicyRule::where('company_id', $company->id)->findOrFail($id);
+        $audit->log('policy_rule.deleted', CompanyPolicyRule::class, $rule->id, $rule->toArray(), null, $company->id, $request->user());
+        $rule->delete();
