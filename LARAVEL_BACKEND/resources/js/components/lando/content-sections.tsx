@@ -208,3 +208,9 @@ export function LandoCompareFeatures({
     </section>
   )
 }
+
+export function LandoFaqSection({
+  title = "Frequently asked questions",
+  faqs = [],
+}: {
+  title?: string
