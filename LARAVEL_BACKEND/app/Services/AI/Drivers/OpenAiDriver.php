@@ -5,6 +5,8 @@ namespace App\Services\AI\Drivers;
 use App\Services\AI\ResolvedAiModel;
 use App\Services\AI\EmbedResult;
 use App\Services\AI\OpenAiChatResult;
+use App\Services\AI\SynthesizeResult;
+use App\Services\AI\TranscribeResult;
 
 class OpenAiDriver extends AbstractAiDriver
 {
@@ -162,6 +164,124 @@ class OpenAiDriver extends AbstractAiDriver
             vector: array_map('floatval', $vector),
             promptTokens: (int) ($usage['prompt_tokens'] ?? 0),
             totalTokens: (int) ($usage['total_tokens'] ?? 0),
+        );
+    }
+
+    public function transcribe(
+        ResolvedAiModel $resolved,
+        string $filePath,
+        string $filename,
+        int $timeoutSeconds = 60,
+    ): TranscribeResult {
+        $base = rtrim($resolved->apiBaseUrl ?: $resolved->provider->api_base_url ?: 'https://api.openai.com/v1', '/');
+        $started = microtime(true);
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($resolved->apiKey)
+                ->timeout($timeoutSeconds)
+                ->attach('file', file_get_contents($filePath), $filename)
+                ->post("{$base}/audio/transcriptions", [
+                    'model' => $resolved->model->model_key,
+                    'response_format' => 'text',
+                ]);
+        } catch (\Throwable $e) {
+            return new TranscribeResult(
+                text: null,
+                success: false,
+                model: $resolved->model->model_key,
+                latencyMs: $this->elapsed($started),
+                error: $e->getMessage(),
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        if (! $response->successful()) {
+            return new TranscribeResult(
+                text: null,
+                success: false,
+                model: $resolved->model->model_key,
+                latencyMs: $this->elapsed($started),
+                httpStatus: $response->status(),
+                error: $this->errorMessage($response),
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        $text = trim($response->body());
+
+        return new TranscribeResult(
+            text: $text !== '' ? $text : null,
+            success: $text !== '',
+            model: $resolved->model->model_key,
+            latencyMs: $this->elapsed($started),
+            httpStatus: $response->status(),
+            providerId: $resolved->provider->id,
+            modelId: $resolved->model->id,
+        );
+    }
+
+    public function synthesize(
+        ResolvedAiModel $resolved,
+        string $text,
+        string $voice = 'alloy',
+        string $format = 'mp3',
+        int $timeoutSeconds = 60,
+    ): SynthesizeResult {
+        $base = rtrim($resolved->apiBaseUrl ?: $resolved->provider->api_base_url ?: 'https://api.openai.com/v1', '/');
+        $started = microtime(true);
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($resolved->apiKey)
+                ->timeout($timeoutSeconds)
+                ->post("{$base}/audio/speech", [
+                    'model' => $resolved->model->model_key,
+                    'input' => mb_substr($text, 0, 4096),
+                    'voice' => $voice,
+                    'response_format' => $format,
+                ]);
+        } catch (\Throwable $e) {
+            return new SynthesizeResult(
+                audioPath: null,
+                mimeType: null,
+                success: false,
+                model: $resolved->model->model_key,
+                latencyMs: $this->elapsed($started),
+                error: $e->getMessage(),
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        if (! $response->successful()) {
+            return new SynthesizeResult(
+                audioPath: null,
+                mimeType: null,
+                success: false,
+                model: $resolved->model->model_key,
+                latencyMs: $this->elapsed($started),
+                httpStatus: $response->status(),
+                error: $this->errorMessage($response),
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        $mime = $format === 'opus' ? 'audio/ogg' : 'audio/mpeg';
+        $ext = $format === 'opus' ? 'ogg' : 'mp3';
+        $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'tts_'.uniqid('', true).'.'.$ext;
+        file_put_contents($path, $response->body());
+
+        return new SynthesizeResult(
+            audioPath: $path,
+            mimeType: $mime,
+            success: true,
+            model: $resolved->model->model_key,
+            latencyMs: $this->elapsed($started),
+            httpStatus: $response->status(),
+            providerId: $resolved->provider->id,
+            modelId: $resolved->model->id,
         );
     }
 
