@@ -130,3 +130,9 @@ partner_accounts            — reseller markup, commission, white-label scope
 | Tax | **Roadmap** | No VAT/GST, Stripe Tax, or tax lines |
 | Credits / wallet | **Roadmap** | No prepaid balance |
 | Proration | **Roadmap** | No upgrade/downgrade math; Stripe portal only |
+| Revenue reports | **Partial** | Admin `RevenueController`, order aggregates; no unified billing ledger |
+
+**Critical gaps**
+
+1. No single payment ledger — cannot reconcile platform revenue across gateways.
+2. Refunds are status flags, not financial events.
