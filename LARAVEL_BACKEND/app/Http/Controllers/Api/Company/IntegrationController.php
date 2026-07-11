@@ -16,3 +16,9 @@ class IntegrationController extends Controller
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
         }
+
+        $connected = CompanyIntegration::where('company_id', $company->id)->get()->keyBy('connector_type');
+
+        $connectors = collect($registry->catalog())->map(function (array $meta) use ($connected) {
+            $row = $connected->get($meta['type']);
+
