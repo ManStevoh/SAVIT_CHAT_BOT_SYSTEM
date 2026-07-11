@@ -76,3 +76,9 @@ class CmsAdminController extends Controller
             $page->is_published = (bool) $validated['isPublished'];
         }
         $page->save();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function updateSection(Request $request, string $slug, string $sectionKey): JsonResponse
+    {
