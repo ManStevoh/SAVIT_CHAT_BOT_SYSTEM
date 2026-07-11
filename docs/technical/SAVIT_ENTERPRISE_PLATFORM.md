@@ -82,3 +82,9 @@ Each module: **vision → status → what exists → gaps → build spec (global
 
 | Sub-capability | Status | Evidence |
 |----------------|--------|----------|
+| Plans (CRUD, public list) | **Implemented** | `Plan`, `PlanController`, `PlanSeeder`, admin CRUD |
+| Trials (on signup) | **Partial** | `AuthController::createDefaultTrialSubscription`, `config/subscription.php`; `trial_elapsed_action` **never executed** |
+| Monthly / annual billing | **Partial** | Stripe recurring; M-Pesa/Paystack = **+1 month one-shot**, no auto-renew |
+| Usage-based limits | **Partial** | `PlanLimitService`, `AiBillingService`, growth/WhatsApp limits — **hardcoded per plan slug**, not DB entitlements |
+| Credits (platform) | **Roadmap** | Meta WhatsApp credit lines only (`WhatsAppCreditSharingService`) |
+| Seat-based | **Partial** | Limits reported in `SubscriptionController::usage()` — **not enforced** on invite |
