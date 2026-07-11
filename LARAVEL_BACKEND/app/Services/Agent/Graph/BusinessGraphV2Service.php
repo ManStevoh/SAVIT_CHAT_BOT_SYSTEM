@@ -226,3 +226,9 @@ final class BusinessGraphV2Service
             [
                 'from_node_id' => $fromId,
                 'to_node_id' => $toId,
+                'edge_type' => $edgeType,
+            ],
+            ['company_id' => $company->id],
+        );
+
+        return true;
