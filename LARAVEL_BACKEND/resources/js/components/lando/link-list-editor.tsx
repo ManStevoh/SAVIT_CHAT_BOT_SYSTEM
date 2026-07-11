@@ -4,3 +4,9 @@ import { Label } from "@/components/ui/label"
 import { Plus, Trash2 } from "lucide-react"
 import type { CmsLink } from "./types"
 
+export function LinkListEditor({
+  label,
+  links,
+  onChange,
+}: {
+  label: string
