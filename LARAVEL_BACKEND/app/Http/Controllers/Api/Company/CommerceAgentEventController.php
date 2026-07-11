@@ -52,3 +52,9 @@ class CommerceAgentEventController extends Controller
             ->limit(30)
             ->get()
             ->map(fn ($e) => $this->formatEvent($e));
+
+        return response()->json(['alerts' => $events]);
+    }
+
+    public function detect(Request $request, CommerceEventDetector $detector): JsonResponse
+    {
