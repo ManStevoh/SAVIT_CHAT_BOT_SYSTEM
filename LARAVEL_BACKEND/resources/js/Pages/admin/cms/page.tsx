@@ -520,3 +520,9 @@ function SortableSectionList({
           onDragStart={() => setDragIndex(index)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={() => handleDrop(index)}
+          className={cn(dragIndex === index && "opacity-50")}
+        >
+          <SectionEditor
+            slug={slug}
+            section={section}
+            onSaved={onSaved}
