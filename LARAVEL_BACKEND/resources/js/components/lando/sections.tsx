@@ -10,3 +10,9 @@ interface LandoHeroProps {
   primaryCtaHref?: string
   secondaryCtaText?: string
   secondaryCtaHref?: string
+  imageUrl?: string
+  imageAlt?: string
+}
+
+export function LandoHeroSection({
+  kicker,
