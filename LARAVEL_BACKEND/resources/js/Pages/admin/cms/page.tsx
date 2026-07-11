@@ -250,3 +250,9 @@ function SectionEditor({
           )}
           {key === "intro_card" && (
             <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          )}
+        </div>
+      )
+    }
+
+    if (key.startsWith("feature_")) {
