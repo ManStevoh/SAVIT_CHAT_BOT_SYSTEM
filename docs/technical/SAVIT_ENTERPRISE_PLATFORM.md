@@ -310,3 +310,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 ### Vendor Portal
 
 **Vision:** Suppliers update inventory, upload invoices, accept POs, track payments, communicate.
+
+| Status | **Roadmap** |
+
+**Note:** Distinct from Composer `vendor/`. Requires `vendors` table, scoped login, PO workflow tied to Document Builder.
+
+---
