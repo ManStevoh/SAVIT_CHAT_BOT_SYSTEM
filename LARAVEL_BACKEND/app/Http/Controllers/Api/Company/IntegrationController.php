@@ -64,3 +64,9 @@ class IntegrationController extends Controller
         return response()->json([
             'success' => (bool) ($result['success'] ?? false),
             'integration' => $integration,
+            'message' => $result['message'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 422);
+    }
+
+    public function disconnect(Request $request, string $connectorType): JsonResponse
+    {
