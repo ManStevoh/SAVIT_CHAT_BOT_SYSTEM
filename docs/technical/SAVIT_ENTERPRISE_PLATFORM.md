@@ -214,3 +214,9 @@ form_logic                  — conditional rules engine (safe DSL, no eval)
 - **AI integration:** Agent can pre-fill from `customer_memories`; submissions → event bus.
 
 ---
+
+### 6. Document Builder
+
+**Vision:** Generate quotations, invoices, contracts, POs, receipts, delivery notes, certificates from reusable templates.
+
+| Document | Status | Evidence |
