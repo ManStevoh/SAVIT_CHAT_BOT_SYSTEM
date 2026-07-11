@@ -418,3 +418,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 ### 26. Search Engine
 
 **Vision:** Google-like — one search bar across customers, products, orders, chats, invoices, employees, files, tasks, meetings.
+
+| Status | **Partial** |
+
+**Evidence:** Per-entity SQL `search` params; semantic search for FAQ/products/knowledge chunks. No global index (Meilisearch/Elasticsearch/Typesense).
+
+**Build spec:** Unified `search_index` pipeline via event bus; company-scoped indices; highlight snippets; permission-filtered results.
