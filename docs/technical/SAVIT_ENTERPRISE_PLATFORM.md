@@ -268,3 +268,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 **Vision:** Policies, training, procedures, FAQs, videos — searchable.
 
 | Status | **Partial** |
+
+**Evidence:** `Faq` CRUD + dashboard; `KnowledgeChunk` embeddings; `SearchKnowledgeTool`; `KnowledgeArtifact` (AI compression). No wiki articles, versioning, or video library UI.
+
+**Gap → build:** Extend FAQ into `wiki_pages` with categories, markdown, version history, full-text + semantic search unified in Search Engine (module 26).
+
+---
