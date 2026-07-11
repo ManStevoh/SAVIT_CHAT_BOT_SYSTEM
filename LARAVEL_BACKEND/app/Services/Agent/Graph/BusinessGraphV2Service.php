@@ -82,3 +82,9 @@ final class BusinessGraphV2Service
             ->where('company_id', $company->id)
             ->orderByDesc('id')
             ->limit(50)
+            ->get(['id', 'name', 'status', 'sent_count'])
+            ->each(function (WhatsAppCampaign $campaign) use ($company, &$stats) {
+                $this->upsertNode(
+                    $company,
+                    BusinessGraphNode::TYPE_CAMPAIGN,
+                    'whatsapp_campaign',
