@@ -34,3 +34,9 @@ final class ChannelReplyDispatcher
             $messageText,
             $customerName,
             $customerEmail,
+        );
+
+        $reply = null;
+        if ($result['queued'] && $syncReply) {
+            ProcessIncomingChannelMessage::dispatchSync(
+                $company->id,
