@@ -64,3 +64,9 @@ Already shipped in ABI foundation (`audit_events`, `AuditService`). Phase 2 wire
 
 ### 2h — API platform v1
 
+| Component | Path |
+|-----------|------|
+| API keys | `company_api_keys` + `ApiKeyService` |
+| Middleware | `api.key` → `AuthenticateApiKey` |
+| v1 routes | `GET /api/v1/company/health`, `GET /api/v1/company/orders` |
+| Webhooks | `POST /api/company/api-platform/webhooks` |
