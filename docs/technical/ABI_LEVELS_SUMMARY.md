@@ -76,3 +76,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 | Multi-year capital / hiring / branch models | 6, 10 | |
 | Full org chart approval UI | 7 | Policy engine v1 shipped |
 | Entity trust (suppliers, couriers) | 8 | |
+| Multi-business ecosystem AI | 12 | |
+| Autonomous board sessions | 13–14 | |
+| Per-role specialist personalities | 15 | |
+| Policy engine DSL + legal packs | 17 | |
+| Full genome versioning | 18 | |
+| Unified loop KPI controller | 20 | Outcome API shipped |
