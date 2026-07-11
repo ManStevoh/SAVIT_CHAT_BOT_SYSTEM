@@ -196,3 +196,9 @@ function SectionEditor({
           <Field label="Success message" value={str("successMessage")} onChange={(v) => set("successMessage", v)} />
         </div>
       )
+    }
+
+    if (key === "hero") {
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {slug === "home" && (
