@@ -27,6 +27,11 @@ Route::get('/dashboard/customers', [PageController::class, 'dashboardCustomers']
 Route::get('/dashboard/faq', [PageController::class, 'dashboardFaq'])->name('dashboard.faq');
 Route::get('/dashboard/growth', [PageController::class, 'dashboardGrowth'])->name('dashboard.growth');
 Route::get('/dashboard/executive', [PageController::class, 'dashboardExecutive'])->name('dashboard.executive');
+Route::get('/dashboard/cognitive', [PageController::class, 'dashboardCognitive'])->name('dashboard.cognitive');
+    Route::get('/dashboard/agent-ops', [PageController::class, 'dashboardAgentOps'])->name('dashboard.agent-ops');
+    Route::get('/dashboard/business-intelligence', [PageController::class, 'dashboardBusinessIntelligence'])->name('dashboard.business-intelligence');
+Route::get('/dashboard/mission-control', [PageController::class, 'dashboardMissionControl'])->name('dashboard.mission-control');
+Route::get('/dashboard/marketplace', [PageController::class, 'dashboardMarketplace'])->name('dashboard.marketplace');
 Route::get('/dashboard/whatsapp/campaigns', [PageController::class, 'dashboardWhatsAppCampaigns'])->name('dashboard.whatsapp.campaigns');
 Route::get('/dashboard/orders', [PageController::class, 'dashboardOrders'])->name('dashboard.orders');
 Route::get('/dashboard/products', [PageController::class, 'dashboardProducts'])->name('dashboard.products');
