@@ -700,3 +700,9 @@ php artisan platform:verify       # subscription, billing, audit schema
 
 | Document | Scope |
 |----------|-------|
+| [SAVIT_DIGITAL_NERVOUS_SYSTEM.md](SAVIT_DIGITAL_NERVOUS_SYSTEM.md) | AI vision concepts 1–24 |
+| [AI_ABI_PLATFORM.md](AI_ABI_PLATFORM.md) | Shipped AI layers |
+| [AI_PHASE5_OS.md](AI_PHASE5_OS.md) | Executive UI, approvals, voice |
+| [database.md](database.md) | Current schema |
+| [api-reference.md](api-reference.md) | REST endpoints |
+| [payments.md](../user-guide/customer-journeys/payments.md) | Customer payment flows |
