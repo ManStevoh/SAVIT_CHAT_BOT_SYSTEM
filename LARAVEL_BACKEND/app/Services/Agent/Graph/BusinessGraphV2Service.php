@@ -52,3 +52,9 @@ final class BusinessGraphV2Service
                         $stats['edges']++;
                     }
                 }
+            });
+
+        ProductRelationship::query()
+            ->where('company_id', $company->id)
+            ->limit(500)
+            ->get()
