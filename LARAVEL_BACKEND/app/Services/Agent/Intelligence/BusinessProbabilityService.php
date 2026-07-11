@@ -70,3 +70,9 @@ final class BusinessProbabilityService
         $this->persistScore($companyId, null, 'buy', $buy, $factors);
         $this->persistScore($companyId, null, 'churn', $churn, $factors);
         $this->persistScore($companyId, null, 'refund', $refund, $factors);
+
+        return [
+            'buy' => round($buy, 4),
+            'churn' => round($churn, 4),
+            'refund' => round($refund, 4),
+            'factors' => $factors,
