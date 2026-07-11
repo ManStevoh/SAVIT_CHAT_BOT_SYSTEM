@@ -550,3 +550,9 @@ All new modules must meet these **global SaaS standards** before marking **Imple
 | Audit trail | Partial | Audit Center on all mutations |
 | Rate limiting | Auth routes | Per API key + per company quotas |
 | Input validation | Controller validate | Form requests + shared schemas |
+
+### Scalability
+
+| Pattern | Application |
+|---------|-------------|
+| Async by default | Notifications, webhooks, search indexing, usage metering via queues |
