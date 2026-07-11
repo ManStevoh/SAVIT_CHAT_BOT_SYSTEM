@@ -22,3 +22,9 @@ export function LandoNavbar({
   loginLabel = "Log in",
   loginHref = "/login",
   signupLabel = "Sign up",
+  signupHref = "/register",
+  activePath = "/",
+}: LandoNavbarProps) {
+  const [open, setOpen] = useState(false)
+
+  return (
