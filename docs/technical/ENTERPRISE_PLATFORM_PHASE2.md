@@ -142,3 +142,5 @@ Outbound webhooks receive HMAC-SHA256 signed JSON with headers:
 ## Related docs
 
 - [SAVIT_ENTERPRISE_PLATFORM.md](SAVIT_ENTERPRISE_PLATFORM.md) — full 35-module blueprint
+- [PLATFORM_MODULE_GAP_MATRIX.md](PLATFORM_MODULE_GAP_MATRIX.md) — status matrix
+- [ABI_LEVELS_SUMMARY.md](ABI_LEVELS_SUMMARY.md) — decision intelligence levels
