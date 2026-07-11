@@ -22,3 +22,9 @@ final class MultiChannelIngestService
         string $channelUserId,
         string $messageText,
         ?string $customerName = null,
+        ?string $customerEmail = null,
+    ): array {
+        if (! in_array($channel, ChatChannel::all(), true)) {
+            throw new \InvalidArgumentException('Unsupported channel: '.$channel);
+        }
+
