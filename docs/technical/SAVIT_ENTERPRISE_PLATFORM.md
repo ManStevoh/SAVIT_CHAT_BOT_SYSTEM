@@ -262,3 +262,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 - **Permissions:** Channel membership via Permission Engine (module 22).
 
 ---
+
+### 8. Company Wiki / Knowledge Base
+
+**Vision:** Policies, training, procedures, FAQs, videos — searchable.
+
+| Status | **Partial** |
