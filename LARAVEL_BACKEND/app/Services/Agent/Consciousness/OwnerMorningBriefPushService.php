@@ -82,3 +82,9 @@ final class OwnerMorningBriefPushService
             ->value('phone');
 
         if (is_string($ownerPhone) && trim($ownerPhone) !== '') {
+            return $this->normalizePhone($ownerPhone);
+        }
+
+        $companyPhone = trim((string) ($company->phone ?? ''));
+
+        return $companyPhone !== '' ? $this->normalizePhone($companyPhone) : '';
