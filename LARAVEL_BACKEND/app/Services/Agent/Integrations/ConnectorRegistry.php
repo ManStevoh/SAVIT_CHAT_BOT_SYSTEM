@@ -244,3 +244,9 @@ final class ConnectorRegistry
 
         if (! is_string($url) || $url === '') {
 
+            return ['success' => false, 'message' => 'Provide api_url in config or set AGENT_SHIPPING_API_URL.'];
+
+        }
+
+
+
