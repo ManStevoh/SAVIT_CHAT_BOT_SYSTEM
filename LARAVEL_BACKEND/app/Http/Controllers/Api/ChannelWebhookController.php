@@ -22,3 +22,9 @@ class ChannelWebhookController extends Controller
         int $companyId,
     ): JsonResponse {
         $company = $auth->companyFromRequest($request, $companyId);
+        if (! $company) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        $validated = $request->validate([
+            'from' => 'required|string|max:200',
