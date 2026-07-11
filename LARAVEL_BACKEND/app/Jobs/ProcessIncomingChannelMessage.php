@@ -52,3 +52,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
 
         if ($reply === null || trim((string) ($reply['reply'] ?? '')) === '') {
             return;
+        }
+
+        Message::create([
+            'chat_id' => $chat->id,
+            'sender' => 'bot',
+            'content' => $reply['reply'],
