@@ -70,3 +70,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
       }
       if (pageSlug === "pricing") {
         return <LandoPageHero title={str(content.title)} description={str(content.description)} />
+      }
+      return (
+        <LandoHeroSection
+          kicker={str(content.kicker)}
+          title={str(content.title)}
+          description={str(content.description)}
