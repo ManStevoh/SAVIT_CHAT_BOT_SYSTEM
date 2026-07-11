@@ -376,3 +376,9 @@ final class ConnectorRegistry
 
             if (! $response->successful()) {
 
+                return ['success' => false, 'message' => 'ERP returned HTTP '.$response->status()];
+
+            }
+
+
+
