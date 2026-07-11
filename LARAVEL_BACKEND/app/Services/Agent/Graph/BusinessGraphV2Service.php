@@ -196,3 +196,9 @@ final class BusinessGraphV2Service
      */
     private function upsertNode(
         Company $company,
+        string $nodeType,
+        string $refType,
+        int $refId,
+        string $label,
+        array $metadata = [],
+    ): BusinessGraphNode {
