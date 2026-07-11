@@ -676,3 +676,9 @@ flowchart TB
 
 Before marking any module **Implemented**, require:
 
+- [ ] Migration + model + service + API routes
+- [ ] Company-scoped authorization tests
+- [ ] Audit event on create/update/delete
+- [ ] Emitted on Event Bus (where applicable)
+- [ ] Documented in this registry + API reference
+- [ ] `php artisan test` feature tests green
