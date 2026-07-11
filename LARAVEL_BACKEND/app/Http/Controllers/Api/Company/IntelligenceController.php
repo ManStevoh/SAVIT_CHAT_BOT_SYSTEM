@@ -208,3 +208,9 @@ class IntelligenceController extends Controller
 
 
         return response()->json(['outcome' => $record], 201);
+
+    }
+
+    public function outcomes(Request $request): JsonResponse
+    {
+        $company = $request->user()->company;
