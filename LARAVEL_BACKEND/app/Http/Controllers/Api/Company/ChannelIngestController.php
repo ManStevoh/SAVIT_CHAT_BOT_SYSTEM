@@ -82,3 +82,9 @@ class ChannelIngestController extends Controller
 
         $settings->web_widget_token = Str::random(32);
         $settings->channel_ingest_secret = Str::random(32);
+        $settings->save();
+
+        return response()->json([
+            'webWidgetToken' => $settings->web_widget_token,
+            'channelIngestSecret' => $settings->channel_ingest_secret,
+        ]);
