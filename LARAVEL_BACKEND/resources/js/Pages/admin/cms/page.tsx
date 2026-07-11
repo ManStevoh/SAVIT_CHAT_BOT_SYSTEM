@@ -454,3 +454,9 @@ function SectionEditor({
           </div>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm">
+              <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent>
+          <div className="space-y-4 border-t p-4">
