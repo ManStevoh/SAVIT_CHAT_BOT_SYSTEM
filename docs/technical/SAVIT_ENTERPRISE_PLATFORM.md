@@ -178,3 +178,9 @@ revenue_snapshots           — daily MRR/ARR/churn aggregates (materialized)
 2. No user preference matrix (per channel, per event type).
 3. Admin `notify_*` flags in `PlatformSetting` never trigger sends.
 
+**Build spec**
+
+```
+notification_templates      — channel, locale, subject/body, variables
+notification_rules          — event_type → channels, conditions, throttle
+notification_deliveries   — status, provider_id, read_at (in-app)
