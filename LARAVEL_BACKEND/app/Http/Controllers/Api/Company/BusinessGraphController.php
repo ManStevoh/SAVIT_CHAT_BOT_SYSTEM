@@ -64,3 +64,8 @@ class BusinessGraphController extends Controller
                 'id' => $node->id,
                 'type' => $node->node_type,
                 'label' => $node->label,
+                'metadata' => $node->metadata,
+            ],
+        ], 201);
+    }
+}
