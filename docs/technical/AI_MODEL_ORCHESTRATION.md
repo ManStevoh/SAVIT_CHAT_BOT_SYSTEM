@@ -136,3 +136,6 @@ php artisan test --filter=CommerceAgent
 
 ## Related
 
+- [HONEST_REMAINING_GAPS.md](HONEST_REMAINING_GAPS.md)
+- `config/ai.php` — use-case routing
+- `app/Services/AI/AiOrchestrator.php` — main facade
