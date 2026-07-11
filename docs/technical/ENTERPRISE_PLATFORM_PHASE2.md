@@ -28,3 +28,9 @@ Phase 2 extends existing subscription, billing, and notification plumbing withou
 |-----------|------|
 | Table | `billing_payments` (idempotent on `gateway` + `external_event_id`) |
 | Service | `BillingLedgerService` |
+| Wired | `MpesaCallbackController`, `StripeWebhookController` (`invoice.paid`) |
+| API | `GET /api/company/api-platform/billing-history` |
+
+### 2c — Notification center v1
+
+| Component | Path |
