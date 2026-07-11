@@ -46,3 +46,9 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
         <LandoNavbar
           links={navLinks}
           loginLabel={String(navbarContent.loginLabel ?? "Log in")}
+          loginHref={String(navbarContent.loginHref ?? "/login")}
+          signupLabel={String(navbarContent.signupLabel ?? "Sign up")}
+          signupHref={String(navbarContent.signupHref ?? "/register")}
+          activePath={pathname}
+        />
+
