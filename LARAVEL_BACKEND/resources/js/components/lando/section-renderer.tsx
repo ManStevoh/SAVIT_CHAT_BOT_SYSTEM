@@ -154,3 +154,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
         <LandoCompareFeatures
           title={str(content.title, "Compare Features")}
           columns={arr(content.columns)}
+        />
+      )
+
+    case "faq":
+      return (
+        <LandoFaqSection title={str(content.title)} faqs={pageData.faqs ?? []} />
