@@ -106,3 +106,9 @@ class CmsAdminController extends Controller
 
         return response()->json([
             'success' => true,
+            'section' => [
+                'id' => (string) $section->id,
+                'key' => $section->section_key,
+                'label' => $section->label,
+                'isEnabled' => (bool) $section->is_enabled,
+                'sortOrder' => (int) $section->sort_order,
