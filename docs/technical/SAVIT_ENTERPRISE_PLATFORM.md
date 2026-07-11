@@ -334,3 +334,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 | Status | **Roadmap** |
 
 ---
+
+### 21. Audit Center
+
+**Vision:** Who did what, when, where, old/new value, IP, device, approval — enterprise critical.
+
+| Status | **Partial** |
