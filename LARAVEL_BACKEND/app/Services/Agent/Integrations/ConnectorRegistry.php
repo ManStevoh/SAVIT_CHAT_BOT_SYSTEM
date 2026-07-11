@@ -334,3 +334,9 @@ final class ConnectorRegistry
 
         $url = trim((string) ($config['inventory_url'] ?? ''));
 
+        if ($url === '' || ! filter_var($url, FILTER_VALIDATE_URL)) {
+
+            return ['success' => false, 'message' => 'Valid inventory_url required.'];
+
+        }
+
