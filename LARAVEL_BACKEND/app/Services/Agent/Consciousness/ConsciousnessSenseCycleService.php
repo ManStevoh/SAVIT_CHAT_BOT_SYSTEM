@@ -10,3 +10,9 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Phase 9 — lightweight 5-minute consciousness sense cycle.
+ */
+final class ConsciousnessSenseCycleService
+{
+    public function __construct(
+        protected UnifiedCompanyBrainService $brain,
+        protected BusinessTimelineService $timeline,
