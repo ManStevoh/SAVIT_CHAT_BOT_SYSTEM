@@ -250,3 +250,9 @@ export function LandoCtaSection({
 }) {
   return (
     <section className="bg-[#f3f4f6] py-12 lg:py-16">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-3xl bg-white p-8 shadow-sm lg:p-12">
+          <div className={cn("grid items-center gap-10", showImage && imageUrl && "lg:grid-cols-2")}>
+            <div>
+              <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
+              {description && <p className="mt-3 text-gray-600">{description}</p>}
