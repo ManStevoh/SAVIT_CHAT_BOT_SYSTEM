@@ -190,3 +190,9 @@ class IntelligenceController extends Controller
             $company,
 
             $request->user(),
+
+            $validated['source_type'],
+
+            (int) $validated['source_id'],
+
+            $validated['recommended_action'],
