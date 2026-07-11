@@ -184,3 +184,9 @@ export function LandoCompareFeatures({
         <div className="mt-8 overflow-hidden rounded-2xl bg-white shadow-sm">
           <div className="grid border-b border-gray-200 md:grid-cols-3">
             {columns.map((col) => (
+              <div key={col.name} className="border-gray-200 p-6 font-bold text-black md:border-r last:md:border-r-0">
+                {col.name}
+              </div>
+            ))}
+          </div>
+          <div className="grid md:grid-cols-3">
