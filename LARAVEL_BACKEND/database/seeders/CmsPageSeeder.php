@@ -220,3 +220,9 @@ class CmsPageSeeder extends Seeder
                             'usePlansApi' => true,
                             'popularBadge' => 'Most Popular',
                         ],
+                    ],
+                    [
+                        'section_key' => 'compare_features',
+                        'label' => 'Compare features',
+                        'sort_order' => 3,
+                        'content' => [
