@@ -16,3 +16,9 @@ class BusinessProbabilityScore extends Model
         'computed_at',
     ];
 
+    protected $casts = [
+        'probability' => 'float',
+        'factors' => 'array',
+        'computed_at' => 'datetime',
+    ];
+
