@@ -76,3 +76,9 @@ class ApiPlatformController extends Controller
 
         $endpoints = WebhookEndpoint::where('company_id', $company->id)->orderByDesc('id')->get();
 
+        return response()->json(['webhooks' => $endpoints]);
+    }
+
+    public function createWebhook(Request $request, WebhookDeliveryService $webhooks): JsonResponse
+    {
+        $company = $request->user()->company;
