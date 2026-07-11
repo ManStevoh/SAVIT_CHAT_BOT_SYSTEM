@@ -256,3 +256,9 @@ function SectionEditor({
     }
 
     if (key.startsWith("feature_")) {
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Label" value={str("label")} onChange={(v) => set("label", v)} />
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          <Field label="Button text" value={str("ctaText")} onChange={(v) => set("ctaText", v)} />
