@@ -16,3 +16,9 @@ use Illuminate\Support\Facades\Log;
 
 /**
 
+ * Registry of commerce integrations — weather/delivery shipped; CRM/ERP/shipping adapters.
+
+ */
+
+final class ConnectorRegistry
+
