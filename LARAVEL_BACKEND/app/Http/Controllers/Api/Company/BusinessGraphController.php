@@ -58,3 +58,9 @@ class BusinessGraphController extends Controller
             $validated['label'],
             $validated['metadata'] ?? [],
         );
+
+        return response()->json([
+            'node' => [
+                'id' => $node->id,
+                'type' => $node->node_type,
+                'label' => $node->label,
