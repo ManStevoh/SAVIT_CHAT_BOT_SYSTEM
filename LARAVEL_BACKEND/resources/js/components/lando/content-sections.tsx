@@ -166,3 +166,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
       </div>
     </section>
   )
+}
+
+export function LandoCompareFeatures({
+  title = "Compare Features",
+  columns = [],
+}: {
