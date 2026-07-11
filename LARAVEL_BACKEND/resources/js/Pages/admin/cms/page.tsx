@@ -406,3 +406,9 @@ function SectionEditor({
                 value={m.imageUrl ?? ""}
                 onChange={(v) => {
                   const next = [...members]
+                  next[i] = { ...next[i], imageUrl: v }
+                  set("members", next)
+                }}
+              />
+            </div>
+          ))}
