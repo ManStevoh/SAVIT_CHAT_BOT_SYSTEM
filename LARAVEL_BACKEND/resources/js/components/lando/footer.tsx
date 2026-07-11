@@ -4,3 +4,9 @@ import type { CmsLink } from "./types"
 
 interface LandoFooterProps {
   copyright?: string
+  navLinks?: CmsLink[]
+  socialLinks?: CmsLink[]
+  legalLinks?: CmsLink[]
+}
+
+export function LandoFooter({
