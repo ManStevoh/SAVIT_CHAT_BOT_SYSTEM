@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             CompanySeeder::class,
             PaymentGatewaySeeder::class,
             EnterprisePlatformSeeder::class,
+            CmsPageSeeder::class,
         ]);
     }
 }
