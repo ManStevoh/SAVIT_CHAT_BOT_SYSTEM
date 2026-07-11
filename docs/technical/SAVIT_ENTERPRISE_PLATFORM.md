@@ -634,3 +634,9 @@ flowchart TB
     AUDIT[Audit Center]
     BUS[Event Bus]
   end
+
+  subgraph p3 [Phase 3 - Surfaces]
+    DOC[Document Builder]
+    FORM[Form Builder]
+    SRCH[Search Engine]
+    CPORT[Customer Portal]
