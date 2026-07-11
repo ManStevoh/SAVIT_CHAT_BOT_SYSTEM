@@ -16,3 +16,9 @@ final class OwnerMorningBriefPushService
 {
     public function __construct(
         protected WhatsAppMessageSenderService $waSender,
+    ) {}
+
+    public function pushForCompany(Company $company, ?CommerceBrief $brief = null): bool
+    {
+        $company->loadMissing('settings');
+        $settings = $company->settings;
