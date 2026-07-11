@@ -76,3 +76,9 @@ export function LandoTestimonials({
               <p className="mt-4 font-bold text-black">{t.name}</p>
               {t.role && <p className="text-sm text-gray-500">{t.role}</p>}
             </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
