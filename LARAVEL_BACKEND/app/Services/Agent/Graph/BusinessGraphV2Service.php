@@ -130,3 +130,9 @@ final class BusinessGraphV2Service
 
         return $stats;
     }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    public function addManualNode(
+        Company $company,
