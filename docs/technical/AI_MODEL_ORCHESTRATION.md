@@ -88,3 +88,9 @@ $orchestrator->extractEntities($message, $company);
 
 Legacy code may still use `OpenAiClient` or `AiGateway` — both route through `AiModelResolver` with use-case hints.
 
+---
+
+## Company vs platform model selection
+
+| Mode | Applies to |
+|------|------------|
