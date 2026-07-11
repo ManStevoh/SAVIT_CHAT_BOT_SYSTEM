@@ -22,3 +22,9 @@ class CmsPageController extends Controller
 
         $page->load('sections');
 
+        $enabledKeys = $page->sections->where('is_enabled', true)->pluck('section_key')->all();
+
+        $extras = [];
+
+        if (in_array('testimonials', $enabledKeys, true)) {
+            $extras['testimonials'] = Testimonial::where('is_active', true)
