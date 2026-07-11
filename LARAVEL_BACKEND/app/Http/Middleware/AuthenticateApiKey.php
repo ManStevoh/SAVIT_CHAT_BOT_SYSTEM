@@ -28,3 +28,8 @@ class AuthenticateApiKey
         }
 
         $request->attributes->set('api_key', $key);
+        $request->attributes->set('api_key_company_id', $key->company_id);
+
+        return $next($request);
+    }
+}
