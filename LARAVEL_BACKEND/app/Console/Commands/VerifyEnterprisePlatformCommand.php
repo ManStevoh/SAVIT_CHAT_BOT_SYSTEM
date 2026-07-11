@@ -28,3 +28,9 @@ class VerifyEnterprisePlatformCommand extends Command
             'webhook_endpoints table' => Schema::hasTable('webhook_endpoints'),
             'webhook_deliveries table' => Schema::hasTable('webhook_deliveries'),
             'investigation_cases table' => Schema::hasTable('investigation_cases'),
+            'audit_events table' => Schema::hasTable('audit_events'),
+            'domain_events table' => Schema::hasTable('domain_events'),
+            'company_policy_rules table' => Schema::hasTable('company_policy_rules'),
+            'company_integrations table' => Schema::hasTable('company_integrations'),
+            'company_settings.agent_council_enabled' => Schema::hasColumn('company_settings', 'agent_council_enabled'),
+        ];
