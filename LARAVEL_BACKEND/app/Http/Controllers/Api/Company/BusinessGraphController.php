@@ -22,3 +22,9 @@ class BusinessGraphController extends Controller
         return response()->json($graph->exportGraph($company, min(500, max(10, $limit))));
     }
 
+    public function sync(Request $request, BusinessGraphV2Service $graph): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
