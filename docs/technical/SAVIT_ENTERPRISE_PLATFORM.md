@@ -232,3 +232,9 @@ form_logic                  — conditional rules engine (safe DSL, no eval)
 **Build spec**
 
 ```
+document_templates          — type, html/docx schema, variables, locale
+document_instances          — rendered PDF path, status, signers
+document_workflows          — draft → sent → signed → archived
+```
+
+- **Standards:** PDF/A for archival; digital signatures (optional module); template versioning.
