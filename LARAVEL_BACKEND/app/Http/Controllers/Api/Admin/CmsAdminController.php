@@ -70,3 +70,9 @@ class CmsAdminController extends Controller
             $page->meta_title = $validated['metaTitle'];
         }
         if (array_key_exists('metaDescription', $validated)) {
+            $page->meta_description = $validated['metaDescription'];
+        }
+        if (array_key_exists('isPublished', $validated)) {
+            $page->is_published = (bool) $validated['isPublished'];
+        }
+        $page->save();
