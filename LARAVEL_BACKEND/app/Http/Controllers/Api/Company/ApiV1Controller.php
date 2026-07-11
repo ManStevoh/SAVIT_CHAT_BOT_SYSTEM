@@ -22,3 +22,9 @@ class ApiV1Controller extends Controller
         $orders = Order::where('company_id', $companyId)
             ->orderByDesc('created_at')
             ->limit(50)
+            ->get(['id', 'order_number', 'customer_phone', 'customer_name', 'total', 'status', 'payment_status', 'created_at']);
+
+        return response()->json(['orders' => $orders]);
+    }
+
+    public function health(): JsonResponse
