@@ -274,3 +274,9 @@ function SectionEditor({
       return (
         <div className="space-y-3">
           <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} />
+          <Field label="Button text" value={str("ctaText")} onChange={(v) => set("ctaText", v)} />
+          <Field label="Button link" value={str("ctaHref")} onChange={(v) => set("ctaHref", v)} />
+          <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          {steps.map((step, i) => (
+            <div key={i} className="rounded border p-3 space-y-2">
