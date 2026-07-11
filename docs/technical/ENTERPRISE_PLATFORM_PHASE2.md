@@ -58,3 +58,9 @@ Already shipped in ABI foundation (`audit_events`, `AuditService`). Phase 2 wire
 | Component | Path |
 |-----------|------|
 | Outbox | `domain_events` |
+| Fan-out | `DomainEventDispatcher` → notifications + webhook queue |
+| Webhooks | `WebhookDeliveryService` + `webhook_deliveries` |
+| Schedule | `DispatchDomainEventsJob` every minute |
+
+### 2h — API platform v1
+
