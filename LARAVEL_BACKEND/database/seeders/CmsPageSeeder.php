@@ -232,3 +232,9 @@ class CmsPageSeeder extends Seeder
                                     'name' => 'Starter',
                                     'features' => ['AI replies', 'Order management', 'M-Pesa payments', '1 WhatsApp number', 'Email support'],
                                 ],
+                                [
+                                    'name' => 'Growth',
+                                    'features' => ['Everything in Starter', 'Multi-agent inbox', 'Stripe payments', 'Analytics dashboard', 'Priority support', 'API access'],
+                                ],
+                                [
+                                    'name' => 'Enterprise',
