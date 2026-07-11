@@ -70,3 +70,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
 
         if ($chat->channel === ChatChannel::WHATSAPP && $company->whatsappAccount?->isActive()) {
             try {
+                app(\App\Services\WhatsAppMessageSenderService::class)->sendText(
+                    $company->whatsappAccount,
+                    $chat->customer_phone,
+                    (string) $reply['reply'],
+                );
+            } catch (\Throwable $e) {
