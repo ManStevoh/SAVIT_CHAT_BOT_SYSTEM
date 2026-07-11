@@ -16,3 +16,9 @@ class CmsPageSeeder extends Seeder
         $aboutTeamImage = '/images/lando/lando-about-team.png';
 
         $pages = [
+            [
+                'slug' => 'global',
+                'title' => 'Global',
+                'meta_title' => null,
+                'meta_description' => null,
+                'sections' => [
