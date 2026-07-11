@@ -82,3 +82,9 @@ final class ConnectorRegistry
 
                 'type' => 'dhl_shipping',
 
+                'name' => 'DHL Express',
+
+                'category' => 'logistics',
+
+                'status_label' => 'Adapter v1 — rates via DHL API URL',
+
