@@ -412,3 +412,9 @@ final class ConnectorRegistry
 
     {
 
+        $url = trim((string) ($config['webhook_url'] ?? ''));
+
+        if ($url === '') {
+
+            return ['success' => false, 'message' => 'Webhook URL required.'];
+
