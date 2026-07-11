@@ -436,3 +436,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 **Evidence:** Product images, chat attachments (`storage/public`), CSV exports. No folder tree, versioning, or ACLs.
 
 **Build spec:** `files`, `file_versions`, `folders`, S3-compatible storage, virus scan hook, signed URLs with TTL.
+
+---
+
+### 28. Calendar
+
+**Vision:** Unified calendar — meetings, orders, deliveries, tasks, campaigns, birthdays, subscriptions, maintenance.
