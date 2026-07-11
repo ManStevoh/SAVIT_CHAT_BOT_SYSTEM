@@ -94,3 +94,9 @@ php artisan route:list --path=v1/company
 ### Policy rules (Sanctum, company owner)
 
 ```
+GET    /api/company/policy-rules
+POST   /api/company/policy-rules
+PATCH  /api/company/policy-rules/{id}
+DELETE /api/company/policy-rules/{id}
+```
+
