@@ -40,3 +40,9 @@ class CmsPageSeeder extends Seeder
                         ],
                     ],
                     [
+                        'section_key' => 'auth_shell',
+                        'label' => 'Auth pages shell',
+                        'sort_order' => 3,
+                        'content' => [
+                            'imageUrl' => '/images/lando/lando-hero.png',
+                            'imageAlt' => 'Platform illustration',
