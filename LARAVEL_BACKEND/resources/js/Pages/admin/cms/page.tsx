@@ -562,3 +562,9 @@ function PageEditor({ slug }: { slug: string }) {
       mutate()
     }
   }
+
+  const previewHref =
+    slug === "global" ? "/" : slug === "home" ? "/" : `/${slug}`
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
+  if (!data) return <p className="text-sm text-muted-foreground">Page not found.</p>
