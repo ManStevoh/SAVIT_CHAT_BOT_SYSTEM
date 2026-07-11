@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderProduct;
 use App\Models\Product;
+use App\Services\Agent\Intelligence\IntelligenceOutcomeService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -14,6 +15,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class OpportunityDetectionService
 {
+    public function __construct(
+        protected IntelligenceOutcomeService $outcomes,
+    ) {}
+
     /**
      * @return list<BusinessOpportunity>
      */
@@ -158,7 +163,7 @@ final class OpportunityDetectionService
             return null;
         }
 
-        return BusinessOpportunity::create([
+        $created = BusinessOpportunity::create([
             'company_id' => $companyId,
             'opportunity_type' => $opp['opportunity_type'],
             'title' => $opp['title'],
@@ -169,5 +174,17 @@ final class OpportunityDetectionService
             'status' => 'open',
             'detected_at' => now(),
         ]);
+
+        $company = Company::find($companyId);
+        if ($company) {
+            $this->outcomes->seedFromOpportunity(
+                $company,
+                (int) $created->id,
+                (string) $created->title,
+                (string) $created->description,
+            );
+        }
+
+        return $created;
     }
 }
