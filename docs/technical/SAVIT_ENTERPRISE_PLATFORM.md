@@ -670,3 +670,9 @@ flowchart TB
   AI --> EXEC[Executive AI]
 ```
 
+---
+
+## Verification checklist (per module)
+
+Before marking any module **Implemented**, require:
+
