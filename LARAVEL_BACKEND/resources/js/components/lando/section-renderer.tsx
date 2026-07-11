@@ -40,3 +40,9 @@ interface SectionRendererProps {
 export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }: SectionRendererProps) {
   switch (sectionKey) {
     case "hero":
+      if (pageSlug === "contact") {
+        return (
+          <LandoContactSection
+            title={str(content.title)}
+            description={str(content.description)}
+            imageUrl={str(content.imageUrl)}
