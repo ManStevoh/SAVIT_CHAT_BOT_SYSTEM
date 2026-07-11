@@ -40,3 +40,9 @@ final class OwnerMorningBriefPushService
             return false;
         }
 
+        $phone = $this->resolveOwnerPhone($company);
+        if ($phone === '') {
+            return false;
+        }
+
+        $wa = WhatsAppAccount::where('company_id', $company->id)->where('status', 'active')->first();
