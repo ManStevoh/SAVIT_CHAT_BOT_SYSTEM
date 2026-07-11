@@ -52,3 +52,9 @@ class IntelligenceController extends Controller
             'goal' => 'required|string|max:1000',
 
             'period' => 'nullable|string|in:7d,30d,90d',
+
+            'time_horizon' => 'nullable|string|max:40',
+
+            'constraints' => 'nullable|array',
+
+            'constraints.*' => 'string|max:300',
