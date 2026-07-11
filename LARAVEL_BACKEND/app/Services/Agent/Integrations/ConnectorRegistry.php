@@ -22,3 +22,9 @@ use Illuminate\Support\Facades\Log;
 
 final class ConnectorRegistry
 
+{
+
+    /**
+
+     * @return list<array<string, mixed>>
+
