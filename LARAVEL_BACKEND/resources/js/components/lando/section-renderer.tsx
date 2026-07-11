@@ -34,3 +34,9 @@ interface SectionRendererProps {
   pageSlug: string
   sectionKey: string
   content: Content
+  pageData: CmsPageData
+}
+
+export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }: SectionRendererProps) {
+  switch (sectionKey) {
+    case "hero":
