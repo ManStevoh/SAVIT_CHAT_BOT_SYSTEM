@@ -58,3 +58,9 @@ class CmsAdminController extends Controller
 
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
+            'metaTitle' => 'nullable|string|max:255',
+            'metaDescription' => 'nullable|string|max:2000',
+            'isPublished' => 'sometimes|boolean',
+        ]);
+
+        if (array_key_exists('title', $validated)) {
