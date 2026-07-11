@@ -168,8 +168,7 @@ final class CommerceAgentOrchestrator
 
                 messages: $messages,
 
-                tools: $this->tools->openAiDefinitions(),
-
+                tools: $this->tools->openAiDefinitionsForCompany($company),
                 company: $company,
 
                 chatId: (int) $chat->id,
@@ -474,8 +473,7 @@ TEXT;
 
             $specialists,
 
-            $this->skills->promptAddonForCompany($company->industry ?? 'retail'),
-
+            $this->skills->promptAddonsForCompany($company),
             $this->digitalTwin->getForPrompt($company),
 
             $this->worldModel->getForPrompt($company),
