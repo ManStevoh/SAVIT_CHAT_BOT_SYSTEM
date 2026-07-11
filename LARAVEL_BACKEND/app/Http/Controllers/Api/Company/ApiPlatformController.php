@@ -106,3 +106,9 @@ class ApiPlatformController extends Controller
 
         $payments = BillingPayment::where('company_id', $company->id)
             ->orderByDesc('paid_at')
+            ->limit(50)
+            ->get();
+
+        return response()->json(['payments' => $payments]);
+    }
+}
