@@ -24,10 +24,10 @@ Companies subscribe, connect WhatsApp, and the system handles:
 - **Payment collection** via M-Pesa STK push, Stripe card payments, or manual instructions
 - **Business dashboard** for chats, orders, products, customers, analytics, and team management
 - **Growth Engine** for AI social posts, attribution tracking, and closed-loop revenue analytics
-- **AI Business OS** — 18 agent tools, unified brain, owner analytics, morning briefs, background consciousness jobs
+- **AI Business OS** — 20 agent tools, unified brain, owner analytics, morning briefs, executive approvals
 - **Super Admin panel** for platform operators to manage companies, plans, billing, and integrations
 
-Strategic vision: [Digital Nervous System](technical/SAVIT_DIGITAL_NERVOUS_SYSTEM.md) · Engineering: [AI ABI Platform](technical/AI_ABI_PLATFORM.md)
+Strategic vision: [Digital Nervous System](technical/SAVIT_DIGITAL_NERVOUS_SYSTEM.md) · Engineering: [AI ABI Platform](technical/AI_ABI_PLATFORM.md) · Platform modules: [Enterprise Blueprint](technical/SAVIT_ENTERPRISE_PLATFORM.md)
 
 ## Production URLs
 
