@@ -88,3 +88,9 @@ final class ConnectorRegistry
 
                 'status_label' => 'Adapter v1 — rates via DHL API URL',
 
+                'description' => 'DHL rate lookup when api_url + api_key configured (MyDHL API compatible endpoint).',
+
+            ],
+
+            [
+
