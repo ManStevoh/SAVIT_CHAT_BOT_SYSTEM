@@ -142,3 +142,9 @@ export function LandoFeatureBlock({
   imagePosition = "left",
 }: {
   label?: string
+  title: string
+  description?: string
+  ctaText?: string
+  ctaHref?: string
+  imageUrl?: string
+  imageAlt?: string
