@@ -58,3 +58,9 @@ class ChannelWebhookController extends Controller
 
     /**
      * Instagram DM webhook (Meta messaging_events subset or generic JSON).
+     */
+    public function instagramDm(
+        Request $request,
+        ChannelIngestAuthService $auth,
+        ChannelReplyDispatcher $dispatcher,
+        int $companyId,
