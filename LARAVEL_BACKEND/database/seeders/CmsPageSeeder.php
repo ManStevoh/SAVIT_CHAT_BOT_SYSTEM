@@ -214,3 +214,9 @@ class CmsPageSeeder extends Seeder
                     ],
                     [
                         'section_key' => 'pricing_plans',
+                        'label' => 'Pricing plans',
+                        'sort_order' => 2,
+                        'content' => [
+                            'usePlansApi' => true,
+                            'popularBadge' => 'Most Popular',
+                        ],
