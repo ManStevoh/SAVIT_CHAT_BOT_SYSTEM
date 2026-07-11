@@ -34,3 +34,9 @@ class WebWidgetController extends Controller
 
             'widgetToken' => 'required|string|max:64',
 
+        ]);
+
+
+
+        $company = $auth->companyFromWidgetToken((int) $validated['companyId'], $validated['widgetToken']);
+
