@@ -16,3 +16,9 @@ class ChannelIngestController extends Controller
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
         }
+
+        $validated = $request->validate([
+            'channel' => 'required|string|in:'.implode(',', ChatChannel::all()),
+            'channelUserId' => 'required|string|max:120',
+            'message' => 'required|string|max:5000',
+            'customerName' => 'nullable|string|max:120',
