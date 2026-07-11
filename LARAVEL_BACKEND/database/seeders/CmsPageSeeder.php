@@ -382,3 +382,9 @@ class CmsPageSeeder extends Seeder
                         ],
                     ],
                 ],
+            ],
+            [
+                'slug' => 'terms',
+                'title' => 'Terms of Service',
+                'meta_title' => 'Terms of Service — Essem Chat',
+                'meta_description' => 'The terms governing your use of Essem Chat.',
