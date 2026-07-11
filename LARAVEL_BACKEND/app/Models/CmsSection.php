@@ -16,3 +16,9 @@ class CmsSection extends Model
         'content',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'is_enabled' => 'boolean',
+            'sort_order' => 'integer',
+            'content' => 'array',
