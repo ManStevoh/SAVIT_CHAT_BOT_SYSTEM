@@ -28,3 +28,9 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 1,
                         'content' => [
                             'links' => [
+                                ['label' => 'Home', 'href' => '/'],
+                                ['label' => 'Pricing', 'href' => '/pricing'],
+                                ['label' => 'About us', 'href' => '/about'],
+                                ['label' => 'Contact', 'href' => '/contact'],
+                            ],
+                            'loginLabel' => 'Log in',
