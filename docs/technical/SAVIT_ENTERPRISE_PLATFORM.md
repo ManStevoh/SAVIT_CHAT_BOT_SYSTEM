@@ -508,3 +508,9 @@ event_outbox                — transactional outbox pattern for reliability
 ### 33. White-Label Platform
 
 **Vision:** Agency logo, domain, colors, emails, resell, manage sub-customers.
+
+| Status | **Roadmap** |
+
+**Adjacent:** `AppBrandingController` for platform logo/name. No per-tenant domain, email SMTP override per partner, or reseller hierarchy.
+
+---
