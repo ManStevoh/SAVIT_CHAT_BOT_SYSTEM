@@ -58,3 +58,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           />
         )
       }
+      if (pageSlug === "about") {
+        return (
+          <LandoAboutHero
+            title={str(content.title)}
+            description={str(content.description)}
+            imageUrl={str(content.imageUrl)}
