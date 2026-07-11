@@ -28,3 +28,9 @@ class ChannelWebhookController extends Controller
 
         $validated = $request->validate([
             'from' => 'required|string|max:200',
+            'fromName' => 'nullable|string|max:120',
+            'subject' => 'nullable|string|max:300',
+            'body' => 'required|string|max:10000',
+            'messageId' => 'nullable|string|max:200',
+        ]);
+
