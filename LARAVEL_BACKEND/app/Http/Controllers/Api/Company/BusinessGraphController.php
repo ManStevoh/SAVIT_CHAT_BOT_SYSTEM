@@ -52,3 +52,9 @@ class BusinessGraphController extends Controller
             'metadata' => 'sometimes|array',
         ]);
 
+        $node = $graph->addManualNode(
+            $company,
+            $validated['nodeType'],
+            $validated['label'],
+            $validated['metadata'] ?? [],
+        );
