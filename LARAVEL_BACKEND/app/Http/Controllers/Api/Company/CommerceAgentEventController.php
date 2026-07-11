@@ -88,3 +88,9 @@ class CommerceAgentEventController extends Controller
         $company = $request->user()->company;
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $event = CommerceAgentEvent::where('company_id', $company->id)->findOrFail($id);
+        $event->update(['status' => 'acknowledged', 'handled_at' => now()]);
+
+        return response()->json(['event' => $this->formatEvent($event->fresh())]);
