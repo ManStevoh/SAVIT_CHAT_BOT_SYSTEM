@@ -34,3 +34,9 @@ export interface CmsGlobalData {
   page: CmsPageData['page']
   sections: CmsSection[]
 }
+
+export interface AdminCmsSection extends CmsSection {
+  id: string
+}
+
+export interface AdminCmsPage {
