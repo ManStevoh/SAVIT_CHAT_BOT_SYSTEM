@@ -112,3 +112,9 @@ class IntelligenceController extends Controller
 
 
         return response()->json(['cases' => $cases]);
+
+    }
+
+
+
+    public function showCase(Request $request, int $id, InvestigationCaseService $cases): JsonResponse
