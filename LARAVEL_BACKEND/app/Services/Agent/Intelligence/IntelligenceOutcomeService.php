@@ -34,3 +34,9 @@ final class IntelligenceOutcomeService
             ]);
         }
     }
+
+    /**
+     * @param  list<string>  $recommendations
+     */
+    public function seedFromBrief(Company $company, int $briefId, array $recommendations): void
+    {
