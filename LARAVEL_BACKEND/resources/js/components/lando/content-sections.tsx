@@ -154,3 +154,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                   if (plan.checkoutAvailable && isLoggedIn) {
                     handleSubscribe(plan.id)
                   } else if (!isLoggedIn) {
+                    window.location.href = "/register"
+                  }
+                }}
+              >
+                {plan.cta ?? "Get started"}
+              </Button>
