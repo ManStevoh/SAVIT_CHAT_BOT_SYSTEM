@@ -433,6 +433,7 @@ export function useSubscriptionInvoices() {
 
 /** Company settings shape — API: GET /api/company/settings */
 export interface CompanySettings {
+  companyId?: number
   companyName?: string
   email?: string
   phone?: string
@@ -466,8 +467,23 @@ export interface CompanySettings {
   autoReplyEnabled?: boolean
   agentCommerceEnabled?: boolean
   agentProactiveEnabled?: boolean
+  agentVoiceReplyEnabled?: boolean
+  agentMorningBriefWhatsappEnabled?: boolean
+  ownerWhatsappPhone?: string | null
+  consciousnessLastSensedAt?: string | null
+  webWidgetToken?: string | null
+  channelIngestSecret?: string | null
+  channelWebhookUrls?: { email: string; instagramDm: string }
+  widgetScriptUrl?: string
   agentBusinessGoals?: string[]
   agentBusinessGoalCatalog?: Record<string, string>
+  businessDna?: BusinessDnaSettings
+  businessDnaCustom?: boolean
+  businessDnaPresets?: Record<string, BusinessDnaPreset>
+  digitalTwin?: Record<string, string>
+  digitalTwinCustom?: boolean
+  digitalTwinFields?: Record<string, string>
+  agentCouncilEnabled?: boolean
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
@@ -493,6 +509,21 @@ export interface CompanySettings {
   industry?: 'retail' | 'restaurant' | 'services' | 'other'
   /** Days to retain attribution data (30–730); null uses platform default */
   attributionRetentionDays?: number | null
+}
+
+/** Business DNA shapes how the agent speaks (luxury vs café, etc.) */
+export interface BusinessDnaSettings {
+  tone?: string
+  values?: string[]
+  risk_tolerance?: 'low' | 'medium' | 'high'
+  service_philosophy?: string
+  escalation_culture?: string
+  communication_style?: string
+}
+
+export interface BusinessDnaPreset extends BusinessDnaSettings {
+  label?: string
+  description?: string
 }
 
 /**
@@ -1596,6 +1627,334 @@ export function useCommerceExperiments() {
   return useSWR<{ experiments: CommerceExperimentItem[] }>(
     'commerce-experiments',
     async () => apiRequest<{ experiments: CommerceExperimentItem[] }>('/api/company/commerce-experiments'),
+    { revalidateOnFocus: false }
+  )
+}
+
+// ============================================
+// COGNITIVE AI + INTELLIGENCE API (ABI Level 19)
+// ============================================
+
+export interface CognitiveDashboardData {
+  architecture: string
+  workforce: Array<{ id: string; title: string; objective: string; reports: string }>
+  forecast: Record<string, unknown>
+  causalAnalysis: {
+    metric: string
+    change: string
+    likely_causes: Array<{ cause: string; likelihood: string }>
+  }
+  recentEpisode: {
+    confidence: number
+    confidence_action: string
+    perception: Record<string, unknown>
+    outcome: string | null
+  } | null
+  counts: {
+    strategic_memories: number
+    tool_proposals: number
+    knowledge_artifacts: number
+    executive_plans: number
+  }
+}
+
+export interface IntelligenceReasoningResult {
+  goal: string
+  confidence: number
+  executive_summary: string
+  assumptions: string[]
+  hypotheses: Array<{
+    hypothesis: string
+    likelihood: string
+    source: string
+    confidence?: number
+  }>
+  recommended_actions: Array<{
+    action: string
+    source: string
+    requires_approval?: boolean
+  }>
+  simulation: {
+    scenarios: Array<Record<string, unknown>>
+    recommendation: string
+  } | null
+  plan: { breakdown: Record<string, unknown>; persisted?: boolean } | null
+  missing_info: string[]
+  investigation_id: number
+  case_id?: number
+  probability_scores?: {
+    buy: number
+    churn: number
+    refund: number
+    factors: Record<string, unknown>
+  }
+}
+
+export interface InvestigationCaseItem {
+  id: number
+  goal: string
+  status: string
+  current_step: number
+  steps: Array<{ step: number; name: string; status: string; at: string | null }>
+  owner_analytics_investigation_id: number | null
+  created_at: string
+}
+
+export function useInvestigationCases() {
+  return useSWR<{ cases: InvestigationCaseItem[] }>(
+    'investigation-cases',
+    async () => apiRequest<{ cases: InvestigationCaseItem[] }>('/api/company/intelligence/cases'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useCognitiveDashboard() {
+  return useSWR<CognitiveDashboardData>(
+    'cognitive-dashboard',
+    async () => apiRequest<CognitiveDashboardData>('/api/company/cognitive-ai/dashboard'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export interface CommerceAgentEventItem {
+  id: number
+  eventType: string
+  eventKey: string
+  status: string
+  payload?: Record<string, unknown>
+  handledAt?: string | null
+  createdAt?: string
+}
+
+export interface CommerceSpecialistRunItem {
+  id: string
+  agentType: string
+  status: string
+  chatId?: number | null
+  output?: Record<string, unknown>
+  startedAt?: string | null
+  completedAt?: string | null
+}
+
+export function useCommerceSpecialistRuns() {
+  return useSWR<{ runs: CommerceSpecialistRunItem[] }>(
+    'commerce-specialist-runs',
+    async () => apiRequest<{ runs: CommerceSpecialistRunItem[] }>('/api/company/commerce-specialists/runs'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useCommerceOwnerAlerts() {
+  return useSWR<{ alerts: CommerceAgentEventItem[] }>(
+    'commerce-owner-alerts',
+    async () => apiRequest<{ alerts: CommerceAgentEventItem[] }>('/api/company/commerce-events/owner-alerts'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useCommerceEvents() {
+  return useSWR<{ events: CommerceAgentEventItem[] }>(
+    'commerce-events',
+    async () => apiRequest<{ events: CommerceAgentEventItem[] }>('/api/company/commerce-events'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export interface CompanyBrainSnapshot {
+  id: number
+  snapshotAt?: string
+  summaryText?: string
+  commerceData?: Record<string, unknown>
+  growthData?: Record<string, unknown>
+  digest?: Record<string, unknown>
+}
+
+export interface OwnerAnalyticsInvestigationItem {
+  id: number
+  question: string
+  period: string
+  status: string
+  confidence?: number
+  findings?: unknown[]
+  recommendations?: unknown[]
+  evidence?: Record<string, unknown>
+  createdAt?: string
+}
+
+export interface CommerceConnectorItem {
+  type: string
+  name: string
+  category: string
+  status_label: string
+  description: string
+  status: string
+  connected: boolean
+  lastSyncAt?: string | null
+  lastError?: string | null
+}
+
+export function useCompanyBrain() {
+  return useSWR<{ snapshot: CompanyBrainSnapshot }>(
+    'company-brain',
+    async () => apiRequest<{ snapshot: CompanyBrainSnapshot }>('/api/company/company-brain'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useOwnerAnalyticsInvestigations() {
+  return useSWR<{ investigations: OwnerAnalyticsInvestigationItem[] }>(
+    'owner-analytics-investigations',
+    async () =>
+      apiRequest<{ investigations: OwnerAnalyticsInvestigationItem[] }>(
+        '/api/company/owner-analytics/investigations'
+      ),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useCommerceIntegrations() {
+  return useSWR<{ connectors: CommerceConnectorItem[] }>(
+    'commerce-integrations',
+    async () => apiRequest<{ connectors: CommerceConnectorItem[] }>('/api/company/integrations'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useKnowledgeVectorStatus() {
+  return useSWR<{ vectorSearch: { driver: string; pgvector: boolean; message: string }; chunkCount: number }>(
+    'knowledge-vector-status',
+    async () =>
+      apiRequest('/api/company/knowledge/vector-status'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export type MissionControlAttentionItem = {
+  priority: number
+  type: string
+  title: string
+  summary?: string | null
+  id?: number | null
+  href?: string
+}
+
+export type MissionControlData = {
+  generatedAt: string
+  brainSummary?: string | null
+  brainDigest?: Record<string, unknown> | null
+  healthScore?: { overall: number; summary?: string; date: string } | null
+  topDecisions: Array<{ decision: string; evidence?: Record<string, unknown> }>
+  attentionQueue: MissionControlAttentionItem[]
+  counts: { openEvents: number; pendingApprovals: number; openOpportunities: number }
+  recentTimeline: Array<{
+    id: number
+    eventType: string
+    category: string
+    title: string
+    summary?: string | null
+    importance: number
+    occurredAt?: string
+  }>
+  graphStats: { nodes: number; edges: number }
+}
+
+export function useMissionControl() {
+  return useSWR<MissionControlData>(
+    'mission-control',
+    async () => apiRequest<MissionControlData>('/api/company/mission-control'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useBusinessTimeline(category?: string) {
+  const key = category ? `business-timeline-${category}` : 'business-timeline'
+  return useSWR<{ events: MissionControlData['recentTimeline'] }>(
+    key,
+    async () =>
+      apiRequest<{ events: MissionControlData['recentTimeline'] }>(
+        `/api/company/business-timeline${category ? `?category=${encodeURIComponent(category)}` : ''}`
+      ),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useBusinessGraph() {
+  return useSWR<{
+    stats: { nodes: number; edges: number }
+    nodes: Array<{ id: number; type: string; label: string; refType?: string; refId?: number; metadata?: Record<string, unknown> }>
+    edges: Array<{ from: number; to: number; type: string }>
+  }>(
+    'business-graph',
+    async () => apiRequest('/api/company/business-graph'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export type AgentTrustLogItem = {
+  id: number
+  actionType?: string | null
+  goal?: string | null
+  reasoningSummary?: string | null
+  confidence?: number | null
+  toolsUsed?: unknown
+  dataConsulted?: unknown
+  outcome?: string | null
+  explainability?: Record<string, unknown> | null
+  createdAt?: string | null
+}
+
+export function useAgentTrustLogs(limit = 10) {
+  return useSWR<{ logs: AgentTrustLogItem[] }>(
+    `agent-trust-logs-${limit}`,
+    async () => apiRequest<{ logs: AgentTrustLogItem[] }>(`/api/company/agent-trust-logs?limit=${limit}`),
+    { revalidateOnFocus: false }
+  )
+}
+
+export type MemorySearchResult = {
+  source: string
+  sourceType: string
+  sourceId: number
+  title: string
+  snippet?: string | null
+  score: number
+  occurredAt?: string | null
+}
+
+export type MemorySearchResponse = {
+  query: string
+  results: MemorySearchResult[]
+  counts: { total: number; knowledge: number; investigations: number; timeline: number; briefs: number }
+}
+
+export type MarketplaceModuleItem = {
+  moduleKey: string
+  name: string
+  description?: string | null
+  category: string
+  publisher: string
+  requiredPlan?: string | null
+  tools: string[]
+  isInstalled: boolean
+  canInstall: boolean
+  isThirdParty: boolean
+}
+
+export type MarketplaceInstalledItem = {
+  moduleKey: string
+  name: string
+  description?: string | null
+  category?: string
+  publisher?: string
+  tools: string[]
+  config?: Record<string, unknown>
+  installedAt?: string
+}
+
+export function useMarketplaceModules() {
+  return useSWR<{ modules: MarketplaceModuleItem[]; installed: MarketplaceInstalledItem[] }>(
+    'marketplace-modules',
+    async () => apiRequest('/api/company/marketplace/modules'),
     { revalidateOnFocus: false }
   )
 }
