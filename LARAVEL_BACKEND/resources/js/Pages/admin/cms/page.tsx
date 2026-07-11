@@ -490,3 +490,9 @@ function SortableSectionList({
   }, [sections])
 
   const handleDrop = async (targetIndex: number) => {
+    if (dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null)
+      return
+    }
+    const next = [...items]
+    const [moved] = next.splice(dragIndex, 1)
