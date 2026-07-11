@@ -52,3 +52,9 @@ class VerifyAiOrchestrationCommand extends Command
 
         $this->newLine();
         if ($ok) {
+            $this->info('Orchestration slots OK. See docs/technical/AI_MODEL_ORCHESTRATION.md');
+
+            return self::SUCCESS;
+        }
+
+        $this->warn('Some capability defaults missing — run migrations and set platform defaults in Admin → AI Models.');
