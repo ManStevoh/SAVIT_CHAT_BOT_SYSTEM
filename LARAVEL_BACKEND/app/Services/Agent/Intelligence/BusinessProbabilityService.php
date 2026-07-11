@@ -46,3 +46,9 @@ final class BusinessProbabilityService
             ->where('updated_at', '>=', $since90)
             ->count();
 
+        $activeChats = (int) Chat::where('company_id', $companyId)
+            ->where('updated_at', '>=', $since30)
+            ->count();
+
+        $repeatRate = $uniqueBuyers90 > 0 ? $repeatBuyers / $uniqueBuyers90 : 0.0;
+        $velocity = min(1.0, $orderCount30 / max(1, $orderCount90) * 1.5);
