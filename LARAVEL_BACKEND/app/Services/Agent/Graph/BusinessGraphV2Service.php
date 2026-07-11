@@ -178,3 +178,9 @@ final class BusinessGraphV2Service
             'nodes' => $nodes->map(fn (BusinessGraphNode $n) => [
                 'id' => $n->id,
                 'type' => $n->node_type,
+                'label' => $n->label,
+                'refType' => $n->ref_type,
+                'refId' => $n->ref_id,
+                'metadata' => $n->metadata,
+            ])->all(),
+            'edges' => $edges->map(fn (BusinessGraphEdge $e) => [
