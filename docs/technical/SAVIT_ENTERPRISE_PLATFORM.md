@@ -70,3 +70,9 @@ These are the substrate every other module must plug into.
 
 ---
 
+## Module registry
+
+Each module: **vision → status → what exists → gaps → build spec (global standards)**.
+
+---
+
