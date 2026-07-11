@@ -172,3 +172,9 @@ export function LandoFeatureBlock({
                 className="mt-8 h-11 rounded-lg border-black bg-transparent px-6 text-black hover:bg-gray-50"
               >
                 <Link href={ctaHref}>{ctaText}</Link>
+              </Button>
+            )}
+          </div>
+          {imagePosition === "right" && image}
+        </div>
+      </div>
