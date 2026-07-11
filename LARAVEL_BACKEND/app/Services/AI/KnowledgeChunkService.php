@@ -15,6 +15,7 @@ final class KnowledgeChunkService
     public function __construct(
         protected OpenAiClient $openAiClient,
         protected AiLearningConfig $learningConfig,
+        protected PgVectorSearchService $pgVector,
     ) {}
 
     /**
@@ -60,7 +61,7 @@ final class KnowledgeChunkService
         $payload = "Question: {$faq->question}\nAnswer: {$faq->answer}";
         foreach ($this->splitText($payload) as $index => $chunkText) {
             $embedding = $this->openAiClient->embedText($chunkText, (int) $faq->company_id);
-            KnowledgeChunk::create([
+            $chunk = KnowledgeChunk::create([
                 'company_id' => $faq->company_id,
                 'source_type' => KnowledgeChunk::SOURCE_FAQ,
                 'source_id' => $faq->id,
@@ -68,6 +69,9 @@ final class KnowledgeChunkService
                 'content' => $chunkText,
                 'embedding' => $embedding,
             ]);
+            if (is_array($embedding)) {
+                $this->pgVector->storeVector((int) $chunk->id, $embedding);
+            }
         }
     }
 
@@ -105,7 +109,7 @@ final class KnowledgeChunkService
             if ($index === 0) {
                 $primaryEmbedding = $embedding;
             }
-            KnowledgeChunk::create([
+            $chunk = KnowledgeChunk::create([
                 'company_id' => $product->company_id,
                 'source_type' => KnowledgeChunk::SOURCE_PRODUCT,
                 'source_id' => $product->id,
@@ -113,6 +117,9 @@ final class KnowledgeChunkService
                 'content' => $chunkText,
                 'embedding' => $embedding,
             ]);
+            if (is_array($embedding)) {
+                $this->pgVector->storeVector((int) $chunk->id, $embedding);
+            }
         }
 
         if ($primaryEmbedding !== null) {
@@ -150,6 +157,22 @@ final class KnowledgeChunkService
             ? $this->learningConfig->faqSemanticMinScore()
             : $this->learningConfig->learningSemanticMinScore();
 
+        $minScore = $sourceType === KnowledgeChunk::SOURCE_FAQ
+            ? $this->learningConfig->faqSemanticMinScore()
+            : $this->learningConfig->learningSemanticMinScore();
+
+        if ($this->pgVector->isAvailable()) {
+            $pgHits = $this->pgVector->search($companyId, $queryEmbedding, $sourceType, $limit, $minScore);
+            if ($pgHits !== []) {
+                return array_map(fn ($row) => [
+                    'source_type' => $row['source_type'],
+                    'source_id' => $row['source_id'],
+                    'score' => $row['score'],
+                    'content' => $row['content'],
+                ], $pgHits);
+            }
+        }
+
         $scored = [];
         foreach ($candidates as $chunk) {
             if (! is_array($chunk->embedding)) {
@@ -183,5 +206,13 @@ final class KnowledgeChunkService
         }
 
         return $out;
+    }
+
+    /**
+     * @return array{driver: string, pgvector: bool, enabled: bool, message: string}
+     */
+    public function vectorSearchStatus(): array
+    {
+        return $this->pgVector->status();
     }
 }
