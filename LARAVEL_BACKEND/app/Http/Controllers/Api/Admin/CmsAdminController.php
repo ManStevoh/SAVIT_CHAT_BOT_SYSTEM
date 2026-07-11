@@ -142,3 +142,9 @@ class CmsAdminController extends Controller
             'orders.*.key' => 'required|string',
             'orders.*.sortOrder' => 'required|integer|min:0',
         ]);
+
+        foreach ($validated['orders'] as $item) {
+            CmsSection::where('cms_page_id', $page->id)
+                ->where('section_key', $item['key'])
+                ->update(['sort_order' => (int) $item['sortOrder']]);
+        }
