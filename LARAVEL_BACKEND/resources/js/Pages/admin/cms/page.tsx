@@ -142,3 +142,9 @@ function SectionEditor({
           <Field label="Login label" value={str("loginLabel")} onChange={(v) => set("loginLabel", v)} />
           <Field label="Login link" value={str("loginHref")} onChange={(v) => set("loginHref", v)} />
           <Field label="Sign up label" value={str("signupLabel")} onChange={(v) => set("signupLabel", v)} />
+          <Field label="Sign up link" value={str("signupHref")} onChange={(v) => set("signupHref", v)} />
+          <div className="sm:col-span-2">
+            <LinkListEditor
+              label="Navigation links"
+              links={navLinks}
+              onChange={(links) => set("links", links)}
