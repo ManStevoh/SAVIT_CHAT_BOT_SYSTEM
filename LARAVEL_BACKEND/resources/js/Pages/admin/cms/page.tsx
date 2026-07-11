@@ -436,3 +436,9 @@ function SectionEditor({
         }}
         rows={8}
         className="font-mono text-xs"
+      />
+    )
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
