@@ -16,3 +16,9 @@
 | Outbound vision images | **`VisionOutboundImageService`** — sends catalog product image after vision match |
 | Vector search status API | **`GET /knowledge/vector-status`** |
 
+---
+
+## Still roadmap (honest — not blockers)
+
+### pgvector production enablement
+
