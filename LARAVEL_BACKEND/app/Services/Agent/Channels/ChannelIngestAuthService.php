@@ -16,3 +16,9 @@ final class ChannelIngestAuthService
         }
         if ($companyId <= 0) {
             return null;
+        }
+
+        $secret = $this->extractSecret($request);
+        if ($secret === null || $secret === '') {
+            return null;
+        }
