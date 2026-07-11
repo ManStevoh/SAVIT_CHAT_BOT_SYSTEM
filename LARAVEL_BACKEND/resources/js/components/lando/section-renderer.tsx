@@ -136,3 +136,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           steps={arr(content.steps)}
         />
       )
+
+    case "testimonials":
+      return (
+        <LandoTestimonials
+          title={str(content.title)}
+          description={str(content.description)}
