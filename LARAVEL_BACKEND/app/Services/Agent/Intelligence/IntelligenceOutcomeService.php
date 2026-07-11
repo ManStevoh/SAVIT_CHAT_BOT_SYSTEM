@@ -64,3 +64,9 @@ final class IntelligenceOutcomeService
 
     /**
      * @param  list<array{action?: string, source?: string}|string>  $actions
+     */
+    private function seedActions(Company $company, string $sourceType, int $sourceId, array $actions): void
+    {
+        foreach (array_slice($actions, 0, 8) as $action) {
+            if (is_string($action)) {
+                $text = trim($action);
