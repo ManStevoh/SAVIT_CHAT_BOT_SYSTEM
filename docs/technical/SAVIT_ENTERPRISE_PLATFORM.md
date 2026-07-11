@@ -514,3 +514,9 @@ event_outbox                — transactional outbox pattern for reliability
 **Adjacent:** `AppBrandingController` for platform logo/name. No per-tenant domain, email SMTP override per partner, or reseller hierarchy.
 
 ---
+
+### 34. Business Intelligence Layer
+
+**Vision:** KPI definitions, custom metrics, branch benchmarking, scheduled executive reports, goal tracking, forecasting.
+
+| Status | **Partial** |
