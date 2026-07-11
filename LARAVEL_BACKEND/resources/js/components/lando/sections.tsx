@@ -34,3 +34,9 @@ export function LandoHeroSection({
               — {kicker}
             </p>
           )}
+          <h1 className="text-4xl font-bold leading-tight text-black sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
+            {title}
+          </h1>
+          {description && (
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-gray-600 sm:text-lg">
+              {description}
