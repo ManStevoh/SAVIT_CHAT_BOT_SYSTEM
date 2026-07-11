@@ -76,3 +76,9 @@ final class BusinessProbabilityService
             'churn' => round($churn, 4),
             'refund' => round($refund, 4),
             'factors' => $factors,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $factors
+     */
