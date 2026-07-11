@@ -10,3 +10,9 @@ class UsageMeter extends Model
     protected $fillable = [
         'company_id', 'meter_key', 'period_start', 'period_end', 'consumed', 'limit_value',
     ];
+
+    protected $casts = [
+        'period_start' => 'date',
+        'period_end' => 'date',
+    ];
+
