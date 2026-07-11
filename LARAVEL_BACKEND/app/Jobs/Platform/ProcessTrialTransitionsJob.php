@@ -16,3 +16,9 @@ class ProcessTrialTransitionsJob implements ShouldQueue
 
     public function handle(
         DomainEventDispatcher $events,
+        NotificationDispatcher $notifications,
+    ): void {
+        $expiredTrials = Subscription::where('status', 'trial')
+            ->where('end_date', '<', now()->toDateString())
+            ->get();
+
