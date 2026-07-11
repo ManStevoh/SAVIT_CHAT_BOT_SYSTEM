@@ -226,3 +226,9 @@ form_logic                  — conditional rules engine (safe DSL, no eval)
 | Quotations | **Roadmap** | — |
 | Contracts | **Roadmap** | — |
 | Purchase orders | **Roadmap** | — |
+| Delivery notes | **Roadmap** | — |
+| Certificates | **Roadmap** | — |
+
+**Build spec**
+
+```
