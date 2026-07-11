@@ -58,3 +58,9 @@ final class ChannelIngestAuthService
 
         $auth = $request->header('Authorization');
         if (is_string($auth) && str_starts_with($auth, 'Bearer ')) {
+            return substr($auth, 7);
+        }
+
+        return $request->input('ingestSecret') ?: $request->input('secret');
+    }
+}
