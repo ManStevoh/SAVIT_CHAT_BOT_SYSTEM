@@ -274,3 +274,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 **Gap → build:** Extend FAQ into `wiki_pages` with categories, markdown, version history, full-text + semantic search unified in Search Engine (module 26).
 
 ---
+
+### 0. Project Management
+
+**Vision:** Kanban, Gantt, tasks, dependencies, milestones, time tracking, files.
+
+| Status | **Roadmap** |
