@@ -64,3 +64,9 @@ class CmsPageSeeder extends Seeder
                                 ['label' => 'Facebook', 'href' => '#'],
                                 ['label' => 'Instagram', 'href' => '#'],
                                 ['label' => 'Twitter', 'href' => '#'],
+                                ['label' => 'Linkedin', 'href' => '#'],
+                            ],
+                            'legalLinks' => [
+                                ['label' => 'Privacy Policy', 'href' => '/privacy'],
+                                ['label' => 'Terms Of Service', 'href' => '/terms'],
+                            ],
