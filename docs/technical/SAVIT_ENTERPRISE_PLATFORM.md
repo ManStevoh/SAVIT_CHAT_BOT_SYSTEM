@@ -370,3 +370,9 @@ audit_retention_policies    — per entity type, GDPR export
 
 ```
 permissions                 — permission_key
+roles                       — company-scoped role definitions
+role_permissions            — many-to-many
+policy_rules                — ABAC: resource, action, conditions JSON (amount_lt, department)
+```
+
+- **Integration:** Replace hardcoded checks in controllers; agent tools consult policy engine before execution.
