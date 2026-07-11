@@ -4,3 +4,9 @@
 
 ---
 
+## Architecture
+
+```text
+                    SAVIT Application
+                           │
+                   AiOrchestrator
