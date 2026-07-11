@@ -10,3 +10,9 @@ use InvalidArgumentException;
 
 class MarketplaceController extends Controller
 {
+    public function catalog(Request $request, MarketplaceModuleService $marketplace): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
