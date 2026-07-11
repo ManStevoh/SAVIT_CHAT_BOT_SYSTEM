@@ -28,3 +28,9 @@ final class OwnerMorningBriefPushService
         }
 
         if (! ($settings?->agent_morning_brief_whatsapp_enabled ?? false)) {
+            return false;
+        }
+
+        $brief ??= CommerceBrief::query()
+            ->where('company_id', $company->id)
+            ->whereDate('brief_date', now()->toDateString())
