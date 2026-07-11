@@ -76,3 +76,9 @@ class PolicyRuleController extends Controller
         $audit->log('policy_rule.updated', CompanyPolicyRule::class, $rule->id, $before, $rule->fresh()->toArray(), $company->id, $request->user());
 
         return response()->json(['rule' => $rule->fresh()]);
+    }
+
+    public function destroy(Request $request, int $id, AuditService $audit): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company || $request->user()->role !== 'company_owner') {
