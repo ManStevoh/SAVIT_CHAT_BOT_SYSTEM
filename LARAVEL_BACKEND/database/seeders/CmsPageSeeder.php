@@ -304,3 +304,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Team',
                         'sort_order' => 4,
                         'content' => [
+                            'title' => 'Team',
+                            'description' => 'Meet the people behind our magical product',
+                            'members' => [
+                                ['name' => 'Hannah Mika', 'role' => 'CEO', 'imageUrl' => '/images/lando/team-ceo.png'],
+                                ['name' => 'Daniel Peter', 'role' => 'CTO', 'imageUrl' => '/images/lando/team-cto.png'],
+                                ['name' => 'Lars Mikkel', 'role' => 'Head of Operations', 'imageUrl' => '/images/lando/team-operations.png'],
