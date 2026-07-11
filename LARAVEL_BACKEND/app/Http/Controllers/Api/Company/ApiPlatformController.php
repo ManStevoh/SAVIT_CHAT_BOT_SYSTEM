@@ -70,3 +70,9 @@ class ApiPlatformController extends Controller
     public function listWebhooks(Request $request): JsonResponse
     {
         $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $endpoints = WebhookEndpoint::where('company_id', $company->id)->orderByDesc('id')->get();
+
