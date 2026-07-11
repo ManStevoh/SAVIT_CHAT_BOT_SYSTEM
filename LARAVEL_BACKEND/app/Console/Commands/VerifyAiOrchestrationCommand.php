@@ -46,3 +46,9 @@ class VerifyAiOrchestrationCommand extends Command
 
             return self::FAILURE;
         }
+
+        $reasoning = $resolver->resolve(null, AiModel::CAPABILITY_REASONING, AiUseCase::AGENT_REASONING);
+        $this->line($reasoning ? '  [OK] agent_reasoning resolves' : '  [WARN] agent_reasoning could not resolve (check API keys)');
+
+        $this->newLine();
+        if ($ok) {
