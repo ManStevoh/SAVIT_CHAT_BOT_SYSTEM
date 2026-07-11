@@ -16,3 +16,9 @@ class OnboardingInterviewController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
 
+        return response()->json($interview->start($company), 201);
+    }
+
+    public function respond(Request $request, OnboardingInterviewService $interview): JsonResponse
+    {
+        $company = $request->user()->company;
