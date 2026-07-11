@@ -16,3 +16,9 @@ import { getAuthToken } from "@/lib/api-client"
 import { toast } from "sonner"
 
 export function LandoTrustedCompanies({
+  title,
+  companies = [],
+}: {
+  title?: string
+  companies?: Array<{ name: string; logoUrl?: string } | string>
+}) {
