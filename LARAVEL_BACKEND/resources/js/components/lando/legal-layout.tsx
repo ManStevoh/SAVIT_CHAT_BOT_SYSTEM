@@ -28,3 +28,9 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
         loginHref={String(navbarContent.loginHref ?? "/login")}
         signupLabel={String(navbarContent.signupLabel ?? "Sign up")}
         signupHref={String(navbarContent.signupHref ?? "/register")}
+        activePath={activePath}
+      />
+      <main className="mx-auto max-w-3xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32">
+        <h1 className="text-3xl font-bold tracking-tight text-black sm:text-4xl">{title}</h1>
+        <div className="prose prose-sm mt-10 max-w-none text-gray-600 prose-headings:font-semibold prose-headings:text-black prose-a:text-[#2563eb]">
+          {children}
