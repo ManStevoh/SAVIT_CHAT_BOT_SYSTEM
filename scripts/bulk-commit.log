@@ -1,0 +1,6 @@
+﻿Committing 24 new files in ~6-line chunks and 72 modified files...
+powershell : Remove-Item : Cannot remove item C:\SAVIT_CHAT_BOT\debug.log: The process cannot access the file 
+At C:\Users\Admin\AppData\Local\Temp\ps-script-7675e5e0-11ab-40cc-b210-f0c83fff3a4b.ps1:85 char:83
++ ... RT=$start"; powershell -NoProfile -ExecutionPolicy Bypass -File "c:\S ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Remove-Item : C...ccess the file :String) [], RemoteException
