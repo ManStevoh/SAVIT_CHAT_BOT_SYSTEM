@@ -232,3 +232,9 @@ final class ConnectorRegistry
 
     {
 
+        if (! config('agent.external.shipping_enabled')) {
+
+            return ['success' => false, 'message' => 'Shipping tool disabled in platform config.'];
+
+        }
+
