@@ -34,3 +34,9 @@ final class ChannelIngestAuthService
 
         return Company::with('settings')->find($companyId);
     }
+
+    public function companyFromWidgetToken(int $companyId, string $widgetToken): ?Company
+    {
+        $settings = CompanySetting::where('company_id', $companyId)->first();
+        if (! $settings || ! $settings->web_widget_token) {
+            return null;
