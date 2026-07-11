@@ -298,3 +298,9 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => "Let's start\nworking\nmore\nefficiently\ntoday!",
                         ],
+                    ],
+                    [
+                        'section_key' => 'team',
+                        'label' => 'Team',
+                        'sort_order' => 4,
+                        'content' => [
