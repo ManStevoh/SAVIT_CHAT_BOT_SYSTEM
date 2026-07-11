@@ -124,3 +124,9 @@ class IntelligenceController extends Controller
         $company = $request->user()->company;
 
         if (! $company) {
+
+            return response()->json(['message' => 'No company.'], 403);
+
+        }
+
+
