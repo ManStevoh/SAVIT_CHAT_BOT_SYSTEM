@@ -16,3 +16,9 @@ class DomainEvent extends Model
         'dispatched_at',
         'last_error',
     ];
+
+    protected $casts = [
+        'payload' => 'array',
+        'dispatched_at' => 'datetime',
+    ];
+
