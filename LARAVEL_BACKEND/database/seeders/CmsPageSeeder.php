@@ -136,3 +136,9 @@ class CmsPageSeeder extends Seeder
                             'ctaText' => 'Try now',
                             'ctaHref' => '/register',
                             'imageUrl' => $heroImage,
+                            'imageAlt' => 'Team inbox',
+                            'imagePosition' => 'left',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'feature_2',
