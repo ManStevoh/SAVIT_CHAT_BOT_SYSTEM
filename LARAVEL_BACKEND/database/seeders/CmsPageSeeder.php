@@ -262,3 +262,9 @@ class CmsPageSeeder extends Seeder
                             'ctaText' => 'Sign up now',
                             'ctaHref' => '/register',
                         ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'about',
+                'title' => 'About us',
