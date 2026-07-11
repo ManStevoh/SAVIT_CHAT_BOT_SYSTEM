@@ -82,3 +82,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 
 ## Counts
 
+| Status | Count |
+|--------|-------|
+| ✅ Full module | 0 (capabilities live inside commerce stack) |
+| 🟡 Partial | 22 |
+| ⬜ Roadmap | 13 |
+
