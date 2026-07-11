@@ -70,3 +70,9 @@ final class ConsciousnessSenseCycleService
                 'sensed' => true,
             ];
         } catch (\Throwable $e) {
+            Log::warning('Consciousness sense cycle failed', [
+                'company_id' => $company->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['failed' => true];
