@@ -16,3 +16,9 @@ return new class extends Migration
             $table->text('meta_description')->nullable();
             $table->boolean('is_published')->default(true);
             $table->timestamps();
+        });
+
+        Schema::create('cms_sections', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('cms_page_id')->constrained('cms_pages')->cascadeOnDelete();
+            $table->string('section_key');
