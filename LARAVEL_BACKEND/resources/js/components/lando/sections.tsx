@@ -196,3 +196,9 @@ export function LandoHowToJoin({
   ctaText?: string
   ctaHref?: string
   imageUrl?: string
+  imageAlt?: string
+  steps?: Array<{ title: string; description: string }>
+}) {
+  return (
+    <section id="how-to-join" className="bg-[#f3f4f6] py-12 lg:py-16">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
