@@ -8,9 +8,9 @@ use App\Models\Company;
 use App\Services\AI\AiBillingService;
 use App\Services\AI\AiDriverFactory;
 use App\Services\AI\AiModelResolver;
+use App\Services\AI\AiUseCase;
 use App\Services\AI\Drivers\OpenAiDriver;
 use App\Services\AI\OpenAiChatResult;
-use App\Services\AI\OpenAiClient;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
@@ -36,8 +36,12 @@ class AgentChatService
         ?int $maxTokens = null,
         ?float $temperature = 0.4,
         int $timeoutSeconds = 35,
+        string $useCase = AiUseCase::AGENT_COMMERCE,
     ): OpenAiChatResult {
-        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT);
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_REASONING, $useCase);
+        if ($resolved === null) {
+            $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, $useCase);
+        }
         if ($resolved === null) {
             return new OpenAiChatResult(
                 content: null,
@@ -106,7 +110,7 @@ class AgentChatService
             finishReason: $result->finishReason,
         );
 
-        $this->persistLog($result, $company->id, $chatId, $resolved->credentialSource);
+        $this->persistLog($result, $company->id, $chatId, $resolved->credentialSource, $useCase);
 
         return $result;
     }
@@ -122,7 +126,10 @@ class AgentChatService
         bool $jsonMode = true,
         int $timeoutSeconds = 40,
     ): OpenAiChatResult {
-        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT);
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_VISION, AiUseCase::AGENT_VISION);
+        if ($resolved === null) {
+            $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, AiUseCase::AGENT_VISION);
+        }
         if ($resolved === null) {
             return new OpenAiChatResult(
                 content: null,
@@ -197,7 +204,7 @@ class AgentChatService
             estimatedCostUsd: $cost,
         );
 
-        $this->persistLog($result, $company->id, $chatId, $resolved->credentialSource, 'agent_vision');
+        $this->persistLog($result, $company->id, $chatId, $resolved->credentialSource, AiUseCase::AGENT_VISION);
 
         return $result;
     }
@@ -207,7 +214,7 @@ class AgentChatService
         int $companyId,
         ?int $chatId,
         ?string $credentialSource,
-        string $useCase = 'agent_commerce',
+        string $useCase = AiUseCase::AGENT_COMMERCE,
     ): void {
         $billed = $credentialSource !== null
             ? $this->billing->billedCostUsd($result->estimatedCostUsd, $credentialSource)
