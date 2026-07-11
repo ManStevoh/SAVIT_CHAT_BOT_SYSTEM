@@ -10,3 +10,9 @@ function getSectionContent(sections: CmsSection[], key: string) {
 
 interface LegalLayoutProps {
   title: string
+  activePath?: string
+  children: React.ReactNode
+}
+
+export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutProps) {
+  const { data: globalData } = useCmsGlobal()
