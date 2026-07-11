@@ -574,3 +574,9 @@ function PageEditor({ slug }: { slug: string }) {
   return (
     <div className="space-y-6">
       {slug !== "global" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Page SEO</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Field label="Meta title" value={metaTitle} onChange={setMetaTitle} />
