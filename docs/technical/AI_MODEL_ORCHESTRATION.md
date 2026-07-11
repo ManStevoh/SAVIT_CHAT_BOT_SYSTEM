@@ -70,3 +70,9 @@ $orchestrator->chat($messages, $company, AiUseCase::WHATSAPP, chatId: $chatId, l
 $orchestrator->reason($messages, $company, chatId: $chatId);
 
 // Agent tool loop (uses reasoning slot)
+$orchestrator->completeWithTools($messages, $tools, $company, chatId: $chatId);
+
+// Vision / receipt OCR
+$orchestrator->vision($company, $imageUrl, $instruction, chatId: $chatId);
+
+// Embeddings
