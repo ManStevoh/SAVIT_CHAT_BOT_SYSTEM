@@ -10,3 +10,9 @@ export function LandoAuthHeader({
   title,
   description,
   className,
+}: {
+  title: string
+  description?: string
+  className?: string
+}) {
+  return (
