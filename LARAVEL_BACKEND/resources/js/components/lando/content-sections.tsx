@@ -400,3 +400,9 @@ export function LandoContactSection({
                 <input
                   required
                   value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={namePlaceholder}
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-[#2563eb]"
+                />
+              </div>
+              <div>
