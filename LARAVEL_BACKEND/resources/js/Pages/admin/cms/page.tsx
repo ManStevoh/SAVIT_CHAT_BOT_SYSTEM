@@ -604,3 +604,9 @@ function PageEditor({ slug }: { slug: string }) {
         <SortableSectionList slug={slug} sections={sections} onSaved={() => mutate()} />
       </div>
     </div>
+  )
+}
+
+export default function AdminCmsPage() {
+  const [activeSlug, setActiveSlug] = useState("home")
+
