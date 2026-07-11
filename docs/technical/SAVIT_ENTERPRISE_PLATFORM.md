@@ -328,3 +328,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 ---
 
 ### 8. Asset Management
+
+**Vision:** Track laptops, printers, vehicles, furniture; maintenance schedules, assignments.
+
+| Status | **Roadmap** |
+
+---
