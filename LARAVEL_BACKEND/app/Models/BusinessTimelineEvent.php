@@ -16,3 +16,9 @@ class BusinessTimelineEvent extends Model
         'payload',
         'source_type',
         'source_id',
+        'importance',
+        'occurred_at',
+    ];
+
+    protected function casts(): array
+    {
