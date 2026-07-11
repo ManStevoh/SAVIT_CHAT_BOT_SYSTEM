@@ -454,3 +454,9 @@ final class ConnectorRegistry
 
      * @return array{success: bool, message?: string}
 
+     */
+
+    private function pingCarrierQuote(array $config, array $payload): array
+
+    {
+
