@@ -46,3 +46,9 @@ This document maps **every operational platform module** in the SAVIT vision to 
 | Infrastructure | Files, Calendar | 0 | 2 | 0 |
 | Ecosystem | Industry Packs, Offline, White-label, Marketplace | 0 | 0 | 4 |
 
+**Bottom line:** Phase 1 **Core Commerce** is largely built. Phase 2 **Operations v1** is shipped (entitlements, billing ledger, notifications, audit, policies, event bus, API keys) — see [ENTERPRISE_PLATFORM_PHASE2.md](ENTERPRISE_PLATFORM_PHASE2.md). Phase 3+ covers portals, builders, coupons, tax, and full ABAC.
+
+---
+
+## What is already built (Phase 1 — Core Commerce)
+
