@@ -28,3 +28,5 @@ class CompanyModuleInstallation extends Model
     public function module(): BelongsTo
     {
         return $this->belongsTo(MarketplaceModule::class, 'module_key', 'module_key');
+    }
+}
