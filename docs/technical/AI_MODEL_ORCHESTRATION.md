@@ -118,3 +118,9 @@ Commerce agent **tool calling** still requires an **OpenAI-compatible** provider
 | TTS outbound WhatsApp voice replies | Slot seeded, not wired |
 | Anthropic/Gemini tool calling in agent loop | OpenAI-compatible only |
 | pgvector / Pinecone | JSON+cosine fine for current catalog sizes |
+| Dedicated ML fraud / forecast models | Heuristics + rules today |
+| Translation model slot | Use chat model with language prompt (existing i18n) |
+
+---
+
+## Verification
