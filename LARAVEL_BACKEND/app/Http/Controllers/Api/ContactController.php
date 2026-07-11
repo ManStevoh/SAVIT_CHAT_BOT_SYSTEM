@@ -16,3 +16,9 @@ class ContactController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'message' => 'required|string|max:5000',
+        ]);
+
+        $settings = PlatformSetting::first();
+        $to = $settings?->support_email ?? config('mail.from.address');
+
+        if ($to) {
