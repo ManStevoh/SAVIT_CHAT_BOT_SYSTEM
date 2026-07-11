@@ -10,3 +10,9 @@ class CmsPage extends Model
     protected $fillable = [
         'slug',
         'title',
+        'meta_title',
+        'meta_description',
+        'is_published',
+    ];
+
+    protected function casts(): array
