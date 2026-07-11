@@ -16,3 +16,8 @@ class UsageMeter extends Model
         'period_end' => 'date',
     ];
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+}
