@@ -82,3 +82,9 @@ class WebWidgetController extends Controller
 
             'name' => 'nullable|string|max:120',
 
+        ]);
+
+
+
+        $company = $auth->companyFromWidgetToken((int) $validated['companyId'], $validated['widgetToken']);
+
