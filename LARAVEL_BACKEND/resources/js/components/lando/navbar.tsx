@@ -106,3 +106,9 @@ export function LandoNavbar({
               className="rounded-lg px-3 py-2 text-sm font-medium text-black hover:bg-white/70"
             >
               {loginLabel}
+            </Link>
+            <Button asChild className="h-10 rounded-lg bg-[#2563eb] text-white hover:bg-[#1d4ed8]">
+              <Link href={signupHref} onClick={() => setOpen(false)}>
+                {signupLabel}
+              </Link>
+            </Button>
