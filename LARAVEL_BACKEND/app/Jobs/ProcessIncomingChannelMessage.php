@@ -76,3 +76,8 @@ class ProcessIncomingChannelMessage implements ShouldQueue
                     (string) $reply['reply'],
                 );
             } catch (\Throwable $e) {
+                Log::warning('Channel agent WhatsApp fallback send failed', ['error' => $e->getMessage()]);
+            }
+        }
+    }
+}
