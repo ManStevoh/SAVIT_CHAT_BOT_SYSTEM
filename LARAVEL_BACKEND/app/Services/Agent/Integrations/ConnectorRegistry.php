@@ -70,3 +70,9 @@ final class ConnectorRegistry
 
                 'name' => 'Shipping quote API (generic)',
 
+                'category' => 'logistics',
+
+                'status_label' => config('agent.external.shipping_enabled') ? 'Configured' : 'Needs API URL',
+
+                'description' => 'External shipping rate lookup when AGENT_SHIPPING_API_URL is set.',
+
