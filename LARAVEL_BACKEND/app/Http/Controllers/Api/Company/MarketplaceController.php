@@ -46,3 +46,9 @@ class MarketplaceController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
+        return response()->json([
+            'installation' => $installation,
+            'installed' => $marketplace->installedForCompany($company),
+        ], 201);
+    }
+
