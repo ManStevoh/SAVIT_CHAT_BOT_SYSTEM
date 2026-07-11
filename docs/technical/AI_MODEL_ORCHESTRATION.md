@@ -40,3 +40,9 @@
 | **Marketing images** | `image` | **gemini-2.5-flash-image** | Gemini native image API |
 | **Intent detection** | `fast_chat` (optional LLM) | Rules first, fast LLM fallback | Dedicated classifier model later |
 | **Entity extraction** | `fast_chat` (optional LLM) | Rules + LLM for complex orders | — |
+
+### Do **not** use LLMs for
+
+| Problem | Handler |
+|---------|---------|
+| Tax calculation | Business rules |
