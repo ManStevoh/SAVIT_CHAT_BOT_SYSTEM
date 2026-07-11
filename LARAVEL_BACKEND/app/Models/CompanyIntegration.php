@@ -16,3 +16,8 @@ class CompanyIntegration extends Model
         'last_sync_at' => 'datetime',
     ];
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+}
