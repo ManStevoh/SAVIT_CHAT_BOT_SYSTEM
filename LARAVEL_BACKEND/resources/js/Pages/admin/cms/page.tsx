@@ -556,3 +556,9 @@ function PageEditor({ slug }: { slug: string }) {
   }, [data?.page.id, data?.page.metaTitle, data?.page.metaDescription])
 
   const saveMeta = async () => {
+    const res = await updateCmsPage(slug, { metaTitle, metaDescription })
+    if (res.success) {
+      toast({ title: "Page SEO saved" })
+      mutate()
+    }
+  }
