@@ -16,3 +16,9 @@ export function LegalCmsPage({ slug, fallbackTitle, fallbackBody }: LegalCmsPage
   const section = data?.sections?.find((s) => s.key === "legal_content" && s.isEnabled)
   const content = (section?.content ?? {}) as {
     title?: string
+    lastUpdated?: string
+    body?: string
+  }
+
+  const title = content.title || fallbackTitle
+  const metaTitle = data?.page.metaTitle || `${title} — Essem Chat`
