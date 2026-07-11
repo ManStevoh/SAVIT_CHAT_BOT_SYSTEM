@@ -58,3 +58,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 | 22 | Permission Engine | 🟡 | **company_policy_rules CRUD + approval ABAC** — dashboard ABAC pending |
 
 ## Platform
+
+| # | Module | Status | Top gap |
+|---|--------|--------|---------|
+| 23 | API Platform | 🟡 | **API keys + v1 orders + outbound webhooks** — OpenAPI publish pending |
+| 24 | Integration Hub | 🟡 | Growth connectors only |
+| 25 | Analytics Studio | 🟡 | Fixed dashboards; no custom KPI builder |
