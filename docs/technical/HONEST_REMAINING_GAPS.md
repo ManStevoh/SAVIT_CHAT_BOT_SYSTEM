@@ -40,3 +40,9 @@ Whisper inbound is wired; outbound TTS slot seeded but not connected to WhatsApp
 
 ## Verification
 
+```bash
+php artisan migrate
+php artisan test --filter=CommerceAgentOperatingSystem
+php artisan test --filter=CommerceAgent
+php artisan test --filter=AiOrchestration
+php artisan ai:verify-orchestration
