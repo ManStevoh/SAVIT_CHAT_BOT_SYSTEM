@@ -94,3 +94,9 @@ function ImageField({
   )
 }
 
+function SectionEditor({
+  slug,
+  section,
+  onSaved,
+  dragHandle,
+}: {
