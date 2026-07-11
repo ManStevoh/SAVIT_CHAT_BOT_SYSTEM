@@ -34,3 +34,9 @@ export function LandoTrustedCompanies({
           {parsed.map((company) => (
             <div key={company.name} className="flex items-center gap-2">
               {company.logoUrl ? (
+                <img src={company.logoUrl} alt={company.name} className="h-8 max-w-[120px] object-contain opacity-60" />
+              ) : (
+                <span className="text-lg font-bold text-gray-400">{company.name}</span>
+              )}
+            </div>
+          ))}
