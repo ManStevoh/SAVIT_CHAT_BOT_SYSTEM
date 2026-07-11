@@ -22,3 +22,9 @@ class IntelligenceOutcome extends Model
 
     protected $casts = [
         'metrics' => 'array',
+        'measured_at' => 'datetime',
+    ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
