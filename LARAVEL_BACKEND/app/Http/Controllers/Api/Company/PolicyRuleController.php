@@ -34,3 +34,9 @@ class PolicyRuleController extends Controller
         if ($request->user()->role !== 'company_owner') {
             return response()->json(['message' => 'Only company owner can manage policies.'], 403);
         }
+
+        $validated = $request->validate([
+            'action_type' => 'required|string|max:80',
+            'subject_role' => 'nullable|string|max:40',
+            'max_amount' => 'nullable|numeric|min:0',
+            'requires_role' => 'nullable|string|max:40',
