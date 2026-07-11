@@ -94,3 +94,9 @@ final class OwnerMorningBriefPushService
     {
         $lines = [
             '🌅 Morning brief — '.$company->name,
+            '',
+            (string) $brief->summary,
+        ];
+
+        $recs = is_array($brief->recommendations) ? array_slice($brief->recommendations, 0, 3) : [];
+        if ($recs !== []) {
