@@ -304,3 +304,9 @@ final class ConnectorRegistry
 
     {
 
+        $url = trim((string) ($config['webhook_url'] ?? ''));
+
+        if ($url === '' || ! filter_var($url, FILTER_VALIDATE_URL)) {
+
+            return ['success' => false, 'message' => 'Valid webhook_url required.'];
+
