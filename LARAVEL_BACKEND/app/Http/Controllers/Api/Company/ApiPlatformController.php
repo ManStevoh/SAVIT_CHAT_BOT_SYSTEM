@@ -46,3 +46,9 @@ class ApiPlatformController extends Controller
             $validated['name'],
             $validated['scopes'] ?? ['read'],
         );
+
+        return response()->json([
+            'apiKey' => $result['key'],
+            'plainText' => $result['plain_text'],
+            'message' => 'Store this key securely — it will not be shown again.',
+        ], 201);
