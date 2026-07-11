@@ -40,3 +40,9 @@ export function LandoHeroSection({
           {description && (
             <p className="mt-5 max-w-lg text-base leading-relaxed text-gray-600 sm:text-lg">
               {description}
+            </p>
+          )}
+          {(primaryCtaText || secondaryCtaText) && (
+            <div className="mt-8 flex flex-wrap gap-3">
+              {primaryCtaText && primaryCtaHref && (
+                <Button
