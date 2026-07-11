@@ -220,3 +220,9 @@ final class BusinessGraphV2Service
     {
         if ($fromId === $toId) {
             return false;
+        }
+
+        BusinessGraphEdge::firstOrCreate(
+            [
+                'from_node_id' => $fromId,
+                'to_node_id' => $toId,
