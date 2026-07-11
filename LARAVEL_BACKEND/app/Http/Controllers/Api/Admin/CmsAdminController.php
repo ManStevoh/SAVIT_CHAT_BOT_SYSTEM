@@ -46,3 +46,9 @@ class CmsAdminController extends Controller
                 'key' => $s->section_key,
                 'label' => $s->label,
                 'isEnabled' => (bool) $s->is_enabled,
+                'sortOrder' => (int) $s->sort_order,
+                'content' => $s->content ?? [],
+            ])->values()->all(),
+        ]);
+    }
+
