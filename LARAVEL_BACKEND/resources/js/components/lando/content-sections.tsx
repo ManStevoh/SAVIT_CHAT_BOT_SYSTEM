@@ -70,3 +70,9 @@ export function LandoTestimonials({
               <p className="text-base leading-relaxed text-black">&ldquo;{t.content}&rdquo;</p>
               <div className="mt-4 flex justify-center gap-0.5">
                 {Array.from({ length: t.rating || 5 }).map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-[#2563eb] text-[#2563eb]" />
+                ))}
+              </div>
+              <p className="mt-4 font-bold text-black">{t.name}</p>
+              {t.role && <p className="text-sm text-gray-500">{t.role}</p>}
+            </div>
