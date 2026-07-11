@@ -136,3 +136,9 @@ class CmsAdminController extends Controller
     public function reorderSections(Request $request, string $slug): JsonResponse
     {
         $page = CmsPage::where('slug', $slug)->firstOrFail();
+
+        $validated = $request->validate([
+            'orders' => 'required|array',
+            'orders.*.key' => 'required|string',
+            'orders.*.sortOrder' => 'required|integer|min:0',
+        ]);
