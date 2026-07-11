@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AiModel;
 use App\Models\AiProvider;
 use App\Services\AI\AiModelResolver;
+use App\Services\AI\AiOrchestrator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,6 +31,11 @@ class AiConfigController extends Controller
             ]);
 
         return response()->json(['providers' => $providers]);
+    }
+
+    public function orchestration(AiOrchestrator $orchestrator): JsonResponse
+    {
+        return response()->json($orchestrator->routingMap());
     }
 
     public function updateProvider(Request $request, AiProvider $provider): JsonResponse
@@ -75,7 +81,7 @@ class AiConfigController extends Controller
             'providerId' => 'required|integer|exists:ai_providers,id',
             'modelKey' => 'required|string|max:120',
             'displayName' => 'required|string|max:120',
-            'capability' => ['required', Rule::in(['chat', 'embedding'])],
+            'capability' => ['required', Rule::in(AiModel::capabilities())],
             'inputCostPerMillion' => 'nullable|numeric|min:0',
             'outputCostPerMillion' => 'nullable|numeric|min:0',
             'maxOutputTokens' => 'nullable|integer|min:1|max:200000',
