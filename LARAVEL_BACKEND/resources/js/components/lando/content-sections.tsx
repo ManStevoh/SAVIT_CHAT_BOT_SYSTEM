@@ -340,3 +340,9 @@ export function LandoContactSection({
   emailPlaceholder = "Email address",
   messageLabel = "Message",
   messagePlaceholder = "How can we help?",
+  submitText = "Send message",
+  successMessage = "Thank you! We will get back to you shortly.",
+}: {
+  title: string
+  description?: string
+  imageUrl?: string
