@@ -238,3 +238,9 @@ document_workflows          — draft → sent → signed → archived
 ```
 
 - **Standards:** PDF/A for archival; digital signatures (optional module); template versioning.
+- **Integration:** Order paid → auto-generate invoice; agent tool `generate_quotation`.
+
+---
+
+### 7. Internal Chat (Slack-like)
+
