@@ -46,3 +46,9 @@ export function LandoFooter({
         </div>
 
         <div className="flex flex-col gap-2">
+          {legalLinks.map((link) => (
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-black hover:text-[#2563eb]">
+              {link.label}
+            </Link>
+          ))}
+        </div>
