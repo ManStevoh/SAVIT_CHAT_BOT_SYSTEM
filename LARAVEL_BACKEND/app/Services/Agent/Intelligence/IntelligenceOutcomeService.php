@@ -52,3 +52,9 @@ final class IntelligenceOutcomeService
 
     public function seedFromOpportunity(Company $company, int $opportunityId, string $title, ?string $description = null): void
     {
+        $action = trim($title);
+        if ($description) {
+            $action .= ' — '.trim($description);
+        }
+
+        $this->seedActions($company, 'opportunity', $opportunityId, [
