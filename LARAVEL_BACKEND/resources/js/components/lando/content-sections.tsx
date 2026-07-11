@@ -172,3 +172,9 @@ export function LandoCompareFeatures({
   title = "Compare Features",
   columns = [],
 }: {
+  title?: string
+  columns?: Array<{ name: string; features: string[] }>
+}) {
+  if (columns.length === 0) return null
+
+  return (
