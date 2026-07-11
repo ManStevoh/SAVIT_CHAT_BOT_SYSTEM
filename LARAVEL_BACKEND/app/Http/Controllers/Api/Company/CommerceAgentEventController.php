@@ -4,3 +4,9 @@ namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\CommerceAgentEvent;
+use App\Services\Agent\Events\CommerceEventDetector;
+use App\Services\Agent\Events\CommerceEventHandler;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class CommerceAgentEventController extends Controller
