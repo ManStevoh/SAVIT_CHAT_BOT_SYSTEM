@@ -118,3 +118,9 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 3,
                         'content' => [
                             'title' => 'Introducing WhatsApp commerce',
+                            'description' => 'Join businesses using Essem Chat and experience AI-powered sales today!',
+                            'ctaText' => 'Try for free',
+                            'ctaHref' => '/register',
+                            'imageUrl' => $heroImage,
+                            'imageAlt' => 'Platform overview',
+                        ],
