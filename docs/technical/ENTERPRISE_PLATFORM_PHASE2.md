@@ -106,3 +106,9 @@ DELETE /api/company/policy-rules/{id}
 GET    /api/company/api-platform/keys
 POST   /api/company/api-platform/keys
 DELETE /api/company/api-platform/keys/{id}
+GET    /api/company/api-platform/webhooks
+POST   /api/company/api-platform/webhooks
+GET    /api/company/api-platform/billing-history
+```
+
+### API v1 (API key)
