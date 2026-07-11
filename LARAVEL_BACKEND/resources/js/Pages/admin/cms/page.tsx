@@ -112,3 +112,9 @@ function SectionEditor({
   const [saving, setSaving] = useState(false)
 
   const set = (key: string, value: unknown) => setContent((c) => ({ ...c, [key]: value }))
+  const str = (key: string) => String(content[key] ?? "")
+
+  const save = async () => {
+    setSaving(true)
+    const res = await updateCmsSection(slug, section.key, { isEnabled: enabled, content })
+    setSaving(false)
