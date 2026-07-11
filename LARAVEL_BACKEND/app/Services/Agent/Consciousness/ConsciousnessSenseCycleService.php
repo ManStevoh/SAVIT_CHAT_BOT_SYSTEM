@@ -40,3 +40,9 @@ final class ConsciousnessSenseCycleService
             if (config('agent.brain.enabled', true)) {
                 $this->brain->refreshIfStale($company, $maxAge);
             }
+
+            if (config('agent.timeline.sync_on_background', true)) {
+                $this->timeline->syncFromCompany($company, $timelineLimit);
+            }
+
+            $detected = 0;
