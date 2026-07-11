@@ -22,3 +22,8 @@ class CmsPage extends Model
         ];
     }
 
+    public function sections(): HasMany
+    {
+        return $this->hasMany(CmsSection::class)->orderBy('sort_order')->orderBy('id');
+    }
+}
