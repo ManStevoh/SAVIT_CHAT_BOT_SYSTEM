@@ -646,3 +646,9 @@ flowchart TB
     ICHAT[Internal Chat]
     PM[Project Management]
     DEL[Delivery Mgmt]
+  end
+
+  subgraph p5 [Phase 5 - Ecosystem]
+    DEV[Developer Platform]
+    WL[White-label]
+    IP[Industry Packs]
