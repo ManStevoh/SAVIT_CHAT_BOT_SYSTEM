@@ -598,3 +598,9 @@ Phase 3 — Platform surfaces
 
 Phase 4 — Workforce & supply chain
   Internal Chat, Project Management, Employee Portal, Vendor Portal
+  Delivery Management, Asset Management, Company Wiki v2
+
+Phase 5 — Ecosystem
+  Developer Platform + Marketplace, Industry Packs, White-label, Offline PWA
+  BI Layer v2, partner pricing
+```
