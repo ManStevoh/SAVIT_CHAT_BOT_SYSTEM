@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\MailService;
 use App\Services\OrderPaymentService;
+use App\Services\Platform\BillingLedgerService;
 use App\Services\StripeService;
 use Illuminate\Http\Request;
 use Stripe\StripeObject;
@@ -18,7 +19,8 @@ class StripeWebhookController extends Controller
     public function __construct(
         protected StripeService $stripe,
         protected MailService $mailService,
-        protected OrderPaymentService $orderPaymentService
+        protected OrderPaymentService $orderPaymentService,
+        protected BillingLedgerService $billingLedger,
     ) {}
 
     /**
@@ -53,7 +55,9 @@ class StripeWebhookController extends Controller
                     $this->stripe->handleSubscriptionDeleted($event->data->object);
                     break;
                 case 'invoice.paid':
-                    $this->stripe->handleInvoicePaid($event->data->object, $this->mailService);
+                    $invoice = $event->data->object;
+                    $this->stripe->handleInvoicePaid($invoice, $this->mailService);
+                    $this->recordStripeInvoicePayment($invoice);
                     break;
                 default:
                     Log::info('Stripe webhook unhandled type: '.$event->type);
@@ -92,5 +96,33 @@ class StripeWebhookController extends Controller
         $endDate = $subscription->end_date->format('F j, Y');
 
         $this->mailService->sendSubscriptionConfirmed($company->email, $planName, $endDate);
+    }
+
+    protected function recordStripeInvoicePayment(StripeObject $invoice): void
+    {
+        $customerId = $invoice->customer ?? null;
+        if (! $customerId) {
+            return;
+        }
+
+        $company = \App\Models\Company::where('stripe_customer_id', $customerId)->first();
+        $subscription = $company
+            ? Subscription::where('company_id', $company->id)->orderByDesc('end_date')->first()
+            : null;
+
+        $amount = isset($invoice->amount_paid) ? $invoice->amount_paid / 100 : 0;
+        $eventId = (string) ($invoice->id ?? uniqid('inv_', true));
+
+        $this->billingLedger->record(
+            'stripe',
+            $eventId,
+            (float) $amount,
+            $company?->id,
+            $subscription?->id,
+            strtoupper((string) ($invoice->currency ?? 'usd')),
+            'subscription',
+            (string) ($invoice->number ?? $invoice->id),
+            ['invoice_status' => $invoice->status ?? null],
+        );
     }
 }
