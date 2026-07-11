@@ -64,3 +64,9 @@ export function LandoTestimonials({
           {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
           {description && <p className="mt-3 text-gray-600">{description}</p>}
         </div>
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {testimonials.slice(0, 3).map((t) => (
+            <div key={t.id} className="rounded-2xl bg-white p-8 text-center shadow-sm">
+              <p className="text-base leading-relaxed text-black">&ldquo;{t.content}&rdquo;</p>
+              <div className="mt-4 flex justify-center gap-0.5">
+                {Array.from({ length: t.rating || 5 }).map((_, i) => (
