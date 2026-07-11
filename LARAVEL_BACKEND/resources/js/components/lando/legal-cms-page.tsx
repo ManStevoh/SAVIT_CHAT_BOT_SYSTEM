@@ -28,3 +28,9 @@ export function LegalCmsPage({ slug, fallbackTitle, fallbackBody }: LegalCmsPage
     <>
       <Head title={metaTitle} />
       <LegalLayout title={title}>
+        {content.lastUpdated && (
+          <p className="text-sm leading-relaxed">
+            <strong>Last updated:</strong> {content.lastUpdated}
+          </p>
+        )}
+
