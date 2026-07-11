@@ -6,6 +6,7 @@ use App\Models\AiModel;
 use App\Models\AiRequestLog;
 use App\Models\Company;
 use App\Models\PlatformSetting;
+use App\Services\AI\Drivers\OpenAiDriver;
 use App\Services\AI\Drivers\Contracts\AiProviderDriver;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -37,7 +38,7 @@ class AiGateway
         int $timeoutSeconds = 30,
         bool $jsonMode = false,
     ): OpenAiChatResult {
-        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT);
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, $useCase);
         if ($resolved === null) {
             $result = new OpenAiChatResult(
                 content: null,
@@ -96,7 +97,7 @@ class AiGateway
     public function embedText(string $text, ?int $companyId = null): ?array
     {
         $company = $companyId ? Company::find($companyId) : null;
-        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_EMBEDDING);
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_EMBEDDING, AiUseCase::EMBEDDING);
         if ($resolved === null || ! $this->consumeRateLimit($company?->id)) {
             return null;
         }
@@ -139,7 +140,7 @@ class AiGateway
 
     public function generateImage(string $prompt, ?Company $company = null): GeminiImageResult
     {
-        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_IMAGE);
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_IMAGE, AiUseCase::IMAGE);
         if ($resolved === null) {
             $result = new GeminiImageResult(
                 imageBytes: null,
@@ -187,6 +188,156 @@ class AiGateway
 
         $result = $this->geminiImage->generate($prompt, $company);
         $this->persistImageLog($result, $company?->id, $resolved);
+
+        return $result;
+    }
+
+    public function transcribeAudio(string $filePath, string $filename, Company $company): TranscribeResult
+    {
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_STT, AiUseCase::SPEECH_TO_TEXT);
+        if ($resolved === null) {
+            return new TranscribeResult(
+                text: null,
+                success: false,
+                model: 'unknown',
+                error: 'No speech-to-text model configured',
+            );
+        }
+
+        if ($resolved->credentialSource === 'platform' && ! $this->billing->isWithinPlatformAiBudget($company)) {
+            return new TranscribeResult(
+                text: null,
+                success: false,
+                model: $resolved->model->model_key,
+                error: 'AI usage limit reached for your plan.',
+                httpStatus: 402,
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        if (! $this->consumeRateLimit($company->id)) {
+            return new TranscribeResult(
+                text: null,
+                success: false,
+                model: $resolved->model->model_key,
+                error: 'AI rate limit exceeded',
+                httpStatus: 429,
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        $driver = $this->driverFactory->driverFor($resolved->provider);
+        if (! $driver instanceof OpenAiDriver) {
+            return new TranscribeResult(
+                text: null,
+                success: false,
+                model: $resolved->model->model_key,
+                error: 'Speech-to-text requires an OpenAI-compatible provider.',
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        $started = microtime(true);
+        $result = $driver->transcribe($resolved, $filePath, $filename);
+        $latencyMs = (int) round((microtime(true) - $started) * 1000);
+
+        $transcribe = new TranscribeResult(
+            text: $result?->text,
+            success: $result !== null && $result->success,
+            model: $resolved->model->model_key,
+            latencyMs: $latencyMs,
+            httpStatus: $result?->httpStatus,
+            error: $result?->error,
+            providerId: $resolved->provider->id,
+            modelId: $resolved->model->id,
+        );
+
+        $logResult = new OpenAiChatResult(
+            content: $transcribe->text,
+            success: $transcribe->success,
+            model: $transcribe->model,
+            latencyMs: $latencyMs,
+            httpStatus: $transcribe->httpStatus,
+            error: $transcribe->error,
+            providerId: $transcribe->providerId,
+            modelId: $transcribe->modelId,
+        );
+        $this->persistLog($logResult, AiUseCase::SPEECH_TO_TEXT, $company->id, null, $resolved);
+
+        return $transcribe;
+    }
+
+    public function synthesizeSpeech(string $text, Company $company, ?string $voice = null): SynthesizeResult
+    {
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_TTS, AiUseCase::TEXT_TO_SPEECH);
+        if ($resolved === null) {
+            return new SynthesizeResult(
+                audioPath: null,
+                mimeType: null,
+                success: false,
+                model: 'unknown',
+                error: 'No text-to-speech model configured',
+            );
+        }
+
+        if ($resolved->credentialSource === 'platform' && ! $this->billing->isWithinPlatformAiBudget($company)) {
+            return new SynthesizeResult(
+                audioPath: null,
+                mimeType: null,
+                success: false,
+                model: $resolved->model->model_key,
+                error: 'AI usage limit reached for your plan.',
+                httpStatus: 402,
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        if (! $this->consumeRateLimit($company->id)) {
+            return new SynthesizeResult(
+                audioPath: null,
+                mimeType: null,
+                success: false,
+                model: $resolved->model->model_key,
+                error: 'AI rate limit exceeded',
+                httpStatus: 429,
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        $driver = $this->driverFactory->driverFor($resolved->provider);
+        if (! $driver instanceof OpenAiDriver) {
+            return new SynthesizeResult(
+                audioPath: null,
+                mimeType: null,
+                success: false,
+                model: $resolved->model->model_key,
+                error: 'TTS requires an OpenAI-compatible provider.',
+                providerId: $resolved->provider->id,
+                modelId: $resolved->model->id,
+            );
+        }
+
+        $started = microtime(true);
+        $voiceName = $voice ?? config('agent.voice.tts_voice', 'alloy');
+        $format = config('agent.voice.tts_format', 'mp3');
+        $result = $driver->synthesize($resolved, $text, $voiceName, $format);
+
+        $logResult = new OpenAiChatResult(
+            content: null,
+            success: $result->success,
+            model: $result->model,
+            latencyMs: (int) round((microtime(true) - $started) * 1000),
+            httpStatus: $result->httpStatus,
+            error: $result->error,
+            providerId: $result->providerId,
+            modelId: $result->modelId,
+        );
+        $this->persistLog($logResult, AiUseCase::TEXT_TO_SPEECH, $company->id, null, $resolved);
 
         return $result;
     }
