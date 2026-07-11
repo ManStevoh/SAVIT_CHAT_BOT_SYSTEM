@@ -52,3 +52,9 @@ export function LandoNavbar({
           })}
         </div>
 
+        <div className="flex items-center gap-2">
+          <Link
+            href={loginHref}
+            className="hidden text-sm font-medium text-black sm:inline"
+          >
+            {loginLabel}
