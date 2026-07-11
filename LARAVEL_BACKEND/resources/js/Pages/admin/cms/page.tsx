@@ -616,3 +616,9 @@ export default function AdminCmsPage() {
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Layout className="h-6 w-6" />
           Website CMS
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Manage Lando-style public pages: content, images, and section visibility.
+        </p>
+      </div>
+
