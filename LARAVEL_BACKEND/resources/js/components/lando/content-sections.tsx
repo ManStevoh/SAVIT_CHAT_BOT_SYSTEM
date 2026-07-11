@@ -160,3 +160,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
               >
                 {plan.cta ?? "Get started"}
               </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
