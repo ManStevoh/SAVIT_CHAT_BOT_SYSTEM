@@ -100,3 +100,9 @@ export function LandoNavbar({
             )
           })}
           <div className="mt-3 flex flex-col gap-2 border-t border-gray-200 pt-3">
+            <Link
+              href={loginHref}
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-black hover:bg-white/70"
+            >
+              {loginLabel}
