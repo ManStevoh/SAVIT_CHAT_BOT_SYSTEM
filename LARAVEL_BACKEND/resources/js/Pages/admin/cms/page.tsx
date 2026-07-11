@@ -88,3 +88,9 @@ function ImageField({
             <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
           </label>
         </Button>
+      </div>
+      {value && <img src={value} alt="" className="mt-2 h-20 rounded border object-cover" />}
+    </div>
+  )
+}
+
