@@ -15,6 +15,7 @@ class Chat extends Model
         'customer_name',
         'customer_phone',
         'detected_language',
+        'detected_sentiment',
         'customer_avatar',
         'last_message',
         'last_message_at',

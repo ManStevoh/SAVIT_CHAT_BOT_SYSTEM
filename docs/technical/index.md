@@ -38,6 +38,13 @@ Essem Chat Bot/
 | Automated CI/CD (local → server) | [CI/CD Pipeline](ci-cd.md) |
 | `.env` reference | [Environment Variables](environment-variables.md) |
 | Cron, queues, jobs | [Queues & Scheduler](queues-scheduler.md) |
+| **AI / ABI (master)** | [Artificial Business Intelligence](AI_ABI_PLATFORM.md) |
+| **Digital Nervous System (vision)** | [SAVIT — Digital Nervous System](SAVIT_DIGITAL_NERVOUS_SYSTEM.md) |
+| **AI Phase 4** | [Vision, Owner Analytics, Brain, External Tools](AI_PHASE4_OS.md) |
+| AI Layer 1 — Agent | [AI Agent Commerce OS](AI_AGENT_OS.md) |
+| AI Layer 2 — Company | [AI Company OS](AI_COMPANY_OS.md) |
+| AI Layer 3 — Platform | [AI Platform OS](AI_PLATFORM_OS.md) |
+| AI Layer 4 — Cognitive | [AI Cognitive Architecture](AI_COGNITIVE_OS.md) |
 | Common issues | [Troubleshooting](troubleshooting.md) |
 
 ## Production URLs

@@ -121,4 +121,54 @@ class WhatsAppPlatformConfig
     {
         return rtrim((string) config('app.url'), '/') . '/api/whatsapp/webhook';
     }
+
+    public static function billingModel(): string
+    {
+        $settings = self::settings();
+        $model = (string) ($settings?->whatsapp_billing_model ?? WhatsAppBillingModel::TECH_PROVIDER);
+
+        return WhatsAppBillingModel::normalize($model);
+    }
+
+    public static function isSolutionPartnerBilling(): bool
+    {
+        return self::billingModel() === WhatsAppBillingModel::SOLUTION_PARTNER;
+    }
+
+    public static function extendedCreditLineId(): string
+    {
+        $settings = self::settings();
+
+        return (string) ($settings?->whatsapp_extended_credit_line_id ?? '');
+    }
+
+    public static function creditSharingSystemToken(): string
+    {
+        $settings = self::settings();
+
+        return (string) ($settings?->whatsapp_credit_sharing_system_token ?? '');
+    }
+
+    public static function wabaCurrency(): string
+    {
+        $settings = self::settings();
+        $currency = strtoupper((string) ($settings?->whatsapp_waba_currency ?? 'USD'));
+
+        if (! in_array($currency, WhatsAppBillingModel::SUPPORTED_WABA_CURRENCIES, true)) {
+            return 'USD';
+        }
+
+        return $currency;
+    }
+
+    public static function hasSolutionPartnerCredentials(): bool
+    {
+        return self::extendedCreditLineId() !== ''
+            && self::creditSharingSystemToken() !== '';
+    }
+
+    public static function isSolutionPartnerBillingReady(): bool
+    {
+        return self::isSolutionPartnerBilling() && self::hasSolutionPartnerCredentials();
+    }
 }

@@ -203,4 +203,283 @@ class WhatsAppOnboardingTest extends TestCase
             ->assertJsonCount(1, 'connections')
             ->assertJsonPath('connections.0.companyName', 'Acme Ltd');
     }
+
+    public function test_solution_partner_mode_shares_credit_line_on_embedded_signup(): void
+    {
+        PlatformSetting::query()->update([
+            'whatsapp_billing_model' => 'solution_partner',
+            'whatsapp_extended_credit_line_id' => 'credit-line-1',
+            'whatsapp_credit_sharing_system_token' => 'system-token-xyz',
+            'whatsapp_waba_currency' => 'USD',
+        ]);
+        WhatsAppPlatformConfig::clearCache();
+
+        Http::fake([
+            'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token-abc'], 200),
+            'graph.facebook.com/*/waba-sp/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/credit-line-1/whatsapp_credit_sharing_and_attach*' => Http::response([
+                'allocation_config_id' => 'alloc-999',
+                'waba_id' => 'waba-sp',
+            ], 200),
+            'graph.facebook.com/*/phone-sp/register' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/company/whatsapp/embedded/complete', [
+            'code' => 'oauth-code-xyz',
+            'phoneNumberId' => 'phone-sp',
+            'whatsappBusinessAccountId' => 'waba-sp',
+        ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertNotNull($account);
+        $this->assertSame('solution_partner', $account->meta_billing_model);
+        $this->assertSame('alloc-999', $account->credit_allocation_config_id);
+        $this->assertNotNull($account->credit_line_shared_at);
+        $this->assertSame('active', $account->status);
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'whatsapp_credit_sharing_and_attach')
+            && str_contains($request->url(), 'waba_id=waba-sp')
+            && str_contains($request->url(), 'waba_currency=USD'));
+    }
+
+    public function test_solution_partner_mode_fails_when_credit_credentials_missing(): void
+    {
+        PlatformSetting::query()->update([
+            'whatsapp_billing_model' => 'solution_partner',
+            'whatsapp_extended_credit_line_id' => null,
+            'whatsapp_credit_sharing_system_token' => null,
+        ]);
+        WhatsAppPlatformConfig::clearCache();
+
+        Http::fake([
+            'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token-abc'], 200),
+            'graph.facebook.com/*/waba-sp/subscribed_apps' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/embedded/complete', [
+            'code' => 'oauth-code-xyz',
+            'phoneNumberId' => 'phone-sp',
+            'whatsappBusinessAccountId' => 'waba-sp',
+        ])
+            ->assertStatus(503)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('code', 'platform_billing_not_ready');
+
+        $this->assertNull(WhatsAppAccount::where('company_id', $user->company_id)->first());
+    }
+
+    public function test_status_reflects_solution_partner_billing_model(): void
+    {
+        PlatformSetting::query()->update(['whatsapp_billing_model' => 'solution_partner']);
+        WhatsAppPlatformConfig::clearCache();
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->getJson('/api/company/whatsapp/status')
+            ->assertOk()
+            ->assertJsonPath('metaBillingModel', 'solution_partner')
+            ->assertJsonPath('requiresMetaPaymentMethod', false);
+    }
+
+    public function test_tech_provider_mode_sets_meta_billing_model_on_account(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token-abc'], 200),
+            'graph.facebook.com/*/waba-1/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/phone-1/register' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/embedded/complete', [
+            'code' => 'oauth-code-xyz',
+            'phoneNumberId' => 'phone-1',
+            'whatsappBusinessAccountId' => 'waba-1',
+        ])->assertOk();
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertSame('tech_provider', $account->meta_billing_model);
+        $this->assertNull($account->credit_line_shared_at);
+    }
+
+    public function test_solution_partner_manual_connect_shares_credit_line(): void
+    {
+        PlatformSetting::query()->update([
+            'whatsapp_billing_model' => 'solution_partner',
+            'whatsapp_extended_credit_line_id' => 'credit-line-1',
+            'whatsapp_credit_sharing_system_token' => 'system-token-xyz',
+            'whatsapp_waba_currency' => 'USD',
+        ]);
+        WhatsAppPlatformConfig::clearCache();
+
+        Http::fake([
+            'graph.facebook.com/*/phone-manual*' => Http::response([
+                'id' => 'phone-manual',
+                'display_phone_number' => '+254712345678',
+            ], 200),
+            'graph.facebook.com/*/waba-manual/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/credit-line-1/whatsapp_credit_sharing_and_attach*' => Http::response([
+                'allocation_config_id' => 'alloc-manual',
+                'waba_id' => 'waba-manual',
+            ], 200),
+            'graph.facebook.com/*/phone-manual/register' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+            'whatsappBusinessAccountId' => 'waba-manual',
+        ])->assertOk();
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertSame('solution_partner', $account->meta_billing_model);
+        $this->assertSame('alloc-manual', $account->credit_allocation_config_id);
+    }
+
+    public function test_solution_partner_disconnect_revokes_credit_line(): void
+    {
+        PlatformSetting::query()->update([
+            'whatsapp_billing_model' => 'solution_partner',
+            'whatsapp_extended_credit_line_id' => 'credit-line-1',
+            'whatsapp_credit_sharing_system_token' => 'system-token-xyz',
+        ]);
+        WhatsAppPlatformConfig::clearCache();
+
+        Http::fake([
+            'graph.facebook.com/*/waba-sp/subscribed_apps' => Http::sequence()
+                ->push(['success' => true], 200)
+                ->push(['success' => true], 200),
+            'graph.facebook.com/*/alloc-999*' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        WhatsAppAccount::create([
+            'company_id' => $user->company_id,
+            'phone_number_id' => 'phone-sp',
+            'whatsapp_business_account_id' => 'waba-sp',
+            'access_token' => 'biz-token',
+            'meta_billing_model' => 'solution_partner',
+            'credit_allocation_config_id' => 'alloc-999',
+            'credit_line_shared_at' => now(),
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'connected_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+        $this->postJson('/api/company/whatsapp/disconnect')->assertOk();
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertSame('disconnected', $account->onboarding_status);
+        $this->assertNull($account->credit_allocation_config_id);
+        $this->assertNull($account->credit_line_shared_at);
+
+        Http::assertSent(fn ($req) => $req->method() === 'DELETE' && str_contains($req->url(), 'alloc-999'));
+    }
+
+    public function test_embedded_signup_rejects_duplicate_phone(): void
+    {
+        $otherCompany = Company::create(['name' => 'Other', 'email' => 'other@test.local', 'status' => 'active']);
+        WhatsAppAccount::create([
+            'company_id' => $otherCompany->id,
+            'phone_number_id' => 'phone-dup',
+            'access_token' => 'token',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+        ]);
+
+        Http::fake([
+            'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token-abc'], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/embedded/complete', [
+            'code' => 'oauth-code-xyz',
+            'phoneNumberId' => 'phone-dup',
+            'whatsappBusinessAccountId' => 'waba-new',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+    }
+
+    public function test_connect_blocked_when_solution_partner_not_configured(): void
+    {
+        PlatformSetting::query()->update([
+            'whatsapp_billing_model' => 'solution_partner',
+            'whatsapp_extended_credit_line_id' => null,
+            'whatsapp_credit_sharing_system_token' => null,
+        ]);
+        WhatsAppPlatformConfig::clearCache();
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->postJson('/api/company/whatsapp/embedded/complete', [
+            'code' => 'oauth-code-xyz',
+            'phoneNumberId' => 'phone-1',
+            'whatsappBusinessAccountId' => 'waba-1',
+        ])
+            ->assertStatus(503)
+            ->assertJsonPath('code', 'platform_billing_not_ready');
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-1',
+            'accessToken' => 'token',
+        ])
+            ->assertStatus(503)
+            ->assertJsonPath('code', 'platform_billing_not_ready');
+    }
+
+    public function test_admin_can_save_billing_model_settings(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->putJson('/api/admin/settings', [
+            'whatsappBillingModel' => 'solution_partner',
+            'whatsappExtendedCreditLineId' => 'credit-123',
+            'whatsappCreditSharingSystemToken' => 'sys-token-abc',
+            'whatsappWabaCurrency' => 'USD',
+        ])->assertOk();
+
+        WhatsAppPlatformConfig::clearCache();
+
+        $this->getJson('/api/admin/settings')
+            ->assertOk()
+            ->assertJsonPath('whatsappBillingModel', 'solution_partner')
+            ->assertJsonPath('whatsappExtendedCreditLineId', 'credit-123')
+            ->assertJsonPath('whatsappSolutionPartnerReady', true)
+            ->assertJsonPath('whatsappCreditSharingSystemToken', '********');
+    }
+
+    public function test_embedded_config_includes_billing_flags(): void
+    {
+        PlatformSetting::query()->update(['whatsapp_billing_model' => 'solution_partner']);
+        WhatsAppPlatformConfig::clearCache();
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->getJson('/api/company/whatsapp/embedded/config')
+            ->assertOk()
+            ->assertJsonPath('metaBillingModel', 'solution_partner')
+            ->assertJsonPath('requiresMetaPaymentMethod', false)
+            ->assertJsonPath('platformBillingReady', false);
+    }
 }

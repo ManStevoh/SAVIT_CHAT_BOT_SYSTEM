@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Log;
 class WhatsAppOnboardingService
 {
     public function __construct(
-        protected WhatsAppGraphClient $graph
+        protected WhatsAppGraphClient $graph,
+        protected WhatsAppCreditSharingService $creditSharing,
     ) {}
 
     /**
@@ -55,6 +56,13 @@ class WhatsAppOnboardingService
             return [
                 'success' => false,
                 'message' => 'Phone Number ID not received from Meta. Please retry embedded signup.',
+            ];
+        }
+
+        if ($this->isPhoneUsedByAnotherCompany($phoneNumberId, $companyId)) {
+            return [
+                'success' => false,
+                'message' => 'This phone number is already connected to another company on the platform.',
             ];
         }
 
@@ -142,10 +150,23 @@ class WhatsAppOnboardingService
             }
         }
 
+        if ($account->meta_billing_model === WhatsAppBillingModel::SOLUTION_PARTNER) {
+            $revoke = $this->creditSharing->revokeForAccount($account);
+            if (! $revoke['success']) {
+                Log::warning('WhatsApp credit line revoke on disconnect failed', [
+                    'company_id' => $account->company_id,
+                    'allocation_config_id' => $account->credit_allocation_config_id,
+                    'message' => $revoke['message'] ?? null,
+                ]);
+            }
+        }
+
         $account->update([
             'status' => 'inactive',
             'onboarding_status' => 'disconnected',
             'disconnected_at' => now(),
+            'credit_allocation_config_id' => null,
+            'credit_line_shared_at' => null,
         ]);
 
         return ['success' => true, 'message' => 'WhatsApp disconnected.'];
@@ -163,6 +184,7 @@ class WhatsAppOnboardingService
         ?string $qualityRating,
     ): array {
         $pin = $this->generateRegistrationPin();
+        $billingModel = WhatsAppPlatformConfig::billingModel();
 
         $account = WhatsAppAccount::updateOrCreate(
             ['company_id' => $companyId],
@@ -171,6 +193,7 @@ class WhatsAppOnboardingService
                 'access_token' => $accessToken,
                 'display_phone_number' => $displayPhone,
                 'whatsapp_business_account_id' => $wabaId,
+                'meta_billing_model' => $billingModel,
                 'status' => 'inactive',
                 'onboarding_status' => 'token_received',
                 'onboarding_error' => null,
@@ -178,6 +201,8 @@ class WhatsAppOnboardingService
                 'registration_pin' => Crypt::encryptString($pin),
                 'connected_at' => now(),
                 'disconnected_at' => null,
+                'credit_allocation_config_id' => null,
+                'credit_line_shared_at' => null,
             ]
         );
 
@@ -202,6 +227,50 @@ class WhatsAppOnboardingService
             }
         }
 
+        if ($billingModel === WhatsAppBillingModel::SOLUTION_PARTNER) {
+            if ($wabaId === null || $wabaId === '') {
+                $account->onboarding_status = 'error';
+                $account->onboarding_error = 'WhatsApp Business Account ID is required for platform billing.';
+                $account->save();
+
+                return [
+                    'success' => false,
+                    'message' => 'Solution Partner billing requires a WhatsApp Business Account ID from Meta signup.',
+                    'account' => $account,
+                ];
+            }
+
+            if (! WhatsAppPlatformConfig::isSolutionPartnerBillingReady()) {
+                $account->onboarding_status = 'error';
+                $account->onboarding_error = 'Platform Solution Partner billing is not fully configured.';
+                $account->save();
+
+                return [
+                    'success' => false,
+                    'message' => 'Platform billing is enabled but not configured. Contact your administrator to set credit line credentials in Admin → Settings.',
+                    'account' => $account,
+                ];
+            }
+
+            $creditShare = $this->creditSharing->shareCreditLineWithWaba($wabaId);
+            if (! $creditShare['success']) {
+                $account->onboarding_status = 'error';
+                $account->onboarding_error = $creditShare['message'] ?? 'Credit line sharing failed';
+                $account->save();
+
+                return [
+                    'success' => false,
+                    'message' => $creditShare['message'] ?? 'Failed to attach platform credit line to your WhatsApp account.',
+                    'account' => $account,
+                ];
+            }
+
+            $account->credit_line_shared_at = now();
+            $account->credit_allocation_config_id = $creditShare['allocationConfigId'] ?? null;
+            $account->onboarding_status = 'credit_line_shared';
+            $account->save();
+        }
+
         $register = $this->graph->registerPhoneNumber($phoneNumberId, $accessToken, $pin);
         if ($register['ok'] || $this->graph->isAlreadyRegisteredError($register)) {
             $account->phone_registered_at = now();
@@ -224,9 +293,13 @@ class WhatsAppOnboardingService
 
         $account->save();
 
+        $successMessage = $billingModel === WhatsAppBillingModel::SOLUTION_PARTNER
+            ? 'WhatsApp connected successfully. WhatsApp usage is billed through the platform — no Meta payment method required.'
+            : 'WhatsApp connected successfully. You can now receive and send messages.';
+
         return [
             'success' => true,
-            'message' => 'WhatsApp connected successfully. You can now receive and send messages.',
+            'message' => $successMessage,
             'account' => $account->fresh(),
             'phoneNumberId' => $phoneNumberId,
         ];

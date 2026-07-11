@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PlatformSetting;
 use App\Services\AI\AiLearningConfig;
 use App\Services\MailService;
+use App\Services\WhatsApp\WhatsAppBillingModel;
 use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,6 +60,13 @@ class PlatformSettingsController extends Controller
             'whatsappEnableCoexist' => (bool) ($data['whatsapp_enable_coexist'] ?? false),
             'whatsappEmbeddedSignupEnabled' => (bool) ($data['whatsapp_embedded_signup_enabled'] ?? true),
             'whatsappManualConnectEnabled' => (bool) ($data['whatsapp_manual_connect_enabled'] ?? true),
+            'whatsappBillingModel' => WhatsAppBillingModel::normalize($data['whatsapp_billing_model'] ?? null),
+            'whatsappBillingModelLabel' => WhatsAppBillingModel::label($data['whatsapp_billing_model'] ?? WhatsAppBillingModel::TECH_PROVIDER),
+            'whatsappExtendedCreditLineId' => $data['whatsapp_extended_credit_line_id'] ?? null,
+            'whatsappCreditSharingSystemToken' => $this->maskSecret($settings, 'whatsapp_credit_sharing_system_token'),
+            'whatsappWabaCurrency' => WhatsAppPlatformConfig::wabaCurrency(),
+            'whatsappSolutionPartnerReady' => WhatsAppPlatformConfig::isSolutionPartnerBillingReady(),
+            'whatsappBillingRequiresMetaPayment' => ! WhatsAppPlatformConfig::isSolutionPartnerBilling(),
             'whatsappWebhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
             'whatsappEmbeddedSignupReady' => WhatsAppPlatformConfig::hasEmbeddedSignupCredentials(),
             'whatsappEmbeddedSignupActive' => WhatsAppPlatformConfig::isEmbeddedSignupEnabled(),
@@ -127,6 +135,10 @@ class PlatformSettingsController extends Controller
             'whatsappEnableCoexist' => 'sometimes|boolean',
             'whatsappEmbeddedSignupEnabled' => 'sometimes|boolean',
             'whatsappManualConnectEnabled' => 'sometimes|boolean',
+            'whatsappBillingModel' => 'sometimes|string|in:' . implode(',', WhatsAppBillingModel::all()),
+            'whatsappExtendedCreditLineId' => 'nullable|string|max:100',
+            'whatsappCreditSharingSystemToken' => 'nullable|string|max:2000',
+            'whatsappWabaCurrency' => 'nullable|string|size:3|in:' . implode(',', WhatsAppBillingModel::SUPPORTED_WABA_CURRENCIES),
             'openaiApiKey' => 'nullable|string|max:500',
             'openaiModel' => 'nullable|string|max:100',
             'openaiMaxTokens' => 'nullable|integer|min:1|max:4096',
@@ -198,6 +210,10 @@ class PlatformSettingsController extends Controller
             'whatsappEnableCoexist' => 'whatsapp_enable_coexist',
             'whatsappEmbeddedSignupEnabled' => 'whatsapp_embedded_signup_enabled',
             'whatsappManualConnectEnabled' => 'whatsapp_manual_connect_enabled',
+            'whatsappBillingModel' => 'whatsapp_billing_model',
+            'whatsappExtendedCreditLineId' => 'whatsapp_extended_credit_line_id',
+            'whatsappCreditSharingSystemToken' => 'whatsapp_credit_sharing_system_token',
+            'whatsappWabaCurrency' => 'whatsapp_waba_currency',
             'openaiApiKey' => 'openai_api_key',
             'openaiModel' => 'openai_model',
             'openaiMaxTokens' => 'openai_max_tokens',
@@ -215,7 +231,7 @@ class PlatformSettingsController extends Controller
             'notifyDailySummary' => 'notify_daily_summary',
             'landingTrustedCompanies' => 'landing_trusted_companies',
         ];
-        $skipIfMasked = ['smtp_password', 'meta_app_secret', 'whatsapp_embedded_app_secret', 'openai_api_key'];
+        $skipIfMasked = ['smtp_password', 'meta_app_secret', 'whatsapp_embedded_app_secret', 'whatsapp_credit_sharing_system_token', 'openai_api_key'];
         foreach ($validated as $key => $value) {
             if ($key === 'logo') {
                 continue;

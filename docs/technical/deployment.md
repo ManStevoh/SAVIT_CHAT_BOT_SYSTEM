@@ -39,6 +39,20 @@ All routes — landing, dashboard, admin, webhooks, and REST API — live under 
 
 Wrong root causes "Index of /" listing, broken routes, and missing Vite assets.
 
+### Blank page / CORS errors to `[::1]:5173`
+
+The HTML is still pointing at the **Vite dev server** instead of compiled assets. On the server:
+
+```bash
+cd LARAVEL_BACKEND
+rm -f public/hot                    # left over from `npm run dev` — most common cause
+npm ci && npm run build             # creates public/build/manifest.json
+php artisan view:clear
+php artisan config:cache
+```
+
+Ensure `.env` has `APP_ENV=production` and `APP_DEBUG=false`, and `APP_URL` matches your live domain (e.g. `https://ai.essemdigital.com`).
+
 ## Deployment steps
 
 ```bash

@@ -14,6 +14,9 @@ class WhatsAppAccount extends Model
         'company_id',
         'phone_number_id',
         'whatsapp_business_account_id',
+        'meta_billing_model',
+        'credit_allocation_config_id',
+        'credit_line_shared_at',
         'access_token',
         'verify_token',
         'status',
@@ -31,6 +34,7 @@ class WhatsAppAccount extends Model
 
     protected $casts = [
         'webhook_subscribed_at' => 'datetime',
+        'credit_line_shared_at' => 'datetime',
         'phone_registered_at' => 'datetime',
         'connected_at' => 'datetime',
         'disconnected_at' => 'datetime',

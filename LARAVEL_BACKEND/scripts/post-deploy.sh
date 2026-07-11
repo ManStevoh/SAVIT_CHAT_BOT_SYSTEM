@@ -4,6 +4,24 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Dev hot file must never exist in production (causes browser to load [::1]:5173).
+if [ -f public/hot ]; then
+  echo "==> Removing stale public/hot (Vite dev server marker)..."
+  rm -f public/hot
+fi
+
+if [ ! -f public/build/manifest.json ]; then
+  echo "ERROR: public/build/manifest.json is missing. Frontend was not built."
+  if command -v npm >/dev/null 2>&1; then
+    echo "==> Attempting npm ci && npm run build..."
+    npm ci
+    npm run build
+  else
+    echo "Install Node 20+ on the server, or run 'npm run build' locally and upload public/build/."
+    exit 1
+  fi
+fi
+
 echo "==> Installing PHP dependencies (production)..."
 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 

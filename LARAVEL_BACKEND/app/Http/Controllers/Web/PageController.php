@@ -78,6 +78,11 @@ class PageController extends Controller
         return Inertia::render('dashboard/growth/page');
     }
 
+    public function dashboardExecutive(): Response
+    {
+        return Inertia::render('dashboard/executive/page');
+    }
+
     public function dashboardWhatsAppCampaigns(): Response
     {
         return Inertia::render('dashboard/whatsapp/campaigns/page');

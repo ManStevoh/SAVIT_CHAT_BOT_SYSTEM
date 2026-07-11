@@ -73,7 +73,7 @@ flowchart TB
 - Phone number that can receive SMS/voice OTP
 - Number **not** locked to another WhatsApp API provider (unless using **coexist** mode)
 - Facebook account to complete Embedded Signup
-- **Payment method on their WhatsApp Business Account** in Meta (see [Billing](#9-pricing-and-billing))
+- **Payment method on their WhatsApp Business Account** in Meta — **only when platform billing model is Tech Provider** (default). With Solution Partner, Essem shares its credit line; see [WhatsApp Meta Billing Model](../WHATSAPP_META_BILLING_MODEL.md).
 
 ---
 
@@ -378,10 +378,11 @@ Do not confuse these:
 | Bill | Who pays | What it covers |
 |------|----------|----------------|
 | **Essem subscription** | Company → Essem | Platform access, dashboard, AI, growth, support |
-| **Meta WhatsApp fees** | Company → Meta (on their WABA) | WhatsApp conversation charges |
+| **Meta WhatsApp fees** | Depends on billing model (below) | WhatsApp conversation charges |
 
-You bill companies via **Stripe / M-Pesa / Paystack** in Essem (`/dashboard/subscription`).  
-Meta bills companies via **card on their WhatsApp Business Account**.
+You bill companies via **Stripe / M-Pesa / Paystack** in Essem (`/dashboard/subscription`).
+
+**Meta WhatsApp billing is configurable** by the super admin in **Admin → Settings → Integrations → Meta WhatsApp billing model**. See the full guide: **[WhatsApp Meta Billing Model](WHATSAPP_META_BILLING_MODEL.md)**.
 
 ---
 
@@ -398,14 +399,20 @@ Meta uses **conversation-based pricing** (not per-SMS). Rates depend on **countr
 | **Authentication** | OTP, login codes | Business (template) |
 | **Marketing** | Promotions, offers | Business (template) |
 
-### Who pays Meta?
+### Who pays Meta? (platform toggle)
 
-| Your Meta role | Who adds payment method | Who receives Meta invoice |
-|----------------|-------------------------|---------------------------|
-| **Tech Provider** (Essem’s path) | **Each company** on their WABA | Each company (via Meta) |
-| **Solution Partner** | You share your line of credit | You allocate to clients (advanced) |
+Configure in **Admin → Settings → Integrations**:
 
-Essem is set up as **Tech Provider**: companies pay Meta directly for WhatsApp usage.
+| Billing model | Setting value | Who adds Meta payment | Who receives Meta invoice |
+|---------------|---------------|----------------------|---------------------------|
+| **Tech Provider** (default) | `tech_provider` | **Each company** on their WABA | Each company (via Meta) |
+| **Solution Partner** | `solution_partner` | **Nobody** — Essem shares credit line | **Essem** (aggregated); you bill clients as you choose |
+
+When **Solution Partner** is enabled, Essem automatically calls Meta’s [`whatsapp_credit_sharing_and_attach`](https://developers.facebook.com/docs/marketing-api/reference/extended-credit/whatsapp_credit_sharing_and_attach/) API during company onboarding. You must configure extended credit line ID, system user token, and WABA currency in admin settings.
+
+> **Liability:** In Solution Partner mode, Meta bills **you** for all WhatsApp spend on shared credit lines. You are the Bill-To party.
+
+**Changing the toggle applies to new connections only.** Companies already connected keep the model active when they connected until they disconnect and reconnect.
 
 ### Official pricing reference
 
@@ -422,9 +429,9 @@ Essem is set up as **Tech Provider**: companies pay Meta directly for WhatsApp u
 
 You can:
 
-1. **Pass through** — companies pay Meta only; Essem subscription is separate.
-2. **Bundle** — higher Essem plan “includes WhatsApp” but companies still need Meta card on WABA (Tech Provider model).
-3. **Become Solution Partner** later — share your Meta credit line and resell (requires extra Meta onboarding).
+1. **Pass through (Tech Provider)** — companies pay Meta only; Essem subscription is separate. Enable **Tech Provider** in admin settings.
+2. **Bundle (Solution Partner)** — higher Essem plan “includes WhatsApp”; enable **Solution Partner** and share your Meta credit line. You invoice clients for WhatsApp usage (Essem does not auto-rebill Meta costs today).
+3. **Switch models** — super admin toggles in **Admin → Settings → Integrations**; affects new connections only. See [WhatsApp Meta Billing Model](WHATSAPP_META_BILLING_MODEL.md).
 
 ### Essem subscription plans (platform)
 

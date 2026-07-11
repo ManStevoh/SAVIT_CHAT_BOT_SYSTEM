@@ -30,6 +30,21 @@ class WhatsAppGraphClient
         return $this->formatResponse($response->status(), $response->json(), $response->body());
     }
 
+    /**
+     * POST with query-string parameters (Meta credit-sharing endpoints use this pattern).
+     */
+    public function postWithQuery(string $path, string $accessToken, array $query = []): array
+    {
+        $url = WhatsAppPlatformConfig::graphUrl() . '/' . ltrim($path, '/');
+        if ($query !== []) {
+            $url .= '?' . http_build_query($query);
+        }
+
+        $response = Http::withToken($accessToken)->timeout(25)->post($url);
+
+        return $this->formatResponse($response->status(), $response->json(), $response->body());
+    }
+
     public function delete(string $path, string $accessToken): array
     {
         $url = WhatsAppPlatformConfig::graphUrl() . '/' . ltrim($path, '/');
@@ -139,6 +154,21 @@ class WhatsAppGraphClient
             'messaging_product' => 'whatsapp',
             'pin' => $pin,
         ]);
+    }
+
+    public function getWabaOwnerBusinessId(string $wabaId, string $accessToken): ?string
+    {
+        $result = $this->get($wabaId, $accessToken, [
+            'fields' => 'owner_business_info',
+        ]);
+
+        if (! $result['ok']) {
+            return null;
+        }
+
+        $owner = $result['data']['owner_business_info'] ?? null;
+
+        return is_array($owner) ? (string) ($owner['id'] ?? '') ?: null : null;
     }
 
     public function isAlreadyRegisteredError(array $result): bool

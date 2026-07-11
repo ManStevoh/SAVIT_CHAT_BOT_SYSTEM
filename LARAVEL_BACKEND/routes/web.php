@@ -26,6 +26,7 @@ Route::get('/dashboard/chats', [PageController::class, 'dashboardChats'])->name(
 Route::get('/dashboard/customers', [PageController::class, 'dashboardCustomers'])->name('dashboard.customers');
 Route::get('/dashboard/faq', [PageController::class, 'dashboardFaq'])->name('dashboard.faq');
 Route::get('/dashboard/growth', [PageController::class, 'dashboardGrowth'])->name('dashboard.growth');
+Route::get('/dashboard/executive', [PageController::class, 'dashboardExecutive'])->name('dashboard.executive');
 Route::get('/dashboard/whatsapp/campaigns', [PageController::class, 'dashboardWhatsAppCampaigns'])->name('dashboard.whatsapp.campaigns');
 Route::get('/dashboard/orders', [PageController::class, 'dashboardOrders'])->name('dashboard.orders');
 Route::get('/dashboard/products', [PageController::class, 'dashboardProducts'])->name('dashboard.products');

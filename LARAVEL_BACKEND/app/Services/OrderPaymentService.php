@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Message;
 use App\Models\Order;
 use App\Models\PaymentGateway;
+use App\Services\Agent\AgentProactiveMessageService;
+use App\Services\Agent\Platform\CommerceExperimentService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -152,7 +154,29 @@ class OrderPaymentService
             'status' => 'confirmed',
         ]);
 
+        $this->recordExperimentConversionIfAssigned($order);
         $this->sendPaymentConfirmationToCustomer($order);
+    }
+
+    private function recordExperimentConversionIfAssigned(Order $order): void
+    {
+        $assign = Cache::get("exp_assign:order:{$order->id}");
+        if (! is_array($assign)) {
+            return;
+        }
+
+        $experimentId = (int) ($assign['experiment_id'] ?? 0);
+        $variantId = (int) ($assign['variant_id'] ?? 0);
+        if ($experimentId <= 0 || $variantId <= 0) {
+            return;
+        }
+
+        app(CommerceExperimentService::class)->recordConversion(
+            $experimentId,
+            $variantId,
+            (float) $order->total,
+        );
+        Cache::forget("exp_assign:order:{$order->id}");
     }
 
     /**
@@ -173,7 +197,8 @@ class OrderPaymentService
             return;
         }
 
-        $message = "Payment received. Your order #{$order->order_number} is confirmed. Thank you!\n\nView invoice / receipt:\n".$order->publicReceiptUrl();
+        $message = app(AgentProactiveMessageService::class)->paymentReceivedMessage($order)
+            ?? "Payment received. Your order #{$order->order_number} is confirmed. Thank you!\n\nView invoice / receipt:\n".$order->publicReceiptUrl();
         $to = $order->customer_phone ?: $chat->customer_phone;
         if (! $to) {
             return;

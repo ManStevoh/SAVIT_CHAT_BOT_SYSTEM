@@ -50,11 +50,26 @@ When a company completes **Connect with Facebook**, the platform automatically:
 
 1. Exchanges the OAuth code for a business token  
 2. Subscribes webhooks on their WABA  
-3. Registers their phone for Cloud API  
+3. **(Solution Partner only)** Shares your Meta credit line with the company WABA  
+4. Registers their phone for Cloud API  
 
 Monitor all connections at **Admin → WhatsApp** (`/admin/whatsapp`).
 
-**Meta requirements (one-time for Essem):** Business verification, App Review (`whatsapp_business_messaging` + `whatsapp_business_management`), Tech Provider access verification. Companies must add a payment method to their WABA (unless you are a Solution Partner with shared billing).
+### Meta WhatsApp billing model
+
+| Setting | Options | Effect |
+|---------|---------|--------|
+| **Billing model** | Tech Provider / Solution Partner | Platform-wide; applies to **new** connections after save |
+| **Extended credit line ID** | Meta credit line ID | Required for Solution Partner |
+| **System user access token** | System token with `business_management` | Required for credit sharing API |
+| **Default WABA currency** | USD, EUR, GBP, AUD, INR, IDR | Used when attaching credit line |
+
+- **Tech Provider (default):** Each company adds a payment method to their WABA in Meta.  
+- **Solution Partner:** Companies skip Meta payment; Essem shares its credit line via Meta API. You are liable for WhatsApp spend.
+
+Full guide: [WhatsApp Meta Billing Model](../../WHATSAPP_META_BILLING_MODEL.md)
+
+**Meta requirements (one-time for Essem):** Business verification, App Review (`whatsapp_business_messaging` + `whatsapp_business_management`), Tech Provider *or* Solution Partner onboarding with Meta.
 
 ### OpenAI
 

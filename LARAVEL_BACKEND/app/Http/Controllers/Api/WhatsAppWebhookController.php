@@ -305,7 +305,7 @@ class WhatsAppWebhookController extends Controller
             return;
         }
 
-        Message::create([
+        $message = Message::create([
             'chat_id' => $chat->id,
             'content' => $text,
             'message_type' => $mediaMeta['message_type'] ?? 'text',
@@ -325,7 +325,8 @@ class WhatsAppWebhookController extends Controller
             $phoneNumberId,
             $text,
             $customerName,
-            $waMessageId
+            $waMessageId,
+            (int) $message->id,
         );
     }
 
@@ -404,7 +405,11 @@ class WhatsAppWebhookController extends Controller
             Storage::disk('public')->put($path, $binaryResponse->body());
 
             return [
-                'message_type' => $type === 'image' ? 'image' : 'file',
+                'message_type' => match ($type) {
+                    'image' => 'image',
+                    'audio' => 'audio',
+                    default => 'file',
+                },
                 'attachment_url' => Storage::disk('public')->url($path),
                 'attachment_name' => $safeName,
                 'attachment_mime' => $effectiveMime,

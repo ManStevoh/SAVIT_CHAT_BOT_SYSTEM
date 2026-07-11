@@ -24,10 +24,12 @@ class Order extends Model
         'total',
         'status',
         'payment_status',
+        'agent_proactive_follow_up_at',
     ];
 
     protected $casts = [
         'total' => 'decimal:2',
+        'agent_proactive_follow_up_at' => 'datetime',
     ];
 
     public function company(): BelongsTo

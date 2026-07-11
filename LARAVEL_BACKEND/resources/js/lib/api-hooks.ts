@@ -464,6 +464,10 @@ export interface CompanySettings {
   learnFromConversationsEditable?: boolean
   aiLearningEnabled?: boolean
   autoReplyEnabled?: boolean
+  agentCommerceEnabled?: boolean
+  agentProactiveEnabled?: boolean
+  agentBusinessGoals?: string[]
+  agentBusinessGoalCatalog?: Record<string, string>
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
@@ -1477,6 +1481,121 @@ export function useAdminGrowthPortfolio(period?: string) {
         totals: { leads: 0, revenue: 0, posts: 0 },
       }
     },
+    { revalidateOnFocus: false }
+  )
+}
+
+// ============================================
+// EXECUTIVE AI (Phase 5)
+// ============================================
+
+export interface ExecutiveDashboardData {
+  worldModel: Record<string, unknown>
+  healthScore: {
+    overall: number
+    factors: Record<string, unknown>
+    summary: string
+    date: string
+  } | null
+  topDecisions: Array<{
+    decision: string
+    evidence?: Record<string, unknown>
+    risk?: string
+    requires_approval?: boolean
+  }>
+  pendingApprovals: number
+  openOpportunities: number
+}
+
+export interface CommerceBriefData {
+  brief: {
+    date: string
+    summary: string
+    metrics: Record<string, unknown>
+    recommendations: string[]
+    executiveDecisions: Array<{ decision: string; evidence?: Record<string, unknown> }>
+  } | null
+}
+
+export interface AgentApprovalItem {
+  id: number
+  action_type: string
+  risk_level: string
+  payload: Record<string, unknown>
+  reasoning: string | null
+  status: string
+  created_at: string
+}
+
+export interface BusinessOpportunityItem {
+  id: number
+  opportunity_type: string
+  title: string
+  description: string
+  priority: string
+  status: string
+  estimated_impact: Record<string, unknown> | null
+  detected_at: string
+}
+
+export interface CommerceExperimentVariant {
+  id: number
+  variant_key: string
+  label: string
+  payload: { message?: string }
+  assignments_count: number
+  conversions_count: number
+  revenue_total: string
+}
+
+export interface CommerceExperimentItem {
+  id: number
+  name: string
+  experiment_type: string
+  status: string
+  metric_key: string
+  winner_variant_id: number | null
+  started_at: string | null
+  ended_at: string | null
+  variants: CommerceExperimentVariant[]
+}
+
+export function useExecutiveDashboard() {
+  return useSWR<ExecutiveDashboardData>(
+    'executive-dashboard',
+    async () => apiRequest<ExecutiveDashboardData>('/api/company/executive-ai/dashboard'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useCommerceBrief() {
+  return useSWR<CommerceBriefData>(
+    'commerce-brief',
+    async () => apiRequest<CommerceBriefData>('/api/company/commerce-brief'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useExecutiveApprovals() {
+  return useSWR<{ approvals: AgentApprovalItem[] }>(
+    'executive-approvals',
+    async () => apiRequest<{ approvals: AgentApprovalItem[] }>('/api/company/executive-ai/approvals'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useExecutiveOpportunities() {
+  return useSWR<{ opportunities: BusinessOpportunityItem[] }>(
+    'executive-opportunities',
+    async () => apiRequest<{ opportunities: BusinessOpportunityItem[] }>('/api/company/executive-ai/opportunities'),
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useCommerceExperiments() {
+  return useSWR<{ experiments: CommerceExperimentItem[] }>(
+    'commerce-experiments',
+    async () => apiRequest<{ experiments: CommerceExperimentItem[] }>('/api/company/commerce-experiments'),
     { revalidateOnFocus: false }
   )
 }

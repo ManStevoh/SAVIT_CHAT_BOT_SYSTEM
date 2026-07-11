@@ -80,6 +80,7 @@ jobs:
             --exclude 'storage/framework/cache/data/*' \
             --exclude 'storage/framework/sessions/*' \
             --exclude 'storage/framework/views/*' \
+            --exclude 'public/hot' \
             --exclude '.phpunit.result.cache' \
             -e "ssh -i ~/.ssh/deploy_key -p ${SSH_PORT} -o StrictHostKeyChecking=accept-new" \
             LARAVEL_BACKEND/ "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/"

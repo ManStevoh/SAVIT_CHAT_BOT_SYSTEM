@@ -4,6 +4,7 @@ namespace App\Services\AI\Drivers;
 
 use App\Services\AI\ResolvedAiModel;
 use App\Services\AI\EmbedResult;
+use App\Services\AI\OpenAiChatResult;
 
 class OpenAiDriver extends AbstractAiDriver
 {
@@ -55,6 +56,81 @@ class OpenAiDriver extends AbstractAiDriver
             (int) ($usage['completion_tokens'] ?? 0),
             $this->elapsed($started),
             $response->status(),
+        );
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $messages
+     * @param  array<int, array<string, mixed>>  $tools
+     */
+    public function chatCompletionWithTools(
+        ResolvedAiModel $resolved,
+        array $messages,
+        array $tools,
+        int $maxTokens,
+        ?float $temperature,
+        int $timeoutSeconds,
+    ): OpenAiChatResult {
+        $base = rtrim($resolved->apiBaseUrl ?: $resolved->provider->api_base_url ?: 'https://api.openai.com/v1', '/');
+        $started = microtime(true);
+
+        $payload = [
+            'model' => $resolved->model->model_key,
+            'messages' => $messages,
+            'max_tokens' => $maxTokens,
+            'tools' => $tools,
+            'tool_choice' => 'auto',
+        ];
+        if ($temperature !== null) {
+            $payload['temperature'] = $temperature;
+        }
+
+        try {
+            $response = $this->postWithRetry("{$base}/chat/completions", $resolved->apiKey, $payload, $timeoutSeconds);
+        } catch (\Throwable $e) {
+            return $this->failedResult($resolved, $this->elapsed($started), null, $e->getMessage());
+        }
+
+        if ($response === null || ! $response->successful()) {
+            return $this->failedResult(
+                $resolved,
+                $this->elapsed($started),
+                $response?->status(),
+                $response ? $this->errorMessage($response) : 'Request failed',
+            );
+        }
+
+        $data = $response->json();
+        $usage = is_array($data['usage'] ?? null) ? $data['usage'] : [];
+        $message = is_array($data['choices'][0]['message'] ?? null) ? $data['choices'][0]['message'] : [];
+        $toolCalls = [];
+        foreach ($message['tool_calls'] ?? [] as $tc) {
+            if (! is_array($tc)) {
+                continue;
+            }
+            $fn = is_array($tc['function'] ?? null) ? $tc['function'] : [];
+            $toolCalls[] = [
+                'id' => (string) ($tc['id'] ?? ''),
+                'name' => (string) ($fn['name'] ?? ''),
+                'arguments' => (string) ($fn['arguments'] ?? '{}'),
+            ];
+        }
+
+        $content = isset($message['content']) ? (string) $message['content'] : null;
+
+        return new OpenAiChatResult(
+            content: $content !== '' ? $content : null,
+            success: true,
+            model: $resolved->model->model_key,
+            promptTokens: (int) ($usage['prompt_tokens'] ?? 0),
+            completionTokens: (int) ($usage['completion_tokens'] ?? 0),
+            totalTokens: (int) ($usage['total_tokens'] ?? 0),
+            latencyMs: $this->elapsed($started),
+            httpStatus: $response->status(),
+            providerId: $resolved->provider->id,
+            modelId: $resolved->model->id,
+            toolCalls: $toolCalls,
+            finishReason: (string) ($data['choices'][0]['finish_reason'] ?? ''),
         );
     }
 

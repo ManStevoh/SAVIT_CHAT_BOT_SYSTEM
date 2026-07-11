@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Company;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\CompanySetting;
+use App\Services\Agent\BusinessGoalService;
 use App\Services\AI\AiLearningConfig;
 use App\Services\PlanLimitService;
 use Illuminate\Http\JsonResponse;
@@ -51,6 +52,10 @@ class SettingsController extends Controller
                 && (bool) ($learningConfig->all()['allowCompanyOverride'] ?? true),
             'aiLearningEnabled' => $learningConfig->isLearningEnabled(),
             'autoReplyEnabled' => (bool) ($settings?->auto_reply_enabled ?? false),
+            'agentCommerceEnabled' => (bool) ($settings?->agent_commerce_enabled ?? config('agent.default_agent_commerce_enabled', false)),
+            'agentProactiveEnabled' => (bool) ($settings?->agent_proactive_enabled ?? false),
+            'agentBusinessGoals' => $settings?->agent_business_goals ?? app(BusinessGoalService::class)->enabledKeys($company),
+            'agentBusinessGoalCatalog' => app(BusinessGoalService::class)->catalog(),
             'notificationsEnabled' => (bool) ($settings?->notifications_enabled ?? false),
             'ordersAcceptMpesa' => (bool) ($settings?->orders_accept_mpesa ?? false),
             'ordersAcceptStripe' => (bool) ($settings?->orders_accept_stripe ?? false),
@@ -104,6 +109,10 @@ class SettingsController extends Controller
             'workingHours' => 'nullable|array',
             'workingHours.*' => 'nullable|string|max:50',
             'learnFromConversations' => 'sometimes|boolean',
+            'agentCommerceEnabled' => 'sometimes|boolean',
+            'agentProactiveEnabled' => 'sometimes|boolean',
+            'agentBusinessGoals' => 'sometimes|nullable|array',
+            'agentBusinessGoals.*' => 'string|max:80',
             'autoReplyEnabled' => 'sometimes|boolean',
             'notificationsEnabled' => 'sometimes|boolean',
             'ordersAcceptMpesa' => 'sometimes|boolean',
@@ -214,6 +223,19 @@ class SettingsController extends Controller
         }
         if (array_key_exists('autoReplyEnabled', $companyValidated)) {
             $settings->auto_reply_enabled = $companyValidated['autoReplyEnabled'];
+        }
+        if (array_key_exists('agentCommerceEnabled', $companyValidated)) {
+            $settings->agent_commerce_enabled = $companyValidated['agentCommerceEnabled'];
+        }
+        if (array_key_exists('agentProactiveEnabled', $companyValidated)) {
+            $settings->agent_proactive_enabled = $companyValidated['agentProactiveEnabled'];
+        }
+        if (array_key_exists('agentBusinessGoals', $companyValidated)) {
+            $catalog = array_keys(app(BusinessGoalService::class)->catalog());
+            $goals = is_array($companyValidated['agentBusinessGoals'])
+                ? array_values(array_intersect($companyValidated['agentBusinessGoals'], $catalog))
+                : null;
+            $settings->agent_business_goals = $goals;
         }
         if (array_key_exists('notificationsEnabled', $companyValidated)) {
             $settings->notifications_enabled = $companyValidated['notificationsEnabled'];

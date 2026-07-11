@@ -21,7 +21,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <Suspense fallback={<div className="h-14 border-b border-border/50" />}>
             <DashboardNavbar />
           </Suspense>
-          <main className="min-h-[calc(100vh-3.5rem)] p-6 lg:p-8">
+          <main className="min-h-[calc(100vh-3.5rem)] min-w-0 max-w-full overflow-x-hidden p-6 lg:p-8">
             <Suspense fallback={<DashboardFallback />}>{children}</Suspense>
           </main>
         </div>

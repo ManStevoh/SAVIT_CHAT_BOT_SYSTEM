@@ -878,6 +878,9 @@ export interface UpdateSettingsData {
   timezone?: string
   workingHours?: Record<string, string>
   learnFromConversations?: boolean
+  agentCommerceEnabled?: boolean
+  agentProactiveEnabled?: boolean
+  agentBusinessGoals?: string[]
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
@@ -979,10 +982,15 @@ export interface WhatsAppStatus {
   qualityRating?: string | null
   webhookSubscribed?: boolean
   phoneRegistered?: boolean
+  creditLineShared?: boolean
   onboardingError?: string | null
   embeddedSignupEnabled?: boolean
   manualConnectEnabled?: boolean
   webhookUrl?: string | null
+  metaBillingModel?: 'tech_provider' | 'solution_partner'
+  metaBillingModelLabel?: string | null
+  requiresMetaPaymentMethod?: boolean
+  platformBillingReady?: boolean
 }
 
 export interface WhatsAppEmbeddedConfig {
@@ -991,6 +999,11 @@ export interface WhatsAppEmbeddedConfig {
   configId: string | null
   graphVersion: string
   enableCoexist?: boolean
+  webhookUrl?: string | null
+  metaBillingModel?: 'tech_provider' | 'solution_partner'
+  requiresMetaPaymentMethod?: boolean
+  platformBillingReady?: boolean
+}
   webhookUrl?: string | null
 }
 
@@ -1250,6 +1263,8 @@ export interface AdminWhatsAppConnection {
   status: string
   onboardingStatus?: string
   onboardingError?: string | null
+  metaBillingModel?: string | null
+  creditLineSharedAt?: string | null
   connectedAt?: string | null
 }
 
@@ -1261,6 +1276,9 @@ export async function getAdminWhatsAppConnections(): Promise<{
     manualConnectEnabled?: boolean
     webhookUrl: string
     graphVersion: string
+    billingModel?: string
+    billingModelLabel?: string
+    solutionPartnerReady?: boolean
   }
 }> {
   if (useMockApi()) {
@@ -1908,6 +1926,13 @@ export interface PlatformSettings {
   whatsappEnableCoexist?: boolean
   whatsappEmbeddedSignupEnabled?: boolean
   whatsappManualConnectEnabled?: boolean
+  whatsappBillingModel?: 'tech_provider' | 'solution_partner'
+  whatsappBillingModelLabel?: string | null
+  whatsappExtendedCreditLineId?: string | null
+  whatsappCreditSharingSystemToken?: string | null
+  whatsappWabaCurrency?: string | null
+  whatsappSolutionPartnerReady?: boolean
+  whatsappBillingRequiresMetaPayment?: boolean
   whatsappWebhookUrl?: string | null
   whatsappEmbeddedSignupReady?: boolean
   whatsappEmbeddedSignupActive?: boolean
@@ -1960,6 +1985,10 @@ export interface UpdatePlatformSettingsData {
   whatsappEnableCoexist?: boolean
   whatsappEmbeddedSignupEnabled?: boolean
   whatsappManualConnectEnabled?: boolean
+  whatsappBillingModel?: 'tech_provider' | 'solution_partner'
+  whatsappExtendedCreditLineId?: string
+  whatsappCreditSharingSystemToken?: string
+  whatsappWabaCurrency?: string
   openaiApiKey?: string
   openaiModel?: string
   openaiMaxTokens?: number
@@ -2815,6 +2844,51 @@ export async function addGrowthCompetitor(data: {
       method: 'POST',
       body: data,
     })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+// ============================================
+// EXECUTIVE AI (Phase 5)
+// ============================================
+
+export async function approveExecutiveAction(id: number): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest(`/api/company/executive-ai/approvals/${id}/approve`, { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function rejectExecutiveAction(id: number, reason?: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest(`/api/company/executive-ai/approvals/${id}/reject`, {
+      method: 'POST',
+      body: reason ? { reason } : {},
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function createCommerceExperiment(data: {
+  name: string
+  variant_a_message: string
+  variant_b_message: string
+}): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest('/api/company/commerce-experiments', { method: 'POST', body: data })
+    return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function evaluateCommerceExperiment(id: number): Promise<{ success: boolean; message?: string }> {
+  try {
+    await apiRequest(`/api/company/commerce-experiments/${id}/evaluate`, { method: 'POST' })
+    return { success: true }
   } catch (e) {
     return handleApiError(e)
   }

@@ -7,6 +7,12 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Dev hot file must never exist in production (causes browser to load [::1]:5173).
+if [ -f public/hot ]; then
+  echo "==> Removing stale public/hot (Vite dev server marker)..."
+  rm -f public/hot
+fi
+
 echo "==> Installing PHP dependencies (production)..."
 composer install --no-dev --optimize-autoloader --no-interaction
 
@@ -15,6 +21,11 @@ npm ci
 
 echo "==> Building frontend assets..."
 npm run build
+
+if [ ! -f public/build/manifest.json ]; then
+  echo "ERROR: Vite build did not produce public/build/manifest.json"
+  exit 1
+fi
 
 echo "==> Running database migrations..."
 php artisan migrate --force

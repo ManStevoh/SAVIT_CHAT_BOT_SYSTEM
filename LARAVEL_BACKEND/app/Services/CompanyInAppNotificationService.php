@@ -90,4 +90,22 @@ class CompanyInAppNotificationService
             'body' => "You've used {$used} of {$limit} {$resource} this period. Upgrade to continue.",
         ]);
     }
+
+    public function recordAgentEventAlert(Company $company, \App\Models\CommerceAgentEvent $event): void
+    {
+        $payload = $event->payload ?? [];
+        $title = match ($event->event_type) {
+            'low_stock' => 'Low stock alert',
+            'sales_drop' => 'Sales drop detected',
+            default => 'Commerce alert: '.$event->event_type,
+        };
+        $body = (string) ($payload['summary'] ?? $payload['message'] ?? json_encode($payload));
+
+        CompanyNotification::create([
+            'company_id' => $company->id,
+            'type' => 'agent',
+            'title' => $title,
+            'body' => Str::limit($body, 300),
+        ]);
+    }
 }

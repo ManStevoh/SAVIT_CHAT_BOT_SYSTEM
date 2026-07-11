@@ -23,6 +23,9 @@ export default function AdminWhatsAppPage() {
     manualConnectEnabled?: boolean
     webhookUrl: string
     graphVersion: string
+    billingModel?: string
+    billingModelLabel?: string
+    solutionPartnerReady?: boolean
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -74,6 +77,15 @@ export default function AdminWhatsAppPage() {
               Manual connection:{" "}
               <strong className="text-foreground">{platform.manualConnectEnabled ? "Enabled" : "Disabled"}</strong>
             </p>
+            <p>
+              Meta billing:{" "}
+              <strong className="text-foreground">{platform.billingModelLabel ?? platform.billingModel ?? "tech_provider"}</strong>
+              {platform.billingModel === "solution_partner" && (
+                <span className="ml-1">
+                  ({platform.solutionPartnerReady ? "credit line ready" : "credit line not configured"})
+                </span>
+              )}
+            </p>
             <p>Graph API: {platform.graphVersion}</p>
             <p className="break-all">Webhook: <code className="text-xs bg-muted px-1 rounded">{platform.webhookUrl}</code></p>
           </CardContent>
@@ -103,6 +115,7 @@ export default function AdminWhatsAppPage() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Onboarding</TableHead>
+                  <TableHead>Billing</TableHead>
                   <TableHead>Connected</TableHead>
                 </TableRow>
               </TableHeader>
@@ -121,6 +134,12 @@ export default function AdminWhatsAppPage() {
                       <div>{c.onboardingStatus ?? "—"}</div>
                       {c.onboardingError && (
                         <div className="text-xs text-destructive truncate max-w-xs" title={c.onboardingError}>{c.onboardingError}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div>{c.metaBillingModel === "solution_partner" ? "Platform credit line" : "Meta direct"}</div>
+                      {c.creditLineSharedAt && (
+                        <div className="text-muted-foreground">Shared {new Date(c.creditLineSharedAt).toLocaleDateString()}</div>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">

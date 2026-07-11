@@ -235,6 +235,13 @@ export default function AdminSettingsPage() {
         whatsappEnableCoexist: settings.whatsappEnableCoexist ?? false,
         whatsappEmbeddedSignupEnabled: settings.whatsappEmbeddedSignupEnabled ?? true,
         whatsappManualConnectEnabled: settings.whatsappManualConnectEnabled ?? true,
+        whatsappBillingModel: settings.whatsappBillingModel ?? 'tech_provider',
+        whatsappExtendedCreditLineId: settings.whatsappExtendedCreditLineId ?? undefined,
+        whatsappCreditSharingSystemToken:
+          settings.whatsappCreditSharingSystemToken && settings.whatsappCreditSharingSystemToken !== "********"
+            ? settings.whatsappCreditSharingSystemToken
+            : undefined,
+        whatsappWabaCurrency: settings.whatsappWabaCurrency ?? undefined,
         openaiApiKey: settings.openaiApiKey && settings.openaiApiKey !== "********" ? settings.openaiApiKey : undefined,
         openaiModel: settings.openaiModel ?? undefined,
         openaiMaxTokens: settings.openaiMaxTokens ?? undefined,
@@ -242,6 +249,8 @@ export default function AdminSettingsPage() {
       })
       if (res.success) {
         toast({ title: res.message ?? "Integrations saved" })
+        const refreshed = await getPlatformSettings()
+        setSettings(refreshed)
       } else {
         toast({ title: res.message ?? "Save failed", variant: "destructive" })
       }
@@ -297,7 +306,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Platform Settings</h1>
         <p className="text-muted-foreground">Configure platform-wide settings</p>
@@ -313,7 +322,7 @@ export default function AdminSettingsPage() {
             setActiveTab(value as (typeof validTabs)[number])
           }
         }}
-        className="space-y-6"
+        className="min-w-0 space-y-6"
       >
         <TabsList className="flex-wrap h-auto gap-2">
           <TabsTrigger value="general" className="gap-2">
@@ -415,8 +424,8 @@ export default function AdminSettingsPage() {
               </FieldGroup>
 
               <div className="space-y-4 pt-4 border-t border-border">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">Maintenance Mode</p>
                     <p className="text-sm text-muted-foreground">Disable access for all users except admins</p>
                   </div>
@@ -426,8 +435,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">New Registrations</p>
                     <p className="text-sm text-muted-foreground">Allow new companies to register</p>
                   </div>
@@ -437,8 +446,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">Require Email Verification</p>
                     <p className="text-sm text-muted-foreground">
                       New users must verify email before signing in. Requires SMTP configured in Email tab.
@@ -592,8 +601,8 @@ export default function AdminSettingsPage() {
               </FieldGroup>
 
               <div className="space-y-4 pt-4 border-t border-border">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">Two-Factor Authentication</p>
                     <p className="text-sm text-muted-foreground">Require 2FA for all admin accounts</p>
                   </div>
@@ -603,8 +612,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">IP Allowlisting</p>
                     <p className="text-sm text-muted-foreground">Restrict admin access to specific IPs</p>
                   </div>
@@ -614,8 +623,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">Audit Logging</p>
                     <p className="text-sm text-muted-foreground">Log all admin actions</p>
                   </div>
@@ -774,8 +783,8 @@ export default function AdminSettingsPage() {
                   Graph API: v22.0 (Embedded Signup v4)
                 </p>
               </div>
-              <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
+              <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                <div className="min-w-0 flex-1 space-y-0.5">
                   <FieldLabel>Enable Embedded Signup for companies</FieldLabel>
                   <p className="text-sm text-muted-foreground">
                     Turn off while Meta App Review is pending or during maintenance. Credentials are kept when disabled.
@@ -786,8 +795,8 @@ export default function AdminSettingsPage() {
                   onCheckedChange={(v) => updateSetting("whatsappEmbeddedSignupEnabled", v)}
                 />
               </Field>
-              <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
+              <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                <div className="min-w-0 flex-1 space-y-0.5">
                   <FieldLabel>Enable manual connection for companies</FieldLabel>
                   <p className="text-sm text-muted-foreground">
                     Allow companies to paste Phone Number ID and access token from Meta Developer Console. Useful for testing or when Embedded Signup is off.
@@ -798,6 +807,92 @@ export default function AdminSettingsPage() {
                   onCheckedChange={(v) => updateSetting("whatsappManualConnectEnabled", v)}
                 />
               </Field>
+
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-4">
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">Meta WhatsApp billing model</p>
+                  <p className="text-sm text-muted-foreground">
+                    Controls who pays Meta for WhatsApp conversation fees. Applies to all companies connecting after you save.
+                    Essem subscription billing (Stripe/M-Pesa) is separate.
+                  </p>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor="whatsappBillingModel">Billing model</FieldLabel>
+                  <Select
+                    value={settings?.whatsappBillingModel ?? "tech_provider"}
+                    onValueChange={(v) => updateSetting("whatsappBillingModel", v as "tech_provider" | "solution_partner")}
+                  >
+                    <SelectTrigger id="whatsappBillingModel">
+                      <SelectValue placeholder="Select billing model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tech_provider">Tech Provider — each company pays Meta directly</SelectItem>
+                      <SelectItem value="solution_partner">Solution Partner — platform credit line (companies skip Meta payment)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                {settings?.whatsappBillingModel === "solution_partner" && (
+                  <div className="space-y-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+                    <p className="text-sm text-muted-foreground">
+                      Requires Meta Solution Partner status and an extended credit line. On connect, Essem automatically calls Meta&apos;s{" "}
+                      <code className="text-xs">whatsapp_credit_sharing_and_attach</code> API for each company WABA.
+                      You are the Bill-To party and liable for all WhatsApp spend on shared credit lines.
+                    </p>
+                    <FieldGroup>
+                      <Field>
+                        <FieldLabel htmlFor="whatsappExtendedCreditLineId">Extended credit line ID</FieldLabel>
+                        <Input
+                          id="whatsappExtendedCreditLineId"
+                          value={settings?.whatsappExtendedCreditLineId ?? ""}
+                          onChange={(e) => updateSetting("whatsappExtendedCreditLineId", e.target.value)}
+                          placeholder="From GET /{business_id}/extendedcredits"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="whatsappCreditSharingSystemToken">System user access token</FieldLabel>
+                        <Input
+                          id="whatsappCreditSharingSystemToken"
+                          type="password"
+                          value={settings?.whatsappCreditSharingSystemToken ?? ""}
+                          onChange={(e) => updateSetting("whatsappCreditSharingSystemToken", e.target.value)}
+                          placeholder="System token with business_management permission"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="whatsappWabaCurrency">Default WABA currency</FieldLabel>
+                        <Select
+                          value={settings?.whatsappWabaCurrency ?? "USD"}
+                          onValueChange={(v) => updateSetting("whatsappWabaCurrency", v)}
+                        >
+                          <SelectTrigger id="whatsappWabaCurrency">
+                            <SelectValue placeholder="Currency" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["USD", "EUR", "GBP", "AUD", "INR", "IDR"].map((c) => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ISO-4217 code used when attaching your credit line. Meta uses this for conversation rate cards.
+                        </p>
+                      </Field>
+                    </FieldGroup>
+                    <p className="text-sm">
+                      Solution Partner ready:{" "}
+                      <strong className={settings?.whatsappSolutionPartnerReady ? "text-green-600" : "text-amber-600"}>
+                        {settings?.whatsappSolutionPartnerReady ? "Yes" : "No — credit line ID and system token required"}
+                      </strong>
+                    </p>
+                  </div>
+                )}
+                {settings?.whatsappBillingModel !== "solution_partner" && (
+                  <p className="text-sm text-muted-foreground">
+                    Companies will be prompted to add a payment method to their WhatsApp Business Account in Meta during signup.
+                  </p>
+                )}
+              </div>
+
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="whatsappWebhookVerifyToken">WhatsApp webhook verify token</FieldLabel>
@@ -855,8 +950,8 @@ export default function AdminSettingsPage() {
                     placeholder="https://your-domain.com/dashboard/settings"
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Enable WhatsApp Business app coexistence</FieldLabel>
                     <p className="text-sm text-muted-foreground">Allow numbers already on WhatsApp Business mobile app (coex flow).</p>
                   </div>
@@ -910,8 +1005,8 @@ export default function AdminSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <FieldGroup>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Enable AI learning</FieldLabel>
                     <p className="text-sm text-muted-foreground">Master switch for storing exchanges and using them in prompts.</p>
                   </div>
@@ -920,8 +1015,8 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateAiLearning("learningEnabled", v)}
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Learn from WhatsApp chats (default)</FieldLabel>
                     <p className="text-sm text-muted-foreground">Store successful AI replies for future prompt context.</p>
                   </div>
@@ -930,8 +1025,8 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateAiLearning("defaultLearnFromChats", v)}
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Allow companies to override</FieldLabel>
                     <p className="text-sm text-muted-foreground">Companies can disable learning in their dashboard settings.</p>
                   </div>
@@ -940,8 +1035,8 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateAiLearning("allowCompanyOverride", v)}
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>PII redaction before storage</FieldLabel>
                     <p className="text-sm text-muted-foreground">Redact emails, phones, and card-like numbers (GDPR-aligned minimization).</p>
                   </div>
@@ -950,8 +1045,8 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateAiLearning("piiRedactionEnabled", v)}
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Store FAQ exchanges</FieldLabel>
                     <p className="text-sm text-muted-foreground">When a FAQ answer is sent, add it to learning memory.</p>
                   </div>
@@ -960,8 +1055,8 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateAiLearning("storeFaqExchanges", v)}
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Learn from human agent replies</FieldLabel>
                     <p className="text-sm text-muted-foreground">When agents reply in dashboard chat, pair with last customer message.</p>
                   </div>
@@ -970,8 +1065,8 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateAiLearning("storeAgentReplies", v)}
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>FAQ semantic embeddings</FieldLabel>
                     <p className="text-sm text-muted-foreground">Vector search for FAQ matching and knowledge base quality.</p>
                   </div>
@@ -980,8 +1075,8 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateAiLearning("faqEmbeddingsEnabled", v)}
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Learning sample embeddings</FieldLabel>
                     <p className="text-sm text-muted-foreground">Hybrid lexical + vector retrieval for conversation memory (RAG-style).</p>
                   </div>
@@ -1064,8 +1159,8 @@ export default function AdminSettingsPage() {
                     <p className="text-xs text-muted-foreground mt-1">Applied to platform-billed AI usage (not BYOK).</p>
                   </Field>
                 </div>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Require human review for learning samples</FieldLabel>
                     <p className="text-sm text-muted-foreground">New samples stay pending until approved in AI Learning.</p>
                   </div>
@@ -1074,8 +1169,8 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateAiLearning("requireLearningReview", v)}
                   />
                 </Field>
-                <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <FieldLabel>Auto-detect customer language</FieldLabel>
                     <p className="text-sm text-muted-foreground">Detect language from WhatsApp messages and reply in kind.</p>
                   </div>
@@ -1108,8 +1203,8 @@ export default function AdminSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">New company registrations</p>
                     <p className="text-sm text-muted-foreground">Notify when new companies sign up</p>
                   </div>
@@ -1119,8 +1214,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">Failed payments</p>
                     <p className="text-sm text-muted-foreground">Alert on subscription payment failures</p>
                   </div>
@@ -1130,8 +1225,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">Security alerts</p>
                     <p className="text-sm text-muted-foreground">Suspicious login attempts and security events</p>
                   </div>
@@ -1141,8 +1236,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">System errors</p>
                     <p className="text-sm text-muted-foreground">Critical system errors and failures</p>
                   </div>
@@ -1152,8 +1247,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">Usage alerts</p>
                     <p className="text-sm text-muted-foreground">When companies approach usage limits</p>
                   </div>
@@ -1163,8 +1258,8 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">Daily summary</p>
                     <p className="text-sm text-muted-foreground">Receive daily platform activity summary</p>
                   </div>

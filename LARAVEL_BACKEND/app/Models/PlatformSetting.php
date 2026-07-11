@@ -37,6 +37,10 @@ class PlatformSetting extends Model
         'whatsapp_enable_coexist',
         'whatsapp_embedded_signup_enabled',
         'whatsapp_manual_connect_enabled',
+        'whatsapp_billing_model',
+        'whatsapp_extended_credit_line_id',
+        'whatsapp_credit_sharing_system_token',
+        'whatsapp_waba_currency',
         'openai_api_key',
         'openai_model',
         'openai_max_tokens',
@@ -82,6 +86,7 @@ class PlatformSetting extends Model
         'smtp_password',
         'meta_app_secret',
         'whatsapp_embedded_app_secret',
+        'whatsapp_credit_sharing_system_token',
         'openai_api_key',
     ];
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppAccount;
+use App\Services\WhatsApp\WhatsAppBillingModel;
 use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,9 @@ class WhatsAppConnectionController extends Controller
             'displayNameStatus' => $a->display_name_status,
             'qualityRating' => $a->quality_rating,
             'webhookSubscribedAt' => $a->webhook_subscribed_at?->toIso8601String(),
+            'creditLineSharedAt' => $a->credit_line_shared_at?->toIso8601String(),
+            'metaBillingModel' => $a->meta_billing_model,
+            'creditAllocationConfigId' => $a->credit_allocation_config_id,
             'phoneRegisteredAt' => $a->phone_registered_at?->toIso8601String(),
             'connectedAt' => $a->connected_at?->toIso8601String(),
             'disconnectedAt' => $a->disconnected_at?->toIso8601String(),
@@ -54,6 +58,9 @@ class WhatsAppConnectionController extends Controller
                 'webhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
                 'graphVersion' => WhatsAppPlatformConfig::GRAPH_VERSION,
                 'enableCoexist' => WhatsAppPlatformConfig::enableCoexist(),
+                'billingModel' => WhatsAppPlatformConfig::billingModel(),
+                'billingModelLabel' => WhatsAppBillingModel::label(WhatsAppPlatformConfig::billingModel()),
+                'solutionPartnerReady' => WhatsAppPlatformConfig::isSolutionPartnerBillingReady(),
             ],
         ]);
     }

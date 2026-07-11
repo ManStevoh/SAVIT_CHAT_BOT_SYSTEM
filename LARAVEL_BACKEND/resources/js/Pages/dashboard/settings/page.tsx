@@ -234,6 +234,10 @@ export default function SettingsPage() {
   const handleManualConnect = async (e: React.FormEvent) => {
     e.preventDefault()
     setWaMessage(null)
+    if (waStatus?.platformBillingReady === false) {
+      setWaMessage("Platform WhatsApp billing is enabled but not configured. Contact your administrator.")
+      return
+    }
     setWaManualLoading(true)
     try {
       const result = await connectWhatsApp({
@@ -262,6 +266,10 @@ export default function SettingsPage() {
       const cfg = await getWhatsAppEmbeddedConfig()
       if (!cfg.enabled || !cfg.appId || !cfg.configId) {
         setWaMessage("Embedded signup is not enabled yet. Ask admin to configure Meta App ID and Config ID.")
+        return
+      }
+      if (cfg.platformBillingReady === false) {
+        setWaMessage("Platform WhatsApp billing is enabled but not configured. Contact your administrator.")
         return
       }
 
@@ -357,6 +365,10 @@ export default function SettingsPage() {
     outputCostPerMillion: number
   }>>([])
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false)
+  const [agentCommerceEnabled, setAgentCommerceEnabled] = useState(false)
+  const [agentProactiveEnabled, setAgentProactiveEnabled] = useState(false)
+  const [agentBusinessGoals, setAgentBusinessGoals] = useState<string[]>([])
+  const [agentBusinessGoalCatalog, setAgentBusinessGoalCatalog] = useState<Record<string, string>>({})
   const [learnFromConversations, setLearnFromConversations] = useState(true)
   const [learnFromConversationsEditable, setLearnFromConversationsEditable] = useState(true)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
@@ -433,6 +445,10 @@ export default function SettingsPage() {
         }
       }
       if (settings.autoReplyEnabled != null) setAutoReplyEnabled(settings.autoReplyEnabled)
+      if (settings.agentCommerceEnabled != null) setAgentCommerceEnabled(settings.agentCommerceEnabled)
+      if (settings.agentProactiveEnabled != null) setAgentProactiveEnabled(settings.agentProactiveEnabled)
+      if (settings.agentBusinessGoals) setAgentBusinessGoals(settings.agentBusinessGoals)
+      if (settings.agentBusinessGoalCatalog) setAgentBusinessGoalCatalog(settings.agentBusinessGoalCatalog)
       if (settings.learnFromConversations != null) setLearnFromConversations(settings.learnFromConversations)
       if (settings.learnFromConversationsEditable != null) {
         setLearnFromConversationsEditable(settings.learnFromConversationsEditable)
@@ -529,6 +545,9 @@ export default function SettingsPage() {
       replyInCustomerLanguage,
       defaultReplyLanguage: defaultReplyLanguage.trim() || null,
       autoReplyEnabled,
+      agentCommerceEnabled,
+      agentProactiveEnabled,
+      agentBusinessGoals,
       learnFromConversations,
       notificationsEnabled,
     })
@@ -816,6 +835,9 @@ export default function SettingsPage() {
                   <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
                     <p>Webhook subscribed: {waStatus.webhookSubscribed ? "Yes" : "No"}</p>
                     <p>Phone registered: {waStatus.phoneRegistered ? "Yes" : "No"}</p>
+                    {waStatus.metaBillingModel === "solution_partner" && (
+                      <p>Platform credit line: {waStatus.creditLineShared ? "Attached" : "Pending"}</p>
+                    )}
                   </div>
                   {whatsappNumbers.length > 0 && (
                     <div className="rounded-lg border border-border p-3 space-y-2">
@@ -838,8 +860,16 @@ export default function SettingsPage() {
                       <p className="text-sm font-medium text-foreground">Connect with Facebook</p>
                       <p className="text-sm text-muted-foreground">
                         Sign in with Facebook, select or create your WhatsApp Business account, and verify your phone number with OTP. No Meta Developer setup required on your side.
+                        {waStatus.requiresMetaPaymentMethod === false && (
+                          <> WhatsApp usage is billed through the platform — you do not need to add a payment method in Meta.</>
+                        )}
                       </p>
-                      <Button type="button" onClick={handleEmbeddedSignup} disabled={waEmbeddedLoading}>
+                      {waStatus.platformBillingReady === false && (
+                        <p className="text-sm text-amber-600">
+                          Platform billing is enabled but not fully configured. Contact your administrator before connecting.
+                        </p>
+                      )}
+                      <Button type="button" onClick={handleEmbeddedSignup} disabled={waEmbeddedLoading || waStatus.platformBillingReady === false}>
                         {waEmbeddedLoading ? "Opening Meta signup…" : "Connect with Facebook"}
                       </Button>
                     </div>
@@ -896,7 +926,7 @@ export default function SettingsPage() {
                             placeholder="+254712345678"
                           />
                         </Field>
-                        <Button type="submit" disabled={waManualLoading}>
+                        <Button type="submit" disabled={waManualLoading || waStatus?.platformBillingReady === false}>
                           {waManualLoading ? "Connecting…" : "Connect manually"}
                         </Button>
                       </form>
@@ -914,7 +944,11 @@ export default function SettingsPage() {
                     <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
                       <li>Use a number that can receive SMS or voice OTP (Embedded Signup) or is already on Cloud API (manual).</li>
                       <li>Do not use a number already linked to another WhatsApp API provider.</li>
-                      <li>Add a payment method to your WhatsApp Business account in Meta when prompted (required for messaging).</li>
+                      {waStatus?.requiresMetaPaymentMethod !== false ? (
+                        <li>Add a payment method to your WhatsApp Business account in Meta when prompted (required for messaging).</li>
+                      ) : (
+                        <li>WhatsApp conversation fees are billed through the platform — no Meta payment card required.</li>
+                      )}
                       {waStatus?.embeddedSignupEnabled && (
                         <li>Finish all Meta popup steps without closing the window.</li>
                       )}
@@ -1228,6 +1262,59 @@ export default function SettingsPage() {
                       />
                       <p className="text-xs text-muted-foreground mt-1">ISO code, e.g. en, sw, ar, fr</p>
                     </Field>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">Agent commerce mode</p>
+                      <p className="text-sm text-muted-foreground">
+                        AI employee with tools (search, orders, memory) instead of keyword routing. Requires OpenAI-compatible provider.
+                      </p>
+                    </div>
+                    <Switch checked={agentCommerceEnabled} onCheckedChange={setAgentCommerceEnabled} />
+                  </div>
+
+                  {agentCommerceEnabled && (
+                    <>
+                      <div className="flex items-center justify-between pl-4 border-l-2 border-primary/30">
+                        <div>
+                          <p className="font-medium text-foreground">Proactive agent outreach</p>
+                          <p className="text-sm text-muted-foreground">
+                            AI follows up on abandoned carts and personalizes payment confirmations
+                          </p>
+                        </div>
+                        <Switch checked={agentProactiveEnabled} onCheckedChange={setAgentProactiveEnabled} />
+                      </div>
+
+                      {Object.keys(agentBusinessGoalCatalog).length > 0 && (
+                        <Field>
+                          <FieldLabel>Business goals</FieldLabel>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            The agent optimizes conversations toward these objectives
+                          </p>
+                          <div className="space-y-2">
+                            {Object.entries(agentBusinessGoalCatalog).map(([key, label]) => (
+                              <label key={key} className="flex items-start gap-2 text-sm cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="mt-1"
+                                  checked={agentBusinessGoals.includes(key)}
+                                  onChange={(e) => {
+                                    setAgentBusinessGoals((prev) =>
+                                      e.target.checked ? [...prev, key] : prev.filter((g) => g !== key)
+                                    )
+                                  }}
+                                />
+                                <span>
+                                  <span className="font-medium text-foreground">{key.replace(/_/g, ' ')}</span>
+                                  <span className="block text-muted-foreground text-xs">{label}</span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </Field>
+                      )}
+                    </>
                   )}
 
                   <div className="flex items-center justify-between">

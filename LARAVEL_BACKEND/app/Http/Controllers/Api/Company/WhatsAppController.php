@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Company;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppAccount;
 use App\Services\WhatsApp\WhatsAppOnboardingService;
+use App\Services\WhatsApp\WhatsAppBillingModel;
 use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,23 @@ class WhatsAppController extends Controller
     public function __construct(
         protected WhatsAppOnboardingService $onboarding
     ) {}
+
+    protected function billingNotReadyResponse(): ?JsonResponse
+    {
+        if (! WhatsAppPlatformConfig::isSolutionPartnerBilling()) {
+            return null;
+        }
+
+        if (WhatsAppPlatformConfig::isSolutionPartnerBillingReady()) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Platform WhatsApp billing is enabled but not configured. Contact your platform administrator.',
+            'code' => 'platform_billing_not_ready',
+        ], 503);
+    }
 
     public function embeddedConfig(): JsonResponse
     {
@@ -26,11 +44,20 @@ class WhatsAppController extends Controller
             'graphVersion' => WhatsAppPlatformConfig::GRAPH_VERSION,
             'enableCoexist' => WhatsAppPlatformConfig::enableCoexist(),
             'webhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
+            'metaBillingModel' => WhatsAppPlatformConfig::billingModel(),
+            'requiresMetaPaymentMethod' => ! WhatsAppPlatformConfig::isSolutionPartnerBilling(),
+            'platformBillingReady' => WhatsAppPlatformConfig::isSolutionPartnerBilling()
+                ? WhatsAppPlatformConfig::isSolutionPartnerBillingReady()
+                : true,
         ]);
     }
 
     public function connect(Request $request): JsonResponse
     {
+        if ($billingBlock = $this->billingNotReadyResponse()) {
+            return $billingBlock;
+        }
+
         if (! WhatsAppPlatformConfig::isManualConnectEnabled()) {
             return response()->json([
                 'success' => false,
@@ -74,6 +101,10 @@ class WhatsAppController extends Controller
 
     public function completeEmbeddedSignup(Request $request): JsonResponse
     {
+        if ($billingBlock = $this->billingNotReadyResponse()) {
+            return $billingBlock;
+        }
+
         if (! WhatsAppPlatformConfig::isEmbeddedSignupEnabled()) {
             $message = WhatsAppPlatformConfig::hasEmbeddedSignupCredentials()
                 ? 'WhatsApp embedded signup is temporarily disabled by the platform administrator.'
@@ -160,10 +191,17 @@ class WhatsAppController extends Controller
             'qualityRating' => $account?->quality_rating,
             'webhookSubscribed' => $account?->webhook_subscribed_at !== null,
             'phoneRegistered' => $account?->phone_registered_at !== null,
+            'creditLineShared' => $account?->credit_line_shared_at !== null,
             'onboardingError' => $account?->onboarding_error,
             'embeddedSignupEnabled' => WhatsAppPlatformConfig::isEmbeddedSignupEnabled(),
             'manualConnectEnabled' => WhatsAppPlatformConfig::isManualConnectEnabled(),
             'webhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
+            'metaBillingModel' => WhatsAppPlatformConfig::billingModel(),
+            'metaBillingModelLabel' => WhatsAppBillingModel::label(WhatsAppPlatformConfig::billingModel()),
+            'requiresMetaPaymentMethod' => ! WhatsAppPlatformConfig::isSolutionPartnerBilling(),
+            'platformBillingReady' => WhatsAppPlatformConfig::isSolutionPartnerBilling()
+                ? WhatsAppPlatformConfig::isSolutionPartnerBillingReady()
+                : true,
         ]);
     }
 

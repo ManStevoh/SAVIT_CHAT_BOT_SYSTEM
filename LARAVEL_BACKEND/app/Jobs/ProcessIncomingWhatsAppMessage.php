@@ -7,6 +7,10 @@ use App\Models\Company;
 use App\Models\ConversationLearningSample;
 use App\Models\Message;
 use App\Models\Subscription;
+use App\Jobs\Agent\ExtractCustomerMemoriesJob;
+use App\Jobs\Agent\RunBackgroundThinkingJob;
+use App\Jobs\Agent\ReflectOnConversationJob;
+use App\Services\Agent\CommerceAgentReplyService;
 use App\Services\AIReplyService;
 use App\Services\CompanyInAppNotificationService;
 use App\Services\MailService;
@@ -51,7 +55,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         public string $phoneNumberId,
         public string $messageText,
         public ?string $customerName = null,
-        public ?string $whatsappMessageId = null
+        public ?string $whatsappMessageId = null,
+        public ?int $incomingMessageId = null,
     ) {}
 
     public function handle(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
@@ -125,6 +130,37 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
         if ($this->alreadyRepliedToThisMessage()) {
             return;
+        }
+
+        if (CommerceAgentReplyService::isEnabledForCompany($company)) {
+            $messageText = $this->enrichIncomingMessage($company, $chat);
+
+            $ownerVoice = app(\App\Services\Agent\Voice\OwnerVoiceCommandService::class);
+            if ($ownerVoice->isOwnerPhone($company, $this->customerPhone)) {
+                $ownerResult = $ownerVoice->handle($company, $chat, $messageText);
+                if (($ownerResult['handled'] ?? false) && trim((string) ($ownerResult['reply'] ?? '')) !== '') {
+                    $this->sendReplyAndSave($waSender, $company, $chat, (string) $ownerResult['reply'], 'owner_voice');
+
+                    return;
+                }
+            }
+
+            $agentResult = app(CommerceAgentReplyService::class)->generate(
+                $company,
+                $chat,
+                $this->customerPhone,
+                $this->customerName,
+                $messageText,
+            );
+            if ($agentResult !== null && trim($agentResult['reply'] ?? '') !== '') {
+                if ($agentResult['handoff']) {
+                    $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
+                }
+                $this->sendReplyAndSave($waSender, $company, $chat, $agentResult['reply'], $agentResult['route']);
+                $this->schedulePostConversationJobs($company, $chat);
+
+                return;
+            }
         }
 
         if ($this->isFirstCustomerMessageInChat($this->chatId)) {
@@ -463,5 +499,106 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         if ($detected !== $chat->detected_language) {
             $chat->update(['detected_language' => $detected]);
         }
+    }
+
+    private function enrichIncomingMessage(Company $company, Chat $chat): string
+    {
+        $text = $this->enrichMessageWithAudio($company, $chat);
+
+        return $this->enrichMessageWithVision($company, $chat, $text);
+    }
+
+    private function enrichMessageWithAudio(Company $company, Chat $chat): string
+    {
+        $text = $this->messageText;
+        if (! $this->incomingMessageId) {
+            return $text;
+        }
+
+        $message = Message::find($this->incomingMessageId);
+        if (! $message) {
+            return $text;
+        }
+
+        $isAudio = $message->message_type === 'audio'
+            || str_contains((string) ($message->attachment_mime ?? ''), 'audio')
+            || str_contains((string) $message->content, '[audio received]');
+
+        if (! $isAudio) {
+            return $text;
+        }
+
+        try {
+            $transcript = app(\App\Services\Agent\Voice\VoiceTranscriptionService::class)
+                ->transcribeMessage($message, $company);
+            if ($transcript) {
+                return 'Owner/customer voice note (transcribed): '.$transcript;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Audio enrichment failed', [
+                'message_id' => $this->incomingMessageId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $text;
+    }
+
+    private function enrichMessageWithVision(Company $company, Chat $chat, ?string $baseText = null): string
+    {
+        $text = $baseText ?? $this->messageText;
+        if (! $this->incomingMessageId) {
+            return $text;
+        }
+
+        $message = Message::find($this->incomingMessageId);
+        if (! $message || $message->message_type !== 'image' || empty($message->attachment_url)) {
+            return $text;
+        }
+
+        try {
+            $analysis = app(\App\Services\Agent\Vision\VisionPipelineService::class)->analyzeMessage($message);
+            if ($analysis) {
+                $block = $analysis->toPromptBlock();
+                $caption = trim($text);
+                if ($caption === '' || str_starts_with($caption, '[')) {
+                    return $block;
+                }
+
+                return $block."\n\nCustomer caption: ".$caption;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Vision enrichment failed', [
+                'message_id' => $this->incomingMessageId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $text;
+    }
+
+    private function schedulePostConversationJobs(Company $company, Chat $chat): void
+    {
+        if (! CommerceAgentReplyService::isEnabledForCompany($company)) {
+            return;
+        }
+
+        $settings = $company->settings;
+        if ($settings?->learn_from_conversations) {
+            $memoryDelay = (int) config('agent.proactive.memory_extraction_delay_minutes', 30);
+            ExtractCustomerMemoriesJob::dispatch(
+                $this->companyId,
+                $this->chatId,
+                $this->customerPhone,
+            )->delay(now()->addMinutes($memoryDelay));
+        }
+
+        $reflectionDelay = (int) config('agent.proactive.reflection_delay_minutes', 45);
+        ReflectOnConversationJob::dispatch($this->companyId, $this->chatId)
+            ->delay(now()->addMinutes($reflectionDelay));
+
+        $bgDelay = (int) config('agent.platform.background_thinking_delay_minutes', 50);
+        RunBackgroundThinkingJob::dispatch($this->companyId, $this->chatId)
+            ->delay(now()->addMinutes($bgDelay));
     }
 }

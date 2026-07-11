@@ -17,5 +17,8 @@ readonly class OpenAiChatResult
         public ?int $providerId = null,
         public ?int $modelId = null,
         public float $estimatedCostUsd = 0.0,
+        /** @var array<int, array{id: string, name: string, arguments: string}> */
+        public array $toolCalls = [],
+        public ?string $finishReason = null,
     ) {}
 }

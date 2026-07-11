@@ -8,9 +8,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <ProtectedRoute requireAdmin>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
-        <div className="pl-64">
+        <div className="pl-64 min-w-0">
           <DashboardNavbar />
-          <main className="p-6">{children}</main>
+          <main className="min-w-0 max-w-full overflow-x-hidden p-6">{children}</main>
         </div>
       </div>
     </ProtectedRoute>
