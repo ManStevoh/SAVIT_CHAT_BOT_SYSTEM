@@ -10,3 +10,9 @@ class InvestigationCase extends Model
     protected $fillable = [
         'company_id',
         'owner_analytics_investigation_id',
+        'goal',
+        'status',
+        'current_step',
+        'steps',
+        'metadata',
+        'closed_at',
