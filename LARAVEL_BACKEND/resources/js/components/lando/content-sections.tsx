@@ -322,3 +322,9 @@ export function LandoTeam({
               <p className="mt-4 font-bold text-black">{m.name}</p>
               <p className="text-sm text-gray-500">{m.role}</p>
             </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
