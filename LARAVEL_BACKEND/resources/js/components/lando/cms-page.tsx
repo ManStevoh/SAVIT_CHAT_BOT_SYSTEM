@@ -52,3 +52,9 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
           activePath={pathname}
         />
 
+        {isLoading && (
+          <div className="flex min-h-[50vh] items-center justify-center pt-28">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#2563eb] border-t-transparent" />
+          </div>
+        )}
+
