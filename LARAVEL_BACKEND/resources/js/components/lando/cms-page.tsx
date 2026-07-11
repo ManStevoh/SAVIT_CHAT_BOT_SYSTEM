@@ -16,3 +16,9 @@ interface LandoCmsPageProps {
 function getSectionContent(sections: CmsSection[], key: string) {
   return sections.find((s) => s.key === key)?.content ?? {}
 }
+
+export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
+  const pathname = usePathname()
+  const { data: pageData, isLoading } = useCmsPage(slug)
+  const { data: globalData } = useCmsGlobal()
+
