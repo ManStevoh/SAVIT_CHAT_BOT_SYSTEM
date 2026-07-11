@@ -118,3 +118,9 @@ class CmsAdminController extends Controller
     }
 
     public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|image|max:5120',
+        ]);
+
+        $path = $request->file('image')->store('cms_images', 'public');
