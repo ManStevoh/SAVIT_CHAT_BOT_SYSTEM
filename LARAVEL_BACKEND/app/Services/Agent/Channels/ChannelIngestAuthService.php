@@ -40,3 +40,9 @@ final class ChannelIngestAuthService
         $settings = CompanySetting::where('company_id', $companyId)->first();
         if (! $settings || ! $settings->web_widget_token) {
             return null;
+        }
+        if (! hash_equals((string) $settings->web_widget_token, $widgetToken)) {
+            return null;
+        }
+
+        return Company::with('settings')->find($companyId);
