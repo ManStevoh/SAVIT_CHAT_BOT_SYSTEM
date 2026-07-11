@@ -16,3 +16,9 @@ class ChannelWebhookController extends Controller
      * Generic email ingest webhook (SendGrid/Mailgun-style JSON body).
      */
     public function email(
+        Request $request,
+        ChannelIngestAuthService $auth,
+        ChannelReplyDispatcher $dispatcher,
+        int $companyId,
+    ): JsonResponse {
+        $company = $auth->companyFromRequest($request, $companyId);
