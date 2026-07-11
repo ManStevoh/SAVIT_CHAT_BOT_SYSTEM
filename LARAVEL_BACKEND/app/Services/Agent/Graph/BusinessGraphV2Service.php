@@ -154,3 +154,9 @@ final class BusinessGraphV2Service
      * @return array{nodes: list<array<string, mixed>>, edges: list<array<string, mixed>>, stats: array<string, int>}
      */
     public function exportGraph(Company $company, int $nodeLimit = 200): array
+    {
+        $nodes = BusinessGraphNode::query()
+            ->where('company_id', $company->id)
+            ->orderByDesc('updated_at')
+            ->limit($nodeLimit)
+            ->get();
