@@ -412,3 +412,9 @@ class CmsPageSeeder extends Seeder
                 $pageData
             );
 
+            foreach ($sections as $sectionData) {
+                CmsSection::updateOrCreate(
+                    [
+                        'cms_page_id' => $page->id,
+                        'section_key' => $sectionData['section_key'],
+                    ],
