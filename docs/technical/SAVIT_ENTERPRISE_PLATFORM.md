@@ -88,3 +88,9 @@ Each module: **vision → status → what exists → gaps → build spec (global
 | Usage-based limits | **Partial** | `PlanLimitService`, `AiBillingService`, growth/WhatsApp limits — **hardcoded per plan slug**, not DB entitlements |
 | Credits (platform) | **Roadmap** | Meta WhatsApp credit lines only (`WhatsAppCreditSharingService`) |
 | Seat-based | **Partial** | Limits reported in `SubscriptionController::usage()` — **not enforced** on invite |
+| Feature flags | **Partial** | Implicit gating via plan slug in `PlanLimitService`; no `FeatureFlag` model |
+| Coupons / promos | **Roadmap** | No tables, APIs, or checkout integration |
+| Partner / reseller pricing | **Roadmap** | No partner tiers or revenue share |
+
+**Critical gaps**
+
