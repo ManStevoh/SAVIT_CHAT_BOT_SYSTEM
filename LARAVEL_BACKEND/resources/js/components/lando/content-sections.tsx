@@ -316,3 +316,9 @@ export function LandoTeam({
                 />
               ) : (
                 <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-gray-200 text-2xl font-bold text-gray-500">
+                  {m.name.charAt(0)}
+                </div>
+              )}
+              <p className="mt-4 font-bold text-black">{m.name}</p>
+              <p className="text-sm text-gray-500">{m.role}</p>
+            </div>
