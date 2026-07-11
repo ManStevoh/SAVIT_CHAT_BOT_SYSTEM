@@ -358,3 +358,9 @@ final class ConnectorRegistry
 
     private function pullErpInventory(array $config): array
 
+    {
+
+        $url = trim((string) ($config['inventory_url'] ?? ''));
+
+        if ($url === '') {
+
