@@ -46,3 +46,9 @@ export function LandoNavbar({
                   isActive ? "text-[#2563eb]" : "text-black hover:text-[#2563eb]"
                 )}
               >
+                {link.label}
+              </Link>
+            )
+          })}
+        </div>
+
