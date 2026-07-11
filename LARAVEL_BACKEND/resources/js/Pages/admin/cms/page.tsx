@@ -172,3 +172,9 @@ function SectionEditor({
             label="Legal links"
             links={(content.legalLinks as CmsLink[]) ?? []}
             onChange={(links) => set("legalLinks", links)}
+          />
+        </div>
+      )
+    }
+
+    if (key === "auth_shell") {
