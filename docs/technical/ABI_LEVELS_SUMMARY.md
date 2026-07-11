@@ -142,3 +142,9 @@ php artisan route:list --path=intelligence
 
 ---
 
+## Related docs
+
+- [ENTERPRISE_PLATFORM_PHASE2.md](ENTERPRISE_PLATFORM_PHASE2.md) — Phase 2 implementation (entitlements, billing, API)
+- [AI_ABI_PLATFORM.md](AI_ABI_PLATFORM.md) — master reference
+- [AI_COGNITIVE_OS.md](AI_COGNITIVE_OS.md) — cognitive layer detail
+- [AI_PHASE5_OS.md](AI_PHASE5_OS.md) — executive UI, approvals
