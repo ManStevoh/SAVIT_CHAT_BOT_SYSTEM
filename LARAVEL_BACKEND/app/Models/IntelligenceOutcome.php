@@ -10,3 +10,9 @@ class IntelligenceOutcome extends Model
     protected $fillable = [
         'company_id',
         'source_type',
+        'source_id',
+        'recommendation_key',
+        'recommended_action',
+        'outcome',
+        'notes',
+        'metrics',
