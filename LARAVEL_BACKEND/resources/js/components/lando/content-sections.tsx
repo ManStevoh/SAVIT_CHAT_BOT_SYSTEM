@@ -118,3 +118,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-3">
           {list.map((plan) => (
+            <div
+              key={plan.id}
+              className={cn(
+                "relative rounded-2xl bg-white p-8 shadow-sm",
+                plan.popular && "ring-2 ring-[#2563eb]"
+              )}
