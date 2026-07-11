@@ -106,3 +106,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           ctaHref={str(content.ctaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
+        />
+      )
+
+    case "feature_1":
+    case "feature_2":
+      return (
