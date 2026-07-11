@@ -40,3 +40,9 @@ class IntegrationController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        $validated = $request->validate([
+            'connectorType' => 'required|string|max:40',
+            'config' => 'nullable|array',
+        ]);
+
+        if (! $registry->has($validated['connectorType'])) {
