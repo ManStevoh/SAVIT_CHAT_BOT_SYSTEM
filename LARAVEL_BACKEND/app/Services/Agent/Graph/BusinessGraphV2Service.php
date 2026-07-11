@@ -124,3 +124,9 @@ final class BusinessGraphV2Service
                     $stats['nodes']++;
                     if ($this->link($company, $customerNode->id, $orderNode->id, 'placed_order')) {
                         $stats['edges']++;
+                    }
+                }
+            });
+
+        return $stats;
+    }
