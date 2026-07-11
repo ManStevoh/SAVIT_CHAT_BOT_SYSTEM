@@ -34,3 +34,9 @@ class VerifyEnterprisePlatformCommand extends Command
             'company_integrations table' => Schema::hasTable('company_integrations'),
             'company_settings.agent_council_enabled' => Schema::hasColumn('company_settings', 'agent_council_enabled'),
         ];
+
+        $allPass = true;
+        foreach ($checks as $label => $ok) {
+            $this->line(sprintf('  [%s] %s', $ok ? 'OK' : 'FAIL', $label));
+            if (! $ok) {
+                $allPass = false;
