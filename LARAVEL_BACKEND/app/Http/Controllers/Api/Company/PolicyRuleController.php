@@ -70,3 +70,9 @@ class PolicyRuleController extends Controller
             'requires_role' => 'nullable|string|max:40',
             'is_active' => 'nullable|boolean',
             'meta' => 'nullable|array',
+        ]);
+
+        $rule->update($validated);
+        $audit->log('policy_rule.updated', CompanyPolicyRule::class, $rule->id, $before, $rule->fresh()->toArray(), $company->id, $request->user());
+
+        return response()->json(['rule' => $rule->fresh()]);
