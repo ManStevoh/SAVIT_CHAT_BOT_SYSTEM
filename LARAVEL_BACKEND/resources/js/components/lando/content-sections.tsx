@@ -148,3 +148,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                     ? "bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
                     : "border-black bg-white text-black hover:bg-gray-50"
                 )}
+                variant={plan.popular ? "default" : "outline"}
+                disabled={busy !== null}
+                onClick={() => {
+                  if (plan.checkoutAvailable && isLoggedIn) {
+                    handleSubscribe(plan.id)
+                  } else if (!isLoggedIn) {
