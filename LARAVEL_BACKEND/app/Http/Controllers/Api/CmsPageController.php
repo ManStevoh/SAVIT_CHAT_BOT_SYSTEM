@@ -76,3 +76,9 @@ class CmsPageController extends Controller
 
     public function global(): JsonResponse
     {
+        return $this->show('global');
+    }
+
+    private function resolveImageUrl(?string $path): ?string
+    {
+        if (empty($path)) {
