@@ -10,3 +10,9 @@ use App\Models\Testimonial;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 
+class CmsPageController extends Controller
+{
+    public function show(string $slug): JsonResponse
+    {
+        $page = CmsPage::where('slug', $slug)->where('is_published', true)->first();
+
