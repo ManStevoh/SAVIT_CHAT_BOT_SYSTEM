@@ -526,3 +526,9 @@ event_outbox                — transactional outbox pattern for reliability
 ---
 
 ### 35. Ecosystem
+
+**Vision:** Business Apps + AI Services + Developer Platform + Marketplace + Integrations + Analytics + White Label + Industry Packs + Partner Network.
+
+| Status | **Roadmap** (architecture stage) |
+
+The AI stack (Phases 1–5) is the **AI Services** pillar. This blueprint defines the **Business Apps** and **Platform** pillars required for a full ecosystem.
