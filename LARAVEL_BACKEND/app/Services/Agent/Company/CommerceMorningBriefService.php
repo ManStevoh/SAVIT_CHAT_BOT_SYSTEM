@@ -6,7 +6,9 @@ use App\Models\CommerceBrief;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\Agent\Intelligence\IntelligenceOutcomeService;
 use App\Services\Agent\Platform\ExecutiveBriefService;
+use App\Services\Agent\Timeline\BusinessTimelineService;
 use App\Services\AI\AiGateway;
 use Illuminate\Support\Facades\Log;
 
@@ -18,6 +20,8 @@ final class CommerceMorningBriefService
     public function __construct(
         protected AiGateway $aiGateway,
         protected ExecutiveBriefService $executive,
+        protected BusinessTimelineService $timeline,
+        protected IntelligenceOutcomeService $outcomes,
     ) {}
 
     public function generateForCompany(Company $company): ?CommerceBrief
@@ -62,15 +66,34 @@ final class CommerceMorningBriefService
             $summary = $this->fallbackSummary($company->name, $metrics);
         }
 
+        $recommendations = $this->buildRecommendations($metrics);
+
         $brief = CommerceBrief::create([
             'company_id' => $company->id,
             'brief_date' => $date,
             'summary' => $summary,
             'metrics' => $metrics,
-            'recommendations' => $this->buildRecommendations($metrics),
+            'recommendations' => $recommendations,
         ]);
 
-        return $this->executive->attachToBrief($brief, $company);
+        $brief = $this->executive->attachToBrief($brief, $company);
+
+        $this->outcomes->seedFromBrief($company, (int) $brief->id, $recommendations);
+
+        $this->timeline->record(
+            $company,
+            'morning_brief',
+            'Daily commerce brief',
+            mb_substr((string) $brief->summary, 0, 200),
+            ['brief_date' => $brief->brief_date?->toDateString()],
+            'commerce_brief',
+            (int) $brief->id,
+            55,
+            $brief->brief_date ?? $brief->created_at,
+            'consciousness',
+        );
+
+        return $brief;
     }
 
     /**
