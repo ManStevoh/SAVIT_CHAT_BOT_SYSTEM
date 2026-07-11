@@ -16,3 +16,9 @@ class VerifyAiOrchestrationCommand extends Command
 
     public function handle(AiModelResolver $resolver): int
     {
+        $this->info('AI Orchestration verification');
+        $this->newLine();
+
+        $requiredCapabilities = [
+            AiModel::CAPABILITY_REASONING,
+            AiModel::CAPABILITY_CHAT,
