@@ -286,3 +286,9 @@ class CmsPageSeeder extends Seeder
                         'section_key' => 'mission',
                         'label' => 'Mission',
                         'sort_order' => 2,
+                        'content' => [
+                            'title' => 'Our mission',
+                            'description' => 'At Essem Chat, we are committed to helping businesses sell more on WhatsApp. We believe AI and human agents working together can transform customer experience. Our team is dedicated to providing the best possible service and support, and we are always looking for ways to improve and innovate.',
+                        ],
+                    ],
+                    [
