@@ -46,3 +46,9 @@ export function LandoTrustedCompanies({
   )
 }
 
+export function LandoTestimonials({
+  title,
+  description,
+  testimonials = [],
+}: {
+  title?: string
