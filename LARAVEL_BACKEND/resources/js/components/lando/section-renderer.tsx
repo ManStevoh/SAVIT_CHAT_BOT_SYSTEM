@@ -88,3 +88,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
     case "trusted_companies": {
       const companies = arr<{ name: string; logoUrl?: string }>(content.companies)
       const fromApi = pageData.trustedCompanies
+      const merged =
+        companies.length > 0
+          ? companies
+          : (fromApi ?? []).map((c) =>
+              typeof c === "string" ? { name: c, logoUrl: "" } : c
+            )
