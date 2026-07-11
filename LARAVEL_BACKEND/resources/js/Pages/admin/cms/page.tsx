@@ -124,3 +124,9 @@ function SectionEditor({
     } else {
       toast({ title: res.message ?? "Save failed", variant: "destructive" })
     }
+  }
+
+  const toggleEnabled = async (checked: boolean) => {
+    setEnabled(checked)
+    await updateCmsSection(slug, section.key, { isEnabled: checked })
+    onSaved()
