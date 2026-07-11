@@ -526,3 +526,9 @@ function SortableSectionList({
             slug={slug}
             section={section}
             onSaved={onSaved}
+            dragHandle={
+              <button
+                type="button"
+                className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                aria-label="Drag to reorder"
+              >
