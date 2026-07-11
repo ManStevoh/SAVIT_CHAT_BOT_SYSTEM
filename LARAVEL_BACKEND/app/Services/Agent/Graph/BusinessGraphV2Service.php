@@ -166,3 +166,9 @@ final class BusinessGraphV2Service
         $edges = BusinessGraphEdge::query()
             ->where('company_id', $company->id)
             ->whereIn('from_node_id', $nodeIds)
+            ->whereIn('to_node_id', $nodeIds)
+            ->limit(500)
+            ->get();
+
+        return [
+            'stats' => [
