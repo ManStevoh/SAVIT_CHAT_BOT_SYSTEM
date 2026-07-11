@@ -16,3 +16,9 @@ class AuthenticateApiKey
     public function handle(Request $request, Closure $next): Response
     {
         $header = $request->header('Authorization', '');
+        $plain = str_starts_with($header, 'Bearer ') ? substr($header, 7) : $request->header('X-Api-Key');
+
+        if (! is_string($plain) || $plain === '') {
+            return response()->json(['message' => 'API key required.'], 401);
+        }
+
