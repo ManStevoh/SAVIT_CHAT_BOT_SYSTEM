@@ -496,3 +496,9 @@ event_outbox                — transactional outbox pattern for reliability
 ---
 
 ### 32. Offline Capability
+
+**Vision:** Offline order capture, inventory counts, local cache, sync when online.
+
+| Status | **Roadmap** |
+
+**Build spec:** PWA service worker + IndexedDB queue; `offline_sync_batches` API; conflict resolution (last-write-wins + manual merge for orders).
