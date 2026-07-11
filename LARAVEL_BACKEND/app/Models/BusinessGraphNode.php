@@ -28,3 +28,9 @@ class BusinessGraphNode extends Model
         'ref_type',
         'ref_id',
         'label',
+        'metadata',
+    ];
+
+    protected function casts(): array
+    {
+        return ['metadata' => 'array'];
