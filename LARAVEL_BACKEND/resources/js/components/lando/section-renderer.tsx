@@ -10,3 +10,9 @@ import {
 import {
   LandoTrustedCompanies,
   LandoTestimonials,
+  LandoPricingPlans,
+  LandoCompareFeatures,
+  LandoFaqSection,
+  LandoAboutHero,
+  LandoMission,
+  LandoEfficiency,
