@@ -58,3 +58,9 @@ class WebWidgetController extends Controller
 
             'greeting' => $company->settings?->ai_greeting ?? 'Hi! How can we help you today?',
 
+            'agentEnabled' => (bool) ($company->settings?->agent_commerce_enabled ?? false),
+
+        ]);
+
+    }
+
