@@ -160,3 +160,9 @@ final class ConnectorRegistry
 
     public function connect(Company $company, string $type, array $config): array
 
+    {
+
+        return match ($type) {
+
+            'weather', 'delivery_status' => ['success' => true, 'message' => 'Built-in connector — no setup required.'],
+
