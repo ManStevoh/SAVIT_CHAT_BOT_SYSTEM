@@ -52,3 +52,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 
 ## Governance
 
+| # | Module | Status | Top gap |
+|---|--------|--------|---------|
+| 21 | Audit Center | 🟡 | **audit_events + AuditService wired** — full admin audit UI pending |
+| 22 | Permission Engine | 🟡 | **company_policy_rules CRUD + approval ABAC** — dashboard ABAC pending |
+
+## Platform
