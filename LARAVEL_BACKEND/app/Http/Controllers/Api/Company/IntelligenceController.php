@@ -70,3 +70,9 @@ class IntelligenceController extends Controller
             'include_plan' => 'nullable|boolean',
 
             'persist_plan' => 'nullable|boolean',
+
+            'open_case' => 'nullable|boolean',
+
+        ]);
+
+
