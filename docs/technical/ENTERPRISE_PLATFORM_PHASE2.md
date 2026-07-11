@@ -100,3 +100,9 @@ PATCH  /api/company/policy-rules/{id}
 DELETE /api/company/policy-rules/{id}
 ```
 
+### API platform (Sanctum, company owner for mutations)
+
+```
+GET    /api/company/api-platform/keys
+POST   /api/company/api-platform/keys
+DELETE /api/company/api-platform/keys/{id}
