@@ -112,3 +112,9 @@ partner_accounts            — reseller markup, commission, white-label scope
 ```
 
 - **Security:** Coupon redemption rate-limited; partner API keys scoped to tenant subtree.
+- **Scale:** Usage events async via queue; aggregate meters hourly.
+- **Multi-tenant:** Every row `company_id`; platform plans global, overrides per company.
+
+---
+
+### 19. Billing Engine
