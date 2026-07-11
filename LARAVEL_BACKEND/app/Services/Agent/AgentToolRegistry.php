@@ -2,7 +2,10 @@
 
 namespace App\Services\Agent;
 
+use App\Models\Company;
 use App\Services\Agent\Contracts\AgentTool;
+use App\Services\Agent\Platform\ExternalModuleToolBridge;
+use App\Services\Agent\Platform\SkillModuleRegistry;
 use InvalidArgumentException;
 
 final class AgentToolRegistry
@@ -48,6 +51,56 @@ final class AgentToolRegistry
         }
 
         return $out;
+    }
+
+    /**
+     * @param  list<string>  $allowedNames
+     * @return array<int, array<string, mixed>>
+     */
+    public function openAiDefinitionsFiltered(array $allowedNames): array
+    {
+        if ($allowedNames === []) {
+            return $this->openAiDefinitions();
+        }
+
+        $allowed = array_flip($allowedNames);
+        $out = [];
+        foreach ($this->tools as $tool) {
+            if (isset($allowed[$tool->name()])) {
+                $out[] = [
+                    'type' => 'function',
+                    'function' => [
+                        'name' => $tool->name(),
+                        'description' => $tool->description(),
+                        'parameters' => $tool->parametersSchema(),
+                    ],
+                ];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function openAiDefinitionsForCompany(Company $company): array
+    {
+        $skills = app(SkillModuleRegistry::class);
+        $external = app(ExternalModuleToolBridge::class);
+
+        if (! config('agent.marketplace.restrict_tools_when_installed', true)
+            || ! $skills->hasInstalledModules($company)) {
+            return array_merge(
+                $this->openAiDefinitions(),
+                $external->openAiDefinitionsForCompany($company),
+            );
+        }
+
+        return array_merge(
+            $this->openAiDefinitionsFiltered($skills->allowedToolNamesForCompany($company)),
+            $external->openAiDefinitionsForCompany($company),
+        );
     }
 
     public function execute(string $name, AgentToolContext $context, array $arguments): array
