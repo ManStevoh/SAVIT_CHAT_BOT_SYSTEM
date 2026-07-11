@@ -298,3 +298,9 @@ function SectionEditor({
                   set("steps", next)
                 }}
                 multiline
+              />
+            </div>
+          ))}
+        </div>
+      )
+    }
