@@ -52,3 +52,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 | Perception, debate, confidence, critique | `CognitivePipelineService`, orchestrator |
 | World model, opportunities, health | `BusinessWorldModelService`, `OpportunityDetectionService` |
 | Business simulation | `SimulationService`, `POST /cognitive-ai/simulate`, tests |
+| Executive plans | `ExecutivePlanningService`, `POST /cognitive-ai/plans` |
+| Trust logs + governance | `AgentTrustService`, `GovernanceService` |
+| Anonymized platform patterns | `CrossBusinessLearningService`, `MetaLearningService` |
+| **Unified decision API** | `IntelligenceReasoningService`, `POST /intelligence/reason` |
+| **Investigation cases** | `investigation_cases`, `GET /intelligence/cases` |
+| **Outcome tracking** | `intelligence_outcomes`, `POST /intelligence/outcomes` |
