@@ -418,3 +418,9 @@ export function LandoContactSection({
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-black">{messageLabel}</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder={messagePlaceholder}
