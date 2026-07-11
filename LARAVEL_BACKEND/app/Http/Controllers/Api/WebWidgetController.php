@@ -100,3 +100,9 @@ class WebWidgetController extends Controller
 
             $company,
 
+            ChatChannel::WEB_WIDGET,
+
+            $validated['visitorId'],
+
+            $validated['message'],
+
