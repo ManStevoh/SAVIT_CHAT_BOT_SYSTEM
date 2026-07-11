@@ -52,3 +52,5 @@ php artisan ai:verify-orchestration
 
 ## Related docs
 
+- [AI_MODEL_ORCHESTRATION.md](AI_MODEL_ORCHESTRATION.md)
+- [ENTERPRISE_PLATFORM_PHASE2.md](ENTERPRISE_PLATFORM_PHASE2.md)
