@@ -340,3 +340,9 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => 'Contact Us',
                             'description' => 'Explore the future with us. Feel free to get in touch.',
+                            'imageUrl' => $heroImage,
+                            'imageAlt' => 'Contact us',
+                            'nameLabel' => 'Name',
+                            'namePlaceholder' => 'Full Name',
+                            'emailLabel' => 'Email',
+                            'emailPlaceholder' => 'Email address',
