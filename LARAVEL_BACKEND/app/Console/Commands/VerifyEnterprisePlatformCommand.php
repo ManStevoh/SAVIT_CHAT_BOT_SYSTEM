@@ -16,3 +16,9 @@ class VerifyEnterprisePlatformCommand extends Command
     {
         $this->info('Enterprise Platform Phase 2 verification');
         $this->newLine();
+
+        $checks = [
+            'plans.entitlements' => Schema::hasColumn('plans', 'entitlements'),
+            'company_entitlement_overrides table' => Schema::hasTable('company_entitlement_overrides'),
+            'usage_meters table' => Schema::hasTable('usage_meters'),
+            'billing_payments table' => Schema::hasTable('billing_payments'),
