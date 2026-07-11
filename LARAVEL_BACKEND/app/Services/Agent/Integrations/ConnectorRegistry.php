@@ -472,3 +472,9 @@ final class ConnectorRegistry
 
 
 
+        try {
+
+            $response = Http::timeout(8)
+
+                ->withHeaders(array_filter(['Authorization' => $key !== '' ? 'Bearer '.$key : null]))
+
