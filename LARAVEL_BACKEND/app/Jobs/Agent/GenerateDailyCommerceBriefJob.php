@@ -4,6 +4,7 @@ namespace App\Jobs\Agent;
 
 use App\Models\Company;
 use App\Services\Agent\Company\CommerceMorningBriefService;
+use App\Services\Agent\Consciousness\OwnerMorningBriefPushService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -17,7 +18,7 @@ class GenerateDailyCommerceBriefJob implements ShouldQueue
 
     public function __construct(public ?int $companyId = null) {}
 
-    public function handle(CommerceMorningBriefService $briefs): void
+    public function handle(CommerceMorningBriefService $briefs, OwnerMorningBriefPushService $push): void
     {
         $query = Company::query()
             ->where('status', 'active')
@@ -29,7 +30,16 @@ class GenerateDailyCommerceBriefJob implements ShouldQueue
 
         foreach ($query->pluck('id') as $companyId) {
             try {
-                $briefs->generateForCompany(Company::find((int) $companyId));
+                $company = Company::with('settings')->find((int) $companyId);
+                if (! $company) {
+                    continue;
+                }
+
+                $brief = $briefs->generateForCompany($company);
+
+                if ($brief && config('agent.morning_brief.whatsapp_push_after_generate', true)) {
+                    $push->pushForCompany($company, $brief);
+                }
             } catch (\Throwable $e) {
                 Log::warning('Commerce brief generation failed', [
                     'company_id' => $companyId,
