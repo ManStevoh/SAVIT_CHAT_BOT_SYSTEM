@@ -430,3 +430,9 @@ class CmsPageSeeder extends Seeder
 
         if (Testimonial::count() === 0) {
             $samples = [
+                ['name' => 'Jack Sibire', 'role' => 'Lead Manager, Growio', 'content' => 'Since implementing Essem Chat our business has seen significant growth on WhatsApp.'],
+                ['name' => 'Adele Mouse', 'role' => 'Product Manager, Mousio', 'content' => 'I recommend Essem Chat to any business looking to improve WhatsApp sales.'],
+                ['name' => 'Ben Clock', 'role' => 'CTO, Clockwork', 'content' => "I can't imagine running our company without it."],
+            ];
+            foreach ($samples as $i => $sample) {
+                Testimonial::create([
