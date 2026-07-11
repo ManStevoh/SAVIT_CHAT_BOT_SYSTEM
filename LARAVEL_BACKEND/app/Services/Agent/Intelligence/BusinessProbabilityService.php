@@ -64,3 +64,9 @@ final class BusinessProbabilityService
             'order_count_90d' => $orderCount90,
             'repeat_buyer_rate' => round($repeatRate, 3),
             'refund_rate_90d' => round($refundRate, 3),
+            'active_chats_30d' => $activeChats,
+        ];
+
+        $this->persistScore($companyId, null, 'buy', $buy, $factors);
+        $this->persistScore($companyId, null, 'churn', $churn, $factors);
+        $this->persistScore($companyId, null, 'refund', $refund, $factors);
