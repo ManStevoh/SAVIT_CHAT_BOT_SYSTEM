@@ -100,3 +100,9 @@ Legacy code may still use `OpenAiClient` or `AiGateway` — both route through `
 | **platform_default** | Row with `is_platform_default=true` per capability |
 
 Admin: **Settings → AI Models** (`/admin/ai-models`) — set platform default per capability.
+
+Routing map API: `GET /api/admin/ai-config/orchestration`
+
+---
+
+## Agent tool loop constraint
