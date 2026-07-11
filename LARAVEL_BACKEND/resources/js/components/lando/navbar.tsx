@@ -40,3 +40,9 @@ export function LandoNavbar({
             return (
               <Link
                 key={link.href}
+                href={link.href}
+                className={cn(
+                  "text-sm font-medium transition-colors",
+                  isActive ? "text-[#2563eb]" : "text-black hover:text-[#2563eb]"
+                )}
+              >
