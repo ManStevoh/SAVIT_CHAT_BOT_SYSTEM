@@ -400,3 +400,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 **Evidence:** `GrowthIntegrationService` (GA4, email, website); Meta OAuth; payment gateways; agent external tools (M-Pesa check, shipping API, calendar). No connector framework or marketplace.
 
 **Build spec:** `integrations`, `integration_credentials` (encrypted), `integration_sync_logs`, pluggable `IntegrationDriver` interface per provider.
+
+---
+
+### 25. Analytics Studio
+
+**Vision:** Custom dashboards, charts, KPIs, scheduled reports, drill-downs, exports.
