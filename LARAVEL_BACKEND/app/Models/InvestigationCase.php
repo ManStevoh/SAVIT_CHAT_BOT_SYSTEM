@@ -28,3 +28,9 @@ class InvestigationCase extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    public function investigation(): BelongsTo
+    {
+        return $this->belongsTo(OwnerAnalyticsInvestigation::class, 'owner_analytics_investigation_id');
+    }
+}
