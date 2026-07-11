@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Building2, MessageSquare, Bot, Users, Bell, Plus, Trash2, Check, CreditCard } from "lucide-react"
+import { OnboardingInterviewPanel } from "@/components/agent/OnboardingInterviewPanel"
 
 function isMasked(val: unknown): boolean {
   return typeof val === "string" && val.startsWith("••••")
@@ -37,7 +38,7 @@ function mpesaSecretKey(field: "passkey" | "consumer_secret") {
   return `mpesa:${field}`
 }
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
-import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers } from "@/lib/api-hooks"
+import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers, type BusinessDnaPreset, type BusinessDnaSettings } from "@/lib/api-hooks"
 import { apiRequest } from "@/lib/api-client"
 import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode } from "@/lib/format-currency"
 import { useSWRConfig } from "swr"
@@ -367,8 +368,21 @@ export default function SettingsPage() {
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false)
   const [agentCommerceEnabled, setAgentCommerceEnabled] = useState(false)
   const [agentProactiveEnabled, setAgentProactiveEnabled] = useState(false)
+  const [agentVoiceReplyEnabled, setAgentVoiceReplyEnabled] = useState(false)
+  const [agentMorningBriefWhatsappEnabled, setAgentMorningBriefWhatsappEnabled] = useState(false)
+  const [ownerWhatsappPhone, setOwnerWhatsappPhone] = useState('')
+  const [webWidgetToken, setWebWidgetToken] = useState<string | null>(null)
+  const [channelIngestSecret, setChannelIngestSecret] = useState<string | null>(null)
+  const [channelWebhookUrls, setChannelWebhookUrls] = useState<{ email: string; instagramDm: string } | null>(null)
+  const [widgetScriptUrl, setWidgetScriptUrl] = useState<string | null>(null)
+  const [companyIdForEmbed, setCompanyIdForEmbed] = useState<number | null>(null)
   const [agentBusinessGoals, setAgentBusinessGoals] = useState<string[]>([])
   const [agentBusinessGoalCatalog, setAgentBusinessGoalCatalog] = useState<Record<string, string>>({})
+  const [businessDnaPreset, setBusinessDnaPreset] = useState<'industry_default' | 'luxury_brand' | 'friendly_cafe' | 'custom'>('industry_default')
+  const [businessDna, setBusinessDna] = useState<BusinessDnaSettings>({})
+  const [businessDnaPresets, setBusinessDnaPresets] = useState<Record<string, BusinessDnaPreset>>({})
+  const [digitalTwin, setDigitalTwin] = useState<Record<string, string>>({})
+  const [agentCouncilEnabled, setAgentCouncilEnabled] = useState(false)
   const [learnFromConversations, setLearnFromConversations] = useState(true)
   const [learnFromConversationsEditable, setLearnFromConversationsEditable] = useState(true)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
@@ -447,8 +461,25 @@ export default function SettingsPage() {
       if (settings.autoReplyEnabled != null) setAutoReplyEnabled(settings.autoReplyEnabled)
       if (settings.agentCommerceEnabled != null) setAgentCommerceEnabled(settings.agentCommerceEnabled)
       if (settings.agentProactiveEnabled != null) setAgentProactiveEnabled(settings.agentProactiveEnabled)
+      if (settings.agentVoiceReplyEnabled != null) setAgentVoiceReplyEnabled(settings.agentVoiceReplyEnabled)
+      if (settings.agentMorningBriefWhatsappEnabled != null) {
+        setAgentMorningBriefWhatsappEnabled(settings.agentMorningBriefWhatsappEnabled)
+      }
+      if (settings.ownerWhatsappPhone != null) setOwnerWhatsappPhone(settings.ownerWhatsappPhone)
+      if (settings.webWidgetToken != null) setWebWidgetToken(settings.webWidgetToken)
+      if (settings.channelIngestSecret != null) setChannelIngestSecret(settings.channelIngestSecret)
+      if (settings.channelWebhookUrls) setChannelWebhookUrls(settings.channelWebhookUrls)
+      if (settings.widgetScriptUrl) setWidgetScriptUrl(settings.widgetScriptUrl)
+      if (settings.companyId != null) setCompanyIdForEmbed(settings.companyId)
       if (settings.agentBusinessGoals) setAgentBusinessGoals(settings.agentBusinessGoals)
       if (settings.agentBusinessGoalCatalog) setAgentBusinessGoalCatalog(settings.agentBusinessGoalCatalog)
+      if (settings.businessDnaPresets) setBusinessDnaPresets(settings.businessDnaPresets)
+      if (settings.businessDna) setBusinessDna(settings.businessDna)
+      if (settings.businessDnaCustom != null) {
+        setBusinessDnaPreset(settings.businessDnaCustom ? 'custom' : 'industry_default')
+      }
+      if (settings.digitalTwin) setDigitalTwin(settings.digitalTwin)
+      if (settings.agentCouncilEnabled != null) setAgentCouncilEnabled(settings.agentCouncilEnabled)
       if (settings.learnFromConversations != null) setLearnFromConversations(settings.learnFromConversations)
       if (settings.learnFromConversationsEditable != null) {
         setLearnFromConversationsEditable(settings.learnFromConversationsEditable)
@@ -532,6 +563,36 @@ export default function SettingsPage() {
     setAiMessage(result.success ? 'API key settings saved.' : (result.message ?? 'Failed to save API key.'))
   }
 
+  const applyBusinessDnaPreset = (key: 'industry_default' | 'luxury_brand' | 'friendly_cafe' | 'custom') => {
+    setBusinessDnaPreset(key)
+    if (key === 'industry_default') {
+      setBusinessDna({})
+      return
+    }
+    if (key === 'custom') {
+      return
+    }
+    const preset = businessDnaPresets[key]
+    if (preset) {
+      const { label: _l, description: _d, ...dna } = preset
+      setBusinessDna(dna)
+    }
+  }
+
+  const businessDnaPayload = (): BusinessDnaSettings | null => {
+    if (businessDnaPreset === 'industry_default') {
+      return null
+    }
+    return {
+      tone: businessDna.tone?.trim() || undefined,
+      values: businessDna.values?.filter((v) => v.trim() !== '') ?? undefined,
+      risk_tolerance: businessDna.risk_tolerance,
+      service_philosophy: businessDna.service_philosophy?.trim() || undefined,
+      escalation_culture: businessDna.escalation_culture?.trim() || undefined,
+      communication_style: businessDna.communication_style?.trim() || undefined,
+    }
+  }
+
   const handleAiSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setAiMessage(null)
@@ -547,7 +608,13 @@ export default function SettingsPage() {
       autoReplyEnabled,
       agentCommerceEnabled,
       agentProactiveEnabled,
+      agentVoiceReplyEnabled,
+      agentMorningBriefWhatsappEnabled,
+      ownerWhatsappPhone: ownerWhatsappPhone.trim() || null,
       agentBusinessGoals,
+      businessDna: businessDnaPayload(),
+      digitalTwin: Object.keys(digitalTwin).length > 0 ? digitalTwin : null,
+      agentCouncilEnabled,
       learnFromConversations,
       notificationsEnabled,
     })
@@ -1264,15 +1331,30 @@ export default function SettingsPage() {
                     </Field>
                   )}
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-foreground">Agent commerce mode</p>
-                      <p className="text-sm text-muted-foreground">
-                        AI employee with tools (search, orders, memory) instead of keyword routing. Requires OpenAI-compatible provider.
-                      </p>
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-foreground">Agent commerce mode</p>
+                          {agentCommerceEnabled && (
+                            <Badge variant="default" className="text-[10px] uppercase tracking-wide">
+                              ON
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Turns on the AI employee with tools (search products, orders, memory, refunds).
+                          Requires <strong>Auto-reply</strong> enabled and an OpenAI-compatible provider.
+                        </p>
+                      </div>
+                      <Switch checked={agentCommerceEnabled} onCheckedChange={setAgentCommerceEnabled} />
                     </div>
-                    <Switch checked={agentCommerceEnabled} onCheckedChange={setAgentCommerceEnabled} />
-                  </div>
+
+                    {agentCommerceEnabled && !autoReplyEnabled && (
+                      <p className="text-sm text-amber-700 dark:text-amber-400 rounded-md bg-amber-500/10 px-3 py-2">
+                        Enable <strong>Auto-reply</strong> above so the agent can respond on WhatsApp.
+                      </p>
+                    )}
 
                   {agentCommerceEnabled && (
                     <>
@@ -1285,6 +1367,72 @@ export default function SettingsPage() {
                         </div>
                         <Switch checked={agentProactiveEnabled} onCheckedChange={setAgentProactiveEnabled} />
                       </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-foreground">Voice note replies (TTS)</p>
+                          <p className="text-sm text-muted-foreground">
+                            When customers send voice notes, reply with synthesized audio when possible
+                          </p>
+                        </div>
+                        <Switch checked={agentVoiceReplyEnabled} onCheckedChange={setAgentVoiceReplyEnabled} />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-foreground">Morning brief on WhatsApp</p>
+                          <p className="text-sm text-muted-foreground">
+                            Send the daily commerce brief to the owner via WhatsApp at 7:00 AM
+                          </p>
+                        </div>
+                        <Switch
+                          checked={agentMorningBriefWhatsappEnabled}
+                          onCheckedChange={setAgentMorningBriefWhatsappEnabled}
+                        />
+                      </div>
+
+                      {agentMorningBriefWhatsappEnabled && (
+                        <div className="space-y-2 pl-4 border-l-2 border-primary/30">
+                          <Label htmlFor="ownerWhatsappPhone">Owner WhatsApp number</Label>
+                          <Input
+                            id="ownerWhatsappPhone"
+                            value={ownerWhatsappPhone}
+                            onChange={(e) => setOwnerWhatsappPhone(e.target.value)}
+                            placeholder="e.g. 254712345678"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Falls back to company owner profile phone or company phone if empty.
+                          </p>
+                        </div>
+                      )}
+
+                      {webWidgetToken && (
+                        <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+                          <p className="font-medium">Web chat widget</p>
+                          <p className="font-mono break-all text-muted-foreground">Token: {webWidgetToken}</p>
+                          {channelIngestSecret && (
+                            <p className="font-mono break-all text-muted-foreground">
+                              Webhook secret: {channelIngestSecret}
+                            </p>
+                          )}
+                          {channelWebhookUrls && (
+                            <div className="space-y-1 text-muted-foreground">
+                              <p>Email webhook: {channelWebhookUrls.email}</p>
+                              <p>Instagram DM: {channelWebhookUrls.instagramDm}</p>
+                              <p className="text-[11px]">Header: X-Channel-Ingest-Secret</p>
+                            </div>
+                          )}
+                          {widgetScriptUrl && companyIdForEmbed && (
+                            <pre className="overflow-x-auto rounded bg-background p-2 text-[10px] whitespace-pre-wrap">{`<script
+  src="${widgetScriptUrl}"
+  data-company-id="${companyIdForEmbed}"
+  data-widget-token="${webWidgetToken}"
+  data-api-base="${typeof window !== "undefined" ? window.location.origin : ""}"
+  async
+></script>`}</pre>
+                          )}
+                        </div>
+                      )}
 
                       {Object.keys(agentBusinessGoalCatalog).length > 0 && (
                         <Field>
@@ -1314,8 +1462,155 @@ export default function SettingsPage() {
                           </div>
                         </Field>
                       )}
+
+                      <OnboardingInterviewPanel
+                        onComplete={() => {
+                          mutate("company-settings")
+                        }}
+                      />
+
+                      <Field>
+                        <FieldLabel>Business DNA</FieldLabel>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Same question, different voice — a luxury brand and a friendly café should answer differently.
+                        </p>
+                        <Select
+                          value={businessDnaPreset}
+                          onValueChange={(v) =>
+                            applyBusinessDnaPreset(v as 'industry_default' | 'luxury_brand' | 'friendly_cafe' | 'custom')
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a personality" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="industry_default">
+                              Industry default ({industry})
+                            </SelectItem>
+                            {businessDnaPresets.luxury_brand && (
+                              <SelectItem value="luxury_brand">
+                                {businessDnaPresets.luxury_brand.label ?? 'Luxury brand'}
+                              </SelectItem>
+                            )}
+                            {businessDnaPresets.friendly_cafe && (
+                              <SelectItem value="friendly_cafe">
+                                {businessDnaPresets.friendly_cafe.label ?? 'Friendly café'}
+                              </SelectItem>
+                            )}
+                            <SelectItem value="custom">Custom (edit fields below)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {businessDnaPreset !== 'industry_default' && (
+                          <div className="mt-3 space-y-3 rounded-md border bg-background/80 p-3">
+                            {businessDnaPreset === 'luxury_brand' && businessDnaPresets.luxury_brand?.description && (
+                              <p className="text-xs text-muted-foreground">{businessDnaPresets.luxury_brand.description}</p>
+                            )}
+                            {businessDnaPreset === 'friendly_cafe' && businessDnaPresets.friendly_cafe?.description && (
+                              <p className="text-xs text-muted-foreground">{businessDnaPresets.friendly_cafe.description}</p>
+                            )}
+                            <Field>
+                              <FieldLabel>Tone</FieldLabel>
+                              <Input
+                                value={businessDna.tone ?? ''}
+                                onChange={(e) => {
+                                  setBusinessDnaPreset('custom')
+                                  setBusinessDna((d) => ({ ...d, tone: e.target.value }))
+                                }}
+                                placeholder="e.g. luxury and calm"
+                              />
+                            </Field>
+                            <Field>
+                              <FieldLabel>Core values (comma-separated)</FieldLabel>
+                              <Input
+                                value={(businessDna.values ?? []).join(', ')}
+                                onChange={(e) => {
+                                  setBusinessDnaPreset('custom')
+                                  setBusinessDna((d) => ({
+                                    ...d,
+                                    values: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                                  }))
+                                }}
+                                placeholder="quality, discretion, craftsmanship"
+                              />
+                            </Field>
+                            <Field>
+                              <FieldLabel>Risk tolerance</FieldLabel>
+                              <Select
+                                value={businessDna.risk_tolerance ?? 'medium'}
+                                onValueChange={(v) => {
+                                  setBusinessDnaPreset('custom')
+                                  setBusinessDna((d) => ({
+                                    ...d,
+                                    risk_tolerance: v as 'low' | 'medium' | 'high',
+                                  }))
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="low">Low — cautious, escalate early</SelectItem>
+                                  <SelectItem value="medium">Medium — balanced</SelectItem>
+                                  <SelectItem value="high">High — more autonomous offers</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </Field>
+                            <Field>
+                              <FieldLabel>Service philosophy</FieldLabel>
+                              <Textarea
+                                rows={2}
+                                value={businessDna.service_philosophy ?? ''}
+                                onChange={(e) => {
+                                  setBusinessDnaPreset('custom')
+                                  setBusinessDna((d) => ({ ...d, service_philosophy: e.target.value }))
+                                }}
+                              />
+                            </Field>
+                            <Field>
+                              <FieldLabel>Communication style</FieldLabel>
+                              <Textarea
+                                rows={2}
+                                value={businessDna.communication_style ?? ''}
+                                onChange={(e) => {
+                                  setBusinessDnaPreset('custom')
+                                  setBusinessDna((d) => ({ ...d, communication_style: e.target.value }))
+                                }}
+                              />
+                            </Field>
+                          </div>
+                        )}
+                      </Field>
                     </>
                   )}
+                  </div>
+
+                  <Field>
+                    <FieldLabel>Digital twin</FieldLabel>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Mission, brand voice, and strategy — how the agent models your business.
+                    </p>
+                    <div className="space-y-2">
+                      {(['mission', 'brand_voice', 'sales_strategy', 'pricing_rules', 'competitors', 'target_customers'] as const).map((key) => (
+                        <Textarea
+                          key={key}
+                          rows={2}
+                          placeholder={key.replace(/_/g, ' ')}
+                          value={digitalTwin[key] ?? ''}
+                          onChange={(e) => setDigitalTwin((prev) => ({ ...prev, [key]: e.target.value }))}
+                        />
+                      ))}
+                    </div>
+                  </Field>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">Agent council</p>
+                      <p className="text-sm text-muted-foreground">
+                        Enable internal specialist debate before the Chief Agent replies.
+                      </p>
+                    </div>
+                    <Switch checked={agentCouncilEnabled} onCheckedChange={setAgentCouncilEnabled} />
+                  </div>
 
                   <div className="flex items-center justify-between">
                     <div>
