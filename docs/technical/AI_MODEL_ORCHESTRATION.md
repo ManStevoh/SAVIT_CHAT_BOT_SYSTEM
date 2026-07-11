@@ -10,3 +10,9 @@
                     SAVIT Application
                            │
                    AiOrchestrator
+                     chat / reason / vision / embed / transcribe
+                           │
+                      AiGateway
+                           │
+                   AiModelResolver  ← config/ai.php use_cases
+                           │
