@@ -226,3 +226,9 @@ export function LandoHowToJoin({
             </div>
           </div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+export function LandoCtaSection({
