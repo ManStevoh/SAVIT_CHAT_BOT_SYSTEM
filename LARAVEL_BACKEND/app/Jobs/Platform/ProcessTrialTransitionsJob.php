@@ -52,3 +52,4 @@ class ProcessTrialTransitionsJob implements ShouldQueue
             ]);
         }
     }
+}
