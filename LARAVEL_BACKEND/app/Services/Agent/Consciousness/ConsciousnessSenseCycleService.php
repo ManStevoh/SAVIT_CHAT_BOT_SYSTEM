@@ -28,3 +28,9 @@ final class ConsciousnessSenseCycleService
         if (! ($company->settings?->agent_commerce_enabled ?? false)) {
             return ['skipped' => true];
         }
+
+        if (! config('agent.consciousness.sense_enabled', true)) {
+            return ['skipped' => true];
+        }
+
+        $maxAge = (int) config('agent.consciousness.brain_max_age_minutes', 5);
