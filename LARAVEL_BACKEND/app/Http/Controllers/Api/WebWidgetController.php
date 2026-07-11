@@ -112,3 +112,9 @@ class WebWidgetController extends Controller
 
         );
 
+
+
+        return response()->json([
+
+            'chatId' => $result['chatId'],
+
