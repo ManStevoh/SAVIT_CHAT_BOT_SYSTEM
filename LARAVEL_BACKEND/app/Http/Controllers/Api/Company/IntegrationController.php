@@ -106,3 +106,9 @@ class IntegrationController extends Controller
         }
 
         $result = $registry->sync($company, $validated['connectorType'], $integration->config ?? []);
+
+        $integration->update([
+            'last_sync_at' => ($result['success'] ?? false) ? now() : $integration->last_sync_at,
+            'last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? 'Sync failed'),
+            'status' => ($result['success'] ?? false) ? 'active' : 'error',
+        ]);
