@@ -238,3 +238,9 @@ export function LandoCtaSection({
   ctaHref,
   imageUrl,
   imageAlt = "",
+  showImage = true,
+}: {
+  title: string
+  description?: string
+  ctaText?: string
+  ctaHref?: string
