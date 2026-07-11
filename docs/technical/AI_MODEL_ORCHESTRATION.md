@@ -34,3 +34,9 @@
 | **Customer chat** (WhatsApp, proactive) | `chat` | **gpt-4o-mini** | Company can pick model in Settings |
 | **Fast chat** (thanks, hi, ok) | `fast_chat` | **gpt-4o-mini** | Auto-selected for trivial messages |
 | **Vision / OCR** (product photos, receipts) | `vision` | **gpt-4o** | Same slot handles multimodal OCR |
+| **Speech-to-text** (voice notes) | `stt` | **whisper-1** | Logged + billed via gateway |
+| **Text-to-speech** | `tts` | **tts-1** | Stub slot — not wired to WhatsApp yet |
+| **Embeddings** (FAQ, products, knowledge) | `embedding` | **text-embedding-3-small** | pgvector/Pinecone at very large scale |
+| **Marketing images** | `image` | **gemini-2.5-flash-image** | Gemini native image API |
+| **Intent detection** | `fast_chat` (optional LLM) | Rules first, fast LLM fallback | Dedicated classifier model later |
+| **Entity extraction** | `fast_chat` (optional LLM) | Rules + LLM for complex orders | — |
