@@ -40,3 +40,8 @@ export function LegalCmsPage({ slug, fallbackTitle, fallbackBody }: LegalCmsPage
           <div dangerouslySetInnerHTML={{ __html: content.body as string }} />
         ) : (
           fallbackBody
+        )}
+      </LegalLayout>
+    </>
+  )
+}
