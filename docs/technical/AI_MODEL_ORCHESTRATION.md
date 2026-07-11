@@ -76,3 +76,9 @@ $orchestrator->completeWithTools($messages, $tools, $company, chatId: $chatId);
 $orchestrator->vision($company, $imageUrl, $instruction, chatId: $chatId);
 
 // Embeddings
+$orchestrator->embed($text, $company);
+
+// Voice note → text
+$orchestrator->transcribe($filePath, $filename, $company);
+
+// Intent + entities (rules first)
