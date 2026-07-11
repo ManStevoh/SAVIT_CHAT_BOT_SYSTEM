@@ -52,3 +52,9 @@ class ApiPlatformController extends Controller
             'plainText' => $result['plain_text'],
             'message' => 'Store this key securely — it will not be shown again.',
         ], 201);
+    }
+
+    public function revokeApiKey(Request $request, int $id, ApiKeyService $apiKeys): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company || $request->user()->role !== 'company_owner') {
