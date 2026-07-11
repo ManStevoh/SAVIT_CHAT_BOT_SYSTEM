@@ -100,3 +100,9 @@ final class ConnectorRegistry
 
                 'category' => 'logistics',
 
+                'status_label' => 'Adapter v1 — delivery quote API',
+
+                'description' => 'Sendy-compatible delivery quote endpoint (api_url + api_key).',
+
+            ],
+
