@@ -130,3 +130,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                   {popularBadge}
                 </span>
               )}
+              <h3 className="text-xl font-bold text-black">{plan.name}</h3>
+              <p className="mt-4 text-4xl font-bold text-black">{plan.price}</p>
+              <p className="mt-2 text-sm text-gray-600">{plan.description}</p>
+              <ul className="mt-6 space-y-3">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
