@@ -4,3 +4,9 @@
 
 Phase 2 extends existing subscription, billing, and notification plumbing without replacing Stripe/M-Pesa/Paystack checkout flows.
 
+---
+
+## What shipped
+
+### 2a — Subscription entitlements
+
