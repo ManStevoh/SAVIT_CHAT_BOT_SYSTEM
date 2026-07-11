@@ -16,3 +16,9 @@ class BusinessGraphEdge extends Model
     ];
 
     protected function casts(): array
+    {
+        return ['metadata' => 'array'];
+    }
+
+    public function fromNode(): BelongsTo
+    {
