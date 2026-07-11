@@ -226,3 +226,9 @@ final class ConnectorRegistry
 
      * @return array{success: bool, message?: string}
 
+     */
+
+    private function connectShipping(array $config): array
+
+    {
+
