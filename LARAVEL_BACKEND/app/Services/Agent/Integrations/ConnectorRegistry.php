@@ -190,3 +190,9 @@ final class ConnectorRegistry
 
      * @return array{success: bool, message?: string}
 
+     */
+
+    public function sync(Company $company, string $type, array $config): array
+
+    {
+
