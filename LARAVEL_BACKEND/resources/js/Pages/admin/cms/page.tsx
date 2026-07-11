@@ -610,3 +610,9 @@ function PageEditor({ slug }: { slug: string }) {
 export default function AdminCmsPage() {
   const [activeSlug, setActiveSlug] = useState("home")
 
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <Layout className="h-6 w-6" />
+          Website CMS
