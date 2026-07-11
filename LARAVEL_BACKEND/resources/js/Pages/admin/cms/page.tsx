@@ -52,3 +52,9 @@ function Field({
 }
 
 function ImageField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
