@@ -112,3 +112,9 @@ GET    /api/company/api-platform/billing-history
 ```
 
 ### API v1 (API key)
+
+```
+Authorization: Bearer savit_...
+GET /api/v1/company/health
+GET /api/v1/company/orders
+```
