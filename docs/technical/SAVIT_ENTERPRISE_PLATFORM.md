@@ -460,3 +460,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 **Evidence:** `CommerceEventDetector` + `commerce_agent_events` — **commerce-agent domain only**, not platform-wide. Laravel queues used ad hoc.
 
 **Build spec**
+
+```
+domain_events               — event_name, payload, company_id, correlation_id
+event_subscriptions         — handler class or webhook target
+event_outbox                — transactional outbox pattern for reliability
+```
