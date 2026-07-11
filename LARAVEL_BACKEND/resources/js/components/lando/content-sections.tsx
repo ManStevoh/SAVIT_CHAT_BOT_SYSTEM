@@ -274,3 +274,9 @@ export function LandoMission({ title, description }: { title: string; descriptio
 
 export function LandoEfficiency({ title }: { title: string }) {
   const lines = title.split("\n")
+  return (
+    <section className="bg-[#f3f4f6] py-20 lg:py-28">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <h2 className="text-4xl font-bold leading-tight text-black sm:text-5xl lg:text-6xl">
+          {lines.map((line, i) => (
+            <span key={i} className="block">
