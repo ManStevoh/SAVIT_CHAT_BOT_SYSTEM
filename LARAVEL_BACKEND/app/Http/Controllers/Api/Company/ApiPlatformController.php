@@ -94,3 +94,9 @@ class ApiPlatformController extends Controller
 
         $endpoint = $webhooks->createEndpoint($company, $validated['url'], $validated['events']);
 
+        return response()->json(['webhook' => $endpoint], 201);
+    }
+
+    public function billingHistory(Request $request): JsonResponse
+    {
+        $company = $request->user()->company;
