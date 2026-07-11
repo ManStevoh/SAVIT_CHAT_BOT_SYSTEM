@@ -532,3 +532,9 @@ event_outbox                — transactional outbox pattern for reliability
 | Status | **Roadmap** (architecture stage) |
 
 The AI stack (Phases 1–5) is the **AI Services** pillar. This blueprint defines the **Business Apps** and **Platform** pillars required for a full ecosystem.
+
+---
+
+## Cross-cutting engineering standards
+
+All new modules must meet these **global SaaS standards** before marking **Implemented**:
