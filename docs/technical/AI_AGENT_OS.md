@@ -291,11 +291,12 @@ php artisan test --filter=WhatsApp
 
 ### Manual smoke
 
-1. Enable Agent commerce mode  
-2. Send WhatsApp message  
-3. Confirm `messages.reply_source` is `agent_cognitive*`  
-4. Confirm rows in `agent_tool_invocations` when tools were used  
-5. Enable proactive; age a pending order >24h; run proactive job  
+1. Dashboard → **Settings → AI** → enable **Auto-reply** and **Agent commerce mode ON**
+2. Optional: **Business DNA** → Luxury brand or Friendly café preset
+3. Send WhatsApp message  
+4. Confirm `messages.reply_source` is `agent_cognitive*`  
+5. Confirm rows in `agent_tool_invocations` when tools were used  
+6. Enable proactive; age a pending order >24h; run proactive job  
 
 ---
 
