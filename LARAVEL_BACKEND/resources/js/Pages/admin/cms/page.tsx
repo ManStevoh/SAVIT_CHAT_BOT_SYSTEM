@@ -538,3 +538,9 @@ function SortableSectionList({
           />
         </div>
       ))}
+    </div>
+  )
+}
+
+function PageEditor({ slug }: { slug: string }) {
+  const { data, isLoading, mutate } = useAdminCmsPage(slug)
