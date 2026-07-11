@@ -598,3 +598,9 @@ function PageEditor({ slug }: { slug: string }) {
 
       <div className="space-y-3">
         <h3 className="text-sm font-semibold">Sections</h3>
+        <p className="text-xs text-muted-foreground">
+          Drag sections to reorder. Toggle on/off and edit content below.
+        </p>
+        <SortableSectionList slug={slug} sections={sections} onSaved={() => mutate()} />
+      </div>
+    </div>
