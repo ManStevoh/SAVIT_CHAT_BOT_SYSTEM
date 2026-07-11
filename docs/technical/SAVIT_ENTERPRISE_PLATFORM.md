@@ -286,3 +286,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 ---
 
 ### 12. Customer Portal
+
+**Vision:** Customers log in — track orders, invoices, tickets, subscriptions, downloads, loyalty.
+
+| Status | **Roadmap** |
+
+**Evidence:** Customers use WhatsApp only. Signed receipt URLs are the only self-service artifact.
