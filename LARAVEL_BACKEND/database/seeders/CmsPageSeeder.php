@@ -328,3 +328,9 @@ class CmsPageSeeder extends Seeder
                 ],
             ],
             [
+                'slug' => 'contact',
+                'title' => 'Contact',
+                'meta_title' => 'Contact — Essem Chat',
+                'meta_description' => 'Get in touch with the Essem Chat team. We would love to hear from you.',
+                'sections' => [
+                    [
