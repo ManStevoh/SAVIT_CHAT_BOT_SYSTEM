@@ -466,3 +466,9 @@ domain_events               — event_name, payload, company_id, correlation_id
 event_subscriptions         — handler class or webhook target
 event_outbox                — transactional outbox pattern for reliability
 ```
+
+- **Standards:** CloudEvents 1.0 envelope; idempotent consumers; dead-letter queue.
+
+---
+
+### 30. Developer Platform / Marketplace
