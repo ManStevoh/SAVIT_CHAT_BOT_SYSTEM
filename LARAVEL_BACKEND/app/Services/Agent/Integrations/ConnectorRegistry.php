@@ -430,3 +430,9 @@ final class ConnectorRegistry
 
             return [
 
+                'success' => $response->successful(),
+
+                'message' => $response->successful() ? 'Webhook reachable.' : 'Webhook returned HTTP '.$response->status(),
+
+            ];
+
