@@ -364,3 +364,9 @@ final class ConnectorRegistry
 
         if ($url === '') {
 
+            return ['success' => false, 'message' => 'inventory_url not configured.'];
+
+        }
+
+
+
