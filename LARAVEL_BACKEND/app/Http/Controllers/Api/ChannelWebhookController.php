@@ -124,3 +124,9 @@ class ChannelWebhookController extends Controller
                     syncReply: false,
                 );
                 $processed++;
+            }
+        }
+
+        return response()->json(['accepted' => true, 'processed' => $processed], 200);
+    }
+
