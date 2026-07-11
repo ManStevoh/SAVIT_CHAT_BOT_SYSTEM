@@ -34,3 +34,9 @@ class IntelligenceController extends Controller
 {
 
     public function reason(Request $request, IntelligenceReasoningService $intelligence): JsonResponse
+
+    {
+
+        $company = $request->user()->company;
+
+        if (! $company) {
