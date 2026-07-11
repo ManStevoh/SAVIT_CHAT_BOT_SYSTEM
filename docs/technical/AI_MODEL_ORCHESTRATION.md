@@ -106,3 +106,9 @@ Routing map API: `GET /api/admin/ai-config/orchestration`
 ---
 
 ## Agent tool loop constraint
+
+Commerce agent **tool calling** still requires an **OpenAI-compatible** provider (`OpenAiDriver`). Anthropic/Gemini chat works for plain completions; tool loop fallback message is returned otherwise.
+
+---
+
+## Remaining honest gaps
