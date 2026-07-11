@@ -340,3 +340,9 @@ final class ConnectorRegistry
 
         }
 
+
+
+        return ['success' => true, 'message' => 'ERP connector registered — use sync to pull inventory.'];
+
+    }
+
