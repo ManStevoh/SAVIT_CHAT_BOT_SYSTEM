@@ -10,3 +10,9 @@ export function LinkListEditor({
   onChange,
 }: {
   label: string
+  links: CmsLink[]
+  onChange: (links: CmsLink[]) => void
+}) {
+  const update = (index: number, field: keyof CmsLink, value: string) => {
+    const next = [...links]
+    next[index] = { ...next[index], [field]: value }
