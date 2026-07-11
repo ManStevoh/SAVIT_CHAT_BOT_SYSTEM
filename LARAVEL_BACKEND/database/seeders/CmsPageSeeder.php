@@ -280,3 +280,9 @@ class CmsPageSeeder extends Seeder
                             'description' => 'We offer a revolutionary solution for WhatsApp sales. Join the Essem Chat community and experience the benefits of commerce automation today!',
                             'imageUrl' => $aboutTeamImage,
                             'imageAlt' => 'Our team',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'mission',
+                        'label' => 'Mission',
+                        'sort_order' => 2,
