@@ -424,3 +424,9 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => $sectionData['sort_order'],
                         'content' => $sectionData['content'],
                     ]
+                );
+            }
+        }
+
+        if (Testimonial::count() === 0) {
+            $samples = [
