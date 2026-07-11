@@ -28,3 +28,9 @@ This document maps **every operational platform module** in the SAVIT vision to 
 | **Partial** | Adjacent capability exists; missing core engine or enterprise depth |
 | **Roadmap** | Designed direction; no production implementation |
 
+---
+
+## Executive summary
+
+| Category | Modules | Implemented | Partial | Roadmap |
+|----------|---------|-------------|---------|---------|
