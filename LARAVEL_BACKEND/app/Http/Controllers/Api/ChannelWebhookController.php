@@ -76,3 +76,9 @@ class ChannelWebhookController extends Controller
         }
 
         $body = $request->all();
+        if (isset($body['entry'])) {
+            return $this->processMetaInstagramPayload($body, $company, $dispatcher);
+        }
+
+        $validated = $request->validate([
+            'senderId' => 'required|string|max:120',
