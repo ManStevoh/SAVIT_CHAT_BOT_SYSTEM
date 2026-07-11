@@ -226,3 +226,9 @@ function SectionEditor({
           <Field
             label="Companies (one per line)"
             value={((content.companies as Array<{ name: string }>) ?? []).map((c) => c.name).join("\n")}
+            onChange={(v) =>
+              set(
+                "companies",
+                v.split("\n").filter(Boolean).map((name) => ({ name: name.trim(), logoUrl: "" }))
+              )
+            }
