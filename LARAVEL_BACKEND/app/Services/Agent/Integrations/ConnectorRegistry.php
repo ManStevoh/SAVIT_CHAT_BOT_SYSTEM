@@ -202,3 +202,9 @@ final class ConnectorRegistry
 
                 'event' => 'sync_ping',
 
+                'company_id' => $company->id,
+
+            ]),
+
+            'erp_inventory' => $this->pullErpInventory($config),
+
