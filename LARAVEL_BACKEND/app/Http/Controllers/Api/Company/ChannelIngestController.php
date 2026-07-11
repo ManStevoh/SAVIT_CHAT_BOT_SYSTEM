@@ -64,3 +64,9 @@ class ChannelIngestController extends Controller
                 'scriptUrl' => $baseUrl.'/widget/savit-chat.js',
                 'configUrl' => $baseUrl.'/api/public/web-widget/config',
                 'messageUrl' => $baseUrl.'/api/public/web-widget/message',
+            ],
+        ]);
+    }
+
+    public function regenerateTokens(Request $request): JsonResponse
+    {
