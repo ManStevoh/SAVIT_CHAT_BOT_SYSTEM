@@ -16,3 +16,9 @@ final class ChannelReplyDispatcher
     ) {}
 
     /**
+     * @return array{chatId: int, messageId: int, reply: ?string, queued: bool}
+     */
+    public function ingestAndReply(
+        Company $company,
+        string $channel,
+        string $channelUserId,
