@@ -106,3 +106,9 @@ function SectionEditor({
   dragHandle?: React.ReactNode
 }) {
   const { toast } = useToast()
+  const [open, setOpen] = useState(false)
+  const [enabled, setEnabled] = useState(section.isEnabled)
+  const [content, setContent] = useState<Record<string, unknown>>(section.content ?? {})
+  const [saving, setSaving] = useState(false)
+
+  const set = (key: string, value: unknown) => setContent((c) => ({ ...c, [key]: value }))
