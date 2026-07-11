@@ -34,3 +34,9 @@ final class OwnerMorningBriefPushService
         $brief ??= CommerceBrief::query()
             ->where('company_id', $company->id)
             ->whereDate('brief_date', now()->toDateString())
+            ->first();
+
+        if (! $brief || $brief->pushed_to_owner_at !== null) {
+            return false;
+        }
+
