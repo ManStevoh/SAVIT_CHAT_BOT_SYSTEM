@@ -448,3 +448,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 **Evidence:** `working_hours` on `CompanySetting`; `CalendarAvailabilityService` for agent tool. No events CRUD or calendar UI/API.
 
 **Build spec:** `calendar_events` polymorphic source; iCal feed; conflict detection; timezone per company.
+
+---
+
+### 29. Event Bus
+
+**Vision:** Every action creates an event → inventory, payment, notification, analytics, webhook, automation.
