@@ -76,3 +76,6 @@ final class ConsciousnessSenseCycleService
             ]);
 
             return ['failed' => true];
+        }
+    }
+}
