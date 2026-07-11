@@ -94,3 +94,9 @@ final class BusinessGraphV2Service
                 );
                 $stats['nodes']++;
             });
+
+        Order::query()
+            ->where('company_id', $company->id)
+            ->where('payment_status', 'paid')
+            ->orderByDesc('created_at')
+            ->limit(100)
