@@ -10,3 +10,5 @@ At C:\Users\Admin\AppData\Local\Temp\ps-script-7675e5e0-11ab-40cc-b210-f0c83fff3
 At C:\SAVIT_CHAT_BOT\scripts\bulk-granular-commit.ps1:38 char:5
 +     Remove-Item -LiteralPath $FilePath -Force
 +     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : WriteError: (C:\SAVIT_CHAT_BOT\debug.log:FileInfo) [Remove-Item], IOException
+    + FullyQualifiedErrorId : RemoveFileSystemItemIOError,Microsoft.PowerShell.Commands.RemoveItemCommand
