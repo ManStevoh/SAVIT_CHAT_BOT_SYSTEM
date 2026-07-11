@@ -28,3 +28,9 @@
 
 ## Which model for which job
 
+| Job | Capability slot | Platform default | When to upgrade |
+|-----|-----------------|------------------|-----------------|
+| **Deep reasoning** (agent tools, planning, reflection) | `reasoning` | **gpt-4o** | Claude 3.5 Sonnet for long workflows |
+| **Customer chat** (WhatsApp, proactive) | `chat` | **gpt-4o-mini** | Company can pick model in Settings |
+| **Fast chat** (thanks, hi, ok) | `fast_chat` | **gpt-4o-mini** | Auto-selected for trivial messages |
+| **Vision / OCR** (product photos, receipts) | `vision` | **gpt-4o** | Same slot handles multimodal OCR |
