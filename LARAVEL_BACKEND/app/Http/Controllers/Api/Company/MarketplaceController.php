@@ -40,3 +40,9 @@ class MarketplaceController extends Controller
             $installation = $marketplace->install(
                 $company,
                 $moduleKey,
+                $validated['config'] ?? [],
+            );
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
