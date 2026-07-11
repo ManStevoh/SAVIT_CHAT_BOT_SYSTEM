@@ -322,3 +322,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 **Vision:** Routes, drivers, vehicles, GPS, proof of delivery, photos, signatures, fuel, maintenance.
 
 | Status | **Partial** |
+
+**Evidence:** `delivery_address` on orders; `CheckDeliveryStatusTool`; `CommerceEventDetector::detectDeliveryDelays`. No fleet, routes, or POD.
+
+---
+
+### 8. Asset Management
