@@ -148,3 +148,9 @@ class IntelligenceController extends Controller
             'investigation' => $detail['investigation'],
 
         ]);
+
+    }
+
+
+
+    public function recordOutcome(Request $request, IntelligenceOutcomeService $outcomes): JsonResponse
