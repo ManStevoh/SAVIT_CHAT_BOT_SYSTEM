@@ -244,3 +244,9 @@ export function LandoCtaSection({
   description?: string
   ctaText?: string
   ctaHref?: string
+  imageUrl?: string
+  imageAlt?: string
+  showImage?: boolean
+}) {
+  return (
+    <section className="bg-[#f3f4f6] py-12 lg:py-16">
