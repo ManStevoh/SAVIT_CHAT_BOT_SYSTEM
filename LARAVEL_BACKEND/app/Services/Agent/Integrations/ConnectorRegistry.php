@@ -466,3 +466,9 @@ final class ConnectorRegistry
 
         if ($url === '') {
 
+            return ['success' => false, 'message' => 'api_url not configured.'];
+
+        }
+
+
+
