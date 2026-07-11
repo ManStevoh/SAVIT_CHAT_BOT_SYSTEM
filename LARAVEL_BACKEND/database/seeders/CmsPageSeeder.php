@@ -448,3 +448,9 @@ class CmsPageSeeder extends Seeder
             $faqs = [
                 ['question' => 'How does WhatsApp commerce work?', 'answer' => 'Connect your WhatsApp Business number, add products and FAQs, and our AI handles customer replies, orders, and payments in the chat.'],
                 ['question' => 'What payment methods are supported?', 'answer' => 'M-Pesa STK push and Stripe card payments are built into the conversation — customers pay without leaving WhatsApp.'],
+                ['question' => 'Is there a free trial?', 'answer' => 'Yes. Every plan includes a 14-day free trial so you can test with real customers before committing.'],
+                ['question' => 'Can my team take over conversations?', 'answer' => 'Absolutely. Agents can jump into any thread from the team inbox. The AI pauses until you hand the chat back.'],
+                ['question' => 'Can I have custom pricing?', 'answer' => 'Enterprise plans support custom pricing, dedicated support, and on-premise deployment. Contact us to discuss your needs.'],
+                ['question' => 'Where do I sign up?', 'answer' => 'Click Sign up in the navigation bar or visit /register to create your account and start your free trial.'],
+            ];
+            foreach ($faqs as $i => $faq) {
