@@ -220,3 +220,9 @@ export function LandoFaqSection({
 
   return (
     <section className="bg-[#f3f4f6] py-16 lg:py-24">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <h2 className="text-center text-3xl font-bold text-black sm:text-4xl">{title}</h2>
+        <Accordion type="single" collapsible className="mt-10">
+          {faqs.map((faq) => (
+            <AccordionItem key={faq.id} value={faq.id} className="border-gray-300">
+              <AccordionTrigger className="text-left font-medium text-black hover:no-underline">
