@@ -136,3 +136,9 @@ partner_accounts            — reseller markup, commission, white-label scope
 
 1. No single payment ledger — cannot reconcile platform revenue across gateways.
 2. Refunds are status flags, not financial events.
+3. No PDF invoice generation for local billing.
+4. M-Pesa/Paystack subscriptions lack invoice history.
+
+**Build spec**
+
+```
