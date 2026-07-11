@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Route;
 
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');
+Route::get('/pricing', [PageController::class, 'pricing'])->name('pricing');
+Route::get('/about', [PageController::class, 'about'])->name('about');
+Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 Route::get('/privacy', [PageController::class, 'privacy'])->name('privacy');
 Route::get('/terms', [PageController::class, 'terms'])->name('terms');
 Route::get('/order-paid', [PageController::class, 'orderPaid'])->name('order-paid');
@@ -46,6 +49,7 @@ Route::get('/admin/ai-learning', [PageController::class, 'adminAiLearning'])->na
 Route::get('/admin/ai-models', [PageController::class, 'adminAiModels'])->name('admin.ai-models');
 Route::get('/admin/companies', [PageController::class, 'adminCompanies'])->name('admin.companies');
 Route::get('/admin/growth', [PageController::class, 'adminGrowth'])->name('admin.growth');
+Route::get('/admin/cms', [PageController::class, 'adminCms'])->name('admin.cms');
 Route::get('/admin/landing-faqs', [PageController::class, 'adminLandingFaqs'])->name('admin.landing-faqs');
 Route::get('/admin/logs', [PageController::class, 'adminLogs'])->name('admin.logs');
 Route::get('/admin/payment-gateways', [PageController::class, 'adminPaymentGateways'])->name('admin.payment-gateways');
