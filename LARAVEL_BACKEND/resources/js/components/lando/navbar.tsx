@@ -94,3 +94,9 @@ export function LandoNavbar({
                   "block rounded-lg px-3 py-2 text-sm font-medium",
                   isActive ? "bg-white text-[#2563eb]" : "text-black hover:bg-white/70"
                 )}
+              >
+                {link.label}
+              </Link>
+            )
+          })}
+          <div className="mt-3 flex flex-col gap-2 border-t border-gray-200 pt-3">
