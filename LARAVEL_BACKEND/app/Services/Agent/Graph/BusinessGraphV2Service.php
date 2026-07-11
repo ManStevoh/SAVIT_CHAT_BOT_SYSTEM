@@ -118,3 +118,9 @@ final class BusinessGraphV2Service
                         $company,
                         BusinessGraphNode::TYPE_CUSTOMER,
                         'customer_phone',
+                        crc32($phone) & 0x7FFFFFFF,
+                        $phone,
+                    );
+                    $stats['nodes']++;
+                    if ($this->link($company, $customerNode->id, $orderNode->id, 'placed_order')) {
+                        $stats['edges']++;
