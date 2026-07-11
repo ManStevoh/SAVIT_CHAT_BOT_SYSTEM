@@ -64,3 +64,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 | **Owner dashboards** | `/dashboard/executive`, `/dashboard/cognitive` |
 | Agent commerce + DNA | Settings → AI → Agent commerce ON + Business DNA |
 
+---
+
+## Still roadmap (do not oversell)
+
+| Gap | Levels | Notes |
+|-----|--------|-------|
