@@ -88,3 +88,9 @@ final class BusinessProbabilityService
             'company_id' => $companyId,
             'customer_phone' => $phone,
             'score_type' => $type,
+            'probability' => $probability,
+            'factors' => $factors,
+            'computed_at' => now(),
+        ]);
+    }
+
