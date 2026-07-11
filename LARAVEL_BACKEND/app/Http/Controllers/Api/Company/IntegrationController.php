@@ -34,3 +34,9 @@ class IntegrationController extends Controller
     }
 
     public function connect(Request $request, ConnectorRegistry $registry): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company || $request->user()->role !== 'company_owner') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
