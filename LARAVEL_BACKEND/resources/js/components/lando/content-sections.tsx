@@ -370,3 +370,9 @@ export function LandoContactSection({
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ name, email, message }),
+      })
+      if (res.ok) {
+        setSent(true)
+        setName("")
+        setEmail("")
+        setMessage("")
