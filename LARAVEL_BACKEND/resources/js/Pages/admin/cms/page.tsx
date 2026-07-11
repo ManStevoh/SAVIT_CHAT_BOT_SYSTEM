@@ -580,3 +580,9 @@ function PageEditor({ slug }: { slug: string }) {
           </CardHeader>
           <CardContent className="space-y-3">
             <Field label="Meta title" value={metaTitle} onChange={setMetaTitle} />
+            <Field label="Meta description" value={metaDescription} onChange={setMetaDescription} multiline />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveMeta}>
+                Save SEO
+              </Button>
+              <Button size="sm" variant="outline" asChild>
