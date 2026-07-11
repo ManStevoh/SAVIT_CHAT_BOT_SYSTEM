@@ -226,3 +226,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Compare features',
                         'sort_order' => 3,
                         'content' => [
+                            'title' => 'Compare Features',
+                            'columns' => [
+                                [
+                                    'name' => 'Starter',
+                                    'features' => ['AI replies', 'Order management', 'M-Pesa payments', '1 WhatsApp number', 'Email support'],
+                                ],
