@@ -106,3 +106,9 @@ class WebWidgetController extends Controller
 
             $validated['message'],
 
+            $validated['name'] ?? 'Web visitor',
+
+            syncReply: true,
+
+        );
+
