@@ -172,3 +172,9 @@ revenue_snapshots           — daily MRR/ARR/churn aggregates (materialized)
 | Rules / templates | **Partial** | Blade/email strings inline; admin notify toggles **stored but unused** |
 | Scheduling | **Partial** | `subscription:expiry-reminders` cron only |
 
+**Critical gaps**
+
+1. No `NotificationDispatcher` — channels called ad hoc from jobs/controllers.
+2. No user preference matrix (per channel, per event type).
+3. Admin `notify_*` flags in `PlatformSetting` never trigger sends.
+
