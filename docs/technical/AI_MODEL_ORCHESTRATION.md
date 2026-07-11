@@ -46,3 +46,9 @@
 | Problem | Handler |
 |---------|---------|
 | Tax calculation | Business rules |
+| M-Pesa verification | API integration |
+| Inventory counts | Database |
+| Route optimization | Algorithm |
+| Fraud scoring | ML classifier (roadmap) |
+| Sales forecasting | `ForecastService` (heuristics today) |
+| Product recommendations | Recommendation engine (roadmap) |
