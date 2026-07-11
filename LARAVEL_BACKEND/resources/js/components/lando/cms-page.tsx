@@ -76,3 +76,7 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
           socialLinks={(footerContent.socialLinks as CmsLink[]) ?? []}
           legalLinks={(footerContent.legalLinks as CmsLink[]) ?? []}
         />
+      </div>
+    </>
+  )
+}
