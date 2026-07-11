@@ -10,3 +10,9 @@ use Illuminate\Support\Str;
 
 /**
  * Ingest messages from non-WhatsApp channels into the unified Chat + agent brain.
+ */
+final class MultiChannelIngestService
+{
+    /**
+     * @return array{chat: Chat, message: Message, queued: bool}
+     */
