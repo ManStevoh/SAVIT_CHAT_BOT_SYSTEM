@@ -22,3 +22,9 @@
     (gpt-4o)          (gpt-4o-mini)      (gpt-4o / whisper)
          │                 │                 │
               OpenAI · Anthropic · Google Gemini
+```
+
+---
+
+## Which model for which job
+
