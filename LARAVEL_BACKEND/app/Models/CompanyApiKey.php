@@ -28,3 +28,7 @@ class CompanyApiKey extends Model
     }
 
     public function isActive(): bool
+    {
+        return $this->revoked_at === null;
+    }
+}
