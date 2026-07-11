@@ -22,3 +22,9 @@ class MarketplaceModule extends Model
         'sort_order',
     ];
 
+    protected $casts = [
+        'tools' => 'array',
+        'manifest' => 'array',
+        'is_active' => 'boolean',
+    ];
+
