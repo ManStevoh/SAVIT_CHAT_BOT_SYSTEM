@@ -34,3 +34,9 @@ final class MultiChannelIngestService
 
         $chat = Chat::query()
             ->where('company_id', $company->id)
+            ->where('channel', $channel)
+            ->where('channel_user_id', $channelUserId)
+            ->first();
+
+        if (! $chat) {
+            $chat = Chat::create([
