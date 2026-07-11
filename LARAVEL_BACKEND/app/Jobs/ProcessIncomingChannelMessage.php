@@ -40,3 +40,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
 
         if (! ($company->settings?->auto_reply_enabled ?? false)) {
             return;
+        }
+
+        $reply = app(CommerceAgentReplyService::class)->generate(
+            $company,
+            $chat,
+            $this->customerPhone ?? $chat->customer_phone,
