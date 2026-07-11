@@ -292,3 +292,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 | Status | **Roadmap** |
 
 **Evidence:** Customers use WhatsApp only. Signed receipt URLs are the only self-service artifact.
+
+**Build spec:** Separate Sanctum guard `customer`; portal subdomain optional; SSO magic links via WhatsApp.
+
+---
+
+### 4. Employee Portal
