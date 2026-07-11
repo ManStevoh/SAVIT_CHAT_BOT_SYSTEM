@@ -28,3 +28,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 ## Content & collaboration
 
 | # | Module | Status | Top gap |
+|---|--------|--------|---------|
+| 5 | Form Builder | ⬜ | No dynamic forms |
+| 6 | Document Builder | 🟡 | Order receipt only; no quotations/contracts/POs |
+| 7 | Internal Chat | ⬜ | Chats are customer WhatsApp only |
+| 8 | Company Wiki | 🟡 | FAQ + chunks; no wiki pages/videos |
+| 0 | Project Management | ⬜ | No tasks/kanban |
