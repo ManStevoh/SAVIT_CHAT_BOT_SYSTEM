@@ -64,3 +64,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
             title={str(content.title)}
             description={str(content.description)}
             imageUrl={str(content.imageUrl)}
+            imageAlt={str(content.imageAlt)}
+          />
+        )
+      }
+      if (pageSlug === "pricing") {
+        return <LandoPageHero title={str(content.title)} description={str(content.description)} />
