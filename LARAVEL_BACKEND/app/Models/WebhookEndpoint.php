@@ -10,3 +10,9 @@ class WebhookEndpoint extends Model
 {
     protected $fillable = [
         'company_id', 'url', 'secret', 'events', 'is_active',
+    ];
+
+    protected $casts = [
+        'events' => 'array',
+        'is_active' => 'boolean',
+    ];
