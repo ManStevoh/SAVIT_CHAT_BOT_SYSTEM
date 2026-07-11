@@ -262,3 +262,9 @@ export function LandoCtaSection({
                 </Button>
               )}
             </div>
+            {showImage && imageUrl && (
+              <img src={imageUrl} alt={imageAlt} className="mx-auto max-h-64 w-full object-contain" />
+            )}
+          </div>
+        </div>
+      </div>
