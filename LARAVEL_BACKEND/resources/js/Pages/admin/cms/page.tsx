@@ -550,3 +550,9 @@ function PageEditor({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (data) {
+      setMetaTitle(data.page.metaTitle ?? "")
+      setMetaDescription(data.page.metaDescription ?? "")
+    }
+  }, [data?.page.id, data?.page.metaTitle, data?.page.metaDescription])
+
+  const saveMeta = async () => {
