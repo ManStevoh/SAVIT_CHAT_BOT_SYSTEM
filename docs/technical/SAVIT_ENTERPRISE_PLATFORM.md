@@ -580,3 +580,9 @@ Aligned with your sequence — **foundation before portals**:
 ```text
 Phase 1 — Core Commerce          ✅ LARGELY COMPLETE
   Multi-tenant, WhatsApp, catalog, orders, payments, CRM-lite, AI agent
+
+Phase 2 — Operations             🟡 v1 SHIPPED (2026-07-11)
+  ├── 2a Subscription Engine     ✅ entitlements DB, usage meters, trial job
+  ├── 2b Billing Engine          ✅ billing_payments ledger (Stripe/M-Pesa)
+  ├── 2c Notification Center     ✅ templates + dispatcher + delivery log
+  ├── 2d Permission Engine       ✅ policy rules CRUD + approval ABAC
