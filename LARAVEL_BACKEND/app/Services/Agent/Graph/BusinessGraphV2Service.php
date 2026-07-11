@@ -184,3 +184,9 @@ final class BusinessGraphV2Service
                 'metadata' => $n->metadata,
             ])->all(),
             'edges' => $edges->map(fn (BusinessGraphEdge $e) => [
+                'from' => $e->from_node_id,
+                'to' => $e->to_node_id,
+                'type' => $e->edge_type,
+            ])->all(),
+        ];
+    }
