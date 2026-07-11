@@ -88,3 +88,9 @@ class IntelligenceController extends Controller
 
 
     public function cases(Request $request): JsonResponse
+
+    {
+
+        $company = $request->user()->company;
+
+        if (! $company) {
