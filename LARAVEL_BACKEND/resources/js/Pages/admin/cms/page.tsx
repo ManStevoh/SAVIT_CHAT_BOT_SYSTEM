@@ -190,3 +190,9 @@ function SectionEditor({
       return (
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          <Field label="Submit button text" value={str("submitText")} onChange={(v) => set("submitText", v)} />
+          <Field label="Success message" value={str("successMessage")} onChange={(v) => set("successMessage", v)} />
+        </div>
+      )
