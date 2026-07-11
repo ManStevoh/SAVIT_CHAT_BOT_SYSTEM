@@ -82,3 +82,9 @@ class IntegrationController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function sync(Request $request, ConnectorRegistry $registry): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company || $request->user()->role !== 'company_owner') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
