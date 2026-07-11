@@ -10,3 +10,9 @@ class BusinessTimelineEvent extends Model
     protected $fillable = [
         'company_id',
         'event_type',
+        'category',
+        'title',
+        'summary',
+        'payload',
+        'source_type',
+        'source_id',
