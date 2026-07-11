@@ -178,3 +178,9 @@ final class ConnectorRegistry
 
             default => ['success' => false, 'message' => 'Unknown connector.'],
 
+        };
+
+    }
+
+
+
