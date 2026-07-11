@@ -22,3 +22,9 @@ class CmsSection extends Model
             'is_enabled' => 'boolean',
             'sort_order' => 'integer',
             'content' => 'array',
+        ];
+    }
+
+    public function page(): BelongsTo
+    {
+        return $this->belongsTo(CmsPage::class, 'cms_page_id');
