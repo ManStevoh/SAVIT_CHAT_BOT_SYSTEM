@@ -12,6 +12,13 @@ import { login, resendVerificationEmail, type LoginCredentials } from '@/lib/api
 import { setAuthCookie } from '@/lib/auth-cookie'
 import { useAppBranding } from '@/components/providers/AppBrandingProvider'
 import { Eye, EyeOff, AlertCircle } from 'lucide-react'
+import {
+  LandoAuthHeader,
+  LandoAuthError,
+  LandoAuthSuccess,
+  landoBtnClass,
+  landoInputClass,
+} from '@/components/lando/auth-form'
 
 const SAFE_REDIRECT_PREFIXES = ['/admin', '/dashboard']
 
@@ -37,33 +44,30 @@ function LoginPageContent() {
   const [emailNotVerified, setEmailNotVerified] = useState(false)
   const [resendSent, setResendSent] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
-  
-  // Form state
+
   const [formData, setFormData] = useState<LoginCredentials>({
     email: '',
     password: '',
     rememberMe: false,
   })
-  
-  // Form validation errors
+
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
-  // Validate form
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
-    
+
     if (!formData.email.trim()) {
       errors.email = 'Email is required'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = 'Please enter a valid email address'
     }
-    
+
     if (!formData.password) {
       errors.password = 'Password is required'
     } else if (formData.password.length < 8) {
       errors.password = 'Password must be at least 8 characters'
     }
-    
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -87,7 +91,6 @@ function LoginPageContent() {
     }
   }, [formData.email])
 
-  // Handle field change
   const handleFieldChange = (field: keyof LoginCredentials, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     setError(null)
@@ -98,10 +101,9 @@ function LoginPageContent() {
     }
   }
 
-  // Handle form submission — uses api-actions.login → POST /api/auth/login
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
 
     setIsLoading(true)
@@ -113,7 +115,6 @@ function LoginPageContent() {
       if (result.success && result.user) {
         setEmailNotVerified(false)
 
-        // Always have some token value for client-side guards, even if backend doesn't return one
         const token = result.token ?? '1'
 
         if (formData.rememberMe) {
@@ -124,7 +125,6 @@ function LoginPageContent() {
           sessionStorage.setItem('auth_user', JSON.stringify(result.user))
         }
 
-        // Always set auth cookies so middleware can detect logged-in state
         setAuthCookie(result.user.role, !!formData.rememberMe)
         const target =
           redirectTo ||
@@ -147,150 +147,108 @@ function LoginPageContent() {
   }, [formData, redirectTo, subscribeRedirect, router])
 
   return (
-    <div className="w-full max-w-md">
-      <div className="rounded-xl border border-border/60 bg-card p-8 shadow-premium">
-        <div className="mb-8">
-          <h1 className="font-display text-2xl font-normal text-foreground">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to your account to continue
-          </p>
+    <div className="w-full">
+      <LandoAuthHeader title="Welcome back" description="Sign in to your account to continue" />
+
+      {verifiedParam && (
+        <LandoAuthSuccess>Email verified successfully. You can now sign in.</LandoAuthSuccess>
+      )}
+
+      {registeredParam && !verifiedParam && (
+        <LandoAuthSuccess>
+          {branding.requireEmailVerification
+            ? 'Account created. Please check your email to verify your account, then sign in below.'
+            : 'Account created successfully. You can sign in below.'}
+        </LandoAuthSuccess>
+      )}
+
+      {error && (
+        <LandoAuthError>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+          {emailNotVerified && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2 w-fit border-red-300 text-red-700 hover:bg-red-100"
+              onClick={handleResendVerification}
+              disabled={resendLoading || !formData.email.trim()}
+            >
+              {resendLoading ? 'Sending…' : 'Resend verification email'}
+            </Button>
+          )}
+          {resendSent && <p className="mt-2 text-xs text-green-700">New verification link sent. Check your inbox.</p>}
+        </LandoAuthError>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium text-black">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleFieldChange('email', e.target.value)}
+            placeholder="you@company.com"
+            autoComplete="email"
+            disabled={isLoading}
+            className={formErrors.email ? `${landoInputClass} border-red-400` : landoInputClass}
+          />
+          {formErrors.email && <p className="text-xs text-red-600">{formErrors.email}</p>}
         </div>
 
-        {/* Email verified success (from redirect after verification) */}
-        {verifiedParam && (
-          <div className="mb-6 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
-            Email verified successfully. You can now sign in.
-          </div>
-        )}
-
-        {/* Post-registration: must sign in (no token issued on register) */}
-        {registeredParam && !verifiedParam && (
-          <div className="mb-6 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
-            {branding.requireEmailVerification
-              ? 'Account created. Please check your email to verify your account, then sign in below.'
-              : 'Account created successfully. You can sign in below.'}
-          </div>
-        )}
-
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-6 flex flex-col gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-            {emailNotVerified && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-fit border-destructive/50 text-destructive hover:bg-destructive/10"
-                onClick={handleResendVerification}
-                disabled={resendLoading || !formData.email.trim()}
-              >
-                {resendLoading ? 'Sending…' : 'Resend verification email'}
-              </Button>
-            )}
-            {resendSent && (
-              <p className="text-xs text-green-600 dark:text-green-400">New verification link sent. Check your inbox.</p>
-            )}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email Field */}
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium text-foreground">
-              Email
-            </Label>
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-sm font-medium text-black">Password</Label>
+          <div className="relative">
             <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleFieldChange('email', e.target.value)}
-              placeholder="you@company.com"
-              autoComplete="email"
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={(e) => handleFieldChange('password', e.target.value)}
+              placeholder="Enter your password"
+              autoComplete="current-password"
               disabled={isLoading}
-              className={formErrors.email ? 'border-destructive focus-visible:ring-destructive' : 'border-border/50'}
+              className={formErrors.password ? `${landoInputClass} pr-10 border-red-400` : `${landoInputClass} pr-10`}
             />
-            {formErrors.email && (
-              <p className="text-xs text-destructive">{formErrors.email}</p>
-            )}
-          </div>
-
-          {/* Password Field */}
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm font-medium text-foreground">
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => handleFieldChange('password', e.target.value)}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                disabled={isLoading}
-                className={formErrors.password ? 'border-destructive focus-visible:ring-destructive pr-10' : 'border-border/50 pr-10'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                tabIndex={-1}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-            {formErrors.password && (
-              <p className="text-xs text-destructive">{formErrors.password}</p>
-            )}
-          </div>
-
-          {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="remember"
-                checked={formData.rememberMe}
-                onCheckedChange={(checked) =>
-                  handleFieldChange('rememberMe', checked === true)
-                }
-                disabled={isLoading}
-              />
-              <label
-                htmlFor="remember"
-                className="cursor-pointer text-sm text-muted-foreground"
-              >
-                Remember me
-              </label>
-            </div>
-            <Link
-              href="/forgot-password"
-              className="text-sm text-primary hover:text-primary/80"
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+              tabIndex={-1}
             >
-              Forgot password?
-            </Link>
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
+          {formErrors.password && <p className="text-xs text-red-600">{formErrors.password}</p>}
+        </div>
 
-          {/* Submit Button */}
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? <Spinner className="h-4 w-4" /> : 'Sign In'}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          {"Don't have an account? "}
-          <Link href="/register" className="text-primary hover:text-primary/80">
-            Sign up
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="remember"
+              checked={formData.rememberMe}
+              onCheckedChange={(checked) => handleFieldChange('rememberMe', checked === true)}
+              disabled={isLoading}
+            />
+            <label htmlFor="remember" className="cursor-pointer text-sm text-gray-600">Remember me</label>
+          </div>
+          <Link href="/forgot-password" className="text-sm font-medium text-[#2563eb] hover:text-[#1d4ed8]">
+            Forgot password?
           </Link>
-        </p>
-      </div>
+        </div>
+
+        <Button type="submit" className={landoBtnClass} disabled={isLoading}>
+          {isLoading ? <Spinner className="h-4 w-4" /> : 'Sign in'}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-gray-600">
+        {"Don't have an account? "}
+        <Link href="/register" className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign up</Link>
+      </p>
     </div>
   )
 }
@@ -299,10 +257,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-md">
-          <div className="flex items-center justify-center rounded-xl border border-border/60 bg-card p-8 shadow-premium">
-            <Spinner className="h-6 w-6" />
-          </div>
+        <div className="flex items-center justify-center py-12">
+          <Spinner className="h-6 w-6" />
         </div>
       }
     >
