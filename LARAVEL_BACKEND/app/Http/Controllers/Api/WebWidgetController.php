@@ -22,3 +22,9 @@ use Illuminate\Http\Request;
 
 class WebWidgetController extends Controller
 
+{
+
+    public function config(Request $request, ChannelIngestAuthService $auth): JsonResponse
+
+    {
+
