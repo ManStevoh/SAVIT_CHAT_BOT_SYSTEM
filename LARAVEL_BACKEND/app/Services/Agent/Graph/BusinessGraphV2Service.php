@@ -88,3 +88,9 @@ final class BusinessGraphV2Service
                     $company,
                     BusinessGraphNode::TYPE_CAMPAIGN,
                     'whatsapp_campaign',
+                    (int) $campaign->id,
+                    $campaign->name,
+                    ['status' => $campaign->status, 'sent_count' => $campaign->sent_count],
+                );
+                $stats['nodes']++;
+            });
