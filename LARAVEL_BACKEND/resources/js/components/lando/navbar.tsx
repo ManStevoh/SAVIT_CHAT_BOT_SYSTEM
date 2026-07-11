@@ -10,3 +10,9 @@ import type { CmsLink } from "./types"
 
 interface LandoNavbarProps {
   links?: CmsLink[]
+  loginLabel?: string
+  loginHref?: string
+  signupLabel?: string
+  signupHref?: string
+  activePath?: string
+}
