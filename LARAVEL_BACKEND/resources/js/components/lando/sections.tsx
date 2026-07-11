@@ -166,3 +166,9 @@ export function LandoFeatureBlock({
             <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
             {description && <p className="mt-4 text-base leading-relaxed text-gray-600">{description}</p>}
             {ctaText && ctaHref && (
+              <Button
+                asChild
+                variant="outline"
+                className="mt-8 h-11 rounded-lg border-black bg-transparent px-6 text-black hover:bg-gray-50"
+              >
+                <Link href={ctaHref}>{ctaText}</Link>
