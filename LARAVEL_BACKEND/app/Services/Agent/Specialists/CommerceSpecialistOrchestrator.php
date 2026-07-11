@@ -44,6 +44,11 @@ final class CommerceSpecialistOrchestrator
             return [];
         }
 
+        $company->loadMissing('settings');
+        if (! ($company->settings?->agent_council_enabled ?? false)) {
+            return [];
+        }
+
         $debate = [];
         foreach ($this->enabledTypes() as $type) {
             $specialist = $this->specialists[$type];
