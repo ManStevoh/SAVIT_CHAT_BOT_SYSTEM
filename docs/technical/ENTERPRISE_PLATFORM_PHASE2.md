@@ -46,3 +46,9 @@ Phase 2 extends existing subscription, billing, and notification plumbing withou
 | Component | Path |
 |-----------|------|
 | Table | `company_policy_rules` (from ABI foundation) |
+| Service | `CompanyPolicyService` (agent approvals) |
+| CRUD API | `GET/POST/PATCH/DELETE /api/company/policy-rules` |
+
+### 2e — Audit center
+
+Already shipped in ABI foundation (`audit_events`, `AuditService`). Phase 2 wires policy CRUD + billing + API key lifecycle.
