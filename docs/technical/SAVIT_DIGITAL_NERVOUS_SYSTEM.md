@@ -16,13 +16,16 @@ Once you think this way, **every piece of business information becomes a signal 
 
 This document is the **strategic north star** and **honest implementation map** for that vision. It connects product concepts (1–24) and the **Business Consciousness Layer** to real PHP services, database tables, jobs, APIs, and tests.
 
-For layer-by-layer engineering detail, see [AI ABI Platform](AI_ABI_PLATFORM.md). For shipped phases, see [Phase 4 OS](AI_PHASE4_OS.md) and [Phase 5 OS](AI_PHASE5_OS.md).
+For layer-by-layer engineering detail, see [AI ABI Platform](AI_ABI_PLATFORM.md). For shipped phases, see [Phase 4 OS](AI_PHASE4_OS.md) and [Phase 5 OS](AI_PHASE5_OS.md). For operational modules (subscription, billing, portals, builders), see [Enterprise Platform Blueprint](SAVIT_ENTERPRISE_PLATFORM.md). For model routing, see [AI Model Orchestration](AI_MODEL_ORCHESTRATION.md). For honest gap list, see [Honest Remaining Gaps](HONEST_REMAINING_GAPS.md).
 
-| Verification (today) | Result |
-|----------------------|--------|
-| `php artisan agent:verify` | 18 tools, 34 schema checks — OK |
-| `php artisan test --filter=CommerceAgent` | 63 tests passing |
-| Continuous cognition | Hourly `RunBackgroundThinkingJob` + post-chat delayed jobs |
+| Verification (2026-07-11) | Result |
+|---------------------------|--------|
+| `php artisan agent:verify` | **20 tools**, 42 schema checks — OK |
+| `php artisan platform:verify` | Enterprise Phase 2 tables + integrations — OK |
+| `php artisan test --filter=CommerceAgent` | **95 tests** passing |
+| `php artisan test --filter=EnterprisePlatform` | 9 tests passing |
+| `php artisan test --filter=AiOrchestration` | 8 tests passing |
+| Continuous cognition | Hourly `RunBackgroundThinkingJob` + `ProcessAgentProactiveEventsJob`; daily brief 07:00; post-chat delayed jobs |
 
 ---
 
@@ -70,7 +73,7 @@ flowchart TB
     Signals --> Memory
     Memory --> Reflexes
     Reflexes --> Conscious
-    Conscious --> Chief[Chief Executive AI + 18 tools]
+    Conscious --> Chief[Chief Executive AI + 20 tools]
     Chief --> Sensors
 ```
 
@@ -89,18 +92,50 @@ flowchart TB
 
 ---
 
+## At-a-glance — 24 concepts
+
+| # | Concept | Status |
+|---|---------|--------|
+| 1 | Business Graph | **Partial → v2 live** (products, orders, customers, campaigns, manual supplier/warehouse) |
+| 2 | AI Timeline | **Partial → implemented** (`business_timeline_events`, sync + Mission Control UI) |
+| 3 | Business DNA | Partial (Settings UI + API) |
+| 4 | AI Interviews the Business | **Partial** (Settings UI wizard + API) |
+| 5 | AI Observability | **Partial → UI live** (trust logs API + explainability cards) |
+| 6 | AI Meetings (morning brief) | **Implemented** |
+| 7 | AI Whiteboard | Partial (executive plans + simulate) |
+| 8 | AI Mission Control | **Partial → unified inbox** (`/dashboard/mission-control`, `GET /api/company/mission-control`) |
+| 9 | AI Memory Search | **Partial → unified search** (`POST /api/company/memory-search`) |
+| 10 | AI Relationship Intelligence | Partial |
+| 11 | AI Digital Twin | Partial (Settings + simulate) |
+| 12 | AI Continuous Audits | Partial |
+| 13 | AI Knowledge Mining | Partial |
+| 14 | AI Business Coach | Partial |
+| 15 | AI Team Coach | Roadmap |
+| 16 | AI Operating Procedures | Partial |
+| 17 | AI Project Manager | Partial |
+| 18 | AI Goal Tracking | Partial |
+| 19 | AI Business Simulator | **Implemented (foundation)** |
+| 20 | AI Company Memory | Partial |
+| 21 | AI Marketplace | Foundation |
+| 22 | AI Skill Learning | Roadmap |
+| 23 | Multi-Channel Brain | Partial (WhatsApp + vision in/out + STT) |
+| 24 | AI Economy | Foundation (entitlements + API platform) |
+| + | **Business Consciousness Layer** | **Partial — hourly loop live** |
+
+---
+
 ## Concept map — all 24 + Consciousness
 
 ### 1. Business Graph (not just a database)
 
 **Vision:** Every entity and relationship is traversable — suppliers → products → orders → customers — without hand-written SQL joins.
 
-| Status | **Partial → growing** |
+| Status | **Partial → v2 live** |
 |--------|------------------------|
-| Today | Customer → orders → products (`CommerceKnowledgeGraphService`, `trace_customer_graph` tool). Product ↔ accessory ↔ warranty (`ProductGraphService`, `product_relationships`, `get_product_relationships` tool). |
-| Missing | Employees, suppliers, warehouses, campaigns, contracts, competitors as first-class graph nodes and edges. Graph query language / UI. |
-| Code | `app/Services/Agent/Company/CommerceKnowledgeGraphService.php`, `ProductGraphService.php` |
-| Tables | `product_relationships`, orders, products, `customer_intent_chains` |
+| Today | Customer → orders → products (`CommerceKnowledgeGraphService`, `trace_customer_graph` tool). Product ↔ accessory ↔ warranty (`ProductGraphService`, `product_relationships`). **v2:** `business_graph_nodes` / `business_graph_edges` — products, categories, orders, customers, WhatsApp campaigns; manual supplier/warehouse nodes. **API:** `GET/POST /api/company/business-graph`. |
+| Missing | Employees, contracts, competitors as graph nodes. Graph visualization UI. |
+| Code | `BusinessGraphV2Service`, `CommerceKnowledgeGraphService`, `ProductGraphService` |
+| Tables | `business_graph_nodes`, `business_graph_edges`, `product_relationships` |
 
 ---
 
@@ -108,11 +143,11 @@ flowchart TB
 
 **Vision:** The company’s life as a chronological narrative — branch opened → revenue milestone → supplier change → sales drop → campaign → recovery.
 
-| Status | **Partial** |
+| Status | **Partial → implemented** |
 |--------|-------------|
-| Today | Timestamped events: orders, `commerce_agent_events`, `commerce_briefs`, `business_world_snapshots`, `owner_analytics_investigations`, `cognitive_episodes`, trust logs. |
-| Missing | Unified `business_timeline` model, milestone types, owner-facing timeline UI, causal linking (“supplier changed” → “sales dropped”). |
-| Code | `CommerceEventDetector`, `CommerceMorningBriefService`, `OwnerAnalyticsAgentService` |
+| Today | **`business_timeline_events`** with dedupe by source. Auto-record from commerce events, morning briefs, owner investigations. Backfill via `POST /api/company/business-timeline/sync`. **UI:** Mission Control timeline panel. Background sync via `BackgroundThinkingService`. |
+| Missing | Causal linking UI (“supplier changed” → “sales dropped”). Dedicated full-page timeline explorer. |
+| Code | `BusinessTimelineService`, `CommerceEventDetector`, `CommerceMorningBriefService`, `OwnerAnalyticsAgentService` |
 
 ---
 
@@ -122,8 +157,8 @@ flowchart TB
 
 | Status | **Partial** |
 |--------|-------------|
-| Today | `company_settings.business_dna` JSON + `BusinessDnaService` industry defaults (tone, values, risk, escalation). Injected into cognitive pipeline and Chief prompt. |
-| Missing | Automated discovery on signup; owner interview flow; DNA versioning UI. Settings API does not expose `business_dna` yet. |
+| Today | `company_settings.business_dna` JSON + `BusinessDnaService` industry defaults. **Dashboard:** Settings → AI → Business DNA. **API:** `GET/PUT /api/company/settings` (`businessDna`). |
+| Missing | Automated discovery on signup; owner interview flow; DNA versioning history. |
 | Code | `app/Services/Agent/Cognitive/BusinessDnaService.php` |
 | Config | `config/agent.php` → `cognitive.business_dna_defaults` |
 
@@ -133,11 +168,11 @@ flowchart TB
 
 **Vision:** Conversational onboarding — “Tell me about your business” → natural follow-ups → auto-built business model.
 
-| Status | **Roadmap** |
+| Status | **Partial** |
 |--------|-------------|
-| Today | Static company settings + industry field + optional `digital_twin` JSON (manual/DB). |
-| Missing | `OnboardingInterviewService`, multi-turn owner chat session, structured extraction → DNA + twin. |
-| Adjacent | WhatsApp agent could host interview once owner channel is defined. |
+| Today | `OnboardingInterviewService` — cache-based multi-turn session. `POST /api/company/onboarding-interview/start` + `/respond`. Extracts `business_dna` + `digital_twin` via `AiOrchestrator` and saves to settings. |
+| Missing | Dedicated onboarding UI wizard; WhatsApp-hosted interview for owners. |
+| Code | `app/Services/Agent/Onboarding/OnboardingInterviewService.php` |
 
 ---
 
@@ -183,10 +218,10 @@ flowchart TB
 
 **Vision:** One screen — revenue, customers, orders, inventory, marketing, cash flow, alerts — AI highlights only what needs attention.
 
-| Status | **Partial** |
+| Status | **Partial → unified inbox live** |
 |--------|-------------|
-| Today | `GET /api/company/executive-ai/dashboard`, `GET /api/company/cognitive-ai/dashboard`, `GET /api/company/company-brain`, Growth analytics APIs. Health score, opportunities, open events. |
-| Missing | Unified Mission Control frontend; single attention-priority queue across subsystems. |
+| Today | **`MissionControlService`** — single attention queue (approvals, events, opportunities, health). **`GET /api/company/mission-control`**. **UI:** `/dashboard/mission-control` (brain digest + attention queue + timeline + graph stats). Explainability: `GET /api/company/mission-control/explainability/{id}`. |
+| Missing | Real-time push notifications; mobile-optimized layout. |
 | Code | `ExecutiveAiController`, `CognitiveAiController`, `CompanyBrainController`, `BusinessHealthScoreService` |
 
 ---
@@ -197,9 +232,9 @@ flowchart TB
 
 | Status | **Partial** |
 |--------|-------------|
-| Today | `OwnerAnalyticsAgentService` correlates orders + growth + events + brain digest. Vector search on knowledge/products (`KnowledgeChunkService`, `VectorSimilarity`). Customer memories, org/strategic memories. |
-| Missing | Cross-source semantic search UI; email/meeting ingestion; unified memory index. |
-| Code | `OwnerAnalyticsAgentService`, `SearchKnowledgeTool`, `CustomerMemoryService` |
+| Today | `OwnerAnalyticsAgentService` correlates orders + growth + events + brain digest. Vector search on knowledge/products (`KnowledgeChunkService`, `VectorSimilarity`). **Optional pgvector** path on PostgreSQL (`PgVectorSearchService`, `AI_PGVECTOR_ENABLED`). Customer/org/strategic memories. **UI:** `/dashboard/business-intelligence`. |
+| Missing | Cross-source semantic search UI (“what happened 3 months ago?”); email/meeting ingestion; unified memory index. |
+| Code | `OwnerAnalyticsAgentService`, `SearchKnowledgeTool`, `CustomerMemoryService`, `PgVectorSearchService` |
 
 ---
 
@@ -221,7 +256,7 @@ flowchart TB
 
 | Status | **Partial** |
 |--------|-------------|
-| Today | `company_settings.digital_twin` JSON + `CompanyDigitalTwinService` (mission, brand, strategy, competitors). `SimulationService` + `POST /api/company/cognitive-ai/simulate`. |
+| Today | `company_settings.digital_twin` JSON + `CompanyDigitalTwinService`. `SimulationService` + `POST /api/company/cognitive-ai/simulate`. **Settings UI:** digital twin fields + `agentCouncilEnabled`. |
 | Missing | Twin auto-sync from live data; price-change simulation wired to catalog; twin dashboard. |
 | Code | `CompanyDigitalTwinService`, `SimulationService` |
 
@@ -365,9 +400,9 @@ flowchart TB
 
 | Status | **Partial** |
 |--------|-------------|
-| Today | WhatsApp primary loop. Growth attribution from social. `UnifiedCompanyBrainService` merges commerce + growth. Dashboard agent send. |
-| Missing | Instagram/Messenger/email ingest channels, cross-channel session continuity, ERP/POS connectors as signal sources. |
-| Code | `UnifiedCompanyBrainService`, `ProcessIncomingWhatsAppMessage`, Growth `AttributionService` |
+| Today | WhatsApp primary loop (text + **inbound vision** + **outbound product images** on catalog match). Growth attribution from social. `UnifiedCompanyBrainService` merges commerce + growth. Voice notes → Whisper STT. **AI orchestration** routes reasoning / fast chat / vision / STT by use case (`AiOrchestrator`). |
+| Missing | Instagram/Messenger/email ingest channels, cross-channel session continuity, deep ERP/POS signal feeds. |
+| Code | `UnifiedCompanyBrainService`, `ProcessIncomingWhatsAppMessage`, `VisionPipelineService`, `VisionOutboundImageService`, `AiOrchestrator`, Growth `AttributionService` |
 
 ---
 
@@ -375,11 +410,11 @@ flowchart TB
 
 **Vision:** Developers publish Negotiation Agent, Procurement Agent, Accountant — businesses subscribe à la carte.
 
-| Status | **Roadmap** |
-|--------|-------------|
-| Today | 18 built-in tools, 3 specialists, skill modules as config — all first-party. |
-| Missing | Agent SDK, billing per capability, third-party agent registry, sandbox + approval for external agents. |
-| Foundation | `AgentToolRegistry` allowlist pattern is the execution bus external agents would use. |
+| Status | **Foundation** |
+|--------|----------------|
+| Today | **20 built-in tools**, 3 specialists, `SkillModuleRegistry` (retail/restaurant/services). **Enterprise:** `EntitlementService`, usage meters, API keys, webhooks — pattern for metered capabilities. |
+| Missing | Agent SDK, billing per external capability, third-party agent registry, sandbox + approval for external agents. |
+| Foundation | `AgentToolRegistry`, `EntitlementService`, `ApiKeyService`, `WebhookDeliveryService` |
 
 ---
 
@@ -393,7 +428,7 @@ Every few minutes (today: hourly + post-chat), the system asks itself:
 |----------|---------------------------|
 | What has changed in this business? | `BusinessWorldModelService::snapshot`, `UnifiedCompanyBrainService::buildSnapshot` |
 | What deserves the owner's attention? | `CommerceEventDetector`, owner alerts → `company_notifications`, opportunities |
-| What decisions are waiting? | `agent_action_requests` (approval queue; no high-risk tools yet) |
+| What decisions are waiting? | `agent_action_requests` (approval queue — refunds, high-risk actions via `AgentApprovalService`) |
 | What opportunities appeared? | `OpportunityDetectionService` |
 | What risks are increasing? | Health score, sales_drop / low_stock events, causal notes in reasoning |
 | Which goals are falling behind? | Goals in world model + owner analytics evidence |
@@ -419,8 +454,12 @@ Post-chat (ProcessIncomingWhatsAppMessage)
 
 Owner-initiated
 ├── POST /api/company/owner-analytics/investigate
+├── GET  /api/company/owner-analytics/investigations
 ├── GET  /api/company/company-brain
-└── GET  /api/company/executive-ai/dashboard
+├── POST /api/company/company-brain/refresh
+├── POST /api/company/intelligence/reason
+├── GET  /api/company/executive-ai/dashboard
+└── UI   /dashboard/business-intelligence, /dashboard/agent-ops, /dashboard/executive
 ```
 
 | Status | **Partial — loop exists; consciousness is not yet sub-minute or owner-UI-complete** |
@@ -435,7 +474,7 @@ Owner-initiated
 
 | Layer | Nervous system role | Doc |
 |-------|---------------------|-----|
-| Layer 1 Agent OS | Motor nerves — act via 20 tools, WhatsApp, vision, voice | [AI_AGENT_OS](AI_AGENT_OS.md) |
+| Layer 1 Agent OS | Motor nerves — act via **20 tools**, WhatsApp, vision in/out, voice STT | [AI_AGENT_OS](AI_AGENT_OS.md) |
 | Layer 2 Company OS | Short-term memory — reasoning, twin, briefs, graph | [AI_COMPANY_OS](AI_COMPANY_OS.md) |
 | Layer 3 Platform OS | Vital signs — world model, health, trust, executive | [AI_PLATFORM_OS](AI_PLATFORM_OS.md) |
 | Layer 4 Cognitive OS | Prefrontal cortex — debate, confidence, simulation | [AI_COGNITIVE_OS](AI_COGNITIVE_OS.md) |
@@ -450,7 +489,9 @@ Owner-initiated
 | Signal source | Table / service | Used by |
 |---------------|-----------------|---------|
 | WhatsApp text | `messages` | Chief agent, perception, memories |
-| WhatsApp images | `messages` + `message_vision_analyses` | Vision pipeline → Chief |
+| WhatsApp images (in) | `messages` + `message_vision_analyses` | Vision pipeline → Chief |
+| WhatsApp images (out) | Bot `messages` via `VisionOutboundImageService` | Catalog match → product photo reply |
+| Voice notes | `messages` (audio) → Whisper STT | Enriched text → Chief |
 | Orders / payments | `orders` | World model, analytics, tools |
 | Products / stock | `products` | Graph, opportunities, events |
 | Customer facts | `customer_memories` | Profile tool, proactive |
@@ -458,26 +499,48 @@ Owner-initiated
 | Ad spend | `growth_ad_spend_entries` | Growth analytics, brain |
 | Social posts | `social_posts` | Top posts in brain |
 | Agent events | `commerce_agent_events` | Proactive + owner alerts |
+| Integrations | `company_integrations` | DHL, Sendy, CRM webhook, ERP (connectors) |
 | Reasoning traces | `agent_reasoning_traces` | Observability, episodes |
 | Trust decisions | `agent_trust_logs` | Executive dashboard |
+| Domain events | `domain_events` | Webhook fan-out (every minute) |
+| AI usage | `ai_request_logs`, `usage_meters` | Billing, orchestration observability |
 
 ---
 
-## Roadmap — toward full nervous system
+## Roadmap — Phases 5–10
 
-Prioritized by leverage on the **consciousness layer**:
+Prioritized by leverage on the **consciousness thesis** (continuous thinking → owner sees only what matters):
 
-| Phase | Theme | Key deliverables |
-|-------|-------|------------------|
-| **5** | Business Graph v2 | Supplier, warehouse, campaign nodes; graph API; supplier→product queries |
-| **5** | Business Timeline | `business_timeline_events` + milestone UI + owner analytics integration |
-| **6** | Onboarding Interview | AI interviews owner → DNA + twin auto-population |
-| **6** | Mission Control UI | Single attention inbox fed by brain + events + opportunities |
-| **7** | Memory Search | Unified semantic index across chats, orders, campaigns, briefs |
-| **7** | Observability UI | Explainability card on every AI recommendation |
-| **8** | Multi-channel ingest | Email + Instagram DM + web widget → same `Chat` + brain |
-| **9** | Consciousness v2 | 5-minute sense cycle; owner morning push; outcome tracking on recommendations |
-| **10** | AI Marketplace | Installable industry modules + third-party agent SDK |
+| Phase | Theme | Key deliverables | Builds on |
+|-------|-------|------------------|-----------|
+| **5** ⭐ | **Business Graph v2** | ✅ Supplier/warehouse/campaign nodes; graph REST API; sync from live data | `BusinessGraphV2Service` |
+| **5** ⭐ | **Business Timeline** | ✅ `business_timeline_events`; auto-record + sync API; Mission Control timeline panel | `BusinessTimelineService` |
+| **5** ⭐ | **Mission Control UI** | ✅ Single attention inbox at `/dashboard/mission-control` | `MissionControlService` |
+| **6** | Onboarding Interview | ✅ API live (`OnboardingInterviewService`); UI wizard pending | Concept 4 |
+| **6** | Observability UI | ✅ Explainability cards on Mission Control + Executive | `AgentTrustLogController` |
+| **7** | Memory Search v2 | ✅ Unified search + chat messages | `BusinessMemorySearchService` |
+| **7** | Graph + Timeline in analytics | ✅ Owner investigations include graph/timeline evidence | `OwnerAnalyticsAgentService` |
+| **7** | TTS outbound WhatsApp | ✅ Voice reply when inbound was audio + setting enabled | `VoiceOutboundService` |
+| **8** | Multi-channel ingest | ✅ Web widget embed + email/IG webhooks + ingest secret | `ChannelWebhookController`, `public/widget/savit-chat.js` |
+| **9** | Consciousness v2 | ✅ 5-min sense cycle; owner morning WhatsApp push; outcome tracking on briefs + opportunities | `ConsciousnessSenseCycleService`, `OwnerMorningBriefPushService` |
+| **10** | AI Marketplace | ✅ Installable modules + SDK manifest + external webhook tools | `MarketplaceModuleService`, `/dashboard/marketplace` |
+
+**Recommended next build (Phase 6):** Onboarding UI wizard + Observability explainability cards + Memory Search v2.
+
+---
+
+## Dashboard UI map (owner nervous system surfaces)
+
+| Route | Page | Nervous system role |
+|-------|------|---------------------|
+| `/dashboard/mission-control` | Attention inbox + brain + timeline + graph stats | **Mission control (unified)** |
+| `/dashboard/business-intelligence` | Brain snapshot + owner investigations + vector status | Consciousness + memory search entry |
+| `/dashboard/executive` | Morning brief, approvals, experiments, opportunities | Mission control (partial) |
+| `/dashboard/cognitive` | Reason, simulate, investigation cases | Prefrontal cortex |
+| `/dashboard/agent-ops` | Events, alerts, specialist runs, integrations | Reflexes + connectors |
+| `/dashboard/growth` | Attribution, campaigns, weekly brief | Marketing sensors |
+| `/dashboard/marketplace` | AI module catalog — install industry packs + SDK modules | **Marketplace** |
+| `/dashboard/settings` | Agent commerce, DNA, twin, council, proactive | Configuration / DNA |
 
 ---
 
@@ -487,7 +550,9 @@ Prioritized by leverage on the **consciousness layer**:
 |----------|-------------------------|
 | `GET /api/company/company-brain` | Unified commerce + growth state |
 | `POST /api/company/company-brain/refresh` | Force consciousness refresh |
+| `GET /api/company/owner-analytics/investigations` | Investigation history |
 | `POST /api/company/owner-analytics/investigate` | Ask the business a question with evidence |
+| `POST /api/company/intelligence/reason` | Structured decision intelligence + cases |
 | `GET /api/company/commerce-brief` | Daily COO-style briefing |
 | `GET /api/company/executive-ai/dashboard` | Mission control metrics |
 | `GET /api/company/executive-ai/opportunities` | Detected opportunities |
@@ -495,6 +560,31 @@ Prioritized by leverage on the **consciousness layer**:
 | `POST /api/company/cognitive-ai/simulate` | Digital twin scenarios |
 | `POST /api/company/cognitive-ai/plans` | Whiteboard / planning seeds |
 | `GET /api/company/commerce-specialists/runs` | Background specialist consciousness |
+| `GET /api/company/commerce-events/owner-alerts` | Low stock, sales drop alerts |
+| `GET /api/company/integrations` | DHL, Sendy, CRM, ERP connectors |
+| `GET /api/company/knowledge/vector-status` | Embedding search backend (JSON vs pgvector) |
+| `GET /api/company/mission-control` | Unified attention inbox + brain digest |
+| `GET /api/company/mission-control/explainability/{id}` | Trust log explainability |
+| `GET /api/company/business-timeline` | Chronological business timeline |
+| `POST /api/company/business-timeline/sync` | Backfill timeline from live signals |
+| `GET /api/company/business-graph` | Business graph v2 export |
+| `POST /api/company/business-graph/sync` | Sync graph nodes/edges from company data |
+| `POST /api/company/onboarding-interview/start` | Start owner onboarding interview |
+| `POST /api/company/onboarding-interview/respond` | Continue interview → DNA + twin |
+| `GET /api/company/agent-trust-logs` | Recent AI decisions for observability UI |
+| `POST /api/company/memory-search` | Unified search across knowledge, timeline, investigations, briefs |
+| `GET /api/public/web-widget/config` | Widget greeting + company name |
+| `POST /api/public/web-widget/message` | Public web chat message + sync reply |
+| `POST /api/webhooks/channels/{id}/email` | Email channel webhook (X-Channel-Ingest-Secret) |
+| `GET/POST /api/webhooks/channels/{id}/instagram-dm` | Instagram DM webhook + Meta verify |
+| `GET /api/company/channels` | Widget + webhook URLs and tokens |
+| `POST /api/company/channels/regenerate-tokens` | Rotate widget token + ingest secret |
+| `GET /api/company/intelligence/outcomes` | Pending recommendation outcomes for owner feedback |
+| `POST /api/company/intelligence/outcomes` | Record outcome on a recommendation |
+| `GET /api/company/marketplace/modules` | AI module catalog + installed list |
+| `POST /api/company/marketplace/modules/{key}/install` | Install industry/capability module |
+| `DELETE /api/company/marketplace/modules/{key}/install` | Uninstall module |
+| `GET /api/agent-sdk/v1/manifest` | Third-party agent SDK specification |
 
 Full REST catalog: [API Reference](api-reference.md) (agent routes being expanded).
 
@@ -505,8 +595,12 @@ Full REST catalog: [API Reference](api-reference.md) (agent routes being expande
 ```bash
 cd LARAVEL_BACKEND
 php artisan migrate --force
-php artisan agent:verify
-php artisan test --filter=CommerceAgent
+php artisan agent:verify          # 20 tools, 45 schema checks
+php artisan platform:verify       # Enterprise Phase 2
+php artisan ai:verify-orchestration
+php artisan test --filter=CommerceAgent        # 95 tests
+php artisan test --filter=EnterprisePlatform   # 9 tests
+php artisan test --filter=AiOrchestration      # 8 tests
 php artisan route:list --path=company/company-brain
 php artisan route:list --path=company/owner-analytics
 ```
@@ -520,7 +614,10 @@ php artisan route:list --path=company/owner-analytics
 | [AI ABI Platform](AI_ABI_PLATFORM.md) | Engineering master — layers, tools, ABI levels |
 | [AI Phase 4 OS](AI_PHASE4_OS.md) | Vision, brain, owner analytics |
 | [AI Phase 5 OS](AI_PHASE5_OS.md) | Executive dashboard, approvals, voice, experiments |
+| [AI Model Orchestration](AI_MODEL_ORCHESTRATION.md) | Reasoning vs fast chat vs vision vs STT routing |
+| [Honest Remaining Gaps](HONEST_REMAINING_GAPS.md) | What is shipped vs roadmap (not oversold) |
+| [Enterprise Platform Phase 2](ENTERPRISE_PLATFORM_PHASE2.md) | Billing, entitlements, webhooks, API platform |
 | [Growth Engine](growth-engine.md) | Marketing signal source |
 | [WhatsApp Bot](whatsapp-bot.md) | Primary customer nerve ending |
 
-**Last verified:** 2026-07-11 — 63 CommerceAgent tests; 18 tools; consciousness jobs scheduled in `bootstrap/app.php`.
+**Last verified:** 2026-07-11 — **95** CommerceAgent tests; **20** tools; consciousness jobs in `bootstrap/app.php`; Business Intelligence UI at `/dashboard/business-intelligence`.
