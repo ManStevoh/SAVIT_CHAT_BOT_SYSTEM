@@ -82,3 +82,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 | Policy engine DSL + legal packs | 17 | |
 | Full genome versioning | 18 | |
 | Unified loop KPI controller | 20 | Outcome API shipped |
+| Subscription / billing / notification engines | Platform | Phase 2 enterprise roadmap |
+
+---
+
+## Decision intelligence (north star)
+
