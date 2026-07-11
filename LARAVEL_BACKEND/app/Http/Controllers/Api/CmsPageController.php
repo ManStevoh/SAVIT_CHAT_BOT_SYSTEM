@@ -28,3 +28,9 @@ class CmsPageController extends Controller
 
         if (in_array('testimonials', $enabledKeys, true)) {
             $extras['testimonials'] = Testimonial::where('is_active', true)
+                ->orderBy('sort_order')->orderBy('id')
+                ->get()
+                ->map(fn ($t) => [
+                    'id' => (string) $t->id,
+                    'name' => $t->name,
+                    'role' => $t->role ?? '',
