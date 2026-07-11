@@ -8,6 +8,8 @@ use App\Models\Order;
 use App\Models\OwnerAnalyticsInvestigation;
 use App\Models\Product;
 use App\Services\Agent\Brain\UnifiedCompanyBrainService;
+use App\Services\Agent\Graph\BusinessGraphV2Service;
+use App\Services\Agent\Timeline\BusinessTimelineService;
 use App\Services\Agent\Platform\BusinessHealthScoreService;
 use App\Services\AI\AiDriverFactory;
 use App\Services\AI\AiModelResolver;
@@ -27,6 +29,8 @@ final class OwnerAnalyticsAgentService
         protected BusinessHealthScoreService $healthScore,
         protected AiModelResolver $resolver,
         protected AiDriverFactory $driverFactory,
+        protected BusinessTimelineService $timeline,
+        protected BusinessGraphV2Service $graph,
     ) {}
 
     public function investigate(Company $company, string $question, string $period = '30d'): OwnerAnalyticsInvestigation
@@ -37,7 +41,7 @@ final class OwnerAnalyticsAgentService
 
         $llmResult = $this->synthesizeWithLlm($company, $question, $evidence, $ruleFindings);
 
-        return OwnerAnalyticsInvestigation::create([
+        $investigation = OwnerAnalyticsInvestigation::create([
             'company_id' => $company->id,
             'question' => mb_substr(trim($question), 0, 500),
             'period' => $period,
@@ -48,6 +52,23 @@ final class OwnerAnalyticsAgentService
             'confidence' => (float) ($llmResult['confidence'] ?? 0.6),
             'model_used' => $llmResult['model'] ?? null,
         ]);
+
+        $this->timeline->record(
+            $company,
+            'investigation',
+            'Owner asked: '.mb_substr($investigation->question, 0, 80),
+            is_array($investigation->findings)
+                ? implode(' ', array_slice(array_column($investigation->findings, 'claim'), 0, 2))
+                : null,
+            ['question' => $investigation->question, 'confidence' => $investigation->confidence],
+            'owner_analytics_investigation',
+            (int) $investigation->id,
+            70,
+            $investigation->created_at,
+            'consciousness',
+        );
+
+        return $investigation;
     }
 
     /**
@@ -111,6 +132,9 @@ final class OwnerAnalyticsAgentService
             ])
             ->all();
 
+        $timeline = $this->timeline->timeline($company, 10);
+        $graph = $this->graph->exportGraph($company, 40);
+
         return [
             'period' => $period,
             'orders' => [
@@ -129,6 +153,12 @@ final class OwnerAnalyticsAgentService
             'health_score' => $health->only(['overall_score', 'factors', 'summary']),
             'brain_digest' => $brain?->digest,
             'agent_events' => $events,
+            'business_timeline' => $timeline,
+            'business_graph' => [
+                'stats' => $graph['stats'],
+                'sample_nodes' => array_slice($graph['nodes'], 0, 15),
+                'sample_edges' => array_slice($graph['edges'], 0, 20),
+            ],
         ];
     }
 
