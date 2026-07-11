@@ -34,3 +34,9 @@ class ApiPlatformController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        $validated = $request->validate([
+            'name' => 'required|string|max:80',
+            'scopes' => 'nullable|array',
+            'scopes.*' => 'string|max:40',
+        ]);
+
