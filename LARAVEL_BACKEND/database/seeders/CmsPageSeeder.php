@@ -178,3 +178,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Testimonials',
                         'sort_order' => 7,
                         'content' => [
+                            'title' => 'Testimonials',
+                            'description' => 'People love what we do and we want you to know',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
