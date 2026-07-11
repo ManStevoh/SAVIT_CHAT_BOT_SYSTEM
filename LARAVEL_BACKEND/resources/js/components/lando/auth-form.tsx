@@ -34,3 +34,9 @@ export function LandoAuthError({ children }: { children: React.ReactNode }) {
 export function LandoAuthSuccess({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+      {children}
+    </div>
+  )
+}
+
+export function LandoAuthLink({
