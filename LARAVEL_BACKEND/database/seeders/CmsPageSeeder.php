@@ -250,3 +250,9 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => 'Frequently asked questions',
                             'useFaqsApi' => true,
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'Call to action',
+                        'sort_order' => 5,
