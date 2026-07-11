@@ -112,3 +112,9 @@ Owner goal
 - `POST /api/company/intelligence/outcomes` — record recommendation outcomes
 
 - `GET /api/company/executive-ai/dashboard` — morning decisions, approvals
+- `GET /api/company/cognitive-ai/dashboard` — workforce, forecast, causal
+- `POST /api/company/cognitive-ai/simulate` — scenario-only
+- `POST /api/company/cognitive-ai/plans` — persist executive plan
+
+---
+
