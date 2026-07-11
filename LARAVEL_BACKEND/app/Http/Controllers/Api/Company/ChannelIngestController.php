@@ -88,3 +88,5 @@ class ChannelIngestController extends Controller
             'webWidgetToken' => $settings->web_widget_token,
             'channelIngestSecret' => $settings->channel_ingest_secret,
         ]);
+    }
+}
