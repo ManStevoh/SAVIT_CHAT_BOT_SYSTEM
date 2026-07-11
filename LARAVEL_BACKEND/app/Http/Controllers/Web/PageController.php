@@ -13,6 +13,26 @@ class PageController extends Controller
         return Inertia::render('Home/page');
     }
 
+    public function pricing(): Response
+    {
+        return Inertia::render('Pricing/page');
+    }
+
+    public function about(): Response
+    {
+        return Inertia::render('About/page');
+    }
+
+    public function contact(): Response
+    {
+        return Inertia::render('Contact/page');
+    }
+
+    public function adminCms(): Response
+    {
+        return Inertia::render('admin/cms/page');
+    }
+
     public function privacy(): Response
     {
         return Inertia::render('legal/privacy/page');
