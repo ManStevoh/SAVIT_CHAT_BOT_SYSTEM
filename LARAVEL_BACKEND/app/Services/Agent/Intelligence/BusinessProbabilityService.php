@@ -94,3 +94,8 @@ final class BusinessProbabilityService
         ]);
     }
 
+    private function clamp(float $value): float
+    {
+        return max(0.05, min(0.95, $value));
+    }
+}
