@@ -112,3 +112,9 @@ final class ConnectorRegistry
 
                 'name' => 'CRM webhook (generic)',
 
+                'category' => 'crm',
+
+                'status_label' => 'Outbound sync',
+
+                'description' => 'POST customer/order events to your CRM webhook URL.',
+
