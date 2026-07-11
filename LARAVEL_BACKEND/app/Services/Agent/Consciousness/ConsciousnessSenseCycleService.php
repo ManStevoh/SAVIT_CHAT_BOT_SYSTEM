@@ -34,3 +34,9 @@ final class ConsciousnessSenseCycleService
         }
 
         $maxAge = (int) config('agent.consciousness.brain_max_age_minutes', 5);
+        $timelineLimit = (int) config('agent.consciousness.timeline_sync_limit', 30);
+
+        try {
+            if (config('agent.brain.enabled', true)) {
+                $this->brain->refreshIfStale($company, $maxAge);
+            }
