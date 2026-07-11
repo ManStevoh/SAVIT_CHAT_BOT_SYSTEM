@@ -484,3 +484,9 @@ function SortableSectionList({
   const { toast } = useToast()
   const [items, setItems] = useState(sections)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    setItems(sections)
+  }, [sections])
+
+  const handleDrop = async (targetIndex: number) => {
