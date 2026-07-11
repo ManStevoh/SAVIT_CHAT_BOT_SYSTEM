@@ -178,3 +178,9 @@ export function LandoCompareFeatures({
   if (columns.length === 0) return null
 
   return (
+    <section className="bg-[#f3f4f6] py-16">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <h2 className="text-3xl font-bold text-black">{title}</h2>
+        <div className="mt-8 overflow-hidden rounded-2xl bg-white shadow-sm">
+          <div className="grid border-b border-gray-200 md:grid-cols-3">
+            {columns.map((col) => (
