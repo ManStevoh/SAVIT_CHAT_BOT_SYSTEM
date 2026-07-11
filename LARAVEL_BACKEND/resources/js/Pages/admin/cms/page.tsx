@@ -364,3 +364,9 @@ function SectionEditor({
             <Textarea
               value={str("body")}
               onChange={(e) => set("body", e.target.value)}
+              rows={16}
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Supports basic HTML tags. Leave empty to show the built-in default content.
+            </p>
