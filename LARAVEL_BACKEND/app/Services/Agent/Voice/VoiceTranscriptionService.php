@@ -2,24 +2,19 @@
 
 namespace App\Services\Agent\Voice;
 
-use App\Models\AiModel;
 use App\Models\Company;
 use App\Models\Message;
-use App\Services\AI\AiDriverFactory;
-use App\Services\AI\AiModelResolver;
-use App\Services\AI\Drivers\OpenAiDriver;
-use Illuminate\Support\Facades\Http;
+use App\Services\AI\AiGateway;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Transcribe WhatsApp voice notes via OpenAI-compatible Whisper API.
+ * Transcribe WhatsApp voice notes via the AI orchestration layer (Whisper / STT slot).
  */
 final class VoiceTranscriptionService
 {
     public function __construct(
-        protected AiModelResolver $resolver,
-        protected AiDriverFactory $driverFactory,
+        protected AiGateway $gateway,
     ) {}
 
     public function transcribeMessage(Message $message, Company $company): ?string
@@ -48,29 +43,15 @@ final class VoiceTranscriptionService
             return null;
         }
 
-        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT);
-        if ($resolved === null) {
-            return null;
-        }
-
-        $base = rtrim($resolved->apiBaseUrl ?: $resolved->provider->api_base_url ?: 'https://api.openai.com/v1', '/');
-
         try {
-            $response = Http::withToken($resolved->apiKey)
-                ->timeout(60)
-                ->attach('file', file_get_contents($path), basename($path))
-                ->post("{$base}/audio/transcriptions", [
-                    'model' => config('agent.voice.whisper_model', 'whisper-1'),
-                    'response_format' => 'text',
-                ]);
-
-            if (! $response->successful()) {
-                Log::info('Voice transcription failed', ['status' => $response->status()]);
+            $result = $this->gateway->transcribeAudio($path, basename($path), $company);
+            if (! $result->success) {
+                Log::info('Voice transcription failed', ['error' => $result->error]);
 
                 return null;
             }
 
-            $text = trim($response->body());
+            $text = trim((string) $result->text);
 
             return $text !== '' ? $text : null;
         } catch (\Throwable $e) {
