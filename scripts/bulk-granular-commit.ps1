@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location 'c:\SAVIT_CHAT_BOT'
 
 $ChunkSize = 6
-$ExcludePattern = 'EssemChat-cPanel\.zip|\.phpunit\.result\.cache|database\.sqlite|storage[\\/]logs|storage[\\/]framework[\\/]testing|\.jpg$|\.jpeg$|\.png$|\.gif$|\.webp$'
+$ExcludePattern = 'EssemChat-cPanel\.zip|\.phpunit\.result\.cache|database\.sqlite|storage[\\/]logs|storage[\\/]framework[\\/]testing|\.jpg$|\.jpeg$|\.png$|\.gif$|\.webp$|debug\.log$'
 
 function Should-Skip([string]$Path) {
     return $Path -match $ExcludePattern
