@@ -508,3 +508,9 @@ function SortableSectionList({
     } else {
       toast({ title: res.message ?? "Reorder failed", variant: "destructive" })
       setItems(sections)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((section, index) => (
