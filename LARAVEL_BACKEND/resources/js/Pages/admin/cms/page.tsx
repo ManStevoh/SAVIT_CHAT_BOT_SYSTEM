@@ -70,3 +70,9 @@ function ImageField({
     const res = await uploadCmsImage(file)
     setUploading(false)
     if (res.success && res.url) {
+      onChange(res.url)
+      toast({ title: "Image uploaded" })
+    } else {
+      toast({ title: res.message ?? "Upload failed", variant: "destructive" })
+    }
+  }
