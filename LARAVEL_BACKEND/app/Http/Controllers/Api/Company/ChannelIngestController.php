@@ -58,3 +58,9 @@ class ChannelIngestController extends Controller
             'channelIngestSecret' => $settings?->channel_ingest_secret,
             'webhooks' => [
                 'email' => $baseUrl.'/api/webhooks/channels/'.$company->id.'/email',
+                'instagramDm' => $baseUrl.'/api/webhooks/channels/'.$company->id.'/instagram-dm',
+            ],
+            'widget' => [
+                'scriptUrl' => $baseUrl.'/widget/savit-chat.js',
+                'configUrl' => $baseUrl.'/api/public/web-widget/config',
+                'messageUrl' => $baseUrl.'/api/public/web-widget/message',
