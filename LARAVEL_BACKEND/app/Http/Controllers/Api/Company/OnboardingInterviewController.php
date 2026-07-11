@@ -10,3 +10,9 @@ use Illuminate\Http\Request;
 class OnboardingInterviewController extends Controller
 {
     public function start(Request $request, OnboardingInterviewService $interview): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
