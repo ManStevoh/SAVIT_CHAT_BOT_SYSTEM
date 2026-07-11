@@ -16,3 +16,9 @@ class CompanyPolicyRule extends Model
         'is_active',
         'meta',
     ];
+
+    protected $casts = [
+        'max_amount' => 'float',
+        'is_active' => 'boolean',
+        'meta' => 'array',
+    ];
