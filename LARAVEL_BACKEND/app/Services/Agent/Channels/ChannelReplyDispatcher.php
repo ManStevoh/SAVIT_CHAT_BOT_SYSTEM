@@ -52,3 +52,9 @@ final class ChannelReplyDispatcher
                 ->value('content');
         }
 
+        return [
+            'chatId' => $result['chat']->id,
+            'messageId' => $result['message']->id,
+            'reply' => $reply,
+            'queued' => $result['queued'],
+        ];
