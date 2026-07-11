@@ -52,3 +52,9 @@ class VerifyEnterprisePlatformCommand extends Command
             $this->line('Run: php artisan test --filter=EnterprisePlatform');
             $this->line('Run: php artisan test --filter=CommerceAgent');
 
+            return self::SUCCESS;
+        }
+
+        $this->error('Some checks failed. Run: php artisan migrate && php artisan db:seed --class=EnterprisePlatformSeeder');
+
+        return self::FAILURE;
