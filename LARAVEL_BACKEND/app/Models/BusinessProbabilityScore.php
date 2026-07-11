@@ -10,3 +10,9 @@ class BusinessProbabilityScore extends Model
     protected $fillable = [
         'company_id',
         'customer_phone',
+        'score_type',
+        'probability',
+        'factors',
+        'computed_at',
+    ];
+
