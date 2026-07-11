@@ -556,3 +556,9 @@ All new modules must meet these **global SaaS standards** before marking **Imple
 | Pattern | Application |
 |---------|-------------|
 | Async by default | Notifications, webhooks, search indexing, usage metering via queues |
+| Idempotency | Payment webhooks, event consumers, notification sends |
+| Read/write split | Analytics on aggregates; avoid N+1 in list APIs |
+| Caching | Entitlements resolved once per request; Redis for meters |
+| Multi-region (future) | Stateless API; object storage for files |
+
+### Observability
