@@ -622,3 +622,9 @@ flowchart TB
   subgraph p1 [Phase 1 - Built]
     MT[Multi-tenant]
     WA[WhatsApp]
+    ORD[Orders]
+    AI[AI Agent 20 tools]
+  end
+
+  subgraph p2 [Phase 2 - Foundation]
+    SUB[Subscription Engine]
