@@ -52,3 +52,9 @@ class MarketplaceController extends Controller
         ], 201);
     }
 
+    public function uninstall(Request $request, string $moduleKey, MarketplaceModuleService $marketplace): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
