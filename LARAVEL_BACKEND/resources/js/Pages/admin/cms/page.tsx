@@ -412,3 +412,9 @@ function SectionEditor({
               />
             </div>
           ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("members", [...members, { name: "", role: "", imageUrl: "" }])}
+          >
