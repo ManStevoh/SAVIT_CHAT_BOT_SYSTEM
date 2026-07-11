@@ -46,3 +46,9 @@ final class ConsciousnessSenseCycleService
             }
 
             $detected = 0;
+            if (config('agent.events.detection_enabled', true)) {
+                $detected = count($this->events->detectForCompany($company));
+            }
+
+            $this->timeline->record(
+                $company,
