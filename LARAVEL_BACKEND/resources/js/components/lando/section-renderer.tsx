@@ -76,3 +76,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           kicker={str(content.kicker)}
           title={str(content.title)}
           description={str(content.description)}
+          primaryCtaText={str(content.primaryCtaText)}
+          primaryCtaHref={str(content.primaryCtaHref)}
+          secondaryCtaText={str(content.secondaryCtaText)}
+          secondaryCtaHref={str(content.secondaryCtaHref)}
+          imageUrl={str(content.imageUrl)}
+          imageAlt={str(content.imageAlt)}
