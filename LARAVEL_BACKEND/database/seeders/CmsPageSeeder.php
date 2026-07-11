@@ -46,3 +46,9 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'imageUrl' => '/images/lando/lando-hero.png',
                             'imageAlt' => 'Platform illustration',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'footer',
+                        'label' => 'Footer',
+                        'sort_order' => 4,
