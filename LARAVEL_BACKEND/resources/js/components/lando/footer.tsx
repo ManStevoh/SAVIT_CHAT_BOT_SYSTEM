@@ -34,3 +34,9 @@ export function LandoFooter({
         <div className="flex flex-col gap-2">
           {socialLinks.map((link) => (
             <a
+              key={link.label}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-black hover:text-[#2563eb]"
+            >
