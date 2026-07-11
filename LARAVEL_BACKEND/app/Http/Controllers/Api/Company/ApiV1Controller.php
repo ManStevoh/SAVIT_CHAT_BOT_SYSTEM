@@ -10,3 +10,9 @@ use Illuminate\Http\Request;
 /**
  * Read-only API v1 surface authenticated via company API keys.
  */
+class ApiV1Controller extends Controller
+{
+    public function orders(Request $request): JsonResponse
+    {
+        $companyId = (int) $request->attributes->get('api_key_company_id');
+        if (! $companyId) {
