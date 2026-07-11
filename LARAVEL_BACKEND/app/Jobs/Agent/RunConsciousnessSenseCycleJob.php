@@ -16,3 +16,9 @@ class RunConsciousnessSenseCycleJob implements ShouldQueue
 
     public function __construct(public ?int $companyId = null) {}
 
+    public function handle(ConsciousnessSenseCycleService $sense): void
+    {
+        if (! config('agent.consciousness.sense_enabled', true)) {
+            return;
+        }
+
