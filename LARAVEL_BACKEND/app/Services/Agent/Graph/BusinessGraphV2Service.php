@@ -142,3 +142,9 @@ final class BusinessGraphV2Service
     ): BusinessGraphNode {
         return $this->upsertNode(
             $company,
+            $nodeType,
+            'manual',
+            crc32($label) & 0x7FFFFFFF,
+            $label,
+            $metadata,
+        );
