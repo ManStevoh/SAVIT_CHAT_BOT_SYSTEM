@@ -82,3 +82,9 @@ function ImageField({
       <Label className="text-xs">{label}</Label>
       <div className="flex gap-2">
         <Input value={value} onChange={(e) => onChange(e.target.value)} className="text-sm" placeholder="/images/..." />
+        <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
+          <label className="cursor-pointer">
+            <Upload className="h-4 w-4" />
+            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          </label>
+        </Button>
