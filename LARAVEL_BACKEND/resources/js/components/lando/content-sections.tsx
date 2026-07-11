@@ -436,3 +436,8 @@ export function LandoContactSection({
               </Button>
             </form>
           )}
+        </div>
+      </div>
+    </section>
+  )
+}
