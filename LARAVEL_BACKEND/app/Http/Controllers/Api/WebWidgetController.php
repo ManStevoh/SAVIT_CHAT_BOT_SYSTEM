@@ -52,3 +52,9 @@ class WebWidgetController extends Controller
 
 
 
+        return response()->json([
+
+            'companyName' => $company->name,
+
+            'greeting' => $company->settings?->ai_greeting ?? 'Hi! How can we help you today?',
+
