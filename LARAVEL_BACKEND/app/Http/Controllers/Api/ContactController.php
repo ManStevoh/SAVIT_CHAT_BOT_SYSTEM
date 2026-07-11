@@ -28,3 +28,9 @@ class ContactController extends Controller
                 . "Message:\n{$validated['message']}";
 
             try {
+                $html = '<p>' . nl2br(e($body)) . '</p>';
+                (new MailService)->send($to, 'Contact form: ' . $validated['name'], $html, $body);
+            } catch (\Throwable) {
+                // Still accept the submission if mail fails in dev
+            }
+        }
