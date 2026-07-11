@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PlatformSetting;
 use App\Services\AI\AiLearningConfig;
 use App\Services\MailService;
+use App\Services\Platform\AuditService;
 use App\Services\WhatsApp\WhatsAppBillingModel;
 use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Http\JsonResponse;
@@ -103,7 +104,7 @@ class PlatformSettingsController extends Controller
         return '********';
     }
 
-    public function update(Request $request): JsonResponse
+    public function update(Request $request, AuditService $audit): JsonResponse
     {
         $validated = $request->validate([
             'platformName' => 'nullable|string|max:255',
@@ -231,6 +232,7 @@ class PlatformSettingsController extends Controller
             'notifyDailySummary' => 'notify_daily_summary',
             'landingTrustedCompanies' => 'landing_trusted_companies',
         ];
+        $before = $settings->exists ? $settings->only(array_values($map)) : [];
         $skipIfMasked = ['smtp_password', 'meta_app_secret', 'whatsapp_embedded_app_secret', 'whatsapp_credit_sharing_system_token', 'openai_api_key'];
         foreach ($validated as $key => $value) {
             if ($key === 'logo') {
@@ -265,6 +267,17 @@ class PlatformSettingsController extends Controller
         $settings->save();
         WhatsAppPlatformConfig::clearCache();
         AiLearningConfig::clearCache();
+
+        $audit->log(
+            'platform.settings.updated',
+            PlatformSetting::class,
+            $settings->id,
+            $before,
+            $settings->only(array_values($map)),
+            null,
+            $request->user(),
+            ['changed_keys' => array_keys($validated)],
+        );
 
         return response()->json([
             'success' => true,
