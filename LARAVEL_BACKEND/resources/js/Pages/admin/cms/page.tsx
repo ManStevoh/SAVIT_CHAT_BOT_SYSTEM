@@ -232,3 +232,9 @@ function SectionEditor({
                 v.split("\n").filter(Boolean).map((name) => ({ name: name.trim(), logoUrl: "" }))
               )
             }
+            multiline
+          />
+        </div>
+      )
+    }
+
