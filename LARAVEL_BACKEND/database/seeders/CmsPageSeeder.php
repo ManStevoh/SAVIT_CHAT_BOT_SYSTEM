@@ -268,3 +268,9 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'about',
                 'title' => 'About us',
+                'meta_title' => 'About us — Essem Chat',
+                'meta_description' => 'We offer a revolutionary WhatsApp commerce platform. Join the Essem Chat community today.',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
