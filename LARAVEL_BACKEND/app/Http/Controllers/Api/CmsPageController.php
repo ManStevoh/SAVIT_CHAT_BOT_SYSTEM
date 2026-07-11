@@ -82,3 +82,9 @@ class CmsPageController extends Controller
     private function resolveImageUrl(?string $path): ?string
     {
         if (empty($path)) {
+            return null;
+        }
+        if (str_starts_with($path, 'http') || str_starts_with($path, '/')) {
+            return $path;
+        }
+        if (Storage::disk('public')->exists($path)) {
