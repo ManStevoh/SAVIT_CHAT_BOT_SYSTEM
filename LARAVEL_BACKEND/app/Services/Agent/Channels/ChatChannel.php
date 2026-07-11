@@ -22,3 +22,7 @@ final class ChatChannel
             self::WHATSAPP,
             self::WEB_WIDGET,
             self::EMAIL,
+            self::INSTAGRAM_DM,
+        ];
+    }
+}
