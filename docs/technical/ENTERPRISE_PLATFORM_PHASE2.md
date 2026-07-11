@@ -34,3 +34,9 @@ Phase 2 extends existing subscription, billing, and notification plumbing withou
 ### 2c — Notification center v1
 
 | Component | Path |
+|-----------|------|
+| Templates | `notification_templates` (8 seeded keys) |
+| Deliveries | `notification_deliveries` |
+| Resolver | `NotificationTemplateService` |
+| Dispatcher | `NotificationDispatcher` (in-app + email + delivery log) |
+| Toggles wired | `notify_security_alerts`, `notify_daily_summary`, `notify_failed_payments`, `notify_usage_alerts` |
