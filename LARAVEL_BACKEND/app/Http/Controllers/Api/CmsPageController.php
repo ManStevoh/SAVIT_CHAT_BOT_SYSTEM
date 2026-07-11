@@ -88,3 +88,9 @@ class CmsPageController extends Controller
             return $path;
         }
         if (Storage::disk('public')->exists($path)) {
+            return asset('storage/' . $path);
+        }
+
+        return asset($path);
+    }
+}
