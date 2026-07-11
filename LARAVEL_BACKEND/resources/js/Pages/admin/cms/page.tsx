@@ -58,3 +58,9 @@ function ImageField({
 }: {
   label: string
   value: string
+  onChange: (v: string) => void
+}) {
+  const { toast } = useToast()
+  const [uploading, setUploading] = useState(false)
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
