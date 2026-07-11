@@ -58,3 +58,9 @@ final class BusinessGraphV2Service
             ->where('company_id', $company->id)
             ->limit(500)
             ->get()
+            ->each(function (ProductRelationship $rel) use ($company, &$stats) {
+                $from = $this->upsertNode(
+                    $company,
+                    BusinessGraphNode::TYPE_PRODUCT,
+                    'product',
+                    (int) $rel->product_id,
