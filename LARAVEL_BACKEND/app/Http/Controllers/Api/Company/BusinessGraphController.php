@@ -16,3 +16,9 @@ class BusinessGraphController extends Controller
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
         }
+
+        $limit = (int) $request->query('limit', 200);
+
+        return response()->json($graph->exportGraph($company, min(500, max(10, $limit))));
+    }
+
