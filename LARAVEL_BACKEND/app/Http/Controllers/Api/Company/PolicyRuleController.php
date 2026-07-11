@@ -40,3 +40,9 @@ class PolicyRuleController extends Controller
             'subject_role' => 'nullable|string|max:40',
             'max_amount' => 'nullable|numeric|min:0',
             'requires_role' => 'nullable|string|max:40',
+            'is_active' => 'nullable|boolean',
+            'meta' => 'nullable|array',
+        ]);
+
+        $rule = CompanyPolicyRule::create(array_merge($validated, [
+            'company_id' => $company->id,
