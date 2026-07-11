@@ -250,3 +250,9 @@ final class ConnectorRegistry
 
 
 
+        return ['success' => true, 'message' => 'Shipping connector registered.'];
+
+    }
+
+
+
