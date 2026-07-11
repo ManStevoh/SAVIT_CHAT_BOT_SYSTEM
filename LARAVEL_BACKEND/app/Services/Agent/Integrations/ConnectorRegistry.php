@@ -484,3 +484,9 @@ final class ConnectorRegistry
 
             return [
 
+                'success' => $response->successful(),
+
+                'message' => $response->successful()
+
+                    ? 'Carrier quote endpoint reachable.'
+
