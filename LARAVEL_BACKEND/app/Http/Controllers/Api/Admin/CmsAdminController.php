@@ -40,3 +40,9 @@ class CmsAdminController extends Controller
                 'metaTitle' => $page->meta_title,
                 'metaDescription' => $page->meta_description,
                 'isPublished' => (bool) $page->is_published,
+            ],
+            'sections' => $page->sections->map(fn (CmsSection $s) => [
+                'id' => (string) $s->id,
+                'key' => $s->section_key,
+                'label' => $s->label,
+                'isEnabled' => (bool) $s->is_enabled,
