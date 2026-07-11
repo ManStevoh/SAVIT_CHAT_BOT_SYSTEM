@@ -28,3 +28,9 @@ class ChannelIngestController extends Controller
         $result = $ingest->ingest(
             $company,
             $validated['channel'],
+            $validated['channelUserId'],
+            $validated['message'],
+            $validated['customerName'] ?? null,
+            $validated['customerEmail'] ?? null,
+        );
+
