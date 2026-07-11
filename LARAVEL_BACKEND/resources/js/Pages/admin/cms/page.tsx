@@ -334,3 +334,9 @@ function SectionEditor({
 
     if (key === "mission") {
       return (
+        <div className="space-y-3">
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+        </div>
+      )
+    }
