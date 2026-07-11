@@ -214,3 +214,9 @@ function SectionEditor({
               <Field label="Secondary CTA link" value={str("secondaryCtaHref")} onChange={(v) => set("secondaryCtaHref", v)} />
             </>
           )}
+          <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+        </div>
+      )
+    }
+
+    if (key === "trusted_companies") {
