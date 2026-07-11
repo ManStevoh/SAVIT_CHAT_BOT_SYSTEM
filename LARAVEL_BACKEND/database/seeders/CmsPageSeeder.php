@@ -76,3 +76,9 @@ class CmsPageSeeder extends Seeder
             ],
             [
                 'slug' => 'home',
+                'title' => 'Home',
+                'meta_title' => 'Essem Chat — AI WhatsApp Sales & Order Automation',
+                'meta_description' => 'Turn WhatsApp into your best sales channel. AI replies, order flows, M-Pesa & Stripe payments, multi-agent inbox, and Growth Engine attribution.',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
