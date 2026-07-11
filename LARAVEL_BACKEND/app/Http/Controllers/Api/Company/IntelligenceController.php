@@ -184,3 +184,9 @@ class IntelligenceController extends Controller
         ]);
 
 
+
+        $record = $outcomes->record(
+
+            $company,
+
+            $request->user(),
