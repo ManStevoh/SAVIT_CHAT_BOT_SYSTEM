@@ -46,3 +46,9 @@ final class IntelligenceOutcomeService
                 $actions[] = ['action' => trim($rec), 'source' => 'brief'];
             }
         }
+
+        $this->seedActions($company, 'brief', $briefId, $actions);
+    }
+
+    public function seedFromOpportunity(Company $company, int $opportunityId, string $title, ?string $description = null): void
+    {
