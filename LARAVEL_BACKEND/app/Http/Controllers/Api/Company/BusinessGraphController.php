@@ -40,3 +40,9 @@ class BusinessGraphController extends Controller
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
         }
+
+        $validated = $request->validate([
+            'nodeType' => 'required|string|in:'.implode(',', [
+                BusinessGraphNode::TYPE_SUPPLIER,
+                BusinessGraphNode::TYPE_WAREHOUSE,
+                BusinessGraphNode::TYPE_CAMPAIGN,
