@@ -88,3 +88,9 @@ final class OwnerMorningBriefPushService
         $companyPhone = trim((string) ($company->phone ?? ''));
 
         return $companyPhone !== '' ? $this->normalizePhone($companyPhone) : '';
+    }
+
+    private function formatMessage(Company $company, CommerceBrief $brief): string
+    {
+        $lines = [
+            '🌅 Morning brief — '.$company->name,
