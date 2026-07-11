@@ -154,3 +154,9 @@ revenue_snapshots           — daily MRR/ARR/churn aggregates (materialized)
 - **Idempotency:** All webhook handlers keyed by `external_event_id`.
 - **Audit:** Every financial mutation → Audit Center (module 21).
 - **Compliance:** PCI — never store raw card data; use gateway tokens only.
+
+---
+
+### 20. Notification Center
+
+**Vision:** One system — email, SMS, WhatsApp, push, in-app, voice, rules, templates, scheduling.
