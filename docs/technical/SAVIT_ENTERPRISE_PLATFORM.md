@@ -58,3 +58,9 @@ These are the substrate every other module must plug into.
 |------------|--------|----------|
 | Multi-tenant companies | **Implemented** | `Company`, `CompanySetting`, tenant scoping on all APIs |
 | WhatsApp integration | **Implemented** | `WhatsAppOnboardingService`, `ProcessIncomingWhatsAppMessage`, webhooks |
+| Product catalog | **Implemented** | `Product`, `ProductController`, embeddings sync |
+| Orders & payments | **Implemented** | `Order`, `OrderPaymentService`, M-Pesa/Stripe/Paystack |
+| Inventory signals | **Partial** | Stock on products; agent `low_stock` events; no warehouse module |
+| CRM / customers | **Partial** | `Customer` derived from chats/orders; no full CRM pipeline |
+| Team (basic) | **Partial** | `TeamController`, roles `admin` / `company_owner` / `company_user` |
+| Plans & subscriptions (basic) | **Partial** | `Plan`, `Subscription`, Stripe recurring; M-Pesa/Paystack manual month |
