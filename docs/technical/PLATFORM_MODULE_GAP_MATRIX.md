@@ -64,3 +64,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 | 23 | API Platform | 🟡 | **API keys + v1 orders + outbound webhooks** — OpenAPI publish pending |
 | 24 | Integration Hub | 🟡 | Growth connectors only |
 | 25 | Analytics Studio | 🟡 | Fixed dashboards; no custom KPI builder |
+| 26 | Search Engine | 🟡 | Per-entity search; no global index |
+| 27 | File Management | 🟡 | Uploads only; no drive/versioning |
+| 28 | Calendar | 🟡 | Working hours only |
+| 29 | Event Bus | 🟡 | **domain_events outbox + fan-out job** — full platform event catalog pending |
+| 30 | Developer Platform | ⬜ | No marketplace/apps |
+
