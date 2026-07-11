@@ -22,3 +22,9 @@ class CmsPageSeeder extends Seeder
                 'meta_title' => null,
                 'meta_description' => null,
                 'sections' => [
+                    [
+                        'section_key' => 'navbar',
+                        'label' => 'Navigation bar',
+                        'sort_order' => 1,
+                        'content' => [
+                            'links' => [
