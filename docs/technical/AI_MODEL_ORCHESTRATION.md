@@ -52,3 +52,9 @@
 | Fraud scoring | ML classifier (roadmap) |
 | Sales forecasting | `ForecastService` (heuristics today) |
 | Product recommendations | Recommendation engine (roadmap) |
+
+Configured in `config/ai.php` → `deterministic_handlers`.
+
+---
+
+## Code examples
