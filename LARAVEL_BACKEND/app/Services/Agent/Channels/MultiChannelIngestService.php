@@ -28,3 +28,9 @@ final class MultiChannelIngestService
             throw new \InvalidArgumentException('Unsupported channel: '.$channel);
         }
 
+        $company->loadMissing('settings');
+        $phone = $this->resolvePhone($channel, $channelUserId, $customerEmail);
+        $name = $customerName ?: $this->defaultName($channel, $channelUserId);
+
+        $chat = Chat::query()
+            ->where('company_id', $company->id)
