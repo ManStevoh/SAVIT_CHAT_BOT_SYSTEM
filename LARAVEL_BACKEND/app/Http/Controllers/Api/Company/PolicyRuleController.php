@@ -64,3 +64,9 @@ class PolicyRuleController extends Controller
         $rule = CompanyPolicyRule::where('company_id', $company->id)->findOrFail($id);
         $before = $rule->toArray();
 
+        $validated = $request->validate([
+            'subject_role' => 'nullable|string|max:40',
+            'max_amount' => 'nullable|numeric|min:0',
+            'requires_role' => 'nullable|string|max:40',
+            'is_active' => 'nullable|boolean',
+            'meta' => 'nullable|array',
