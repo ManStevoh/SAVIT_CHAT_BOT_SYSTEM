@@ -136,3 +136,9 @@ class IntelligenceController extends Controller
         if (! $detail) {
 
             return response()->json(['message' => 'Not found.'], 404);
+
+        }
+
+
+
+        return response()->json([
