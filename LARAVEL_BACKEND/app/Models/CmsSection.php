@@ -10,3 +10,9 @@ class CmsSection extends Model
     protected $fillable = [
         'cms_page_id',
         'section_key',
+        'label',
+        'is_enabled',
+        'sort_order',
+        'content',
+    ];
+
