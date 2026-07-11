@@ -280,3 +280,9 @@ final class ConnectorRegistry
 
         if ($key === '') {
 
+            return ['success' => false, 'message' => "{$label} api_key required."];
+
+        }
+
+
+
