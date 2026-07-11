@@ -22,3 +22,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 
 | Level | Name | Status | Strongest evidence today |
 |-------|------|--------|--------------------------|
+| 1 | Understanding (ontology) | **Partial** | World model, causal analysis, health score |
+| 2 | Curiosity | **Partial** | Investigation **case files** + background thinking |
+| 3 | Hypothesis generation | **Partial** | Case steps, reasoning traces, `POST /reason` hypotheses |
+| 4 | Bayesian thinking | **Partial** | **Buy/churn/refund probability scores** on reason |
+| 5 | Counterfactual reasoning | **Partial** | **SimulationService** + API + tests ✅ |
+| 6 | Long-term planning | **Partial** | Executive plans API; no multi-year capital model |
