@@ -100,3 +100,9 @@ class CmsPageSeeder extends Seeder
                         'section_key' => 'trusted_companies',
                         'label' => 'Trusted companies',
                         'sort_order' => 2,
+                        'content' => [
+                            'title' => "Trusted by individuals and teams at the world's best companies",
+                            'companies' => [
+                                ['name' => 'FoodHub', 'logoUrl' => ''],
+                                ['name' => 'ShopEase', 'logoUrl' => ''],
+                                ['name' => 'TechStore', 'logoUrl' => ''],
