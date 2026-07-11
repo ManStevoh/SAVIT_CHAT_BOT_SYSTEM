@@ -40,3 +40,9 @@ final class ChannelReplyDispatcher
         if ($result['queued'] && $syncReply) {
             ProcessIncomingChannelMessage::dispatchSync(
                 $company->id,
+                $result['chat']->id,
+                $result['message']->id,
+                $messageText,
+                $customerName,
+                $result['chat']->customer_phone,
+            );
