@@ -28,3 +28,9 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
 
   const navLinks = (navbarContent.links as CmsLink[] | undefined) ?? []
   const metaTitle = pageData?.page.metaTitle ?? pageData?.page.title ?? fallbackTitle
+  const metaDescription = pageData?.page.metaDescription ?? ""
+
+  const enabledSections =
+    pageData?.sections
+      .filter((s) => s.isEnabled)
+      .sort((a, b) => a.sortOrder - b.sortOrder) ?? []
