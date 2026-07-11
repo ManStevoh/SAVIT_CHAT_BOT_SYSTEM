@@ -16,3 +16,9 @@ class IntelligenceOutcome extends Model
         'outcome',
         'notes',
         'metrics',
+        'recorded_by',
+        'measured_at',
+    ];
+
+    protected $casts = [
+        'metrics' => 'array',
