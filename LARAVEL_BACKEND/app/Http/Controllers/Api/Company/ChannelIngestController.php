@@ -40,3 +40,9 @@ class ChannelIngestController extends Controller
             'queued' => $result['queued'],
         ], 201);
     }
+
+    public function channels(Request $request): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
