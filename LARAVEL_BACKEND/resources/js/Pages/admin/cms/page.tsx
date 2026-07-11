@@ -280,3 +280,9 @@ function SectionEditor({
           <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
           {steps.map((step, i) => (
             <div key={i} className="rounded border p-3 space-y-2">
+              <Field
+                label={`Step ${i + 1} title`}
+                value={step.title}
+                onChange={(v) => {
+                  const next = [...steps]
+                  next[i] = { ...next[i], title: v }
