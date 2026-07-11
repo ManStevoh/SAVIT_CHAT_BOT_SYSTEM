@@ -244,3 +244,9 @@ document_workflows          — draft → sent → signed → archived
 
 ### 7. Internal Chat (Slack-like)
 
+**Vision:** Employee chat; share orders, customers, products, tasks, invoices without copying links.
+
+| Status | **Roadmap** |
+
+**Evidence:** `Chat` model is **customer WhatsApp only** (`customer_phone`). No channels, DMs, or entity cards.
+
