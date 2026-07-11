@@ -46,3 +46,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 ---
 
 ## Strong today (ship with confidence)
+
+| Capability | Where |
+|------------|--------|
+| Perception, debate, confidence, critique | `CognitivePipelineService`, orchestrator |
+| World model, opportunities, health | `BusinessWorldModelService`, `OpportunityDetectionService` |
+| Business simulation | `SimulationService`, `POST /cognitive-ai/simulate`, tests |
