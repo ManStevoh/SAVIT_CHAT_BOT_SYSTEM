@@ -442,3 +442,9 @@ class CmsPageSeeder extends Seeder
                     'is_active' => true,
                 ]);
             }
+        }
+
+        if (LandingFaq::count() === 0) {
+            $faqs = [
+                ['question' => 'How does WhatsApp commerce work?', 'answer' => 'Connect your WhatsApp Business number, add products and FAQs, and our AI handles customer replies, orders, and payments in the chat.'],
+                ['question' => 'What payment methods are supported?', 'answer' => 'M-Pesa STK push and Stripe card payments are built into the conversation — customers pay without leaving WhatsApp.'],
