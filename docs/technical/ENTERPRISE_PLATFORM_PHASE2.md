@@ -88,3 +88,9 @@ php artisan route:list --path=v1/company
 ```
 
 ---
+
+## API quick reference
+
+### Policy rules (Sanctum, company owner)
+
+```
