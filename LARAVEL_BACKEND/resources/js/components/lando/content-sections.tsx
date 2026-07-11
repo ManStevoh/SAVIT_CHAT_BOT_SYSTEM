@@ -106,3 +106,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
   }
 
   if (isLoading && list.length === 0) {
+    return (
+      <div className="flex justify-center py-16">
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#2563eb] border-t-transparent" />
+      </div>
+    )
+  }
