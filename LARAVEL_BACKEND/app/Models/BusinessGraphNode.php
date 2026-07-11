@@ -22,3 +22,9 @@ class BusinessGraphNode extends Model
 
     public const TYPE_CATEGORY = 'category';
 
+    protected $fillable = [
+        'company_id',
+        'node_type',
+        'ref_type',
+        'ref_id',
+        'label',
