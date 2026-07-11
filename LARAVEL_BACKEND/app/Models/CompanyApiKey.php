@@ -10,3 +10,9 @@ class CompanyApiKey extends Model
     protected $fillable = [
         'company_id', 'name', 'key_prefix', 'key_hash', 'scopes', 'last_used_at', 'revoked_at', 'created_by',
     ];
+
+    protected $casts = [
+        'scopes' => 'array',
+        'last_used_at' => 'datetime',
+        'revoked_at' => 'datetime',
+    ];
