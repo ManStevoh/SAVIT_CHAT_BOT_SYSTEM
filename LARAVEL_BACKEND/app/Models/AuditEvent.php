@@ -28,3 +28,9 @@ class AuditEvent extends Model
         'after' => 'array',
         'meta' => 'array',
         'created_at' => 'datetime',
+    ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
