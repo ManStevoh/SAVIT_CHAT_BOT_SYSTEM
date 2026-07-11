@@ -40,3 +40,9 @@ export function LandoTrustedCompanies({
               )}
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
