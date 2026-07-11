@@ -706,3 +706,6 @@ php artisan platform:verify       # subscription, billing, audit schema
 | [database.md](database.md) | Current schema |
 | [api-reference.md](api-reference.md) | REST endpoints |
 | [payments.md](../user-guide/customer-journeys/payments.md) | Customer payment flows |
+| [roles-and-access.md](../user-guide/roles-and-access.md) | Current roles (to be extended) |
+
+**Last verified:** 2026-07-11 — codebase scan + 72 CommerceAgent tests passing.
