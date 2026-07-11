@@ -346,3 +346,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 - `SystemLog` + admin logs UI
 - `AgentTrustLog` — AI decisions only
 - `audit_logging_enabled` in `PlatformSetting` — **toggle only, not wired**
+
+**Build spec**
+
+```
+audit_events                — actor, action, entity, old_values, new_values, ip, user_agent
+audit_retention_policies    — per entity type, GDPR export
