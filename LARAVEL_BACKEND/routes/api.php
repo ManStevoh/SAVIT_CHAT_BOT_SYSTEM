@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Admin\AIUsageController;
 use App\Http\Controllers\Api\Admin\AiConfigController;
 use App\Http\Controllers\Api\Admin\CompanyController;
 use App\Http\Controllers\Api\Admin\ImpersonateController;
+use App\Http\Controllers\Api\Admin\CmsAdminController;
 use App\Http\Controllers\Api\Admin\LandingFaqController;
 use App\Http\Controllers\Api\Admin\LogController;
 use App\Http\Controllers\Api\Admin\OverviewController;
@@ -71,6 +72,9 @@ use App\Http\Controllers\Api\Company\TeamController;
 use App\Http\Controllers\Api\Company\WhatsAppController;
 use App\Http\Controllers\Api\Company\WhatsAppTemplateController;
 use App\Http\Controllers\Api\EmailVerificationController;
+use App\Http\Controllers\Api\AppBrandingController;
+use App\Http\Controllers\Api\CmsPageController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\LandingController;
 use App\Http\Controllers\Api\MpesaCallbackController;
 use App\Http\Controllers\Api\PaystackWebhookController;
@@ -82,6 +86,9 @@ use Illuminate\Support\Facades\Route;
 // Public (no auth)
 Route::get('plans', [PlanController::class, 'index']);
 Route::get('app-branding', [AppBrandingController::class, 'show']);
+Route::get('cms/pages/{slug}', [CmsPageController::class, 'show']);
+Route::get('cms/global', [CmsPageController::class, 'global']);
+Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:10,1');
 Route::get('landing', [LandingController::class, 'index']);
 
 // Stripe webhook (no auth; verified by Stripe signature)
@@ -381,4 +388,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::post('landing-faqs', [LandingFaqController::class, 'store']);
     Route::put('landing-faqs/{landing_faq}', [LandingFaqController::class, 'update']);
     Route::delete('landing-faqs/{landing_faq}', [LandingFaqController::class, 'destroy']);
+    Route::get('cms/pages', [CmsAdminController::class, 'pages']);
+    Route::get('cms/pages/{slug}', [CmsAdminController::class, 'showPage']);
+    Route::put('cms/pages/{slug}', [CmsAdminController::class, 'updatePage']);
+    Route::put('cms/pages/{slug}/sections/{sectionKey}', [CmsAdminController::class, 'updateSection']);
+    Route::put('cms/pages/{slug}/sections-reorder', [CmsAdminController::class, 'reorderSections']);
+    Route::post('cms/upload-image', [CmsAdminController::class, 'uploadImage']);
 });
