@@ -16,3 +16,9 @@ final class ChatChannel
     public const INSTAGRAM_DM = 'instagram_dm';
 
     /** @return list<string> */
+    public static function all(): array
+    {
+        return [
+            self::WHATSAPP,
+            self::WEB_WIDGET,
+            self::EMAIL,
