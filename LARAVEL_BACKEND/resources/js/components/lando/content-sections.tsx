@@ -52,3 +52,9 @@ export function LandoTestimonials({
   testimonials = [],
 }: {
   title?: string
+  description?: string
+  testimonials?: Array<{ id: string; name: string; role: string; content: string; rating: number }>
+}) {
+  if (testimonials.length === 0) return null
+
+  return (
