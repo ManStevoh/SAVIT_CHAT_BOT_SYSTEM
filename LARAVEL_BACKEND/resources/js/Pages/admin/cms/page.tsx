@@ -310,3 +310,9 @@ function SectionEditor({
         <p className="text-sm text-muted-foreground">
           {key === "testimonials" && "Manage testimonial cards in Admin → Testimonials."}
           {key === "faq" && "Manage FAQ items in Admin → Landing FAQ."}
+          {key === "pricing_plans" && "Manage plan cards in Admin → Plans."}
+        </p>
+      )
+    }
+
+    if (key === "compare_features") {
