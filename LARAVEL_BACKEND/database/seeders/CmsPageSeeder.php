@@ -292,3 +292,9 @@ class CmsPageSeeder extends Seeder
                         ],
                     ],
                     [
+                        'section_key' => 'efficiency',
+                        'label' => 'Efficiency statement',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => "Let's start\nworking\nmore\nefficiently\ntoday!",
+                        ],
