@@ -118,3 +118,9 @@ class WebWidgetController extends Controller
 
             'chatId' => $result['chatId'],
 
+            'reply' => $result['reply'],
+
+        ], 201);
+
+    }
+
