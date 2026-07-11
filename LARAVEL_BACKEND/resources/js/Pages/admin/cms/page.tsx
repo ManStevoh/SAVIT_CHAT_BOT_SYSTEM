@@ -586,3 +586,9 @@ function PageEditor({ slug }: { slug: string }) {
                 Save SEO
               </Button>
               <Button size="sm" variant="outline" asChild>
+                <a href={previewHref} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="mr-1 h-4 w-4" />
+                  Preview page
+                </a>
+              </Button>
+            </div>
