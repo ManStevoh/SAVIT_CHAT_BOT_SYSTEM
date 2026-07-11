@@ -16,3 +16,9 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Agent reply for web widget, email, and Instagram DM channels (no WhatsApp send).
+ */
+class ProcessIncomingChannelMessage implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public function __construct(
