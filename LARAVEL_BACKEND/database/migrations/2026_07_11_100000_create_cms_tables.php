@@ -28,3 +28,9 @@ return new class extends Migration
             $table->json('content')->nullable();
             $table->timestamps();
 
+            $table->unique(['cms_page_id', 'section_key']);
+        });
+    }
+
+    public function down(): void
+    {
