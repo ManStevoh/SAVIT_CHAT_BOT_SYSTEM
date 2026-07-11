@@ -22,3 +22,9 @@ class CompanyPolicyRule extends Model
         'is_active' => 'boolean',
         'meta' => 'array',
     ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+}
