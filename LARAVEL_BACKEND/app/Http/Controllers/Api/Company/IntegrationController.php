@@ -118,3 +118,4 @@ class IntegrationController extends Controller
             'message' => $result['message'] ?? null,
         ], ($result['success'] ?? false) ? 200 : 422);
     }
+}
