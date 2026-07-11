@@ -388,3 +388,9 @@ final class ConnectorRegistry
 
             Log::warning('ERP inventory sync failed', ['error' => $e->getMessage()]);
 
+
+
+            return ['success' => false, 'message' => $e->getMessage()];
+
+        }
+
