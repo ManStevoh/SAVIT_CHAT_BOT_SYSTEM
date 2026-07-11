@@ -16,3 +16,9 @@ export function LinkListEditor({
   const update = (index: number, field: keyof CmsLink, value: string) => {
     const next = [...links]
     next[index] = { ...next[index], [field]: value }
+    onChange(next)
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs">{label}</Label>
