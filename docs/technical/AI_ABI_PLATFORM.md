@@ -13,10 +13,11 @@ This document is the **master end-to-end reference** for everything implemented 
 
 | Verification command | Result (2026-07-11) |
 |----------------------|---------------------|
-| `php artisan agent:verify` | **All schema + 18 tools OK** (34 schema checks) |
-| `php artisan test --filter=CommerceAgent` | **63 tests passing** (see layer docs for counts) |
+| `php artisan agent:verify` | **All schema + 20 tools OK** (38 schema checks) |
+| `php artisan test --filter=CommerceAgent` | **72 tests passing** (see layer docs for counts) |
 | `php artisan route:list --path=company/cognitive-ai` | 4 routes registered |
-| `php artisan route:list --path=company/executive-ai` | 3 routes registered |
+| `php artisan route:list --path=company/executive-ai` | 5 routes registered |
+| `php artisan route:list --path=company/intelligence` | 1 route registered |
 | `php artisan route:list --path=company/commerce-brief` | 1 route registered |
 
 ---
@@ -302,7 +303,7 @@ risks[]
 | Internal debate | `InternalDebateService` | Implemented |
 | Confidence | `ConfidenceScoringService` | Implemented |
 | Self-critique | `SelfCritiqueService` (rule-based) | Implemented |
-| Business DNA | `BusinessDnaService` + `business_dna` | Implemented (not in Settings UI API) |
+| Business DNA | `BusinessDnaService` + `business_dna` | **Implemented** — Settings → AI → Business DNA presets |
 | Strategic memory | `StrategicMemoryService` | Implemented |
 | Meta learning | `MetaLearningService` + `platform_intelligence_patterns` | Implemented (seeded patterns) |
 | Tool proposals | `ToolProposalService` | Implemented |
@@ -351,7 +352,7 @@ Middleware: `auth:sanctum`, `user.active`, `subscription.active`.
 | GET | `/api/company/settings` | `agentCommerceEnabled`, `agentProactiveEnabled`, `agentBusinessGoals`, `agentBusinessGoalCatalog` |
 | PUT | `/api/company/settings` | same writable fields |
 
-**Not exposed via Settings API (set in DB / future UI):** `digital_twin`, `business_dna`, `agent_council_enabled`.
+**Not exposed via Settings API (set in DB / future UI):** `digital_twin`, `agent_council_enabled`.
 
 ### D.2 Commerce brief
 
@@ -621,8 +622,10 @@ This section maps the long-term **Artificial Business Intelligence** levels to *
 
 | Today | Evidence |
 |-------|----------|
-| **Partial** | Closest endpoints: `POST /cognitive-ai/plans`, `POST /cognitive-ai/simulate`, executive dashboard, commerce brief. |
-| Missing | Unified `POST /api/company/reason` (or `/intelligence/reason`) product API with standard response contract. |
+| **Implemented** | `POST /api/company/intelligence/reason` — `IntelligenceReasoningService` orchestrates world model, owner investigation, causal analysis, health, forecast, executive decisions, auto simulation/plan, hypotheses, assumptions, recommended actions. UI: **Cognitive AI** dashboard “Ask the business”. |
+| Also | `POST /cognitive-ai/plans`, `POST /cognitive-ai/simulate`, executive dashboard APIs. |
+
+**Code:** `IntelligenceReasoningService`, `IntelligenceController`, `CommerceAgentIntelligenceTest`.
 
 ### Level 20 — The intelligence loop
 
@@ -647,19 +650,18 @@ SAVIT’s differentiating product surface should be **business reasoning**:
 
 1. Collect data — world model, orders, stock, health score, opportunities  
 2. Identify gaps — reasoning `missing_info`, confidence clarify/escalate  
-3. Scenarios — `SimulationService` + `POST /cognitive-ai/simulate`  
+3. Scenarios — `SimulationService` + `POST /cognitive-ai/simulate` + auto in `POST /intelligence/reason`  
 4. Trade-offs — economic notes + simulation estimates  
 5. Explain — trust logs + opportunity evidence + executive decisions  
-6. Recommend — executive brief top 3 + plan breakdown  
+6. Recommend — **`POST /intelligence/reason`** + executive brief top 3 + plan breakdown  
 
 **What is still required for a true Decision Intelligence product:**
 
-1. Unified `POST /reason` Intelligence API (Level 19)  
-2. Persistent investigation cases (Level 2–3)  
-3. Calibrated probabilities (Level 4)  
-4. Approval execution UI for high-risk actions  
-5. Owner-facing Executive / Cognitive dashboards (APIs exist; frontend incomplete)  
-6. Outcome measurement closing the loop (did the recommendation work?)
+1. Persistent investigation **cases** with multi-step probes (Level 2–3)  
+2. Calibrated probabilities (Level 4)  
+3. Outcome measurement — did the recommendation work? (Level 20 loop closure)  
+4. Org chart approval routing (Level 7)  
+5. Multi-business ecosystem reasoning (Level 12)  
 
 ---
 
@@ -668,13 +670,13 @@ SAVIT’s differentiating product surface should be **business reasoning**:
 1. Deploy code; run `php artisan migrate --force`
 2. Run `php artisan agent:verify` — all OK
 3. Ensure queue workers + scheduler: `php artisan schedule:run` (cron)
-4. Dashboard → Settings → AI → **Agent commerce mode ON**
-5. Optional: **Proactive mode ON**; select business goals
-6. Optional (DB/admin for now): set `company_settings.business_dna`, `digital_twin`
-7. Send WhatsApp test message; confirm `messages.reply_source` starts with `agent_cognitive`
-8. Inspect `cognitive_episodes`, `agent_trust_logs`, `agent_tool_invocations`
-9. Call `GET /api/company/executive-ai/dashboard` and `GET /api/company/cognitive-ai/dashboard`
-10. After 07:00 (or dispatch job): check `commerce_briefs` for today
+4. Dashboard → **Settings → AI** → **Auto-reply ON** + **Agent commerce mode ON**
+5. Optional: **Business DNA** preset (Luxury / Café / Custom)
+6. Optional: **Proactive mode ON**; select business goals
+7. Open **Cognitive AI** → test `POST /intelligence/reason` via UI
+8. Open **Executive AI** → brief, approvals, opportunities
+9. Send WhatsApp test message; confirm `messages.reply_source` starts with `agent_cognitive`
+10. Inspect `cognitive_episodes`, `agent_trust_logs`, `owner_analytics_investigations`
 
 ---
 
@@ -684,10 +686,11 @@ SAVIT’s differentiating product surface should be **business reasoning**:
 |----------------|---------|
 | “Full AGI / ABI complete” | Layers 1–4 are production foundations; ABI Levels 1–20 are mostly Partial/Roadmap |
 | “LLM perception” | Perception + sentiment + critique are **rule-based** today; reasoning uses LLM |
-| “Approval workflows live for all tools” | Gate exists; no tool is currently risk=`high` in config |
-| “Settings UI for DNA/twin” | Columns + services exist; Settings API does not expose them yet |
+| “Approval workflows live for all tools” | Gate exists; `send_whatsapp_campaign` and `issue_order_refund` are high-risk; Executive AI UI executes on approve |
+| “Settings UI for DNA/twin” | **Business DNA** in Settings → AI; `digital_twin` still DB-only |
 | “Cross-tenant learning shares data” | Patterns are anonymized platform rows; no private tenant data is copied |
-| “Business simulation is Future” (old Platform doc) | **Outdated** — `SimulationService` + API + tests exist |
+| “Business simulation is Future” | **Outdated** — `SimulationService` + API + tests + `POST /reason` auto-simulate |
+| “Intelligence API missing” | **Outdated** — `POST /api/company/intelligence/reason` shipped (Level 19) |
 
 ---
 
