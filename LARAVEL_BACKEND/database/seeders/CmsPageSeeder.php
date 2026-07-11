@@ -112,3 +112,9 @@ class CmsPageSeeder extends Seeder
                             ],
                         ],
                     ],
+                    [
+                        'section_key' => 'intro_card',
+                        'label' => 'Intro card',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'Introducing WhatsApp commerce',
