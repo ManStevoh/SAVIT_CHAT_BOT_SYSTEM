@@ -352,3 +352,9 @@ final class ConnectorRegistry
 
      * @param  array<string, mixed>  $config
 
+     * @return array{success: bool, message?: string}
+
+     */
+
+    private function pullErpInventory(array $config): array
+
