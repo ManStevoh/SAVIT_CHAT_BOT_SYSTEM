@@ -376,3 +376,9 @@ export function LandoContactSection({
         setName("")
         setEmail("")
         setMessage("")
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
