@@ -22,3 +22,9 @@ export interface CmsPageData {
   testimonials?: Array<{
     id: string
     name: string
+    role: string
+    content: string
+    rating: number
+  }>
+  faqs?: Array<{ id: string; question: string; answer: string }>
+  trustedCompanies?: string[] | Array<{ name: string; logoUrl?: string }>
