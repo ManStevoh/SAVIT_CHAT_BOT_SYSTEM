@@ -100,3 +100,9 @@ export function LandoIntroCard({
   imageUrl,
   imageAlt = "",
 }: {
+  title: string
+  description?: string
+  ctaText?: string
+  ctaHref?: string
+  imageUrl?: string
+  imageAlt?: string
