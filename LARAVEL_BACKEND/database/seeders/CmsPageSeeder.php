@@ -454,3 +454,9 @@ class CmsPageSeeder extends Seeder
                 ['question' => 'Where do I sign up?', 'answer' => 'Click Sign up in the navigation bar or visit /register to create your account and start your free trial.'],
             ];
             foreach ($faqs as $i => $faq) {
+                LandingFaq::create([
+                    ...$faq,
+                    'sort_order' => $i,
+                    'is_active' => true,
+                ]);
+            }
