@@ -124,3 +124,9 @@ class CmsAdminController extends Controller
         ]);
 
         $path = $request->file('image')->store('cms_images', 'public');
+        $url = asset('storage/' . $path);
+
+        return response()->json([
+            'success' => true,
+            'url' => $url,
+            'path' => $path,
