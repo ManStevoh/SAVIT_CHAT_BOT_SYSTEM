@@ -220,3 +220,9 @@ class IntelligenceController extends Controller
 
         $status = $request->query('status', 'pending');
         $query = IntelligenceOutcome::where('company_id', $company->id)
+            ->orderByDesc('created_at')
+            ->limit(50);
+
+        if (in_array($status, ['pending', 'positive', 'neutral', 'negative'], true)) {
+            $query->where('outcome', $status);
+        }
