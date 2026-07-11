@@ -298,3 +298,9 @@ final class ConnectorRegistry
 
      * @return array{success: bool, message?: string}
 
+     */
+
+    private function connectCrmWebhook(array $config): array
+
+    {
+
