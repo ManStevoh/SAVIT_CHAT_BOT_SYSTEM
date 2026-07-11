@@ -106,3 +106,9 @@ final class BusinessGraphV2Service
                     $company,
                     BusinessGraphNode::TYPE_ORDER,
                     'order',
+                    (int) $order->id,
+                    $order->order_number,
+                    ['total' => (float) $order->total],
+                );
+                $stats['nodes']++;
+
