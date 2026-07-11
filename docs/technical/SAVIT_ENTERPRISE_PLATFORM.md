@@ -256,3 +256,9 @@ document_workflows          — draft → sent → signed → archived
 internal_channels           — public/private, company_id
 internal_messages           — thread, mentions, attachments
 internal_entity_refs        — polymorphic links to Order, Customer, Product, etc.
+```
+
+- **Real-time:** Laravel Reverb/Pusher or SSE for live updates.
+- **Permissions:** Channel membership via Permission Engine (module 22).
+
+---
