@@ -214,3 +214,9 @@ export function LandoHowToJoin({
                 <Button asChild className="mt-8 h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]">
                   <Link href={ctaHref}>{ctaText}</Link>
                 </Button>
+              )}
+            </div>
+            <div className="divide-y divide-gray-200">
+              {steps.map((step) => (
+                <div key={step.title} className="py-6 first:pt-0 last:pb-0">
+                  <h3 className="text-lg font-bold text-black">{step.title}</h3>
