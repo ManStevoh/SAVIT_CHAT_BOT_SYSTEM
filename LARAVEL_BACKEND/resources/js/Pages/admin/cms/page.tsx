@@ -460,3 +460,9 @@ function SectionEditor({
         </div>
         <CollapsibleContent>
           <div className="space-y-4 border-t p-4">
+            {renderFields()}
+            <Button onClick={save} disabled={saving} size="sm">
+              <Save className="mr-1 h-4 w-4" />
+              Save section
+            </Button>
+          </div>
