@@ -82,3 +82,9 @@ class CmsAdminController extends Controller
 
     public function updateSection(Request $request, string $slug, string $sectionKey): JsonResponse
     {
+        $page = CmsPage::where('slug', $slug)->firstOrFail();
+        $section = CmsSection::where('cms_page_id', $page->id)
+            ->where('section_key', $sectionKey)
+            ->firstOrFail();
+
+        $validated = $request->validate([
