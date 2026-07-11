@@ -10,3 +10,9 @@ use App\Models\Message;
  * Ingest + optional synchronous agent reply (web widget, webhooks).
  */
 final class ChannelReplyDispatcher
+{
+    public function __construct(
+        protected MultiChannelIngestService $ingest,
+    ) {}
+
+    /**
