@@ -46,3 +46,9 @@ class ProcessTrialTransitionsJob implements ShouldQueue
                 ], $company->id);
             }
 
+            Log::info('Trial subscription expired', [
+                'company_id' => $subscription->company_id,
+                'action' => $action,
+            ]);
+        }
+    }
