@@ -34,3 +34,9 @@ class CmsPageSeeder extends Seeder
                                 ['label' => 'Contact', 'href' => '/contact'],
                             ],
                             'loginLabel' => 'Log in',
+                            'loginHref' => '/login',
+                            'signupLabel' => 'Sign up',
+                            'signupHref' => '/register',
+                        ],
+                    ],
+                    [
