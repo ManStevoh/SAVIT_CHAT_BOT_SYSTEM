@@ -118,3 +118,9 @@ function SectionEditor({
     setSaving(true)
     const res = await updateCmsSection(slug, section.key, { isEnabled: enabled, content })
     setSaving(false)
+    if (res.success) {
+      toast({ title: `${section.label} saved` })
+      onSaved()
+    } else {
+      toast({ title: res.message ?? "Save failed", variant: "destructive" })
+    }
