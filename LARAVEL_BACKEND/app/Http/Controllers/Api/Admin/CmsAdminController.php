@@ -148,3 +148,7 @@ class CmsAdminController extends Controller
                 ->where('section_key', $item['key'])
                 ->update(['sort_order' => (int) $item['sortOrder']]);
         }
+
+        return response()->json(['success' => true]);
+    }
+}
