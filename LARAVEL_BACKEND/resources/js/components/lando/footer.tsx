@@ -10,3 +10,9 @@ interface LandoFooterProps {
 }
 
 export function LandoFooter({
+  copyright,
+  navLinks = [],
+  socialLinks = [],
+  legalLinks = [],
+}: LandoFooterProps) {
+  return (
