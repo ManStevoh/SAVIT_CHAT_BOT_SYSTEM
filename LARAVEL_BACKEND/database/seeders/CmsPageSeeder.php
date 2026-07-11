@@ -82,3 +82,9 @@ class CmsPageSeeder extends Seeder
                 'sections' => [
                     [
                         'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'kicker' => 'FREE 14 DAYS TRIAL',
+                            'title' => 'The best way to sell on WhatsApp.',
+                            'description' => 'AI handles replies and orders. Your team steps in when needed. Customers pay with M-Pesa or card without leaving the chat.',
