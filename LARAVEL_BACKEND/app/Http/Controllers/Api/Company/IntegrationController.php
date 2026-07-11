@@ -28,3 +28,9 @@ class IntegrationController extends Controller
                 'lastError' => $row?->last_error,
                 'connected' => $row !== null && $row->status === 'active',
             ]);
+        })->values();
+
+        return response()->json(['connectors' => $connectors]);
+    }
+
+    public function connect(Request $request, ConnectorRegistry $registry): JsonResponse
