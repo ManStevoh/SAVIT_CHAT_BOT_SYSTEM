@@ -58,3 +58,5 @@ final class ChannelReplyDispatcher
             'reply' => $reply,
             'queued' => $result['queued'],
         ];
+    }
+}
