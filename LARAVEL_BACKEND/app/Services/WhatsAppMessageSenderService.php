@@ -106,6 +106,25 @@ class WhatsAppMessageSenderService
     }
 
     /**
+     * Send audio by uploading file to Meta and sending via media_id.
+     *
+     * @return array{success: bool, message_id?: string, error?: string}
+     */
+    public function sendAudioFile(
+        WhatsAppAccount $account,
+        string $to,
+        string $absolutePath,
+        ?string $mimeType = null,
+    ): array {
+        $upload = $this->uploadMediaFile($account, $absolutePath, $mimeType ?? 'audio/mpeg', basename($absolutePath));
+        if (! $upload['success']) {
+            return ['success' => false, 'error' => $upload['error'] ?? 'Audio upload failed'];
+        }
+
+        return $this->sendMediaById($account, $to, 'audio', $upload['media_id']);
+    }
+
+    /**
      * Send document by public URL.
      *
      * @return array{success: bool, message_id?: string, error?: string}
