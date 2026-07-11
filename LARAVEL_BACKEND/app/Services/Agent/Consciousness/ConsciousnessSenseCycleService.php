@@ -52,3 +52,9 @@ final class ConsciousnessSenseCycleService
 
             $this->timeline->record(
                 $company,
+                'consciousness_sense',
+                'Consciousness sense cycle',
+                'Background sense cycle completed',
+                ['events_detected' => $detected],
+                'company',
+                (int) $company->id,
