@@ -436,3 +436,9 @@ class CmsPageSeeder extends Seeder
             ];
             foreach ($samples as $i => $sample) {
                 Testimonial::create([
+                    ...$sample,
+                    'rating' => 5,
+                    'sort_order' => $i,
+                    'is_active' => true,
+                ]);
+            }
