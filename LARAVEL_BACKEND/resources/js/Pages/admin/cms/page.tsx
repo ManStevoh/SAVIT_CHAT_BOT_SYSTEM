@@ -22,3 +22,9 @@ const PAGE_SLUGS = [
   { slug: "global", label: "Global (Nav & Footer)" },
   { slug: "home", label: "Home" },
   { slug: "pricing", label: "Pricing" },
+  { slug: "about", label: "About" },
+  { slug: "contact", label: "Contact" },
+  { slug: "privacy", label: "Privacy" },
+  { slug: "terms", label: "Terms" },
+]
+
