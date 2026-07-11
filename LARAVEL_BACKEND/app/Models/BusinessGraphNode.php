@@ -46,3 +46,8 @@ class BusinessGraphNode extends Model
         return $this->hasMany(BusinessGraphEdge::class, 'from_node_id');
     }
 
+    public function incomingEdges(): HasMany
+    {
+        return $this->hasMany(BusinessGraphEdge::class, 'to_node_id');
+    }
+}
