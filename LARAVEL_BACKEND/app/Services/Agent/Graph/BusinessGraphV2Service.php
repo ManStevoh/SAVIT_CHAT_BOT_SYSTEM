@@ -10,3 +10,9 @@ use App\Models\Product;
 use App\Models\ProductRelationship;
 use App\Models\WhatsAppCampaign;
 use Illuminate\Support\Facades\DB;
+
+/**
+ * Business Graph v2 — traversable nodes beyond products (suppliers, warehouses, campaigns).
+ */
+final class BusinessGraphV2Service
+{
