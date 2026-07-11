@@ -214,3 +214,9 @@ final class ConnectorRegistry
 
             default => ['success' => true, 'message' => 'No sync required.'],
 
+        };
+
+    }
+
+
+
