@@ -40,3 +40,9 @@ final class BusinessProbabilityService
             ->having('c', '>', 1)
             ->get()
             ->count();
+
+        $refundCount = (int) Order::where('company_id', $companyId)
+            ->where('payment_status', 'refunded')
+            ->where('updated_at', '>=', $since90)
+            ->count();
+
