@@ -346,3 +346,9 @@ export function LandoContactSection({
   title: string
   description?: string
   imageUrl?: string
+  imageAlt?: string
+  nameLabel?: string
+  namePlaceholder?: string
+  emailLabel?: string
+  emailPlaceholder?: string
+  messageLabel?: string
