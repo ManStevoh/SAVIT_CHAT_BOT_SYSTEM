@@ -142,3 +142,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
         <LandoTestimonials
           title={str(content.title)}
           description={str(content.description)}
+          testimonials={pageData.testimonials ?? []}
+        />
+      )
+
+    case "pricing_plans":
+      return <LandoPricingPlans popularBadge={str(content.popularBadge, "Most Popular")} />
