@@ -28,3 +28,9 @@ class MarketplaceController extends Controller
         $company = $request->user()->company;
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $validated = $request->validate([
+            'config' => 'nullable|array',
+            'config.webhook_base_url' => 'nullable|url|max:500',
+            'config.webhook_secret' => 'nullable|string|max:128',
