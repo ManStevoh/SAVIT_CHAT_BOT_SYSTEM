@@ -52,3 +52,9 @@ This document maps **every operational platform module** in the SAVIT vision to 
 
 ## What is already built (Phase 1 — Core Commerce)
 
+These are the substrate every other module must plug into.
+
+| Capability | Status | Key code |
+|------------|--------|----------|
+| Multi-tenant companies | **Implemented** | `Company`, `CompanySetting`, tenant scoping on all APIs |
+| WhatsApp integration | **Implemented** | `WhatsAppOnboardingService`, `ProcessIncomingWhatsAppMessage`, webhooks |
