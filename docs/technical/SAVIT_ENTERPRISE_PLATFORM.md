@@ -106,3 +106,9 @@ subscription_plans          — entitlements JSON (messages, seats, modules, fla
 subscription_entitlements   — resolved effective entitlements per company
 usage_meters                — meter_key, period, consumed, limit
 usage_events                — append-only usage records (idempotent)
+subscription_coupons        — code, %/fixed, redemption limits, partner_id
+subscription_trials         — trial state machine + scheduled transitions
+partner_accounts            — reseller markup, commission, white-label scope
+```
+
+- **Security:** Coupon redemption rate-limited; partner API keys scoped to tenant subtree.
