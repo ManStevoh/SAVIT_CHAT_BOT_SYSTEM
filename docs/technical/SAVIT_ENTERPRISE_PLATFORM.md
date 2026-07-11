@@ -502,3 +502,9 @@ event_outbox                — transactional outbox pattern for reliability
 | Status | **Roadmap** |
 
 **Build spec:** PWA service worker + IndexedDB queue; `offline_sync_batches` API; conflict resolution (last-write-wins + manual merge for orders).
+
+---
+
+### 33. White-Label Platform
+
+**Vision:** Agency logo, domain, colors, emails, resell, manage sub-customers.
