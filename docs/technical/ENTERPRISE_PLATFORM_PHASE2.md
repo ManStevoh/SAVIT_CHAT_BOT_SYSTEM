@@ -52,3 +52,9 @@ Phase 2 extends existing subscription, billing, and notification plumbing withou
 ### 2e — Audit center
 
 Already shipped in ABI foundation (`audit_events`, `AuditService`). Phase 2 wires policy CRUD + billing + API key lifecycle.
+
+### 2f — Event bus fan-out
+
+| Component | Path |
+|-----------|------|
+| Outbox | `domain_events` |
