@@ -418,3 +418,9 @@ class CmsPageSeeder extends Seeder
                         'cms_page_id' => $page->id,
                         'section_key' => $sectionData['section_key'],
                     ],
+                    [
+                        'label' => $sectionData['label'],
+                        'is_enabled' => true,
+                        'sort_order' => $sectionData['sort_order'],
+                        'content' => $sectionData['content'],
+                    ]
