@@ -412,3 +412,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 **Evidence:** Fixed dashboards — `AnalyticsController`, Growth analytics, Executive AI, Cognitive dashboard. No user-defined widgets or report builder.
 
 **Build spec:** `analytics_dashboards`, `widgets`, `kpi_definitions`, `scheduled_reports` — query layer on read replicas / warehouse.
+
+---
+
+### 26. Search Engine
+
+**Vision:** Google-like — one search bar across customers, products, orders, chats, invoices, employees, files, tasks, meetings.
