@@ -196,3 +196,9 @@ class CmsPageSeeder extends Seeder
                         ],
                     ],
                 ],
+            ],
+            [
+                'slug' => 'pricing',
+                'title' => 'Pricing',
+                'meta_title' => 'Pricing — Essem Chat',
+                'meta_description' => 'Straightforward plans for WhatsApp commerce. 14-day free trial on every plan.',
