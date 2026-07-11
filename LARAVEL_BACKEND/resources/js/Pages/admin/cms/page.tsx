@@ -472,3 +472,9 @@ function SectionEditor({
   )
 }
 
+function SortableSectionList({
+  slug,
+  sections,
+  onSaved,
+}: {
+  slug: string
