@@ -46,3 +46,9 @@ export function LandoAuthLink({
   href: string
   children: React.ReactNode
 }) {
+  return (
+    <a href={href} className="text-sm font-medium text-[#2563eb] hover:text-[#1d4ed8]">
+      {children}
+    </a>
+  )
+}
