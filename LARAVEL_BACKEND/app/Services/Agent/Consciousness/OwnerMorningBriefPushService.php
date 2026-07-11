@@ -52,3 +52,9 @@ final class OwnerMorningBriefPushService
 
         $message = $this->formatMessage($company, $brief);
         $result = $this->waSender->sendText($wa, $phone, $message);
+
+        if (! ($result['success'] ?? false)) {
+            Log::warning('Morning brief WhatsApp push failed', [
+                'company_id' => $company->id,
+                'brief_id' => $brief->id,
+            ]);
