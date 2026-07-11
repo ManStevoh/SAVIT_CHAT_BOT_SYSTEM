@@ -88,3 +88,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
 
+  useEffect(() => {
+    setIsLoggedIn(!!getAuthToken())
+  }, [])
+
+  const list = plans ?? []
+
