@@ -34,3 +34,9 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
         <h1 className="text-3xl font-bold tracking-tight text-black sm:text-4xl">{title}</h1>
         <div className="prose prose-sm mt-10 max-w-none text-gray-600 prose-headings:font-semibold prose-headings:text-black prose-a:text-[#2563eb]">
           {children}
+        </div>
+      </main>
+      <LandoFooter
+        copyright={String(footerContent.copyright ?? "")}
+        navLinks={(footerContent.navLinks as CmsLink[]) ?? []}
+        socialLinks={(footerContent.socialLinks as CmsLink[]) ?? []}
