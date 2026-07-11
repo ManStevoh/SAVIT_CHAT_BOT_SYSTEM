@@ -52,3 +52,9 @@ export function LinkListEditor({
         variant="outline"
         size="sm"
         onClick={() => onChange([...links, { label: "", href: "" }])}
+      >
+        <Plus className="mr-1 h-4 w-4" />
+        Add link
+      </Button>
+    </div>
+  )
