@@ -178,3 +178,9 @@ function SectionEditor({
     }
 
     if (key === "auth_shell") {
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ImageField label="Auth illustration" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          <Field label="Image alt text" value={str("imageAlt")} onChange={(v) => set("imageAlt", v)} />
+        </div>
+      )
