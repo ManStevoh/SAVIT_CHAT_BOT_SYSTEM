@@ -610,3 +610,9 @@ Phase 5 — Ecosystem
 The AI agent is only as capable as the platform it runs on. **Subscription + billing + permissions + events** give the agent:
 
 - Safe boundaries (who can approve refunds, what plan allows)
+- Financial truth (invoices, payments, revenue signals)
+- Reliable side effects (notify, webhook, audit on every action)
+
+---
+
+## Dependency graph
