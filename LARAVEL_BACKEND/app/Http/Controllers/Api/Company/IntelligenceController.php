@@ -154,3 +154,9 @@ class IntelligenceController extends Controller
 
 
     public function recordOutcome(Request $request, IntelligenceOutcomeService $outcomes): JsonResponse
+
+    {
+
+        $company = $request->user()->company;
+
+        if (! $company) {
