@@ -88,3 +88,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 | 🟡 Partial | 22 |
 | ⬜ Roadmap | 13 |
 
+## Next implementation priority (Phase 2a–2h)
+
+1. **Subscription Engine** — entitlements table, usage meters, trial job
+2. **Billing Engine** — invoice + payment ledger
+3. **Notification Center** — dispatcher + templates
+## Phase 2 status (2026-07-11)
