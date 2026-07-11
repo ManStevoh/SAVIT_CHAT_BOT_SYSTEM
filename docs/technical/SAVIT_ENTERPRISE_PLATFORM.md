@@ -40,3 +40,9 @@ This document maps **every operational platform module** in the SAVIT vision to 
 | Collaboration | Internal Chat, Wiki, PM | 0 | 1 | 2 |
 | Portals | Customer, Employee, Vendor | 0 | 0 | 3 |
 | Operations | Delivery, Assets | 0 | 1 | 1 |
+| Governance | Audit, Permissions | 0 | 2 | 0 |
+| Platform | API, Integrations, Event Bus, Developer | 1 | 3 | 1 |
+| Intelligence | Analytics Studio, BI, Search | 1 | 2 | 0 |
+| Infrastructure | Files, Calendar | 0 | 2 | 0 |
+| Ecosystem | Industry Packs, Offline, White-label, Marketplace | 0 | 0 | 4 |
+
