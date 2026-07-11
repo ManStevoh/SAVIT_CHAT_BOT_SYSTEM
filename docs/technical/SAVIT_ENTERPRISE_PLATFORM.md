@@ -364,3 +364,9 @@ audit_retention_policies    — per entity type, GDPR export
 
 | Status | **Partial** |
 
+**Evidence:** Role column on `User`; `EnsureUserIsAdmin` middleware; `PlanLimitService` plan gates; agent `tool_risk_levels` + approval queue. **No** Laravel Policies directory, no Spatie Permission, no amount-based rules.
+
+**Build spec**
+
+```
+permissions                 — permission_key
