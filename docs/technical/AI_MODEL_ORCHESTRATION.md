@@ -82,3 +82,9 @@ $orchestrator->embed($text, $company);
 $orchestrator->transcribe($filePath, $filename, $company);
 
 // Intent + entities (rules first)
+$orchestrator->classifyIntent($message, $company);
+$orchestrator->extractEntities($message, $company);
+```
+
+Legacy code may still use `OpenAiClient` or `AiGateway` — both route through `AiModelResolver` with use-case hints.
+
