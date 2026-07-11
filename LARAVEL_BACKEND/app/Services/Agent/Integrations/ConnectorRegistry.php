@@ -346,3 +346,9 @@ final class ConnectorRegistry
 
     }
 
+
+
+    /**
+
+     * @param  array<string, mixed>  $config
+
