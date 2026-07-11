@@ -34,3 +34,9 @@ class BusinessGraphController extends Controller
         return response()->json(['stats' => $stats], 201);
     }
 
+    public function storeNode(Request $request, BusinessGraphV2Service $graph): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
