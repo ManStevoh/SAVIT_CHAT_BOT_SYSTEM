@@ -10,3 +10,9 @@ return new class extends Migration
     {
         Schema::create('cms_pages', function (Blueprint $table) {
             $table->id();
+            $table->string('slug')->unique();
+            $table->string('title');
+            $table->string('meta_title')->nullable();
+            $table->text('meta_description')->nullable();
+            $table->boolean('is_published')->default(true);
+            $table->timestamps();
