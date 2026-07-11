@@ -430,3 +430,9 @@ export function LandoContactSection({
               <Button
                 type="submit"
                 disabled={busy}
+                className="h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]"
+              >
+                {submitText}
+              </Button>
+            </form>
+          )}
