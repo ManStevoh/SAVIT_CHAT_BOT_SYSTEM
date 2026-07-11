@@ -514,3 +514,9 @@ function SortableSectionList({
   return (
     <div className="space-y-3">
       {items.map((section, index) => (
+        <div
+          key={section.id}
+          draggable
+          onDragStart={() => setDragIndex(index)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => handleDrop(index)}
