@@ -136,3 +136,9 @@ class ChannelWebhookController extends Controller
         $token = $request->query('hub_verify_token');
         $challenge = $request->query('hub_challenge');
         $expected = config('agent.channels.instagram_webhook_verify_token', '');
+
+        if ($mode === 'subscribe' && $expected !== '' && hash_equals($expected, (string) $token)) {
+            return response($challenge ?? '', 200)->header('Content-Type', 'text/plain');
+        }
+
+        return response('Forbidden', 403);
