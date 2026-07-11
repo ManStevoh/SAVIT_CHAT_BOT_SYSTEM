@@ -124,3 +124,9 @@ final class ConnectorRegistry
 
                 'type' => 'erp_inventory',
 
+                'name' => 'ERP inventory sync',
+
+                'category' => 'erp',
+
+                'status_label' => 'Read-only pull',
+
