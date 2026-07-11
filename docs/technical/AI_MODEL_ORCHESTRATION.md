@@ -64,3 +64,9 @@ use App\Services\AI\AiOrchestrator;
 use App\Services\AI\AiUseCase;
 
 // Customer WhatsApp (auto fast-routes "thanks" → fast_chat)
+$orchestrator->chat($messages, $company, AiUseCase::WHATSAPP, chatId: $chatId, latestUserMessage: $text);
+
+// Deep reasoning JSON trace
+$orchestrator->reason($messages, $company, chatId: $chatId);
+
+// Agent tool loop (uses reasoning slot)
