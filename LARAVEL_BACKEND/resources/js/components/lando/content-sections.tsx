@@ -328,3 +328,9 @@ export function LandoTeam({
     </section>
   )
 }
+
+export function LandoContactSection({
+  title,
+  description,
+  imageUrl,
+  imageAlt = "",
