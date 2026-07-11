@@ -16,3 +16,9 @@ class MarketplaceController extends Controller
         if (! $company) {
             return response()->json(['message' => 'No company.'], 403);
         }
+
+        return response()->json([
+            'modules' => $marketplace->catalogForCompany($company),
+            'installed' => $marketplace->installedForCompany($company),
+        ]);
+    }
