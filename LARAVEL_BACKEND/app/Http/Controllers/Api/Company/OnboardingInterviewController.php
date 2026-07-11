@@ -28,3 +28,9 @@ class OnboardingInterviewController extends Controller
 
         $validated = $request->validate([
             'sessionId' => 'required|string|max:120',
+            'message' => 'required|string|max:5000',
+        ]);
+
+        return response()->json($interview->respond(
+            $company,
+            $validated['sessionId'],
