@@ -28,3 +28,9 @@ class AgentTrustLogController extends Controller
                 'goal' => $log->goal,
                 'reasoningSummary' => $log->reasoning_summary,
                 'confidence' => $log->confidence !== null ? (float) $log->confidence : null,
+                'toolsUsed' => $log->tools_used,
+                'dataConsulted' => $log->data_consulted,
+                'outcome' => $log->outcome,
+                'explainability' => $log->explainability,
+                'createdAt' => $log->created_at?->toIso8601String(),
+            ]);
