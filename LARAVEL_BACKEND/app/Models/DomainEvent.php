@@ -22,3 +22,8 @@ class DomainEvent extends Model
         'dispatched_at' => 'datetime',
     ];
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+}
