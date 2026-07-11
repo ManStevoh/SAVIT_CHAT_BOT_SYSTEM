@@ -34,3 +34,9 @@ class ProcessTrialTransitionsJob implements ShouldQueue
 
             $company = $subscription->company;
             if ($company) {
+                $notifications->dispatch($company, 'subscription.expiring', [
+                    'plan' => $subscription->plan,
+                    'end_date' => $subscription->end_date,
+                    'owner_email' => $company->email,
+                ]);
+
