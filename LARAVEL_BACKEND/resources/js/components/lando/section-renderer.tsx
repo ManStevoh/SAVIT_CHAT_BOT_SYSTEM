@@ -16,3 +16,9 @@ import {
   LandoAboutHero,
   LandoMission,
   LandoEfficiency,
+  LandoTeam,
+  LandoContactSection,
+} from "./content-sections"
+
+type Content = Record<string, unknown>
+
