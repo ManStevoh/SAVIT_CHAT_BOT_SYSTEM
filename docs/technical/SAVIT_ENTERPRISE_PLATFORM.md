@@ -148,3 +148,9 @@ billing_payments            — gateway, external_id, amount, status
 billing_refunds             — linked to payment, gateway refund id
 billing_credits             — wallet balance, credit transactions
 billing_tax_rates           — jurisdiction, rate, inclusive flag
+revenue_snapshots           — daily MRR/ARR/churn aggregates (materialized)
+```
+
+- **Idempotency:** All webhook handlers keyed by `external_event_id`.
+- **Audit:** Every financial mutation → Audit Center (module 21).
+- **Compliance:** PCI — never store raw card data; use gateway tokens only.
