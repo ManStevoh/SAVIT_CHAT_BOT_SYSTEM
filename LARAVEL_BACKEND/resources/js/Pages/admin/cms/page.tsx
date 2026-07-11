@@ -346,3 +346,9 @@ function SectionEditor({
         <Field
           label="Title (use new lines for stacked text)"
           value={str("title")}
+          onChange={(v) => set("title", v)}
+          multiline
+        />
+      )
+    }
+
