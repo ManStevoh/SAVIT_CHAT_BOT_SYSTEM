@@ -58,3 +58,9 @@ class CmsPageController extends Controller
 
         return response()->json([
             'page' => [
+                'slug' => $page->slug,
+                'title' => $page->title,
+                'metaTitle' => $page->meta_title,
+                'metaDescription' => $page->meta_description,
+            ],
+            'sections' => $page->sections->map(fn ($s) => [
