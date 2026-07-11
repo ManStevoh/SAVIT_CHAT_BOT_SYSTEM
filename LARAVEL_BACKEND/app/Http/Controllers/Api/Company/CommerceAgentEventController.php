@@ -46,3 +46,9 @@ class CommerceAgentEventController extends Controller
         }
 
         $types = config('agent.events.owner_alert_types', ['low_stock', 'sales_drop']);
+        $events = CommerceAgentEvent::where('company_id', $company->id)
+            ->whereIn('event_type', $types)
+            ->orderByDesc('created_at')
+            ->limit(30)
+            ->get()
+            ->map(fn ($e) => $this->formatEvent($e));
