@@ -316,3 +316,9 @@ internal_entity_refs        — polymorphic links to Order, Customer, Product, e
 **Note:** Distinct from Composer `vendor/`. Requires `vendors` table, scoped login, PO workflow tied to Document Builder.
 
 ---
+
+### 6. Delivery Management
+
+**Vision:** Routes, drivers, vehicles, GPS, proof of delivery, photos, signatures, fuel, maintenance.
+
+| Status | **Partial** |
