@@ -46,3 +46,9 @@ final class ConnectorRegistry
 
                 'status_label' => 'Implemented',
 
+                'description' => 'Agent get_weather tool for delivery and event planning.',
+
+            ],
+
+            [
+
