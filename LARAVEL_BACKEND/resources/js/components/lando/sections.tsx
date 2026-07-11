@@ -64,3 +64,9 @@ export function LandoHeroSection({
             </div>
           )}
         </div>
+
+        {imageUrl && (
+          <div className="flex justify-center lg:justify-end">
+            <img
+              src={imageUrl}
+              alt={imageAlt}
