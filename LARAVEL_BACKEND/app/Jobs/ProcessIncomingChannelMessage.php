@@ -22,3 +22,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
+        public int $companyId,
+        public int $chatId,
+        public int $incomingMessageId,
+        public string $messageText,
+        public ?string $customerName = null,
+        public ?string $customerPhone = null,
