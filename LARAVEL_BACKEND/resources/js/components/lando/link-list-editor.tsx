@@ -22,3 +22,9 @@ export function LinkListEditor({
   return (
     <div className="space-y-2">
       <Label className="text-xs">{label}</Label>
+      {links.map((link, i) => (
+        <div key={i} className="flex gap-2">
+          <Input
+            value={link.label}
+            onChange={(e) => update(i, "label", e.target.value)}
+            placeholder="Label"
