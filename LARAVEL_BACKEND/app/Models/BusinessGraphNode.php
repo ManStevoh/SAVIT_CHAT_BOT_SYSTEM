@@ -40,3 +40,9 @@ class BusinessGraphNode extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    public function outgoingEdges(): HasMany
+    {
+        return $this->hasMany(BusinessGraphEdge::class, 'from_node_id');
+    }
+
