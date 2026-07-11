@@ -10,3 +10,9 @@ use App\Services\Platform\ApiKeyService;
 use App\Services\Platform\WebhookDeliveryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+
+class ApiPlatformController extends Controller
+{
+    public function listApiKeys(Request $request): JsonResponse
+    {
+        $company = $request->user()->company;
