@@ -82,3 +82,9 @@ class ApiPlatformController extends Controller
     public function createWebhook(Request $request, WebhookDeliveryService $webhooks): JsonResponse
     {
         $company = $request->user()->company;
+        if (! $company || $request->user()->role !== 'company_owner') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $validated = $request->validate([
+            'url' => 'required|url|max:500',
