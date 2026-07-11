@@ -208,3 +208,9 @@ final class ConnectorRegistry
 
             'erp_inventory' => $this->pullErpInventory($config),
 
+            'dhl_shipping' => $this->pingCarrierQuote($config, ['carrier' => 'dhl', 'test' => true]),
+
+            'sendy_logistics' => $this->pingCarrierQuote($config, ['carrier' => 'sendy', 'test' => true]),
+
+            default => ['success' => true, 'message' => 'No sync required.'],
+
