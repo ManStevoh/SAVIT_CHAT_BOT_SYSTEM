@@ -424,3 +424,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 **Evidence:** Per-entity SQL `search` params; semantic search for FAQ/products/knowledge chunks. No global index (Meilisearch/Elasticsearch/Typesense).
 
 **Build spec:** Unified `search_index` pipeline via event bus; company-scoped indices; highlight snippets; permission-filtered results.
+
+---
+
+### 27. File Management
+
+**Vision:** Store images, videos, documents, contracts, receipts, audio; version history; permissions.
