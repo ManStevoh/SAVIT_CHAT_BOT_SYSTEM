@@ -22,3 +22,9 @@ final class ChannelIngestAuthService
         if ($secret === null || $secret === '') {
             return null;
         }
+
+        $settings = CompanySetting::where('company_id', $companyId)->first();
+        if (! $settings || ! $settings->channel_ingest_secret) {
+            return null;
+        }
+
