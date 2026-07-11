@@ -142,3 +142,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                 ))}
               </ul>
               <Button
+                className={cn(
+                  "mt-8 w-full rounded-lg",
+                  plan.popular
+                    ? "bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
+                    : "border-black bg-white text-black hover:bg-gray-50"
+                )}
