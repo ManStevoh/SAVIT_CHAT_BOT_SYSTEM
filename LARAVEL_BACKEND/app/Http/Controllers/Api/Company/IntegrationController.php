@@ -70,3 +70,9 @@ class IntegrationController extends Controller
 
     public function disconnect(Request $request, string $connectorType): JsonResponse
     {
+        $company = $request->user()->company;
+        if (! $company || $request->user()->role !== 'company_owner') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        CompanyIntegration::where('company_id', $company->id)
