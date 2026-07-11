@@ -118,3 +118,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           description={str(content.description)}
           ctaText={str(content.ctaText)}
           ctaHref={str(content.ctaHref)}
+          imageUrl={str(content.imageUrl)}
+          imageAlt={str(content.imageAlt)}
+          imagePosition={content.imagePosition === "right" ? "right" : "left"}
+        />
+      )
+
