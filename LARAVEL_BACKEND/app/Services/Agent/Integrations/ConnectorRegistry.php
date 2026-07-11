@@ -136,3 +136,9 @@ final class ConnectorRegistry
 
         ];
 
+    }
+
+
+
+    public function has(string $type): bool
+
