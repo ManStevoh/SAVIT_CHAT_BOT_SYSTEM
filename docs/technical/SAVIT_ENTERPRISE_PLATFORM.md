@@ -574,3 +574,9 @@ All new modules must meet these **global SaaS standards** before marking **Imple
 ---
 
 ## Phased roadmap (recommended)
+
+Aligned with your sequence — **foundation before portals**:
+
+```text
+Phase 1 — Core Commerce          ✅ LARGELY COMPLETE
+  Multi-tenant, WhatsApp, catalog, orders, payments, CRM-lite, AI agent
