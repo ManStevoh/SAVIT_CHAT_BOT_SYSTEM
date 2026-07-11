@@ -58,3 +58,9 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
           </div>
         )}
 
+        {!isLoading &&
+          pageData &&
+          enabledSections.map((section) => (
+            <LandoSectionRenderer
+              key={section.key}
+              pageSlug={slug}
