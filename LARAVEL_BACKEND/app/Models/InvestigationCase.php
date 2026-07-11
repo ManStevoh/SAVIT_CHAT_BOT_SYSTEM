@@ -22,3 +22,9 @@ class InvestigationCase extends Model
         'steps' => 'array',
         'metadata' => 'array',
         'closed_at' => 'datetime',
+    ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
