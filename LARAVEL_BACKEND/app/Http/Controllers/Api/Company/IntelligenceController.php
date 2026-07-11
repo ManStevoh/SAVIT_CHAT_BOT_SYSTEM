@@ -64,3 +64,9 @@ class IntelligenceController extends Controller
             'simulate' => 'nullable|boolean',
 
             'scenario_type' => 'nullable|string|max:80',
+
+            'scenario_inputs' => 'nullable|array',
+
+            'include_plan' => 'nullable|boolean',
+
+            'persist_plan' => 'nullable|boolean',
