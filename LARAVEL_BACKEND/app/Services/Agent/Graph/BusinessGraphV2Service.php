@@ -208,3 +208,9 @@ final class BusinessGraphV2Service
                 'node_type' => $nodeType,
                 'ref_type' => $refType,
                 'ref_id' => $refId,
+            ],
+            [
+                'label' => mb_substr($label, 0, 255),
+                'metadata' => $metadata,
+            ],
+        );
