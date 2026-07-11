@@ -70,3 +70,9 @@ class CommerceAgentEventController extends Controller
             'events' => collect($created)->map(fn ($e) => $this->formatEvent($e)),
         ], 201);
     }
+
+    public function processAlerts(Request $request, CommerceEventHandler $handler): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
