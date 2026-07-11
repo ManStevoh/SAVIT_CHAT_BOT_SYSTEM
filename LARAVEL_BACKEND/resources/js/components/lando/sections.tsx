@@ -268,3 +268,6 @@ export function LandoCtaSection({
           </div>
         </div>
       </div>
+    </section>
+  )
+}
