@@ -39,9 +39,13 @@ Essem Chat Bot/
 | `.env` reference | [Environment Variables](environment-variables.md) |
 | Cron, queues, jobs | [Queues & Scheduler](queues-scheduler.md) |
 | **AI / ABI (master)** | [Artificial Business Intelligence](AI_ABI_PLATFORM.md) |
-| **Digital Nervous System (vision)** | [SAVIT — Digital Nervous System](SAVIT_DIGITAL_NERVOUS_SYSTEM.md) |
+| **Digital Nervous System (vision + code map)** | [SAVIT — Digital Nervous System](SAVIT_DIGITAL_NERVOUS_SYSTEM.md) — **north star** |
+| **AI Model Orchestration** | [Reasoning, fast chat, vision, STT routing](AI_MODEL_ORCHESTRATION.md) |
+| **Honest gaps** | [Shipped vs roadmap](HONEST_REMAINING_GAPS.md) |
 | **AI Phase 4** | [Vision, Owner Analytics, Brain, External Tools](AI_PHASE4_OS.md) |
 | **AI Phase 5** | [Executive UI, Voice Commands, Approvals, A/B Experiments](AI_PHASE5_OS.md) |
+| **ABI Levels 1–20 summary** | [Honest status matrix](ABI_LEVELS_SUMMARY.md) |
+| **Enterprise Platform** | [Subscription, Billing, Portals, Builders — Gap Registry](SAVIT_ENTERPRISE_PLATFORM.md) |
 | AI Layer 1 — Agent | [AI Agent Commerce OS](AI_AGENT_OS.md) |
 | AI Layer 2 — Company | [AI Company OS](AI_COMPANY_OS.md) |
 | AI Layer 3 — Platform | [AI Platform OS](AI_PLATFORM_OS.md) |
