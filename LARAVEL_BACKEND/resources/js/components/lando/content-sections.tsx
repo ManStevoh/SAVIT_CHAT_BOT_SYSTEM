@@ -406,3 +406,9 @@ export function LandoContactSection({
                 />
               </div>
               <div>
+                <label className="mb-1.5 block text-sm font-medium text-black">{emailLabel}</label>
+                <input
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
