@@ -34,3 +34,7 @@ class OnboardingInterviewController extends Controller
         return response()->json($interview->respond(
             $company,
             $validated['sessionId'],
+            $validated['message'],
+        ));
+    }
+}
