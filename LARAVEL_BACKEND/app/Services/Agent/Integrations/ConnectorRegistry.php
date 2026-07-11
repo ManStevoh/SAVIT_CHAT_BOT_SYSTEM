@@ -400,3 +400,9 @@ final class ConnectorRegistry
 
     /**
 
+     * @param  array<string, mixed>  $config
+
+     * @param  array<string, mixed>  $payload
+
+     * @return array{success: bool, message?: string}
+
