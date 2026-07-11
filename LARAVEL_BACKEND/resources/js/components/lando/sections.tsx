@@ -52,3 +52,9 @@ export function LandoHeroSection({
                   <Link href={primaryCtaHref}>{primaryCtaText}</Link>
                 </Button>
               )}
+              {secondaryCtaText && secondaryCtaHref && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-11 rounded-lg border-black bg-white px-6 text-black hover:bg-gray-50"
+                >
