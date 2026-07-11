@@ -568,3 +568,9 @@ function PageEditor({ slug }: { slug: string }) {
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
   if (!data) return <p className="text-sm text-muted-foreground">Page not found.</p>
+
+  const sections = [...data.sections].sort((a, b) => a.sortOrder - b.sortOrder)
+
+  return (
+    <div className="space-y-6">
+      {slug !== "global" && (
