@@ -124,3 +124,9 @@ Commerce agent **tool calling** still requires an **OpenAI-compatible** provider
 ---
 
 ## Verification
+
+```bash
+php artisan migrate
+php artisan test --filter=AiOrchestration
+php artisan test --filter=AiModelResolver
+php artisan test --filter=CommerceAgent
