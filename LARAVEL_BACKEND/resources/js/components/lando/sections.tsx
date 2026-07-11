@@ -94,3 +94,9 @@ export function LandoPageHero({ title, description }: { title: string; descripti
 
 export function LandoIntroCard({
   title,
+  description,
+  ctaText,
+  ctaHref,
+  imageUrl,
+  imageAlt = "",
+}: {
