@@ -76,3 +76,9 @@ class IntelligenceController extends Controller
         ]);
 
 
+
+        $result = $intelligence->reason($company, $validated);
+
+
+
+        return response()->json(['reasoning' => $result], 201);
