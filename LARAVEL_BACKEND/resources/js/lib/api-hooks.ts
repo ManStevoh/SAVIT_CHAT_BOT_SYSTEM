@@ -116,6 +116,75 @@ export function useLanding() {
   )
 }
 
+import type { CmsPageData, CmsGlobalData, AdminCmsPage } from '@/components/lando/types'
+
+/**
+ * Fetch CMS page content for public pages
+ * API Endpoint: GET /api/cms/pages/{slug}
+ */
+export function useCmsPage(slug: string) {
+  return useSWR<CmsPageData>(
+    slug ? `cms-page-${slug}` : null,
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<CmsPageData>(`/api/cms/pages/${slug}`)
+      }
+      await delay(300)
+      return {
+        page: { slug, title: slug, metaTitle: null, metaDescription: null },
+        sections: [],
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useCmsGlobal() {
+  return useSWR<CmsGlobalData>(
+    'cms-global',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<CmsGlobalData>('/api/cms/global')
+      }
+      await delay(200)
+      return {
+        page: { slug: 'global', title: 'Global' },
+        sections: [],
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useAdminCmsPages() {
+  return useSWR<Array<{ id: string; slug: string; title: string; isPublished: boolean }>>(
+    'admin-cms-pages',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest('/api/admin/cms/pages')
+      }
+      await delay(200)
+      return []
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export function useAdminCmsPage(slug: string | null) {
+  return useSWR<AdminCmsPage>(
+    slug ? `admin-cms-page-${slug}` : null,
+    async () => {
+      if (!slug) throw new Error('No slug')
+      if (!useMockApi()) {
+        return apiRequest<AdminCmsPage>(`/api/admin/cms/pages/${slug}`)
+      }
+      await delay(200)
+      return { page: { id: '1', slug, title: slug, isPublished: true }, sections: [] }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
 /** Build path with optional query params (excludes undefined and empty string). */
 function buildPath(
   base: string,
