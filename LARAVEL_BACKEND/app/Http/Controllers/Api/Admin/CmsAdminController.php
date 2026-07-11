@@ -10,3 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CmsAdminController extends Controller
+{
+    public function pages(): JsonResponse
+    {
+        $pages = CmsPage::orderBy('id')->get()->map(fn (CmsPage $p) => [
+            'id' => (string) $p->id,
+            'slug' => $p->slug,
