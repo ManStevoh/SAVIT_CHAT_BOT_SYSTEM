@@ -100,3 +100,9 @@ final class OwnerMorningBriefPushService
 
         $recs = is_array($brief->recommendations) ? array_slice($brief->recommendations, 0, 3) : [];
         if ($recs !== []) {
+            $lines[] = '';
+            $lines[] = 'Top actions:';
+            foreach ($recs as $i => $rec) {
+                $lines[] = ($i + 1).'. '.(string) $rec;
+            }
+        }
