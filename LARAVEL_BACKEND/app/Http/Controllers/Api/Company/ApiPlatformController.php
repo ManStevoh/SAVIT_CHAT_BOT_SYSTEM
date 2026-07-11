@@ -22,3 +22,9 @@ class ApiPlatformController extends Controller
 
         $keys = CompanyApiKey::where('company_id', $company->id)
             ->orderByDesc('created_at')
+            ->get(['id', 'name', 'key_prefix', 'scopes', 'last_used_at', 'revoked_at', 'created_at']);
+
+        return response()->json(['apiKeys' => $keys]);
+    }
+
+    public function createApiKey(Request $request, ApiKeyService $apiKeys): JsonResponse
