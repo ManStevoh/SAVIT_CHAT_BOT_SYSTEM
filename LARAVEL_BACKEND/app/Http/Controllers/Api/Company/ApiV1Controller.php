@@ -28,3 +28,7 @@ class ApiV1Controller extends Controller
     }
 
     public function health(): JsonResponse
+    {
+        return response()->json(['status' => 'ok', 'version' => 'v1']);
+    }
+}
