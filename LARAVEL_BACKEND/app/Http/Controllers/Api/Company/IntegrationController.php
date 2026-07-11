@@ -22,3 +22,9 @@ class IntegrationController extends Controller
         $connectors = collect($registry->catalog())->map(function (array $meta) use ($connected) {
             $row = $connected->get($meta['type']);
 
+            return array_merge($meta, [
+                'status' => $row?->status ?? 'inactive',
+                'lastSyncAt' => $row?->last_sync_at?->toIso8601String(),
+                'lastError' => $row?->last_error,
+                'connected' => $row !== null && $row->status === 'active',
+            ]);
