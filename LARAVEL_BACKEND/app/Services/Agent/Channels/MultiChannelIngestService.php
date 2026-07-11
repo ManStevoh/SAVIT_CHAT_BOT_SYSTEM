@@ -76,3 +76,9 @@ final class MultiChannelIngestService
                 $name,
                 $phone,
             );
+            $queued = true;
+        }
+
+        return ['chat' => $chat->fresh(), 'message' => $message, 'queued' => $queued];
+    }
+
