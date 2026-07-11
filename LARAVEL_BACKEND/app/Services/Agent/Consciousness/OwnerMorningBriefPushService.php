@@ -70,3 +70,9 @@ final class OwnerMorningBriefPushService
     public function resolveOwnerPhone(Company $company): string
     {
         $company->loadMissing('settings');
+        $override = trim((string) ($company->settings?->owner_whatsapp_phone ?? ''));
+        if ($override !== '') {
+            return $this->normalizePhone($override);
+        }
+
+        $ownerPhone = User::query()
