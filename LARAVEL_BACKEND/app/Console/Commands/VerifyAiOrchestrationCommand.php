@@ -10,3 +10,9 @@ use Illuminate\Support\Facades\Schema;
 
 class VerifyAiOrchestrationCommand extends Command
 {
+    protected $signature = 'ai:verify-orchestration';
+
+    protected $description = 'Verify AI orchestration capability slots and config';
+
+    public function handle(AiModelResolver $resolver): int
+    {
