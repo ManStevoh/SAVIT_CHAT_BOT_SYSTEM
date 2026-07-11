@@ -388,3 +388,9 @@ class CmsPageSeeder extends Seeder
                 'title' => 'Terms of Service',
                 'meta_title' => 'Terms of Service — Essem Chat',
                 'meta_description' => 'The terms governing your use of Essem Chat.',
+                'sections' => [
+                    [
+                        'section_key' => 'legal_content',
+                        'label' => 'Legal content',
+                        'sort_order' => 1,
+                        'content' => [
