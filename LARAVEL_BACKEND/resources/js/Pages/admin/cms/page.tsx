@@ -154,3 +154,9 @@ function SectionEditor({
       )
     }
 
+    if (key === "footer") {
+      return (
+        <div className="space-y-4">
+          <Field label="Copyright" value={str("copyright")} onChange={(v) => set("copyright", v)} multiline />
+          <LinkListEditor
+            label="Site links"
