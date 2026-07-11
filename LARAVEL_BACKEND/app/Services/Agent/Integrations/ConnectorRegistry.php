@@ -106,3 +106,9 @@ final class ConnectorRegistry
 
             ],
 
+            [
+
+                'type' => 'crm_webhook',
+
+                'name' => 'CRM webhook (generic)',
+
