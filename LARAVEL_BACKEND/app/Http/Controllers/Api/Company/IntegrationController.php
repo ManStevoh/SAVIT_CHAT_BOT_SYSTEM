@@ -58,3 +58,9 @@ class IntegrationController extends Controller
                 'config' => $validated['config'] ?? [],
                 'last_sync_at' => ($result['success'] ?? false) ? now() : null,
                 'last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? 'Connection failed'),
+            ],
+        );
+
+        return response()->json([
+            'success' => (bool) ($result['success'] ?? false),
+            'integration' => $integration,
