@@ -28,3 +28,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 | 4 | Bayesian thinking | **Partial** | **Buy/churn/refund probability scores** on reason |
 | 5 | Counterfactual reasoning | **Partial** | **SimulationService** + API + tests ✅ |
 | 6 | Long-term planning | **Partial** | Executive plans API; no multi-year capital model |
+| 7 | Organizational intelligence | **Partial** | Digital workforce + **role/amount approval policies** |
+| 8 | Trust modeling | **Partial** | Agent trust logs; no supplier/courier scores |
+| 9 | Decision economics | **Partial** | Economic reasoning, opportunities, simulation |
+| 10 | Resource allocation | **Roadmap** | No capital optimizer |
+| 11 | Organizational memory | **Partial** | Org + strategic memories, operating guides |
+| 12 | Multi-business intelligence | **Partial** | Platform patterns (#35); no group/ecosystem AI |
