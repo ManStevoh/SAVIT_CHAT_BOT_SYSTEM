@@ -538,3 +538,9 @@ The AI stack (Phases 1–5) is the **AI Services** pillar. This blueprint define
 ## Cross-cutting engineering standards
 
 All new modules must meet these **global SaaS standards** before marking **Implemented**:
+
+### Security
+
+| Requirement | Current state | Target |
+|-------------|---------------|--------|
+| Authentication | Sanctum + roles | + policies, 2FA, session revocation |
