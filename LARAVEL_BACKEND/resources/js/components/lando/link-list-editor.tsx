@@ -40,3 +40,9 @@ export function LinkListEditor({
             type="button"
             variant="ghost"
             size="icon"
+            className="shrink-0"
+            onClick={() => onChange(links.filter((_, j) => j !== i))}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
