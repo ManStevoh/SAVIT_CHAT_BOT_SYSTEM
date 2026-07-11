@@ -16,3 +16,9 @@ class CmsAdminController extends Controller
         $pages = CmsPage::orderBy('id')->get()->map(fn (CmsPage $p) => [
             'id' => (string) $p->id,
             'slug' => $p->slug,
+            'title' => $p->title,
+            'metaTitle' => $p->meta_title,
+            'metaDescription' => $p->meta_description,
+            'isPublished' => (bool) $p->is_published,
+        ]);
+
