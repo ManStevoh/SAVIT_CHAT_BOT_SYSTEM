@@ -370,3 +370,9 @@ function SectionEditor({
             <p className="text-xs text-muted-foreground">
               Supports basic HTML tags. Leave empty to show the built-in default content.
             </p>
+          </div>
+        </div>
+      )
+    }
+
+    if (key === "team") {
