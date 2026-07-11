@@ -406,3 +406,9 @@ class CmsPageSeeder extends Seeder
         foreach ($pages as $pageData) {
             $sections = $pageData['sections'];
             unset($pageData['sections']);
+
+            $page = CmsPage::updateOrCreate(
+                ['slug' => $pageData['slug']],
+                $pageData
+            );
+
