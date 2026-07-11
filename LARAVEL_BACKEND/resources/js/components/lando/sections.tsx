@@ -88,3 +88,9 @@ export function LandoPageHero({ title, description }: { title: string; descripti
           <p className="mx-auto mt-4 max-w-xl text-base text-gray-600 sm:text-lg">{description}</p>
         )}
       </div>
+    </section>
+  )
+}
+
+export function LandoIntroCard({
+  title,
