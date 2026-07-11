@@ -94,3 +94,9 @@ final class ConnectorRegistry
 
             [
 
+                'type' => 'sendy_logistics',
+
+                'name' => 'Sendy (Kenya logistics)',
+
+                'category' => 'logistics',
+
