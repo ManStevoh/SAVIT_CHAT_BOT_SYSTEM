@@ -22,3 +22,9 @@ final class BusinessGraphV2Service
     public function syncFromCompany(Company $company): array
     {
         $stats = ['nodes' => 0, 'edges' => 0];
+
+        Product::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'active')
+            ->limit(500)
+            ->get(['id', 'name', 'category', 'stock'])
