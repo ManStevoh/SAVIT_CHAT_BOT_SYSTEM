@@ -40,3 +40,9 @@ function Field({
   multiline?: boolean
 }) {
   return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      {multiline ? (
+        <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className="text-sm" />
+      ) : (
+        <Input value={value} onChange={(e) => onChange(e.target.value)} className="text-sm" />
