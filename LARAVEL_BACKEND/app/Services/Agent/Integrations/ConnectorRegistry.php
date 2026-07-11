@@ -34,3 +34,9 @@ final class ConnectorRegistry
 
     {
 
+        return [
+
+            [
+
+                'type' => 'weather',
+
