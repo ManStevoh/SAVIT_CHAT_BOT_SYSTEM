@@ -376,3 +376,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 ```
 
 - **Integration:** Replace hardcoded checks in controllers; agent tools consult policy engine before execution.
+
+---
+
+### 23. API Platform
+
+**Vision:** Everything exposed — REST, GraphQL, webhooks, SDKs.
