@@ -334,3 +334,9 @@ class CmsPageSeeder extends Seeder
                 'meta_description' => 'Get in touch with the Essem Chat team. We would love to hear from you.',
                 'sections' => [
                     [
+                        'section_key' => 'hero',
+                        'label' => 'Hero + form',
+                        'sort_order' => 1,
+                        'content' => [
+                            'title' => 'Contact Us',
+                            'description' => 'Explore the future with us. Feel free to get in touch.',
