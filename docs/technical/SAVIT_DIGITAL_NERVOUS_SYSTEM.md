@@ -16,7 +16,7 @@ Once you think this way, **every piece of business information becomes a signal 
 
 This document is the **strategic north star** and **honest implementation map** for that vision. It connects product concepts (1–24) and the **Business Consciousness Layer** to real PHP services, database tables, jobs, APIs, and tests.
 
-For layer-by-layer engineering detail, see [AI ABI Platform](AI_ABI_PLATFORM.md). For shipped phases, see [Phase 4 OS](AI_PHASE4_OS.md).
+For layer-by-layer engineering detail, see [AI ABI Platform](AI_ABI_PLATFORM.md). For shipped phases, see [Phase 4 OS](AI_PHASE4_OS.md) and [Phase 5 OS](AI_PHASE5_OS.md).
 
 | Verification (today) | Result |
 |----------------------|--------|
@@ -435,12 +435,13 @@ Owner-initiated
 
 | Layer | Nervous system role | Doc |
 |-------|---------------------|-----|
-| Layer 1 Agent OS | Motor nerves — act via 18 tools, WhatsApp, vision | [AI_AGENT_OS](AI_AGENT_OS.md) |
+| Layer 1 Agent OS | Motor nerves — act via 20 tools, WhatsApp, vision, voice | [AI_AGENT_OS](AI_AGENT_OS.md) |
 | Layer 2 Company OS | Short-term memory — reasoning, twin, briefs, graph | [AI_COMPANY_OS](AI_COMPANY_OS.md) |
 | Layer 3 Platform OS | Vital signs — world model, health, trust, executive | [AI_PLATFORM_OS](AI_PLATFORM_OS.md) |
 | Layer 4 Cognitive OS | Prefrontal cortex — debate, confidence, simulation | [AI_COGNITIVE_OS](AI_COGNITIVE_OS.md) |
 | Phase 3 | Specialist workers + event bus + product graph | [AI_ABI_PLATFORM](AI_ABI_PLATFORM.md) § B.5 |
 | Phase 4 | Vision + unified brain + owner analytics + external bus | [AI_PHASE4_OS](AI_PHASE4_OS.md) |
+| Phase 5 | Executive UI + voice commands + approval execution + A/B experiments | [AI_PHASE5_OS](AI_PHASE5_OS.md) |
 
 ---
 
@@ -518,6 +519,7 @@ php artisan route:list --path=company/owner-analytics
 |----------|---------|
 | [AI ABI Platform](AI_ABI_PLATFORM.md) | Engineering master — layers, tools, ABI levels |
 | [AI Phase 4 OS](AI_PHASE4_OS.md) | Vision, brain, owner analytics |
+| [AI Phase 5 OS](AI_PHASE5_OS.md) | Executive dashboard, approvals, voice, experiments |
 | [Growth Engine](growth-engine.md) | Marketing signal source |
 | [WhatsApp Bot](whatsapp-bot.md) | Primary customer nerve ending |
 
