@@ -22,3 +22,9 @@ export function LegalCmsPage({ slug, fallbackTitle, fallbackBody }: LegalCmsPage
 
   const title = content.title || fallbackTitle
   const metaTitle = data?.page.metaTitle || `${title} — Essem Chat`
+  const hasCmsBody = typeof content.body === "string" && content.body.trim().length > 0
+
+  return (
+    <>
+      <Head title={metaTitle} />
+      <LegalLayout title={title}>
