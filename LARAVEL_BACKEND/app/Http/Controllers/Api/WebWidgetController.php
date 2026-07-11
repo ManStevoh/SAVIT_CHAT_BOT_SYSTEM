@@ -88,3 +88,9 @@ class WebWidgetController extends Controller
 
         $company = $auth->companyFromWidgetToken((int) $validated['companyId'], $validated['widgetToken']);
 
+        if (! $company) {
+
+            return response()->json(['message' => 'Invalid widget token.'], 403);
+
+        }
+
