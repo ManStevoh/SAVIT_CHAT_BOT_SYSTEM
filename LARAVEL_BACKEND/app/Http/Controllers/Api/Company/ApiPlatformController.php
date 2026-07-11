@@ -88,3 +88,9 @@ class ApiPlatformController extends Controller
 
         $validated = $request->validate([
             'url' => 'required|url|max:500',
+            'events' => 'required|array|min:1',
+            'events.*' => 'string|max:80',
+        ]);
+
+        $endpoint = $webhooks->createEndpoint($company, $validated['url'], $validated['events']);
+
