@@ -10,3 +10,9 @@ use Illuminate\Http\Request;
 class BusinessTimelineController extends Controller
 {
     public function index(Request $request, BusinessTimelineService $timeline): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
