@@ -52,3 +52,9 @@ final class ChannelIngestAuthService
     {
         $header = $request->header('X-Channel-Ingest-Secret')
             ?? $request->header('X-Ingest-Secret');
+        if (is_string($header) && $header !== '') {
+            return $header;
+        }
+
+        $auth = $request->header('Authorization');
+        if (is_string($auth) && str_starts_with($auth, 'Bearer ')) {
