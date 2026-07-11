@@ -622,3 +622,9 @@ export default function AdminCmsPage() {
         </p>
       </div>
 
+      <Tabs value={activeSlug} onValueChange={setActiveSlug}>
+        <TabsList className="flex flex-wrap h-auto gap-1">
+          {PAGE_SLUGS.map((p) => (
+            <TabsTrigger key={p.slug} value={p.slug} className="text-xs sm:text-sm">
+              {p.label}
+            </TabsTrigger>
