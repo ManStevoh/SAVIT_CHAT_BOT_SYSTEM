@@ -256,3 +256,9 @@ export function LandoAboutHero({
         {imageUrl && (
           <img src={imageUrl} alt={imageAlt} className="mx-auto mt-12 max-h-64 w-full object-contain" />
         )}
+      </div>
+    </section>
+  )
+}
+
+export function LandoMission({ title, description }: { title: string; description?: string }) {
