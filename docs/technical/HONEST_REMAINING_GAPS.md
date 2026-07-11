@@ -28,3 +28,9 @@ Set `AI_PGVECTOR_ENABLED=true` on PostgreSQL with `vector` extension. Until then
 
 DHL/Sendy adapters test quote endpoints — full rate shopping, label printing, and tracking webhooks are separate projects.
 
+### Deep CRM/ERP
+
+HubSpot/Salesforce OAuth, two-way SKU mapping, inventory write-back.
+
+### TTS voice replies
+
