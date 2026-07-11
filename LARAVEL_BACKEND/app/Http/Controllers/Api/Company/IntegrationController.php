@@ -88,3 +88,9 @@ class IntegrationController extends Controller
         if (! $company || $request->user()->role !== 'company_owner') {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
+
+        $validated = $request->validate([
+            'connectorType' => 'required|string|max:40',
+        ]);
+
+        if (! $registry->has($validated['connectorType'])) {
