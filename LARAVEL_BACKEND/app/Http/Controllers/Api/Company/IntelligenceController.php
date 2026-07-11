@@ -130,3 +130,9 @@ class IntelligenceController extends Controller
         }
 
 
+
+        $detail = $cases->showForCompany($company, $id);
+
+        if (! $detail) {
+
+            return response()->json(['message' => 'Not found.'], 404);
