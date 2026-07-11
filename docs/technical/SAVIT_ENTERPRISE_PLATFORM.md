@@ -160,3 +160,9 @@ revenue_snapshots           — daily MRR/ARR/churn aggregates (materialized)
 ### 20. Notification Center
 
 **Vision:** One system — email, SMS, WhatsApp, push, in-app, voice, rules, templates, scheduling.
+
+| Channel | Status | Evidence |
+|---------|--------|----------|
+| Email | **Implemented** | `MailService` — subscription, orders, messages, expiry |
+| In-app | **Implemented** | `CompanyNotification`, `CompanyInAppNotificationService`, API |
+| WhatsApp (customer) | **Implemented** | Commerce channel — not owner notification hub |
