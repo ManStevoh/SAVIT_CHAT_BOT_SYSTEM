@@ -442,3 +442,9 @@ function SectionEditor({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="rounded-lg border">
+        <div className="flex items-center justify-between gap-3 p-4">
+          <div className="flex items-center gap-3 min-w-0">
+            {dragHandle}
+            <Switch checked={enabled} onCheckedChange={toggleEnabled} />
+            <div className="min-w-0">
