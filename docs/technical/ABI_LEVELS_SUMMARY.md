@@ -88,3 +88,9 @@ This is the executive summary. Full evidence per level: [AI_ABI_PLATFORM.md Part
 
 ## Decision intelligence (north star)
 
+**Product thesis:** Expose **business reasoning**, not only chat.
+
+**Today’s path:**
+
+```
+Owner goal
