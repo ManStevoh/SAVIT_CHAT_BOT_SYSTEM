@@ -112,3 +112,9 @@ class IntegrationController extends Controller
             'last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? 'Sync failed'),
             'status' => ($result['success'] ?? false) ? 'active' : 'error',
         ]);
+
+        return response()->json([
+            'success' => (bool) ($result['success'] ?? false),
+            'message' => $result['message'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 422);
+    }
