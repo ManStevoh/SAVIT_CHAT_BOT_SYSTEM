@@ -22,3 +22,9 @@ export function LandoTrustedCompanies({
   title?: string
   companies?: Array<{ name: string; logoUrl?: string } | string>
 }) {
+  const parsed = companies.map((c) =>
+    typeof c === "string" ? { name: c, logoUrl: "" } : c
+  )
+
+  return (
+    <section className="bg-[#f3f4f6] py-12">
