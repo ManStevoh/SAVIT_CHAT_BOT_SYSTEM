@@ -10,3 +10,9 @@ class CompanyPolicyRule extends Model
     protected $fillable = [
         'company_id',
         'action_type',
+        'subject_role',
+        'max_amount',
+        'requires_role',
+        'is_active',
+        'meta',
+    ];
