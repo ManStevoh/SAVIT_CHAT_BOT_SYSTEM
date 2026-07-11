@@ -16,3 +16,9 @@ class AuditEvent extends Model
         'action',
         'subject_type',
         'subject_id',
+        'before',
+        'after',
+        'ip_address',
+        'meta',
+        'created_at',
+    ];
