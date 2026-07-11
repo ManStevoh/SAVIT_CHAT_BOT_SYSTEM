@@ -16,3 +16,9 @@ class BusinessTimelineController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
 
+        $validated = $request->validate([
+            'limit' => 'sometimes|integer|min:1|max:100',
+            'category' => 'sometimes|string|max:40',
+        ]);
+
+        return response()->json([
