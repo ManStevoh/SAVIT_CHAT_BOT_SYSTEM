@@ -10,3 +10,6 @@ class AgentSdkController extends Controller
 {
     public function manifest(MarketplaceModuleService $marketplace): JsonResponse
     {
+        return response()->json($marketplace->sdkManifest());
+    }
+}
