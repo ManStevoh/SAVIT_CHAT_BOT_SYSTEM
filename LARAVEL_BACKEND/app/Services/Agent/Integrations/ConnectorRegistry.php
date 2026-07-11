@@ -76,3 +76,9 @@ final class ConnectorRegistry
 
                 'description' => 'External shipping rate lookup when AGENT_SHIPPING_API_URL is set.',
 
+            ],
+
+            [
+
+                'type' => 'dhl_shipping',
+
