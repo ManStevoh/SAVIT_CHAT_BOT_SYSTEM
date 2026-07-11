@@ -130,3 +130,9 @@ Owner goal
 
 ## Verification
 
+```bash
+php artisan agent:verify
+php artisan platform:verify
+php artisan test --filter=CommerceAgent
+php artisan test --filter=EnterprisePlatform
+php artisan route:list --path=intelligence
