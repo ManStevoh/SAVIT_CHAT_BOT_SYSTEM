@@ -190,3 +190,9 @@ final class BusinessGraphV2Service
             ])->all(),
         ];
     }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function upsertNode(
+        Company $company,
