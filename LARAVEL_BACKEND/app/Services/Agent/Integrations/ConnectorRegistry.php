@@ -166,3 +166,9 @@ final class ConnectorRegistry
 
             'weather', 'delivery_status' => ['success' => true, 'message' => 'Built-in connector — no setup required.'],
 
+            'shipping_quote' => $this->connectShipping($config),
+
+            'dhl_shipping' => $this->connectCarrierApi($config, 'DHL'),
+
+            'sendy_logistics' => $this->connectCarrierApi($config, 'Sendy'),
+
