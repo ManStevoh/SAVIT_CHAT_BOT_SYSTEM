@@ -52,3 +52,9 @@ class CmsAdminController extends Controller
         ]);
     }
 
+    public function updatePage(Request $request, string $slug): JsonResponse
+    {
+        $page = CmsPage::where('slug', $slug)->firstOrFail();
+
+        $validated = $request->validate([
+            'title' => 'sometimes|string|max:255',
