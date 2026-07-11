@@ -34,3 +34,9 @@ class VerifyAiOrchestrationCommand extends Command
                 ->where('is_platform_default', true)
                 ->where('is_enabled', true)
                 ->exists();
+            $this->line($hasDefault ? "  [OK] platform default: {$cap}" : "  [MISSING] platform default: {$cap}");
+            $ok = $ok && $hasDefault;
+        }
+
+        $useCases = config('ai.use_cases', []);
+        $this->line('  [OK] use_cases configured: '.count($useCases));
