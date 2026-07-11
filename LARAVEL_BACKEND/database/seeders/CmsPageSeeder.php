@@ -130,3 +130,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Feature block 1',
                         'sort_order' => 4,
                         'content' => [
+                            'label' => 'SMART INBOX',
+                            'title' => 'All your conversations in one place',
+                            'description' => 'We take customer data seriously. Every chat, order, and payment is encrypted and stored securely. Your team inbox keeps full history per customer.',
+                            'ctaText' => 'Try now',
+                            'ctaHref' => '/register',
+                            'imageUrl' => $heroImage,
