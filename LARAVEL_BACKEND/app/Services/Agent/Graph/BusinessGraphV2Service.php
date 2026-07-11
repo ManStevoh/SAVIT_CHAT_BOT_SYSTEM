@@ -64,3 +64,9 @@ final class BusinessGraphV2Service
                     BusinessGraphNode::TYPE_PRODUCT,
                     'product',
                     (int) $rel->product_id,
+                    'Product #'.$rel->product_id,
+                );
+                $to = $this->upsertNode(
+                    $company,
+                    BusinessGraphNode::TYPE_PRODUCT,
+                    'product',
