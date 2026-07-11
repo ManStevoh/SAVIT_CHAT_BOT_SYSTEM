@@ -58,3 +58,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
             'chat_id' => $chat->id,
             'sender' => 'bot',
             'content' => $reply['reply'],
+            'message_type' => 'text',
+            'reply_source' => $reply['route'] ?? 'agent_commerce',
+        ]);
+
+        $chat->update([
+            'last_message' => mb_substr((string) $reply['reply'], 0, 500),
