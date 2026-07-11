@@ -172,3 +172,9 @@ final class ConnectorRegistry
 
             'sendy_logistics' => $this->connectCarrierApi($config, 'Sendy'),
 
+            'crm_webhook' => $this->connectCrmWebhook($config),
+
+            'erp_inventory' => $this->connectErp($config),
+
+            default => ['success' => false, 'message' => 'Unknown connector.'],
+
