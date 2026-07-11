@@ -58,3 +58,9 @@ final class BusinessProbabilityService
         $buy = $this->clamp(0.25 + ($repeatRate * 0.35) + ($velocity * 0.25) + ($engagement * 0.15));
         $churn = $this->clamp(0.65 - ($repeatRate * 0.3) - ($engagement * 0.25) - ($velocity * 0.1));
         $refund = $this->clamp(0.08 + ($refundRate * 0.7));
+
+        $factors = [
+            'order_count_30d' => $orderCount30,
+            'order_count_90d' => $orderCount90,
+            'repeat_buyer_rate' => round($repeatRate, 3),
+            'refund_rate_90d' => round($refundRate, 3),
