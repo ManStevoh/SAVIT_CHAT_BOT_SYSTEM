@@ -64,3 +64,9 @@ class WebWidgetController extends Controller
 
     }
 
+
+
+    public function message(Request $request, ChannelIngestAuthService $auth, ChannelReplyDispatcher $dispatcher): JsonResponse
+
+    {
+
