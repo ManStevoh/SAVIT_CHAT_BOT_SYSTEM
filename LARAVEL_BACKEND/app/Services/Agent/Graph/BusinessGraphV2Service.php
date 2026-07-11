@@ -160,3 +160,9 @@ final class BusinessGraphV2Service
             ->orderByDesc('updated_at')
             ->limit($nodeLimit)
             ->get();
+
+        $nodeIds = $nodes->pluck('id')->all();
+
+        $edges = BusinessGraphEdge::query()
+            ->where('company_id', $company->id)
+            ->whereIn('from_node_id', $nodeIds)
