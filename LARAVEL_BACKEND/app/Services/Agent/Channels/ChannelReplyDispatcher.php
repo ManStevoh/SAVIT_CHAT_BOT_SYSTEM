@@ -46,3 +46,9 @@ final class ChannelReplyDispatcher
                 $customerName,
                 $result['chat']->customer_phone,
             );
+            $reply = Message::where('chat_id', $result['chat']->id)
+                ->where('sender', 'bot')
+                ->orderByDesc('id')
+                ->value('content');
+        }
+
