@@ -502,3 +502,9 @@ function SortableSectionList({
 
     const orders = next.map((s, i) => ({ key: s.key, sortOrder: i + 1 }))
     const res = await reorderCmsSections(slug, orders)
+    if (res.success) {
+      toast({ title: "Section order saved" })
+      onSaved()
+    } else {
+      toast({ title: res.message ?? "Reorder failed", variant: "destructive" })
+      setItems(sections)
