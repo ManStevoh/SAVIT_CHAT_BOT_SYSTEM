@@ -28,3 +28,9 @@ class WebWidgetController extends Controller
 
     {
 
+        $validated = $request->validate([
+
+            'companyId' => 'required|integer|exists:companies,id',
+
+            'widgetToken' => 'required|string|max:64',
+
