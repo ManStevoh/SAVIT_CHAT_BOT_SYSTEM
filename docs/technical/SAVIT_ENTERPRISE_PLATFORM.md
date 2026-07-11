@@ -430,3 +430,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 ### 27. File Management
 
 **Vision:** Store images, videos, documents, contracts, receipts, audio; version history; permissions.
+
+| Status | **Partial** |
+
+**Evidence:** Product images, chat attachments (`storage/public`), CSV exports. No folder tree, versioning, or ACLs.
+
+**Build spec:** `files`, `file_versions`, `folders`, S3-compatible storage, virus scan hook, signed URLs with TTL.
