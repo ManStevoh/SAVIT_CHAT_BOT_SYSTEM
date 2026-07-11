@@ -460,3 +460,9 @@ final class ConnectorRegistry
 
     {
 
+        $url = trim((string) ($config['api_url'] ?? ''));
+
+        $key = trim((string) ($config['api_key'] ?? ''));
+
+        if ($url === '') {
+
