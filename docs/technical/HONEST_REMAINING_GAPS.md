@@ -34,3 +34,9 @@ HubSpot/Salesforce OAuth, two-way SKU mapping, inventory write-back.
 
 ### TTS voice replies
 
+Whisper inbound is wired; outbound TTS slot seeded but not connected to WhatsApp.
+
+---
+
+## Verification
+
