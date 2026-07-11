@@ -52,3 +52,9 @@ class CmsPageController extends Controller
 
         if (in_array('trusted_companies', $enabledKeys, true)) {
             $settings = PlatformSetting::first();
+            $fromSettings = $settings?->landing_trusted_companies ?? [];
+            $extras['trustedCompanies'] = is_array($fromSettings) ? $fromSettings : [];
+        }
+
+        return response()->json([
+            'page' => [
