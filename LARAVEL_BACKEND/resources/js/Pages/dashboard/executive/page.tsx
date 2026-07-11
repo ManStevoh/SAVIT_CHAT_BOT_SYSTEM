@@ -26,6 +26,7 @@ import {
   useExecutiveApprovals,
   useExecutiveDashboard,
   useExecutiveOpportunities,
+  useAgentTrustLogs,
 } from "@/lib/api-hooks"
 import {
   approveExecutiveAction,
@@ -33,6 +34,7 @@ import {
   evaluateCommerceExperiment,
   rejectExecutiveAction,
 } from "@/lib/api-actions"
+import { AiExplainabilityList } from "@/components/agent/AiExplainabilityCard"
 
 function priorityVariant(priority: string) {
   if (priority === "high") return "destructive" as const
@@ -46,6 +48,7 @@ export default function ExecutivePage() {
   const { data: approvalsData, isLoading: approvalsLoading } = useExecutiveApprovals()
   const { data: opportunitiesData, isLoading: oppLoading } = useExecutiveOpportunities()
   const { data: experimentsData, isLoading: expLoading } = useCommerceExperiments()
+  const { data: trustData, isLoading: trustLoading } = useAgentTrustLogs(6)
 
   const [actingId, setActingId] = useState<number | null>(null)
   const [expName, setExpName] = useState("")
@@ -364,6 +367,19 @@ export default function ExecutivePage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5" />
+            AI observability
+          </CardTitle>
+          <CardDescription>Recent agent decisions with reasoning, tools, and data consulted</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AiExplainabilityList logs={trustData?.logs ?? []} loading={trustLoading} />
+        </CardContent>
+      </Card>
     </div>
   )
 }
