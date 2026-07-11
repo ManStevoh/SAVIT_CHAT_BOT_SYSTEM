@@ -586,3 +586,9 @@ Phase 2 — Operations             🟡 v1 SHIPPED (2026-07-11)
   ├── 2b Billing Engine          ✅ billing_payments ledger (Stripe/M-Pesa)
   ├── 2c Notification Center     ✅ templates + dispatcher + delivery log
   ├── 2d Permission Engine       ✅ policy rules CRUD + approval ABAC
+  ├── 2e Audit Center            ✅ audit_events wired to toggle
+  ├── 2f Event Bus v1            ✅ domain_events outbox + fan-out
+  ├── 2g File Management v1      ⬜ roadmap
+  └── 2h API Platform v1         ✅ API keys + v1 orders + outbound webhooks
+
+Phase 3 — Platform surfaces
