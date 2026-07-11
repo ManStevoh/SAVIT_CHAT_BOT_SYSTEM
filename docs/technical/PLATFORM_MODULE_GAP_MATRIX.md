@@ -94,3 +94,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 2. **Billing Engine** — invoice + payment ledger
 3. **Notification Center** — dispatcher + templates
 ## Phase 2 status (2026-07-11)
+
+Items 1–7 below have **v1 foundations shipped**. See [ENTERPRISE_PLATFORM_PHASE2.md](ENTERPRISE_PLATFORM_PHASE2.md).
+
+1. ~~**Subscription Engine**~~ — entitlements DB + meters + trial job ✅ v1
+2. ~~**Billing Engine**~~ — billing_payments ledger ✅ v1
+3. ~~**Notification Center**~~ — templates + dispatcher ✅ v1
