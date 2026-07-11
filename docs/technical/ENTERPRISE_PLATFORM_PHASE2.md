@@ -130,3 +130,9 @@ Outbound webhooks receive HMAC-SHA256 signed JSON with headers:
 
 | Gap | Status |
 |-----|--------|
+| Coupons, credits, partner pricing | Roadmap |
+| Local PDF invoices, tax, proration | Roadmap |
+| SMS/push notification channels | Roadmap |
+| Full permissions table beyond policy rules | Roadmap |
+| OpenAPI YAML publish | Roadmap |
+| Gateway refund reversal (agent refund = DB only) | Roadmap |
