@@ -106,3 +106,9 @@ class CommerceAgentEventController extends Controller
             'eventType' => $event->event_type,
             'eventKey' => $event->event_key,
             'status' => $event->status,
+            'payload' => $event->payload,
+            'handledAt' => $event->handled_at?->toIso8601String(),
+            'createdAt' => $event->created_at?->toIso8601String(),
+        ];
+    }
+}
