@@ -22,3 +22,9 @@ class AuthenticateApiKey
             return response()->json(['message' => 'API key required.'], 401);
         }
 
+        $key = $this->apiKeys->authenticate($plain);
+        if (! $key) {
+            return response()->json(['message' => 'Invalid API key.'], 401);
+        }
+
+        $request->attributes->set('api_key', $key);
