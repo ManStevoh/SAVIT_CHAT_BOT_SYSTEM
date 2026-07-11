@@ -58,3 +58,9 @@ final class ConsciousnessSenseCycleService
                 ['events_detected' => $detected],
                 'company',
                 (int) $company->id,
+                35,
+                null,
+                'consciousness',
+            );
+
+            $company->settings?->update(['consciousness_last_sensed_at' => now()]);
