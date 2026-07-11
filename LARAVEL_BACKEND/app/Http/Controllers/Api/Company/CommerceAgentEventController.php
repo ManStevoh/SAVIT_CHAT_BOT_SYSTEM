@@ -100,3 +100,9 @@ class CommerceAgentEventController extends Controller
      * @return array<string, mixed>
      */
     private function formatEvent(CommerceAgentEvent $event): array
+    {
+        return [
+            'id' => $event->id,
+            'eventType' => $event->event_type,
+            'eventKey' => $event->event_key,
+            'status' => $event->status,
