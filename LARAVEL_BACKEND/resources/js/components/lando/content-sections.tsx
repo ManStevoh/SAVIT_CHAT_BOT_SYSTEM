@@ -412,3 +412,9 @@ export function LandoContactSection({
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder={emailPlaceholder}
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-[#2563eb]"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-black">{messageLabel}</label>
