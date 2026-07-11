@@ -28,3 +28,9 @@ export function LandoTrustedCompanies({
 
   return (
     <section className="bg-[#f3f4f6] py-12">
+      <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
+        {title && <p className="text-sm text-gray-600">{title}</p>}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-8 lg:gap-12">
+          {parsed.map((company) => (
+            <div key={company.name} className="flex items-center gap-2">
+              {company.logoUrl ? (
