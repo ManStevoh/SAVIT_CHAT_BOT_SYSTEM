@@ -82,3 +82,9 @@ class CommerceAgentEventController extends Controller
 
         return response()->json(['alerted' => $alerted]);
     }
+
+    public function acknowledge(Request $request, int $id): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
