@@ -328,3 +328,9 @@ final class ConnectorRegistry
 
      */
 
+    private function connectErp(array $config): array
+
+    {
+
+        $url = trim((string) ($config['inventory_url'] ?? ''));
+
