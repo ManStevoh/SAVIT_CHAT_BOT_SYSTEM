@@ -34,3 +34,9 @@ Quick reference for product and engineering. Full specs: [SAVIT_ENTERPRISE_PLATF
 | 7 | Internal Chat | ⬜ | Chats are customer WhatsApp only |
 | 8 | Company Wiki | 🟡 | FAQ + chunks; no wiki pages/videos |
 | 0 | Project Management | ⬜ | No tasks/kanban |
+
+## Portals
+
+| # | Module | Status | Top gap |
+|---|--------|--------|---------|
+| 12 | Customer Portal | ⬜ | WhatsApp-only customer UX |
