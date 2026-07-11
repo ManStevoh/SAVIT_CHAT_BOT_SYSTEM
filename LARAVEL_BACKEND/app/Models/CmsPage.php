@@ -16,3 +16,9 @@ class CmsPage extends Model
     ];
 
     protected function casts(): array
+    {
+        return [
+            'is_published' => 'boolean',
+        ];
+    }
+
