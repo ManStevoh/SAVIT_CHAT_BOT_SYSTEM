@@ -40,3 +40,9 @@ class ChannelWebhookController extends Controller
         }
 
         $result = $dispatcher->ingestAndReply(
+            $company,
+            ChatChannel::EMAIL,
+            mb_strtolower(trim($validated['from'])),
+            mb_substr($text, 0, 5000),
+            $validated['fromName'] ?? null,
+            $validated['from'],
