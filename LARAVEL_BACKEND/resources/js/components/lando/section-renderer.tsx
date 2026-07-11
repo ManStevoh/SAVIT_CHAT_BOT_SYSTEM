@@ -166,3 +166,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
       return <LandoMission title={str(content.title)} description={str(content.description)} />
 
     case "efficiency":
+      return <LandoEfficiency title={str(content.title)} />
+
+    case "team":
+      return (
+        <LandoTeam
+          title={str(content.title)}
