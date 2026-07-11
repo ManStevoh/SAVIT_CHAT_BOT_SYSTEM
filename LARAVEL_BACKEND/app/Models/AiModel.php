@@ -9,9 +9,47 @@ class AiModel extends Model
 {
     public const CAPABILITY_CHAT = 'chat';
 
+    public const CAPABILITY_REASONING = 'reasoning';
+
+    public const CAPABILITY_FAST_CHAT = 'fast_chat';
+
+    public const CAPABILITY_VISION = 'vision';
+
     public const CAPABILITY_EMBEDDING = 'embedding';
 
     public const CAPABILITY_IMAGE = 'image';
+
+    public const CAPABILITY_STT = 'stt';
+
+    public const CAPABILITY_TTS = 'tts';
+
+    /** @return array<int, string> */
+    public static function capabilities(): array
+    {
+        return [
+            self::CAPABILITY_CHAT,
+            self::CAPABILITY_REASONING,
+            self::CAPABILITY_FAST_CHAT,
+            self::CAPABILITY_VISION,
+            self::CAPABILITY_EMBEDDING,
+            self::CAPABILITY_IMAGE,
+            self::CAPABILITY_STT,
+            self::CAPABILITY_TTS,
+        ];
+    }
+
+    public static function isDedicatedOrchestrationCapability(string $capability): bool
+    {
+        return in_array($capability, [
+            self::CAPABILITY_REASONING,
+            self::CAPABILITY_FAST_CHAT,
+            self::CAPABILITY_VISION,
+            self::CAPABILITY_EMBEDDING,
+            self::CAPABILITY_IMAGE,
+            self::CAPABILITY_STT,
+            self::CAPABILITY_TTS,
+        ], true);
+    }
 
     protected $fillable = [
         'ai_provider_id',
