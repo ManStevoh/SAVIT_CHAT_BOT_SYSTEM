@@ -34,3 +34,9 @@ final class BusinessGraphV2Service
                     BusinessGraphNode::TYPE_PRODUCT,
                     'product',
                     (int) $product->id,
+                    $product->name,
+                    ['category' => $product->category, 'stock' => $product->stock],
+                );
+                $stats['nodes']++;
+
+                if ($product->category) {
