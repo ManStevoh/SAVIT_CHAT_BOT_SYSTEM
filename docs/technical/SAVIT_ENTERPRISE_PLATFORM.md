@@ -490,3 +490,9 @@ event_outbox                — transactional outbox pattern for reliability
 | Status | **Partial** |
 
 **Evidence:** `company.industry` field; `config/agent.php` `business_dna_defaults` and `skill_modules` per industry; no pack installer.
+
+**Build spec:** `industry_packs` manifest JSON — seeds FAQs, templates, agent prompts, default workflows on company onboarding.
+
+---
+
+### 32. Offline Capability
