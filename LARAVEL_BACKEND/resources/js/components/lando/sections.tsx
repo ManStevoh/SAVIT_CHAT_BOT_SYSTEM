@@ -148,3 +148,9 @@ export function LandoFeatureBlock({
   ctaHref?: string
   imageUrl?: string
   imageAlt?: string
+  imagePosition?: "left" | "right"
+}) {
+  const image = imageUrl ? (
+    <img src={imageUrl} alt={imageAlt} className="mx-auto max-h-80 w-full object-contain" />
+  ) : null
+
