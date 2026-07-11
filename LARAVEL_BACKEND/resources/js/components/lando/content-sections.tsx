@@ -100,3 +100,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
     setBusy(null)
     if (result.success && result.url) {
       window.location.href = result.url
+    } else {
+      toast.error(result.message ?? "Could not start checkout.")
+    }
+  }
+
+  if (isLoading && list.length === 0) {
