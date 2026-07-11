@@ -382,3 +382,9 @@ policy_rules                — ABAC: resource, action, conditions JSON (amount_
 ### 23. API Platform
 
 **Vision:** Everything exposed — REST, GraphQL, webhooks, SDKs.
+
+| Status | **Partial** |
+
+**Evidence:** ~300 lines in `routes/api.php`; Sanctum auth; **inbound** webhooks (WhatsApp, Stripe, Paystack, M-Pesa). No public API keys, OpenAPI spec, outbound webhook subscriptions, GraphQL, or SDK packages.
+
+**Build spec:** `api_keys`, `webhook_endpoints`, `webhook_deliveries`, OpenAPI 3.1 generated from routes, rate limiting per key, scoped OAuth2 for partners.
