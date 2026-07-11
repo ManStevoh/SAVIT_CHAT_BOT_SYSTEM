@@ -46,3 +46,9 @@ final class OwnerMorningBriefPushService
         }
 
         $wa = WhatsAppAccount::where('company_id', $company->id)->where('status', 'active')->first();
+        if (! $wa) {
+            return false;
+        }
+
+        $message = $this->formatMessage($company, $brief);
+        $result = $this->waSender->sendText($wa, $phone, $message);
