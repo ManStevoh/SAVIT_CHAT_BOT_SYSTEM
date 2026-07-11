@@ -76,3 +76,9 @@ final class OwnerMorningBriefPushService
         }
 
         $ownerPhone = User::query()
+            ->where('company_id', $company->id)
+            ->where('role', 'company_owner')
+            ->whereNotNull('phone')
+            ->value('phone');
+
+        if (is_string($ownerPhone) && trim($ownerPhone) !== '') {
