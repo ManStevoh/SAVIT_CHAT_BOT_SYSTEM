@@ -652,3 +652,9 @@ flowchart TB
     DEV[Developer Platform]
     WL[White-label]
     IP[Industry Packs]
+  end
+
+  MT --> SUB
+  SUB --> BILL
+  BILL --> NOTIF
+  PERM --> AI
