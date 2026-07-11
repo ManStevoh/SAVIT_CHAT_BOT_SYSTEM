@@ -202,3 +202,9 @@ function SectionEditor({
       return (
         <div className="grid gap-3 sm:grid-cols-2">
           {slug === "home" && (
+            <Field label="Kicker" value={str("kicker")} onChange={(v) => set("kicker", v)} />
+          )}
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          <Field label="Primary CTA text" value={str("primaryCtaText")} onChange={(v) => set("primaryCtaText", v)} />
+          <Field label="Primary CTA link" value={str("primaryCtaHref")} onChange={(v) => set("primaryCtaHref", v)} />
