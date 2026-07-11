@@ -82,3 +82,9 @@ final class BusinessProbabilityService
     /**
      * @param  array<string, mixed>  $factors
      */
+    private function persistScore(int $companyId, ?string $phone, string $type, float $probability, array $factors): void
+    {
+        BusinessProbabilityScore::create([
+            'company_id' => $companyId,
+            'customer_phone' => $phone,
+            'score_type' => $type,
