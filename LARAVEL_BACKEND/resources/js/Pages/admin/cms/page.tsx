@@ -496,3 +496,9 @@ function SortableSectionList({
     }
     const next = [...items]
     const [moved] = next.splice(dragIndex, 1)
+    next.splice(targetIndex, 0, moved)
+    setItems(next)
+    setDragIndex(null)
+
+    const orders = next.map((s, i) => ({ key: s.key, sortOrder: i + 1 }))
+    const res = await reorderCmsSections(slug, orders)
