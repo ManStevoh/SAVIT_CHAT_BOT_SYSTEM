@@ -220,3 +220,9 @@ form_logic                  — conditional rules engine (safe DSL, no eval)
 **Vision:** Generate quotations, invoices, contracts, POs, receipts, delivery notes, certificates from reusable templates.
 
 | Document | Status | Evidence |
+|----------|--------|----------|
+| Receipts | **Partial** | `order-receipt.blade.php` |
+| Invoices (subscription) | **Partial** | Stripe-hosted |
+| Quotations | **Roadmap** | — |
+| Contracts | **Roadmap** | — |
+| Purchase orders | **Roadmap** | — |
