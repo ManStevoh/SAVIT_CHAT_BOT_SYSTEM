@@ -106,3 +106,9 @@ export function LandoIntroCard({
   ctaHref?: string
   imageUrl?: string
   imageAlt?: string
+}) {
+  return (
+    <section className="bg-[#f3f4f6] py-12 lg:py-16">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-3xl bg-white p-8 shadow-sm lg:p-12">
+          <div className="grid items-center gap-10 lg:grid-cols-2">
