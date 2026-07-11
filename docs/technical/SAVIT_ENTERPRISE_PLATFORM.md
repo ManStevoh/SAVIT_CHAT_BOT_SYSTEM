@@ -94,3 +94,9 @@ Each module: **vision → status → what exists → gaps → build spec (global
 
 **Critical gaps**
 
+1. No unified `SubscriptionEngine` service — logic scattered across Stripe/M-Pesa/Paystack controllers.
+2. Plan `features` JSON is marketing copy, not runtime entitlements.
+3. No trial expiry job, downgrade, or dunning.
+4. No usage metering ledger for overage billing.
+
+**Build spec (global standards)**
