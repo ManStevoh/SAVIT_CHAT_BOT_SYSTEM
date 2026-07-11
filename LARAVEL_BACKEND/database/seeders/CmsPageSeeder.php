@@ -154,3 +154,9 @@ class CmsPageSeeder extends Seeder
                             'imageAlt' => 'Payments in chat',
                             'imagePosition' => 'right',
                         ],
+                    ],
+                    [
+                        'section_key' => 'how_to_join',
+                        'label' => 'How to join',
+                        'sort_order' => 6,
+                        'content' => [
