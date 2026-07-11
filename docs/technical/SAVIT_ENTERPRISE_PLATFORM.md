@@ -604,3 +604,9 @@ Phase 5 — Ecosystem
   Developer Platform + Marketplace, Industry Packs, White-label, Offline PWA
   BI Layer v2, partner pricing
 ```
+
+### Why this order
+
+The AI agent is only as capable as the platform it runs on. **Subscription + billing + permissions + events** give the agent:
+
+- Safe boundaries (who can approve refunds, what plan allows)
