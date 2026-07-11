@@ -28,3 +28,9 @@ const PAGE_SLUGS = [
   { slug: "terms", label: "Terms" },
 ]
 
+function Field({
+  label,
+  value,
+  onChange,
+  multiline = false,
+}: {
