@@ -70,3 +70,9 @@ final class IntelligenceOutcomeService
         foreach (array_slice($actions, 0, 8) as $action) {
             if (is_string($action)) {
                 $text = trim($action);
+            } elseif (is_array($action) && ! empty($action['action'])) {
+                $text = (string) $action['action'];
+            } else {
+                continue;
+            }
+
