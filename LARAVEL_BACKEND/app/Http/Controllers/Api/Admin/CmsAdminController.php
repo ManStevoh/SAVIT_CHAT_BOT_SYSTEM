@@ -130,3 +130,9 @@ class CmsAdminController extends Controller
             'success' => true,
             'url' => $url,
             'path' => $path,
+        ]);
+    }
+
+    public function reorderSections(Request $request, string $slug): JsonResponse
+    {
+        $page = CmsPage::where('slug', $slug)->firstOrFail();
