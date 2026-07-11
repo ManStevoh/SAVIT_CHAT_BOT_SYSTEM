@@ -82,3 +82,9 @@ class ChannelWebhookController extends Controller
 
         $validated = $request->validate([
             'senderId' => 'required|string|max:120',
+            'senderUsername' => 'nullable|string|max:120',
+            'text' => 'required|string|max:5000',
+        ]);
+
+        $result = $dispatcher->ingestAndReply(
+            $company,
