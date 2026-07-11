@@ -358,3 +358,9 @@ audit_retention_policies    — per entity type, GDPR export
 
 ---
 
+### 22. Permission Engine
+
+**Vision:** Fine-grained policies — e.g. Sales Manager approves discounts up to KSh 20,000; Finance refunds below KSh 50,000; Support cannot view payroll.
+
+| Status | **Partial** |
+
