@@ -40,3 +40,9 @@ class VerifyAiOrchestrationCommand extends Command
 
         $useCases = config('ai.use_cases', []);
         $this->line('  [OK] use_cases configured: '.count($useCases));
+
+        if (! Schema::hasTable('ai_models')) {
+            $this->error('ai_models table missing — run migrations');
+
+            return self::FAILURE;
+        }
