@@ -184,3 +184,9 @@ revenue_snapshots           — daily MRR/ARR/churn aggregates (materialized)
 notification_templates      — channel, locale, subject/body, variables
 notification_rules          — event_type → channels, conditions, throttle
 notification_deliveries   — status, provider_id, read_at (in-app)
+notification_preferences    — user/company channel opt-in
+notification_schedules      — delayed/batch sends
+```
+
+- **Reliability:** Queue-backed; retry with exponential backoff; dead-letter table.
+- **Compliance:** Opt-out per channel; SMS/WhatsApp template approval tracking.
