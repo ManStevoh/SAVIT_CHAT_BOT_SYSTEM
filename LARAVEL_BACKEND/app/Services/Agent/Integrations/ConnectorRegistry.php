@@ -40,3 +40,9 @@ final class ConnectorRegistry
 
                 'type' => 'weather',
 
+                'name' => 'Weather API',
+
+                'category' => 'utility',
+
+                'status_label' => 'Implemented',
+
