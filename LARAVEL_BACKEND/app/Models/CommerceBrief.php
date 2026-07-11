@@ -14,6 +14,7 @@ class CommerceBrief extends Model
         'metrics',
         'recommendations',
         'executive_decisions',
+        'pushed_to_owner_at',
     ];
 
     protected $casts = [
@@ -21,6 +22,7 @@ class CommerceBrief extends Model
         'metrics' => 'array',
         'recommendations' => 'array',
         'executive_decisions' => 'array',
+        'pushed_to_owner_at' => 'datetime',
     ];
 
     public function company(): BelongsTo
