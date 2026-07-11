@@ -22,3 +22,9 @@ export function LandoFooter({
           <AppLogoAndName variant="navbar" className="font-bold text-black" />
           {copyright && <p className="mt-4 text-sm text-gray-500">{copyright}</p>}
         </div>
+
+        <div className="flex flex-col gap-2">
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-black hover:text-[#2563eb]">
+              {link.label}
+            </Link>
