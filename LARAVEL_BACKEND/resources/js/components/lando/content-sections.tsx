@@ -196,3 +196,9 @@ export function LandoCompareFeatures({
                   <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2563eb] text-white">
                       <Check className="h-3 w-3" />
+                    </span>
+                    {f}
+                  </div>
+                ))}
+              </div>
+            ))}
