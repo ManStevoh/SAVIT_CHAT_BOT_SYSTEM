@@ -46,3 +46,9 @@ php artisan test --filter=CommerceAgentOperatingSystem
 php artisan test --filter=CommerceAgent
 php artisan test --filter=AiOrchestration
 php artisan ai:verify-orchestration
+```
+
+---
+
+## Related docs
+
