@@ -22,3 +22,9 @@ final class OwnerMorningBriefPushService
     {
         $company->loadMissing('settings');
         $settings = $company->settings;
+
+        if (! ($settings?->agent_commerce_enabled ?? false)) {
+            return false;
+        }
+
+        if (! ($settings?->agent_morning_brief_whatsapp_enabled ?? false)) {
