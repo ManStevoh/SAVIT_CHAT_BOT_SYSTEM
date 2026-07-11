@@ -58,3 +58,9 @@ final class MultiChannelIngestService
                 'unread_count' => (int) $chat->unread_count + 1,
             ]);
         }
+
+        $message = Message::create([
+            'chat_id' => $chat->id,
+            'sender' => 'customer',
+            'content' => $messageText,
+            'message_type' => 'text',
