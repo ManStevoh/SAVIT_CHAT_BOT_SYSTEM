@@ -124,3 +124,9 @@ partner_accounts            — reseller markup, commission, white-label scope
 | Sub-capability | Status | Evidence |
 |----------------|--------|----------|
 | Invoices (subscription) | **Partial** | Stripe passthrough `SubscriptionController::invoices()`; no local `invoices` table |
+| Invoices (orders) | **Partial** | `order-receipt.blade.php`, signed `orders.receipt` URL |
+| Payments | **Partial** | Stripe/M-Pesa/Paystack gateways; `PaymentGateway` model |
+| Refunds | **Partial** | Agent `issue_order_refund` sets DB status only — **no gateway reversal** |
+| Tax | **Roadmap** | No VAT/GST, Stripe Tax, or tax lines |
+| Credits / wallet | **Roadmap** | No prepaid balance |
+| Proration | **Roadmap** | No upgrade/downgrade math; Stripe portal only |
