@@ -328,3 +328,9 @@ function SectionEditor({
             }
           }}
           multiline
+        />
+      )
+    }
+
+    if (key === "mission") {
+      return (
