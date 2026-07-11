@@ -124,3 +124,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
         />
       )
 
+    case "how_to_join":
+      return (
+        <LandoHowToJoin
+          title={str(content.title)}
+          description={str(content.description)}
+          ctaText={str(content.ctaText)}
