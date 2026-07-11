@@ -322,3 +322,9 @@ function SectionEditor({
           value={JSON.stringify(content.columns ?? [], null, 2)}
           onChange={(v) => {
             try {
+              set("columns", JSON.parse(v))
+            } catch {
+              /* ignore invalid json while typing */
+            }
+          }}
+          multiline
