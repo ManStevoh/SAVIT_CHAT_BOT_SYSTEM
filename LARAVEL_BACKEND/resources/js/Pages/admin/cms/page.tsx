@@ -400,3 +400,9 @@ function SectionEditor({
                   next[i] = { ...next[i], role: v }
                   set("members", next)
                 }}
+              />
+              <ImageField
+                label="Photo"
+                value={m.imageUrl ?? ""}
+                onChange={(v) => {
+                  const next = [...members]
