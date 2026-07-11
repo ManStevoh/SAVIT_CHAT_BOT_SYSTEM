@@ -100,3 +100,9 @@ Owner goal
   → scenarios (simulation when relevant)
   → plan breakdown (when relevant)
   → executive decisions + recommended actions
+  → investigation persisted (owner_analytics_investigations)
+  → case file opened (investigation_cases)
+  → outcome rows seeded (intelligence_outcomes)
+  → probability scores (business_probability_scores)
+```
+
