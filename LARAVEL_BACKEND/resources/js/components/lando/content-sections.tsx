@@ -94,3 +94,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
 
   const list = plans ?? []
 
+  const handleSubscribe = async (planId: string) => {
+    setBusy(planId)
+    const result = await createCheckoutSession(planId)
+    setBusy(null)
+    if (result.success && result.url) {
+      window.location.href = result.url
