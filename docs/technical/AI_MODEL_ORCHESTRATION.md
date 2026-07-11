@@ -58,3 +58,9 @@ Configured in `config/ai.php` → `deterministic_handlers`.
 ---
 
 ## Code examples
+
+```php
+use App\Services\AI\AiOrchestrator;
+use App\Services\AI\AiUseCase;
+
+// Customer WhatsApp (auto fast-routes "thanks" → fast_chat)
