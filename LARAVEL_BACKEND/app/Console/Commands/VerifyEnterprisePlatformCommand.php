@@ -40,3 +40,9 @@ class VerifyEnterprisePlatformCommand extends Command
             $this->line(sprintf('  [%s] %s', $ok ? 'OK' : 'FAIL', $label));
             if (! $ok) {
                 $allPass = false;
+            }
+        }
+
+        $toolCount = count($registry->all());
+        $this->line(sprintf('  [OK] Agent tools: %d', $toolCount));
+
