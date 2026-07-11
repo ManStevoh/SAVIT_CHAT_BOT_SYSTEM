@@ -22,3 +22,9 @@ class MemorySearchController extends Controller
         ]);
 
         return response()->json($search->search(
+            $company,
+            $validated['query'],
+            (int) ($validated['limit'] ?? 15),
+        ));
+    }
+}
