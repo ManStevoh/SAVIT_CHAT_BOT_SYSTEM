@@ -16,3 +16,9 @@ class WebhookDelivery extends Model
         'payload' => 'array',
         'delivered_at' => 'datetime',
     ];
+
+    public function endpoint(): BelongsTo
+    {
+        return $this->belongsTo(WebhookEndpoint::class, 'webhook_endpoint_id');
+    }
+
