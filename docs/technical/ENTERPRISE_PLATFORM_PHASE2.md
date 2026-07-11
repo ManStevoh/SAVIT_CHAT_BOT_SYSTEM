@@ -118,3 +118,9 @@ Authorization: Bearer savit_...
 GET /api/v1/company/health
 GET /api/v1/company/orders
 ```
+
+Outbound webhooks receive HMAC-SHA256 signed JSON with headers:
+- `X-Savit-Signature`
+- `X-Savit-Event`
+- `X-Savit-Delivery-Id`
+
