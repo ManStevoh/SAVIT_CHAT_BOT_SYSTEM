@@ -58,3 +58,9 @@ class CommerceAgentEventController extends Controller
 
     public function detect(Request $request, CommerceEventDetector $detector): JsonResponse
     {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $created = $detector->detectForCompany($company);
