@@ -46,3 +46,9 @@ function Field({
         <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className="text-sm" />
       ) : (
         <Input value={value} onChange={(e) => onChange(e.target.value)} className="text-sm" />
+      )}
+    </div>
+  )
+}
+
+function ImageField({
