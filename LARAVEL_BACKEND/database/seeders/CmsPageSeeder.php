@@ -52,3 +52,9 @@ class CmsPageSeeder extends Seeder
                         'section_key' => 'footer',
                         'label' => 'Footer',
                         'sort_order' => 4,
+                        'content' => [
+                            'copyright' => date('Y') . ' © Essem Chat / All rights reserved.',
+                            'navLinks' => [
+                                ['label' => 'Home', 'href' => '/'],
+                                ['label' => 'Pricing', 'href' => '/pricing'],
+                                ['label' => 'About us', 'href' => '/about'],
