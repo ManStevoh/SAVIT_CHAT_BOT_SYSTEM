@@ -34,3 +34,9 @@ class CmsPageController extends Controller
                     'id' => (string) $t->id,
                     'name' => $t->name,
                     'role' => $t->role ?? '',
+                    'content' => $t->content,
+                    'rating' => (int) $t->rating,
+                ])->values()->all();
+        }
+
+        if (in_array('faq', $enabledKeys, true)) {
