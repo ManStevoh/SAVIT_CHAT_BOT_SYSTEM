@@ -244,3 +244,9 @@ class CmsPageSeeder extends Seeder
                         ],
                     ],
                     [
+                        'section_key' => 'faq',
+                        'label' => 'FAQ',
+                        'sort_order' => 4,
+                        'content' => [
+                            'title' => 'Frequently asked questions',
+                            'useFaqsApi' => true,
