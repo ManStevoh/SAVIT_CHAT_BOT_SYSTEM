@@ -76,3 +76,9 @@ final class BusinessGraphV2Service
                 if ($this->link($company, $from->id, $to->id, $rel->relationship_type)) {
                     $stats['edges']++;
                 }
+            });
+
+        WhatsAppCampaign::query()
+            ->where('company_id', $company->id)
+            ->orderByDesc('id')
+            ->limit(50)
