@@ -10,3 +10,9 @@ import type { CmsLink, CmsSection } from "./types"
 
 interface LandoCmsPageProps {
   slug: string
+  fallbackTitle?: string
+}
+
+function getSectionContent(sections: CmsSection[], key: string) {
+  return sections.find((s) => s.key === key)?.content ?? {}
+}
