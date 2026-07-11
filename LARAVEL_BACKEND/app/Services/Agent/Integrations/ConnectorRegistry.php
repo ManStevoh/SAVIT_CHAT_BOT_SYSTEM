@@ -382,3 +382,9 @@ final class ConnectorRegistry
 
 
 
+            return ['success' => true, 'message' => 'ERP inventory pull succeeded (SKU mapping in future release).'];
+
+        } catch (\Throwable $e) {
+
+            Log::warning('ERP inventory sync failed', ['error' => $e->getMessage()]);
+
