@@ -28,3 +28,9 @@ class MissionControlController extends Controller
 
         $result = $missionControl->explainability((int) $company->id, $id);
         if ($result === null) {
+            return response()->json(['message' => 'Trust log not found.'], 404);
+        }
+
+        return response()->json(['explainability' => $result]);
+    }
+}
