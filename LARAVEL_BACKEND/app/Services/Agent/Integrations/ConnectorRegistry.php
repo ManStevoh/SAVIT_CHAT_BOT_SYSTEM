@@ -490,3 +490,9 @@ final class ConnectorRegistry
 
                     ? 'Carrier quote endpoint reachable.'
 
+                    : 'Carrier API returned HTTP '.$response->status(),
+
+            ];
+
+        } catch (\Throwable $e) {
+
