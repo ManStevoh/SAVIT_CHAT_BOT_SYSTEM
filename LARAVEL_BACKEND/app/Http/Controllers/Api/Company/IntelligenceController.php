@@ -172,3 +172,9 @@ class IntelligenceController extends Controller
             'source_type' => 'required|string|in:investigation,reasoning,approval,brief,opportunity',
 
             'source_id' => 'required|integer|min:1',
+
+            'recommended_action' => 'required|string|max:2000',
+
+            'outcome' => 'required|string|in:positive,neutral,negative,pending',
+
+            'notes' => 'nullable|string|max:2000',
