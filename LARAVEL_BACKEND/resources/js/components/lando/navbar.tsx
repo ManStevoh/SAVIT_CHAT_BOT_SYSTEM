@@ -58,3 +58,9 @@ export function LandoNavbar({
             className="hidden text-sm font-medium text-black sm:inline"
           >
             {loginLabel}
+          </Link>
+          <Button
+            asChild
+            className="hidden h-9 rounded-lg bg-[#2563eb] px-5 text-sm font-medium text-white hover:bg-[#1d4ed8] sm:inline-flex"
+          >
+            <Link href={signupHref}>{signupLabel}</Link>
