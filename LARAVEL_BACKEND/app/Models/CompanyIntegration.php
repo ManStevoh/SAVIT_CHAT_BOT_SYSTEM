@@ -4,3 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class CompanyIntegration extends Model
+{
+    protected $fillable = [
+        'company_id', 'connector_type', 'status', 'config', 'last_sync_at', 'last_error',
+    ];
