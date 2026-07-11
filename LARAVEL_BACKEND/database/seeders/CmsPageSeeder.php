@@ -58,3 +58,9 @@ class CmsPageSeeder extends Seeder
                                 ['label' => 'Home', 'href' => '/'],
                                 ['label' => 'Pricing', 'href' => '/pricing'],
                                 ['label' => 'About us', 'href' => '/about'],
+                                ['label' => 'Contact', 'href' => '/contact'],
+                            ],
+                            'socialLinks' => [
+                                ['label' => 'Facebook', 'href' => '#'],
+                                ['label' => 'Instagram', 'href' => '#'],
+                                ['label' => 'Twitter', 'href' => '#'],
