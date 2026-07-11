@@ -22,3 +22,9 @@ class BusinessGraphEdge extends Model
 
     public function fromNode(): BelongsTo
     {
+        return $this->belongsTo(BusinessGraphNode::class, 'from_node_id');
+    }
+
+    public function toNode(): BelongsTo
+    {
+        return $this->belongsTo(BusinessGraphNode::class, 'to_node_id');
