@@ -4,3 +4,9 @@ namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
 use App\Services\Agent\Onboarding\OnboardingInterviewService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class OnboardingInterviewController extends Controller
+{
+    public function start(Request $request, OnboardingInterviewService $interview): JsonResponse
