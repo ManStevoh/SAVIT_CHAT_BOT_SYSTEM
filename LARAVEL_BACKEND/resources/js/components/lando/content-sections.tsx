@@ -424,3 +424,9 @@ export function LandoContactSection({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={messagePlaceholder}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-black outline-none focus:border-[#2563eb]"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={busy}
