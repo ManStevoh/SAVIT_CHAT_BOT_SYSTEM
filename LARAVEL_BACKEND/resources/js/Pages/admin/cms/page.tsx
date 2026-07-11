@@ -340,3 +340,9 @@ function SectionEditor({
         </div>
       )
     }
+
+    if (key === "efficiency") {
+      return (
+        <Field
+          label="Title (use new lines for stacked text)"
+          value={str("title")}
