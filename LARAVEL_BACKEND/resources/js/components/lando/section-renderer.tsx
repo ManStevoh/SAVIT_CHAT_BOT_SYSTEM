@@ -28,3 +28,9 @@ function str(v: unknown, fallback = ""): string {
 
 function arr<T>(v: unknown): T[] {
   return Array.isArray(v) ? (v as T[]) : []
+}
+
+interface SectionRendererProps {
+  pageSlug: string
+  sectionKey: string
+  content: Content
