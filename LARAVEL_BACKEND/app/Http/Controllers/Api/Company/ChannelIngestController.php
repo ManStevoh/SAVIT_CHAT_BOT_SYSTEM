@@ -76,3 +76,9 @@ class ChannelIngestController extends Controller
         }
 
         $settings = $company->settings;
+        if (! $settings) {
+            return response()->json(['message' => 'Settings not found.'], 404);
+        }
+
+        $settings->web_widget_token = Str::random(32);
+        $settings->channel_ingest_secret = Str::random(32);
