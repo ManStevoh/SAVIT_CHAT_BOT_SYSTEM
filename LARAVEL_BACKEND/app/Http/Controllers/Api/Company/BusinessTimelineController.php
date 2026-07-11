@@ -22,3 +22,9 @@ class BusinessTimelineController extends Controller
         ]);
 
         return response()->json([
+            'events' => $timeline->timeline(
+                $company,
+                (int) ($validated['limit'] ?? 50),
+                $validated['category'] ?? null,
+            ),
+        ]);
