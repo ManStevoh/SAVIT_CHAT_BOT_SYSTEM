@@ -10,3 +10,9 @@ use App\Http\Controllers\Controller;
 
 use App\Models\InvestigationCase;
 use App\Models\IntelligenceOutcome;
+
+use App\Services\Agent\Intelligence\IntelligenceOutcomeService;
+
+use App\Services\Agent\Intelligence\IntelligenceReasoningService;
+
+use App\Services\Agent\Intelligence\InvestigationCaseService;
