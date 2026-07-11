@@ -364,3 +364,9 @@ export function LandoContactSection({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setBusy(true)
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ name, email, message }),
