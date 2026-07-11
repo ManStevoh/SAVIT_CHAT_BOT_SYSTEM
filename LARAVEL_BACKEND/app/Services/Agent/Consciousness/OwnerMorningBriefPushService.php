@@ -106,3 +106,9 @@ final class OwnerMorningBriefPushService
                 $lines[] = ($i + 1).'. '.(string) $rec;
             }
         }
+
+        $lines[] = '';
+        $lines[] = 'Open Mission Control in your dashboard for details.';
+
+        return mb_substr(implode("\n", $lines), 0, (int) config('agent.max_output_chars', 1200));
+    }
