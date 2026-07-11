@@ -34,3 +34,9 @@ class BusinessTimelineController extends Controller
     {
         $company = $request->user()->company;
         if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $count = $timeline->syncFromCompany($company);
+
+        return response()->json(['synced' => $count], 201);
