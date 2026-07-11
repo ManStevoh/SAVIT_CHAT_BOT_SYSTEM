@@ -22,3 +22,9 @@ class VerifyAiOrchestrationCommand extends Command
         $requiredCapabilities = [
             AiModel::CAPABILITY_REASONING,
             AiModel::CAPABILITY_CHAT,
+            AiModel::CAPABILITY_FAST_CHAT,
+            AiModel::CAPABILITY_VISION,
+            AiModel::CAPABILITY_EMBEDDING,
+            AiModel::CAPABILITY_STT,
+        ];
+
