@@ -163,7 +163,9 @@ Typical keys: `tone`, `values`, `risk_tolerance`, `service_philosophy`, `escalat
 
 Also mentions configured `ai_tone` from settings.
 
-**Test:** `test_business_dna_uses_company_settings`
+**Dashboard:** Settings → AI → Business DNA (presets: luxury brand, friendly café, industry default, custom).
+
+**API:** `GET/PUT /api/company/settings` — `businessDna`, `businessDnaPresets`, `agentCommerceEnabled`.
 
 **Not in Settings API yet** — set via DB / future UI.
 
@@ -433,12 +435,14 @@ php artisan test --filter=CommerceAgent
 ## Roadmap (Layer 4 → ABI)
 
 1. LLM perception + LLM self-critique  
-2. Unified Intelligence API `POST /reason` (ABI Level 19)  
-3. Approval execution UI  
-4. Voice perception for owner commands  
+2. ~~Unified Intelligence API `POST /reason` (ABI Level 19)~~ — **shipped** (`POST /api/company/intelligence/reason`)  
+3. ~~Approval execution UI~~ — **shipped** (Executive AI dashboard, Phase 5)  
+4. ~~Voice perception for owner commands~~ — **shipped** (Phase 5 owner voice path)  
 5. Publish tool proposals as real tools  
 6. Calibrated Bayesian probabilities (ABI Level 4)  
 7. Multi-year planning + org chart (ABI Levels 6–7)  
 8. Digital board sessions (ABI Level 14)  
+9. Investigation case files with multi-step autonomous probes (Levels 2–3)  
+10. Intelligence loop KPI controller (Level 20)  
 
-See also: [ABI Platform](AI_ABI_PLATFORM.md) · [AI Platform OS](AI_PLATFORM_OS.md) · [AI Company OS](AI_COMPANY_OS.md) · [AI Agent OS](AI_AGENT_OS.md)
+See also: [ABI Levels Summary](ABI_LEVELS_SUMMARY.md) · [ABI Platform](AI_ABI_PLATFORM.md)
