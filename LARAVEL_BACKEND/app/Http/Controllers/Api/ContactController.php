@@ -22,3 +22,9 @@ class ContactController extends Controller
         $to = $settings?->support_email ?? config('mail.from.address');
 
         if ($to) {
+            $body = "Contact form submission\n\n"
+                . "Name: {$validated['name']}\n"
+                . "Email: {$validated['email']}\n\n"
+                . "Message:\n{$validated['message']}";
+
+            try {
