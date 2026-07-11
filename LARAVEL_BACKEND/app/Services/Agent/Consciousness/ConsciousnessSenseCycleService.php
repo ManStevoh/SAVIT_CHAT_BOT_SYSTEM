@@ -64,3 +64,9 @@ final class ConsciousnessSenseCycleService
             );
 
             $company->settings?->update(['consciousness_last_sensed_at' => now()]);
+
+            return [
+                'events_detected' => $detected,
+                'sensed' => true,
+            ];
+        } catch (\Throwable $e) {
