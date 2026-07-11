@@ -76,3 +76,9 @@ Each module: **vision → status → what exists → gaps → build spec (global
 
 ---
 
+### 18. Subscription Engine
+
+**Vision:** Monthly, annual, usage-based, credits, seat-based, feature flags, trials, coupons, partner pricing.
+
+| Sub-capability | Status | Evidence |
+|----------------|--------|----------|
