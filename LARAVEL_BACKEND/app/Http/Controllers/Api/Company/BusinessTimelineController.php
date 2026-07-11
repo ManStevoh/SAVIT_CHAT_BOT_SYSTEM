@@ -28,3 +28,9 @@ class BusinessTimelineController extends Controller
                 $validated['category'] ?? null,
             ),
         ]);
+    }
+
+    public function sync(Request $request, BusinessTimelineService $timeline): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
