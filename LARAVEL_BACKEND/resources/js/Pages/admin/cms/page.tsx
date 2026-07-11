@@ -394,3 +394,9 @@ function SectionEditor({
               />
               <Field
                 label="Role"
+                value={m.role}
+                onChange={(v) => {
+                  const next = [...members]
+                  next[i] = { ...next[i], role: v }
+                  set("members", next)
+                }}
