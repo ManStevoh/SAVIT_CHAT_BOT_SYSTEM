@@ -8,13 +8,17 @@ use App\Models\CustomerMemory;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\Agent\Cognitive\CausalReasoningService;
+use App\Services\Agent\Timeline\BusinessTimelineService;
 
 /**
  * Detects commerce events for proactive outreach and owner alerts.
  */
 final class CommerceEventDetector
 {
-    public function __construct(protected CausalReasoningService $causal) {}
+    public function __construct(
+        protected CausalReasoningService $causal,
+        protected BusinessTimelineService $timeline,
+    ) {}
 
     /**
      * @return list<CommerceAgentEvent>
@@ -165,13 +169,31 @@ final class CommerceEventDetector
             return null;
         }
 
-        return CommerceAgentEvent::create([
+        $event = CommerceAgentEvent::create([
             'company_id' => $companyId,
             'event_type' => $type,
             'event_key' => $key,
             'payload' => $payload,
             'status' => 'open',
         ]);
+
+        $company = Company::find($companyId);
+        if ($company) {
+            $this->timeline->record(
+                $company,
+                $type,
+                ucfirst(str_replace('_', ' ', $type)),
+                (string) ($payload['summary'] ?? $key),
+                $payload,
+                'commerce_agent_event',
+                (int) $event->id,
+                in_array($type, ['sales_drop', 'low_stock'], true) ? 85 : 60,
+                $event->created_at,
+                'signal',
+            );
+        }
+
+        return $event;
     }
 
     private function matchesToday(string $value, string $todayMd): bool
