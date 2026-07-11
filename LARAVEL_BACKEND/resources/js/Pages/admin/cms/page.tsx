@@ -268,3 +268,9 @@ function SectionEditor({
         </div>
       )
     }
+
+    if (key === "how_to_join") {
+      const steps = (content.steps as Array<{ title: string; description: string }>) ?? []
+      return (
+        <div className="space-y-3">
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
