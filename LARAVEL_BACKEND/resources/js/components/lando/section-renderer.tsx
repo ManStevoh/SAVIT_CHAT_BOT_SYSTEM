@@ -148,3 +148,9 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
 
     case "pricing_plans":
       return <LandoPricingPlans popularBadge={str(content.popularBadge, "Most Popular")} />
+
+    case "compare_features":
+      return (
+        <LandoCompareFeatures
+          title={str(content.title, "Compare Features")}
+          columns={arr(content.columns)}
