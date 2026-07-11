@@ -268,3 +268,9 @@ export function LandoMission({ title, description }: { title: string; descriptio
         <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
         {description && <p className="mt-6 text-base leading-relaxed text-gray-600">{description}</p>}
       </div>
+    </section>
+  )
+}
+
+export function LandoEfficiency({ title }: { title: string }) {
+  const lines = title.split("\n")
