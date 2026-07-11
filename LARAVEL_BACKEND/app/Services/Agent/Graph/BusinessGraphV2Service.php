@@ -148,3 +148,9 @@ final class BusinessGraphV2Service
             $label,
             $metadata,
         );
+    }
+
+    /**
+     * @return array{nodes: list<array<string, mixed>>, edges: list<array<string, mixed>>, stats: array<string, int>}
+     */
+    public function exportGraph(Company $company, int $nodeLimit = 200): array
