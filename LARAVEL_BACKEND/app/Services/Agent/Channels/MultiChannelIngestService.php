@@ -16,3 +16,9 @@ final class MultiChannelIngestService
     /**
      * @return array{chat: Chat, message: Message, queued: bool}
      */
+    public function ingest(
+        Company $company,
+        string $channel,
+        string $channelUserId,
+        string $messageText,
+        ?string $customerName = null,
