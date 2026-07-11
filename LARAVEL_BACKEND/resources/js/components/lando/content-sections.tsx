@@ -202,3 +202,9 @@ export function LandoCompareFeatures({
                 ))}
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
