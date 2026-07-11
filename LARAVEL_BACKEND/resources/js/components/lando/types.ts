@@ -28,3 +28,9 @@ export interface CmsPageData {
   }>
   faqs?: Array<{ id: string; question: string; answer: string }>
   trustedCompanies?: string[] | Array<{ name: string; logoUrl?: string }>
+}
+
+export interface CmsGlobalData {
+  page: CmsPageData['page']
+  sections: CmsSection[]
+}
