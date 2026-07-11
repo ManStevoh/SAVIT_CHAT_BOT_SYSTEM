@@ -238,3 +238,9 @@ final class ConnectorRegistry
 
         }
 
+
+
+        $url = $config['api_url'] ?? config('agent.external.shipping_api_url');
+
+        if (! is_string($url) || $url === '') {
+
