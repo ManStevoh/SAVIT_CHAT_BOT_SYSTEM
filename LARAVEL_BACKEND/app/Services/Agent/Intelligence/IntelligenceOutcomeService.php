@@ -40,3 +40,9 @@ final class IntelligenceOutcomeService
      */
     public function seedFromBrief(Company $company, int $briefId, array $recommendations): void
     {
+        $actions = [];
+        foreach ($recommendations as $rec) {
+            if (is_string($rec) && trim($rec) !== '') {
+                $actions[] = ['action' => trim($rec), 'source' => 'brief'];
+            }
+        }
