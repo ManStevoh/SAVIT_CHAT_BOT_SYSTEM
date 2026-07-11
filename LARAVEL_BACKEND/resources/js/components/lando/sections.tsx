@@ -22,3 +22,9 @@ export function LandoHeroSection({
   primaryCtaHref,
   secondaryCtaText,
   secondaryCtaHref,
+  imageUrl,
+  imageAlt = "",
+}: LandoHeroProps) {
+  return (
+    <section className="lando-hero bg-[#f3f4f6] pt-28 pb-16 lg:pt-32 lg:pb-24">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
