@@ -28,3 +28,9 @@ class ProcessIncomingChannelMessage implements ShouldQueue
         public string $messageText,
         public ?string $customerName = null,
         public ?string $customerPhone = null,
+    ) {}
+
+    public function handle(): void
+    {
+        $company = Company::with(['settings', 'whatsappAccount'])->find($this->companyId);
+        $chat = Chat::find($this->chatId);
