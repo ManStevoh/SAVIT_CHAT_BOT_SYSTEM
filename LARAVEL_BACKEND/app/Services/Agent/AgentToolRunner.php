@@ -4,6 +4,7 @@ namespace App\Services\Agent;
 
 use App\Models\AgentToolInvocation;
 use App\Services\Agent\Platform\AgentApprovalService;
+use App\Services\Agent\Platform\ExternalModuleToolBridge;
 use Illuminate\Support\Facades\Log;
 
 final class AgentToolRunner
@@ -11,6 +12,7 @@ final class AgentToolRunner
     public function __construct(
         protected AgentToolRegistry $registry,
         protected AgentApprovalService $approval,
+        protected ExternalModuleToolBridge $externalTools,
     ) {}
 
     /**
@@ -42,14 +44,19 @@ final class AgentToolRunner
         try {
             $result = $this->registry->execute($toolName, $context, $arguments);
         } catch (\Throwable $e) {
-            $success = false;
-            $result = ['error' => mb_substr($e->getMessage(), 0, 500)];
-            Log::warning('Agent tool execution failed', [
-                'tool' => $toolName,
-                'company_id' => $context->company->id,
-                'chat_id' => $context->chat->id,
-                'error' => $e->getMessage(),
-            ]);
+            if ($this->externalTools->canExecute($context->company, $toolName)) {
+                $result = $this->externalTools->execute($context->company, $toolName, $context, $arguments);
+                $success = ! isset($result['error']);
+            } else {
+                $success = false;
+                $result = ['error' => mb_substr($e->getMessage(), 0, 500)];
+                Log::warning('Agent tool execution failed', [
+                    'tool' => $toolName,
+                    'company_id' => $context->company->id,
+                    'chat_id' => $context->chat->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $durationMs = (int) round((microtime(true) - $started) * 1000);
