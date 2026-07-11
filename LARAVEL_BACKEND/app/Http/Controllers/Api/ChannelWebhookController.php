@@ -70,3 +70,9 @@ class ChannelWebhookController extends Controller
             return $this->verifyMetaWebhook($request);
         }
 
+        $company = $auth->companyFromRequest($request, $companyId);
+        if (! $company) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        $body = $request->all();
