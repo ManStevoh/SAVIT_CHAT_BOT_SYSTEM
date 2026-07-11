@@ -22,3 +22,9 @@ class AuditEvent extends Model
         'meta',
         'created_at',
     ];
+
+    protected $casts = [
+        'before' => 'array',
+        'after' => 'array',
+        'meta' => 'array',
+        'created_at' => 'datetime',
