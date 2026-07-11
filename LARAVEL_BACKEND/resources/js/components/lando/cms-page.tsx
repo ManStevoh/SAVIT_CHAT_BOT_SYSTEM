@@ -64,3 +64,9 @@ export function LandoCmsPage({ slug, fallbackTitle }: LandoCmsPageProps) {
             <LandoSectionRenderer
               key={section.key}
               pageSlug={slug}
+              sectionKey={section.key}
+              content={section.content}
+              pageData={pageData}
+            />
+          ))}
+
