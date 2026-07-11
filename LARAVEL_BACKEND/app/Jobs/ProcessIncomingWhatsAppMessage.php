@@ -16,6 +16,7 @@ use App\Services\CompanyInAppNotificationService;
 use App\Services\MailService;
 use App\Services\OrderFlowService;
 use App\Services\PlanLimitService;
+use App\Services\Platform\UsageMeterService;
 use App\Services\AI\AiLearningConfig;
 use App\Services\Conversation\MessageLanguageDetector;
 use App\Services\ConversationLearningService;
@@ -107,6 +108,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        app(UsageMeterService::class)->increment($company, 'messages');
+
         if (! PlanLimitService::isWithinMessageLimit($company)) {
             Log::info('ProcessIncomingWhatsAppMessage: message limit reached, skipping auto-reply', ['company_id' => $company->id]);
             $this->notifyCompanyNewMessage($company, $mailService, 'message');
@@ -157,6 +160,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
                     $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
                 }
                 $this->sendReplyAndSave($waSender, $company, $chat, $agentResult['reply'], $agentResult['route']);
+                $this->maybeSendVisionProductImage($waSender, $company, $chat);
                 $this->schedulePostConversationJobs($company, $chat);
 
                 return;
@@ -289,6 +293,38 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        $inboundWasAudio = false;
+        if ($this->incomingMessageId) {
+            $incoming = Message::find($this->incomingMessageId);
+            $inboundWasAudio = $incoming && (
+                $incoming->message_type === 'audio'
+                || str_contains((string) ($incoming->attachment_mime ?? ''), 'audio')
+                || str_contains((string) $incoming->content, '[audio received]')
+            );
+        }
+
+        $voiceOutbound = app(\App\Services\Agent\Voice\VoiceOutboundService::class);
+        if ($voiceOutbound->shouldReplyWithVoice($company, $inboundWasAudio)) {
+            $voiceResult = $voiceOutbound->sendVoiceReply($account, $company, $this->customerPhone, $replyText);
+            if ($voiceResult['success'] ?? false) {
+                Message::create([
+                    'chat_id' => $this->chatId,
+                    'sender' => 'bot',
+                    'content' => $replyText,
+                    'message_type' => 'audio',
+                    'reply_source' => ($replySource ?? 'agent').'_voice',
+                    'whatsapp_message_id' => $voiceResult['message_id'] ?? null,
+                ]);
+                $chat->update([
+                    'last_message' => mb_substr($replyText, 0, 500),
+                    'last_message_at' => now(),
+                    'ai_handled' => true,
+                ]);
+
+                return;
+            }
+        }
+
         $result = $waSender->sendText($account, $this->customerPhone, $replyText);
 
         $message = Message::create([
@@ -409,6 +445,53 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
         if (! $result['success']) {
             Log::warning('ProcessIncomingWhatsAppMessage: selection image send failed', ['error' => $result['error'] ?? 'unknown']);
+        }
+    }
+
+    protected function maybeSendVisionProductImage(
+        WhatsAppMessageSenderService $waSender,
+        Company $company,
+        Chat $chat,
+    ): void {
+        if (! $this->incomingMessageId) {
+            return;
+        }
+
+        $analysis = \App\Models\MessageVisionAnalysis::where('message_id', $this->incomingMessageId)->first();
+        if (! $analysis) {
+            return;
+        }
+
+        $preview = app(\App\Services\Agent\Vision\VisionOutboundImageService::class)
+            ->resolveProductPreview($company, $analysis);
+        if (! $preview || empty($preview['url'])) {
+            return;
+        }
+
+        $account = $company->whatsappAccount;
+        if (! $account || ! $account->isActive()) {
+            return;
+        }
+
+        $result = $waSender->sendImage($account, $this->customerPhone, $preview['url'], $preview['caption'] ?? null);
+        Message::create([
+            'chat_id' => $chat->id,
+            'content' => $preview['caption'] ?? '',
+            'message_type' => 'image',
+            'attachment_url' => $preview['url'],
+            'attachment_name' => null,
+            'attachment_mime' => 'image/jpeg',
+            'attachment_size' => null,
+            'sender' => 'bot',
+            'status' => $result['success'] ? 'sent' : 'failed',
+            'whatsapp_message_id' => $result['message_id'] ?? null,
+        ]);
+
+        if (! $result['success']) {
+            Log::warning('ProcessIncomingWhatsAppMessage: vision product image send failed', [
+                'error' => $result['error'] ?? 'unknown',
+                'product_id' => $preview['product_id'] ?? null,
+            ]);
         }
     }
 
