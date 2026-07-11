@@ -64,3 +64,9 @@ export function LandoNavbar({
             className="hidden h-9 rounded-lg bg-[#2563eb] px-5 text-sm font-medium text-white hover:bg-[#1d4ed8] sm:inline-flex"
           >
             <Link href={signupHref}>{signupLabel}</Link>
+          </Button>
+          <button
+            type="button"
+            className="rounded-lg p-2 text-black md:hidden"
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
