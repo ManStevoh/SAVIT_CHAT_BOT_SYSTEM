@@ -142,3 +142,9 @@ partner_accounts            — reseller markup, commission, white-label scope
 **Build spec**
 
 ```
+billing_invoices            — local invoice header (subscription + one-time)
+billing_invoice_lines       — line items, tax, discounts
+billing_payments            — gateway, external_id, amount, status
+billing_refunds             — linked to payment, gateway refund id
+billing_credits             — wallet balance, credit transactions
+billing_tax_rates           — jurisdiction, rate, inclusive flag
