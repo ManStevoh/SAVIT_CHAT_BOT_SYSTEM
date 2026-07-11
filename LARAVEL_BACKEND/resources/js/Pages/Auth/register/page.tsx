@@ -5,11 +5,11 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { Eye, EyeOff } from "lucide-react"
-// API: POST /api/auth/register — register new company (api-actions.register)
 import { register as registerApi, type RegisterData } from "@/lib/api-actions"
+import { LandoAuthHeader, LandoAuthError, landoBtnClass, landoInputClass } from "@/components/lando/auth-form"
 
 function RegisterPageContent() {
   const router = useRouter()
@@ -18,7 +18,6 @@ function RegisterPageContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  // API error handling: display message from failed register() response
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -32,7 +31,6 @@ function RegisterPageContent() {
     const phone = (form.elements.namedItem("phone") as HTMLInputElement | null)?.value.trim() ?? ""
     const password = (form.elements.namedItem("password") as HTMLInputElement).value.trim()
     const confirmPassword = (form.elements.namedItem("confirmPassword") as HTMLInputElement).value.trim()
-    // Validation placeholder: add more client-side rules as needed (e.g. password strength)
     if (password !== confirmPassword) {
       setError("Passwords do not match")
       setIsLoading(false)
@@ -53,7 +51,6 @@ function RegisterPageContent() {
       setError(result.message ?? "Registration failed")
       return
     }
-    // Registration does not issue a token; user must log in after verifying email.
     if (planId) {
       router.push(`/login?registered=1&plan=${planId}`)
     } else {
@@ -62,126 +59,83 @@ function RegisterPageContent() {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="rounded-xl border border-border/60 bg-card p-8 shadow-premium">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Start your 14-day free trial
-          </p>
+    <div className="w-full">
+      <LandoAuthHeader title="Create your account" description="Start your 14-day free trial" />
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <LandoAuthError>{error}</LandoAuthError>}
+
+        <div className="space-y-2">
+          <Label htmlFor="company" className="text-sm font-medium text-black">Company Name</Label>
+          <Input id="company" name="company" type="text" placeholder="Your company name" required className={landoInputClass} />
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="company">Company Name</FieldLabel>
-              <Input
-                id="company"
-                name="company"
-                type="text"
-                placeholder="Your company name"
-                required
-              />
-            </Field>
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-sm font-medium text-black">Your Name</Label>
+          <Input id="name" name="name" type="text" placeholder="Your name" className={landoInputClass} />
+        </div>
 
-            <Field>
-              <FieldLabel htmlFor="name">Your Name</FieldLabel>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                placeholder="Your name"
-              />
-            </Field>
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium text-black">Email</Label>
+          <Input id="email" name="email" type="email" placeholder="you@company.com" required className={landoInputClass} />
+        </div>
 
-            <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="you@company.com"
-                required
-              />
-            </Field>
+        <div className="space-y-2">
+          <Label htmlFor="phone" className="text-sm font-medium text-black">Phone</Label>
+          <Input id="phone" name="phone" type="tel" placeholder="+254 700 000 000" required className={landoInputClass} />
+        </div>
 
-            <Field>
-              <FieldLabel htmlFor="phone">Phone</FieldLabel>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                placeholder="+1 555-0100"
-                required
-              />
-            </Field>
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-sm font-medium text-black">Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Create a password"
+              required
+              className={`${landoInputClass} pr-10`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
 
-            <Field>
-              <FieldLabel htmlFor="password">Password</FieldLabel>
-              <div className="relative">
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Create a password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </Field>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword" className="text-sm font-medium text-black">Confirm Password</Label>
+          <div className="relative">
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirm your password"
+              required
+              className={`${landoInputClass} pr-10`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
 
-            <Field>
-              <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </Field>
+        <Button type="submit" className={landoBtnClass} disabled={isLoading}>
+          {isLoading ? <Spinner className="h-4 w-4" /> : "Create account"}
+        </Button>
+      </form>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Spinner className="h-4 w-4" /> : "Create Account"}
-            </Button>
-          </FieldGroup>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:text-primary/80">
-            Sign in
-          </Link>
-        </p>
-      </div>
+      <p className="mt-6 text-center text-sm text-gray-600">
+        Already have an account?{" "}
+        <Link href="/login" className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign in</Link>
+      </p>
     </div>
   )
 }
@@ -190,10 +144,8 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-md">
-          <div className="rounded-xl border border-border/60 bg-card p-8 shadow-premium flex items-center justify-center">
-            <Spinner className="h-6 w-6" />
-          </div>
+        <div className="flex items-center justify-center py-12">
+          <Spinner className="h-6 w-6" />
         </div>
       }
     >
