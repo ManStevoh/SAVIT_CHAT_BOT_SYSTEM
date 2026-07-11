@@ -100,3 +100,9 @@ final class MultiChannelIngestService
         return match ($channel) {
             ChatChannel::WEB_WIDGET => 'Web visitor',
             ChatChannel::EMAIL => 'Email contact',
+            ChatChannel::INSTAGRAM_DM => 'Instagram user',
+            default => 'Customer',
+        };
+    }
+
+    private function looksLikePhone(string $value): bool
