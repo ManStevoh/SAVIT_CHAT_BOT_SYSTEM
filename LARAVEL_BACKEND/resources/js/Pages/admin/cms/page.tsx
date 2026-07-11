@@ -238,3 +238,9 @@ function SectionEditor({
       )
     }
 
+    if (key === "intro_card" || key === "cta") {
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          <Field label="Button text" value={str("ctaText")} onChange={(v) => set("ctaText", v)} />
