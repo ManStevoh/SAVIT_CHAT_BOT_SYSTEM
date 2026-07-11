@@ -40,3 +40,9 @@ export interface AdminCmsSection extends CmsSection {
 }
 
 export interface AdminCmsPage {
+  page: {
+    id: string
+    slug: string
+    title: string
+    metaTitle?: string | null
+    metaDescription?: string | null
