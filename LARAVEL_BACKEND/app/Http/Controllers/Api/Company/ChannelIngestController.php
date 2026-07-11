@@ -52,3 +52,9 @@ class ChannelIngestController extends Controller
         $settings = $company->settings;
         $baseUrl = rtrim(config('app.url'), '/');
 
+        return response()->json([
+            'channels' => ChatChannel::all(),
+            'webWidgetToken' => $settings?->web_widget_token,
+            'channelIngestSecret' => $settings?->channel_ingest_secret,
+            'webhooks' => [
+                'email' => $baseUrl.'/api/webhooks/channels/'.$company->id.'/email',
