@@ -118,3 +118,9 @@ class ChannelWebhookController extends Controller
                 $dispatcher->ingestAndReply(
                     $company,
                     ChatChannel::INSTAGRAM_DM,
+                    $senderId,
+                    $text,
+                    null,
+                    syncReply: false,
+                );
+                $processed++;
