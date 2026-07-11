@@ -10,3 +10,9 @@ import Link from "next/link"
 import { usePlans } from "@/lib/api-hooks"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
+import { createCheckoutSession } from "@/lib/api-actions"
+import { getAuthToken } from "@/lib/api-client"
+import { toast } from "sonner"
+
+export function LandoTrustedCompanies({
