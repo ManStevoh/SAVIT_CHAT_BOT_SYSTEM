@@ -40,3 +40,9 @@ export function LandoAuthSuccess({ children }: { children: React.ReactNode }) {
 }
 
 export function LandoAuthLink({
+  href,
+  children,
+}: {
+  href: string
+  children: React.ReactNode
+}) {
