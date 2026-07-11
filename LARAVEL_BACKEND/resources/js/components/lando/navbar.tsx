@@ -76,3 +76,9 @@ export function LandoNavbar({
         </div>
       </div>
 
+      <div
+        className={cn(
+          "overflow-hidden border-t border-gray-200/80 bg-[#f3f4f6] transition-all md:hidden",
+          open ? "max-h-96 pb-4 opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
