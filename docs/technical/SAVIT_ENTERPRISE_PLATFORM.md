@@ -544,3 +544,9 @@ All new modules must meet these **global SaaS standards** before marking **Imple
 | Requirement | Current state | Target |
 |-------------|---------------|--------|
 | Authentication | Sanctum + roles | + policies, 2FA, session revocation |
+| Authorization | Role column | Permission Engine with ABAC |
+| Tenant isolation | `company_id` on queries | Global scopes + policy tests per module |
+| Encryption at rest | DB defaults | Credentials in `integration_credentials` encrypted |
+| Audit trail | Partial | Audit Center on all mutations |
+| Rate limiting | Auth routes | Per API key + per company quotas |
+| Input validation | Controller validate | Form requests + shared schemas |
