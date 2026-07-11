@@ -358,3 +358,9 @@ function SectionEditor({
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
             <Field label="Last updated" value={str("lastUpdated")} onChange={(v) => set("lastUpdated", v)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Body (HTML — use &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;&lt;li&gt;)</Label>
+            <Textarea
+              value={str("body")}
+              onChange={(e) => set("body", e.target.value)}
