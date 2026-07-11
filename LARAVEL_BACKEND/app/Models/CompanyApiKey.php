@@ -22,3 +22,9 @@ class CompanyApiKey extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function isActive(): bool
