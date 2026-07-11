@@ -436,3 +436,9 @@ final class ConnectorRegistry
 
             ];
 
+        } catch (\Throwable $e) {
+
+            return ['success' => false, 'message' => $e->getMessage()];
+
+        }
+
