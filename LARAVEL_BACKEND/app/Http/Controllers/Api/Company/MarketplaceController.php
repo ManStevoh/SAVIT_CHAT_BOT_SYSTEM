@@ -34,3 +34,9 @@ class MarketplaceController extends Controller
             'config' => 'nullable|array',
             'config.webhook_base_url' => 'nullable|url|max:500',
             'config.webhook_secret' => 'nullable|string|max:128',
+        ]);
+
+        try {
+            $installation = $marketplace->install(
+                $company,
+                $moduleKey,
