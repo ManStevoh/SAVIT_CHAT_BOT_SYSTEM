@@ -310,3 +310,9 @@ export function LandoTeam({
             <div key={m.name}>
               {m.imageUrl ? (
                 <img
+                  src={m.imageUrl}
+                  alt={m.name}
+                  className="mx-auto h-32 w-32 rounded-full object-cover"
+                />
+              ) : (
+                <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-gray-200 text-2xl font-bold text-gray-500">
