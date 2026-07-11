@@ -16,3 +16,9 @@ class MissionControlController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
 
+        return response()->json($missionControl->build($company));
+    }
+
+    public function explainability(Request $request, MissionControlService $missionControl, int $id): JsonResponse
+    {
+        $company = $request->user()->company;
