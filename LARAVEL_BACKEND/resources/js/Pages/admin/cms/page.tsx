@@ -634,3 +634,8 @@ export default function AdminCmsPage() {
           <TabsContent key={p.slug} value={p.slug} className="mt-6">
             <PageEditor slug={p.slug} />
           </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  )
+}
