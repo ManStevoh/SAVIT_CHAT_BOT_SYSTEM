@@ -22,3 +22,9 @@ class PolicyRuleController extends Controller
             ->get();
 
         return response()->json(['rules' => $rules]);
+    }
+
+    public function store(Request $request, AuditService $audit): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
