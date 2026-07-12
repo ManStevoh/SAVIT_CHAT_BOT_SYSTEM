@@ -82,6 +82,7 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           secondaryCtaHref={str(content.secondaryCtaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
+          showFlowSimulation={content.showFlowSimulation === true}
         />
       )
 

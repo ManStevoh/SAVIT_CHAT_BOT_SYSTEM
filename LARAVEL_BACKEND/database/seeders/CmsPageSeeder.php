@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace Database\Seeders;
 
@@ -13,7 +13,13 @@ class CmsPageSeeder extends Seeder
     public function run(): void
     {
         $heroImage = '/images/lando/lando-hero.png';
+        $introImage = '/images/lando/lando-intro.png';
+        $inboxImage = '/images/lando/lando-inbox.png';
+        $paymentsImage = '/images/lando/lando-payments.png';
+        $stepsImage = '/images/lando/lando-steps.png';
+        $ctaImage = '/images/lando/lando-cta.png';
         $aboutTeamImage = '/images/lando/lando-about-team.png';
+        $contactImage = '/images/lando/lando-contact.png';
 
         $pages = [
             [
@@ -44,7 +50,7 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Auth pages shell',
                         'sort_order' => 3,
                         'content' => [
-                            'imageUrl' => '/images/lando/lando-hero.png',
+                            'imageUrl' => $heroImage,
                             'imageAlt' => 'Platform illustration',
                         ],
                     ],
@@ -92,6 +98,7 @@ class CmsPageSeeder extends Seeder
                             'primaryCtaHref' => '/register',
                             'secondaryCtaText' => 'See how it works',
                             'secondaryCtaHref' => '#how-to-join',
+                            'showFlowSimulation' => true,
                             'imageUrl' => $heroImage,
                             'imageAlt' => 'WhatsApp commerce platform illustration',
                         ],
@@ -103,12 +110,12 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => "Trusted by individuals and teams at the world's best companies",
                             'companies' => [
-                                ['name' => 'FoodHub', 'logoUrl' => ''],
-                                ['name' => 'ShopEase', 'logoUrl' => ''],
-                                ['name' => 'TechStore', 'logoUrl' => ''],
-                                ['name' => 'FashionCo', 'logoUrl' => ''],
-                                ['name' => 'QuickBite', 'logoUrl' => ''],
-                                ['name' => 'HomeGoods', 'logoUrl' => ''],
+                                ['name' => 'FoodHub', 'logoUrl' => '/images/lando/logo-foodhub.svg'],
+                                ['name' => 'ShopEase', 'logoUrl' => '/images/lando/logo-shopease.svg'],
+                                ['name' => 'TechStore', 'logoUrl' => '/images/lando/logo-techstore.svg'],
+                                ['name' => 'FashionCo', 'logoUrl' => '/images/lando/logo-fashionco.svg'],
+                                ['name' => 'QuickBite', 'logoUrl' => '/images/lando/logo-quickbite.svg'],
+                                ['name' => 'HomeGoods', 'logoUrl' => '/images/lando/logo-homegoods.svg'],
                             ],
                         ],
                     ],
@@ -121,8 +128,7 @@ class CmsPageSeeder extends Seeder
                             'description' => 'Join businesses using Essem Chat and experience AI-powered sales today!',
                             'ctaText' => 'Try for free',
                             'ctaHref' => '/register',
-                            'imageUrl' => $heroImage,
-                            'imageAlt' => 'Platform overview',
+                            'imageUrl' => $introImage,
                         ],
                     ],
                     [
@@ -135,8 +141,7 @@ class CmsPageSeeder extends Seeder
                             'description' => 'We take customer data seriously. Every chat, order, and payment is encrypted and stored securely. Your team inbox keeps full history per customer.',
                             'ctaText' => 'Try now',
                             'ctaHref' => '/register',
-                            'imageUrl' => $heroImage,
-                            'imageAlt' => 'Team inbox',
+                            'imageUrl' => $inboxImage,
                             'imagePosition' => 'left',
                         ],
                     ],
@@ -150,8 +155,7 @@ class CmsPageSeeder extends Seeder
                             'description' => 'M-Pesa STK push and Stripe card payments built into the conversation. Customers browse, order, and pay in one thread — no redirects, no friction.',
                             'ctaText' => 'Try now',
                             'ctaHref' => '/register',
-                            'imageUrl' => $heroImage,
-                            'imageAlt' => 'Payments in chat',
+                            'imageUrl' => $paymentsImage,
                             'imagePosition' => 'right',
                         ],
                     ],
@@ -164,8 +168,7 @@ class CmsPageSeeder extends Seeder
                             'description' => 'Just 3 simple steps to start selling on WhatsApp.',
                             'ctaText' => 'Sign up now',
                             'ctaHref' => '/register',
-                            'imageUrl' => $heroImage,
-                            'imageAlt' => 'Getting started',
+                            'imageUrl' => $stepsImage,
                             'steps' => [
                                 ['title' => 'Step 1', 'description' => 'Create your account and connect your WhatsApp Business number.'],
                                 ['title' => 'Step 2', 'description' => 'Add your products, FAQs, and payment methods — we guide you through setup.'],
@@ -191,8 +194,7 @@ class CmsPageSeeder extends Seeder
                             'description' => 'Start selling on WhatsApp with AI automation today.',
                             'ctaText' => 'Sign up now',
                             'ctaHref' => '/register',
-                            'imageUrl' => $heroImage,
-                            'imageAlt' => 'Get started',
+                            'imageUrl' => $ctaImage,
                         ],
                     ],
                 ],
@@ -340,8 +342,7 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => 'Contact Us',
                             'description' => 'Explore the future with us. Feel free to get in touch.',
-                            'imageUrl' => $heroImage,
-                            'imageAlt' => 'Contact us',
+                            'imageUrl' => $contactImage,
                             'nameLabel' => 'Name',
                             'namePlaceholder' => 'Full Name',
                             'emailLabel' => 'Email',

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 40" fill="none">
+  <rect x="2" y="8" width="24" height="24" rx="6" fill="#2563eb" opacity="0.12"/>
+  <path d="M10 24l2-10h4l2 10M11 20h6" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+  <text x="34" y="26" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="#374151">QuickBite</text>
+</svg>

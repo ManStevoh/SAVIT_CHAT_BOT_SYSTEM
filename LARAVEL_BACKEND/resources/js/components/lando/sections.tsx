@@ -1,6 +1,7 @@
 ﻿import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { LandoHeroFlowSimulation } from "./hero-flow-simulation"
 
 interface LandoHeroProps {
   kicker?: string
@@ -12,6 +13,7 @@ interface LandoHeroProps {
   secondaryCtaHref?: string
   imageUrl?: string
   imageAlt?: string
+  showFlowSimulation?: boolean
 }
 
 export function LandoHeroSection({
@@ -24,6 +26,7 @@ export function LandoHeroSection({
   secondaryCtaHref,
   imageUrl,
   imageAlt = "",
+  showFlowSimulation = false,
 }: LandoHeroProps) {
   return (
     <section className="lando-hero bg-[#f3f4f6] pt-28 pb-16 lg:pt-32 lg:pb-24">
@@ -65,14 +68,18 @@ export function LandoHeroSection({
           )}
         </div>
 
-        {imageUrl && (
-          <div className="flex justify-center lg:justify-end">
-            <img
-              src={imageUrl}
-              alt={imageAlt}
-              className="max-h-[420px] w-full max-w-md object-contain"
-            />
-          </div>
+        {showFlowSimulation ? (
+          <LandoHeroFlowSimulation />
+        ) : (
+          imageUrl && (
+            <div className="flex justify-center lg:justify-end">
+              <img
+                src={imageUrl}
+                alt={imageAlt}
+                className="max-h-[420px] w-full max-w-md object-contain"
+              />
+            </div>
+          )
         )}
       </div>
     </section>

@@ -212,9 +212,19 @@ function SectionEditor({
             <>
               <Field label="Secondary CTA text" value={str("secondaryCtaText")} onChange={(v) => set("secondaryCtaText", v)} />
               <Field label="Secondary CTA link" value={str("secondaryCtaHref")} onChange={(v) => set("secondaryCtaHref", v)} />
+              <div className="flex items-center justify-between rounded-lg border p-3 sm:col-span-2">
+                <div>
+                  <p className="text-sm font-medium">Animated flow simulation</p>
+                  <p className="text-xs text-muted-foreground">Show live WhatsApp demo instead of hero image</p>
+                </div>
+                <Switch
+                  checked={content.showFlowSimulation === true}
+                  onCheckedChange={(v) => set("showFlowSimulation", v)}
+                />
+              </div>
             </>
           )}
-          <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          <ImageField label="Image (fallback)" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
         </div>
       )
     }
