@@ -31,6 +31,19 @@ The UI is a **unified Laravel + Inertia.js + React** application. All screens li
 - `shims/next-link.tsx` and `shims/next-navigation.ts`: Inertia adapters for migrated pages
 - Legacy Next.js app at repo root is **deprecated**
 
+## Mobile companion (`MOBILE_APP/`)
+
+Flutter app for company owners/agents. Vision and scope: [Mobile App V1 Vision](MOBILE_APP_V1_VISION.md).
+
+| Category | Technology |
+|----------|------------|
+| Framework | Flutter / Dart |
+| Auth | Laravel Sanctum bearer tokens |
+| HTTP | dio |
+| Navigation | go_router |
+| Secure storage | flutter_secure_storage |
+| API base | `LARAVEL_BACKEND` `/api/*` |
+
 ## Backend (`LARAVEL_BACKEND/`)
 
 | Category | Technology | Version |

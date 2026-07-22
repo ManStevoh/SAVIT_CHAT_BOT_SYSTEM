@@ -18,19 +18,29 @@ class PlatformSettingsController extends Controller
     public function show(): JsonResponse
     {
         $settings = PlatformSetting::first();
-        $data = $settings ? $settings->toArray() : [];
-        // SMTP password is hidden on model; expose only "set" indicator for frontend
+        // Use raw attributes so corrupt JSON columns cannot 500 the whole settings page.
+        $data = $settings?->getAttributes() ?? [];
+
         $smtpPasswordMasked = null;
         if ($settings && $settings->getRawOriginal('smtp_password') !== null && $settings->getRawOriginal('smtp_password') !== '') {
             $smtpPasswordMasked = '********';
         }
+
         $appLogoUrl = null;
-        if ($settings && ! empty($settings->app_logo)) {
-            $appLogoUrl = Storage::disk('public')->exists($settings->app_logo)
-                ? asset('storage/' . $settings->app_logo)
-                : null;
+        $logoPath = $data['app_logo'] ?? null;
+        if (is_string($logoPath) && $logoPath !== '') {
+            try {
+                $appLogoUrl = Storage::disk('public')->exists($logoPath)
+                    ? asset('storage/'.$logoPath)
+                    : null;
+            } catch (\Throwable) {
+                $appLogoUrl = null;
+            }
         }
-        // Map snake_case to camelCase for frontend
+
+        $landingTrusted = $this->decodeJsonColumn($data['landing_trusted_companies'] ?? null);
+        $aiLearning = $this->decodeJsonColumn($data['ai_learning_config'] ?? null);
+
         $out = [
             'platformName' => $data['platform_name'] ?? null,
             'primaryColor' => $data['primary_color'] ?? null,
@@ -86,10 +96,33 @@ class PlatformSettingsController extends Controller
             'notifySystemErrors' => (bool) ($data['notify_system_errors'] ?? true),
             'notifyUsageAlerts' => (bool) ($data['notify_usage_alerts'] ?? true),
             'notifyDailySummary' => (bool) ($data['notify_daily_summary'] ?? true),
-            'landingTrustedCompanies' => $data['landing_trusted_companies'] ?? [],
-            'aiLearningConfig' => array_merge(AiLearningConfig::defaults(), is_array($data['ai_learning_config'] ?? null) ? $data['ai_learning_config'] : []),
+            'landingTrustedCompanies' => is_array($landingTrusted) ? $landingTrusted : [],
+            'aiLearningConfig' => array_merge(
+                AiLearningConfig::defaults(),
+                is_array($aiLearning) ? $aiLearning : []
+            ),
         ];
+
         return response()->json($out);
+    }
+
+    private function decodeJsonColumn(mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_array($value)) {
+            return $value;
+        }
+        if (! is_string($value)) {
+            return null;
+        }
+
+        try {
+            return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
     }
 
     private function maskSecret(?PlatformSetting $settings, string $attribute): ?string
@@ -233,7 +266,15 @@ class PlatformSettingsController extends Controller
             'landingTrustedCompanies' => 'landing_trusted_companies',
         ];
         $before = $settings->exists ? $settings->only(array_values($map)) : [];
-        $skipIfMasked = ['smtp_password', 'meta_app_secret', 'whatsapp_embedded_app_secret', 'whatsapp_credit_sharing_system_token', 'openai_api_key'];
+        // Never persist UI mask placeholders — those fields are returned as ******** on GET.
+        $skipIfMasked = [
+            'smtp_password',
+            'meta_app_secret',
+            'whatsapp_webhook_verify_token',
+            'whatsapp_embedded_app_secret',
+            'whatsapp_credit_sharing_system_token',
+            'openai_api_key',
+        ];
         foreach ($validated as $key => $value) {
             if ($key === 'logo') {
                 continue;

@@ -22,6 +22,10 @@ class ChatMessageController extends Controller
         $user = $request->user();
         $chat = Chat::where('id', $chatId)->where('company_id', $user->company_id)->firstOrFail();
 
+        if ((int) $chat->unread_count > 0) {
+            $chat->update(['unread_count' => 0]);
+        }
+
         $messages = Message::where('chat_id', $chat->id)->orderBy('created_at')->get();
 
         $data = $messages->map(fn (Message $m) => [

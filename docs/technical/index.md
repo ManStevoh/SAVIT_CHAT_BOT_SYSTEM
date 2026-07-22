@@ -14,11 +14,12 @@ Developer and DevOps reference for the Essem Chat Bot platform.
 ```
 Essem Chat Bot/
 ├── LARAVEL_BACKEND/   # Unified Laravel 12 + Inertia + React app (UI + API)
+├── MOBILE_APP/        # Flutter company companion (V1)
 ├── docs/              # This documentation site (GitHub Pages)
 └── (deprecated)       # Legacy Next.js at repo root — do not deploy
 ```
 
-> **Note:** The application is `LARAVEL_BACKEND/` only (Laravel + Inertia). The old Next.js frontend has been removed.
+> **Note:** Web UI + API live in `LARAVEL_BACKEND/` (Laravel + Inertia). Mobile companion lives in `MOBILE_APP/` (Flutter).
 
 ## Documentation map
 
@@ -26,6 +27,7 @@ Essem Chat Bot/
 |-------|----------|
 | System design | [Architecture](architecture.md) |
 | Languages & frameworks | [Tech Stack](tech-stack.md) |
+| Flutter company companion (V1) | [Mobile App V1 Vision](MOBILE_APP_V1_VISION.md) · [Pending map](MOBILE_APP_V1_PENDING.md) |
 | Inertia + React UI | [Frontend](frontend.md) |
 | Laravel API | [Backend](backend.md) |
 | REST endpoints | [API Reference](api-reference.md) |

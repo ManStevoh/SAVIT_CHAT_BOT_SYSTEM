@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\Company\CompanyAiProviderController;
 use App\Http\Controllers\Api\Company\CompanyAiUsageController;
 use App\Http\Controllers\Api\Company\ApiPlatformController;
 use App\Http\Controllers\Api\Company\ApiV1Controller;
+use App\Http\Controllers\Api\Company\AiModelController;
 use App\Http\Controllers\Api\Company\ChatController;
 use App\Http\Controllers\Api\Company\ChatMessageController;
 use App\Http\Controllers\Api\Company\WhatsAppCampaignController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\Api\Admin\SystemHealthController;
 use App\Http\Controllers\Api\Company\ExportController;
 use App\Http\Controllers\Api\Company\GrowthAdSpendController;
 use App\Http\Controllers\Api\Company\GrowthAgentController;
+use App\Http\Controllers\Api\Company\AnalyticsController;
 use App\Http\Controllers\Api\Company\GrowthAnalyticsController;
 use App\Http\Controllers\Api\Company\GrowthCompetitorController;
 use App\Http\Controllers\Api\Company\GrowthInsightController;
@@ -144,6 +146,7 @@ Route::prefix('v1/company')->middleware('api.key')->group(function () {
 // Company (auth required; subscription must be active except for subscription/checkout routes)
 Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscription.active'])->group(function () {
     Route::get('chats', [ChatController::class, 'index']);
+    Route::post('chats/start', [ChatController::class, 'start']);
     Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);
     Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);

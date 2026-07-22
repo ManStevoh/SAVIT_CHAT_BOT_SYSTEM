@@ -125,6 +125,7 @@ export default function SettingsPage() {
   const [waManualAccessToken, setWaManualAccessToken] = useState("")
   const [waManualWabaId, setWaManualWabaId] = useState("")
   const [waManualDisplayPhone, setWaManualDisplayPhone] = useState("")
+  const [waManualRegistrationPin, setWaManualRegistrationPin] = useState("")
   const [waTemplates, setWaTemplates] = useState<WhatsAppTemplate[]>([])
   const [tplName, setTplName] = useState("")
   const [tplBody, setTplBody] = useState("")
@@ -246,10 +247,12 @@ export default function SettingsPage() {
         accessToken: waManualAccessToken.trim(),
         whatsappBusinessAccountId: waManualWabaId.trim() || undefined,
         displayPhoneNumber: waManualDisplayPhone.trim() || undefined,
+        registrationPin: waManualRegistrationPin.trim() || undefined,
       })
       setWaMessage(result.message ?? (result.success ? "WhatsApp connected." : "Connection failed."))
       if (result.success) {
         setWaManualAccessToken("")
+        setWaManualRegistrationPin("")
         await loadWhatsAppStatus()
         await loadWhatsAppTemplates()
       }
@@ -288,9 +291,12 @@ export default function SettingsPage() {
       })
 
       const finishPromise = waitForEmbeddedSignupFinish()
-      const loginExtras: Record<string, unknown> = { setup: {} }
-      if (cfg.enableCoexist) {
-        loginExtras.feature_type = "coex"
+      // Meta Embedded Signup requires sessionInfoVersion or the popup can fall back
+      // to a normal Facebook login (news feed) instead of the WhatsApp wizard.
+      const loginExtras: Record<string, unknown> = {
+        setup: {},
+        featureType: cfg.enableCoexist ? "coex" : "",
+        sessionInfoVersion: "3",
       }
 
       const code = await new Promise<string | null>((resolve) => {
@@ -993,6 +999,22 @@ export default function SettingsPage() {
                             placeholder="+254712345678"
                           />
                         </Field>
+                        <Field>
+                          <FieldLabel htmlFor="waManualRegistrationPin">Two-step verification PIN</FieldLabel>
+                          <Input
+                            id="waManualRegistrationPin"
+                            type="password"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            maxLength={6}
+                            value={waManualRegistrationPin}
+                            onChange={(e) => setWaManualRegistrationPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                            placeholder="6-digit PIN from WhatsApp Manager"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Required if this number already has two-step verification enabled in Meta. Leave blank only for a brand-new number.
+                          </p>
+                        </Field>
                         <Button type="submit" disabled={waManualLoading || waStatus?.platformBillingReady === false}>
                           {waManualLoading ? "Connecting…" : "Connect manually"}
                         </Button>
@@ -1393,7 +1415,7 @@ export default function SettingsPage() {
 
                       {agentMorningBriefWhatsappEnabled && (
                         <div className="space-y-2 pl-4 border-l-2 border-primary/30">
-                          <Label htmlFor="ownerWhatsappPhone">Owner WhatsApp number</Label>
+                          <FieldLabel htmlFor="ownerWhatsappPhone">Owner WhatsApp number</FieldLabel>
                           <Input
                             id="ownerWhatsappPhone"
                             value={ownerWhatsappPhone}

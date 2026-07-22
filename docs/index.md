@@ -64,9 +64,13 @@ Architecture, API reference, database schema, deployment, environment variables,
 Customer (WhatsApp)  →  Meta Cloud API  →  Laravel (API + Inertia UI)  →  AI / FAQ / Orders
                                               ↓
 Company Dashboard (React)  ←  REST API  ←  Database + Queue Jobs
+                                              ↑
+                         Essem Mobile (Flutter) — company companion
 
 Growth Engine: Social Post → Attribution Link → WhatsApp → Order → Revenue
 ```
+
+Mobile vision: [Mobile App V1 Vision](technical/MOBILE_APP_V1_VISION.md)
 
 ## Legacy reference documents
 

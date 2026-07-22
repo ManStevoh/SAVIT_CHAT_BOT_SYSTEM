@@ -1,0 +1,26 @@
+name: essem_mobile
+description: Essem Chat Bot company companion — Flutter V1
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  dio: ^5.4.3+1
+  flutter_secure_storage: ^9.2.2
+  go_router: ^14.2.0
+  provider: ^6.1.2
+  image_picker: ^1.1.2
+  flutter_contacts: ^1.1.9+2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

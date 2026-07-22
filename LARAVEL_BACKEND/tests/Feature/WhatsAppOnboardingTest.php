@@ -152,6 +152,37 @@ class WhatsAppOnboardingTest extends TestCase
         $this->assertSame('phone-manual', $account->phone_number_id);
     }
 
+    public function test_manual_connect_uses_provided_registration_pin(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/phone-manual*' => Http::response([
+                'id' => 'phone-manual',
+                'display_phone_number' => '+254712345678',
+                'quality_rating' => 'GREEN',
+            ], 200),
+            'graph.facebook.com/*/waba-manual/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/phone-manual/register' => Http::response(['success' => true], 200),
+        ]);
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+            'whatsappBusinessAccountId' => 'waba-manual',
+            'registrationPin' => '654321',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), 'phone-manual/register')) {
+                return true;
+            }
+
+            return ($request['pin'] ?? null) === '654321'
+                && ($request['messaging_product'] ?? null) === 'whatsapp';
+        });
+    }
+
     public function test_manual_connect_disabled_when_admin_toggles_off(): void
     {
         PlatformSetting::query()->update(['whatsapp_manual_connect_enabled' => false]);

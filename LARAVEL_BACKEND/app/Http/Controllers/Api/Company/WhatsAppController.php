@@ -70,6 +70,7 @@ class WhatsAppController extends Controller
             'accessToken' => 'required|string|max:2000',
             'displayPhoneNumber' => 'nullable|string|max:30',
             'whatsappBusinessAccountId' => 'nullable|string|max:100',
+            'registrationPin' => 'nullable|digits:6',
         ]);
 
         $user = $request->user();
@@ -84,6 +85,7 @@ class WhatsAppController extends Controller
             $validated['accessToken'],
             $validated['whatsappBusinessAccountId'] ?? null,
             $validated['displayPhoneNumber'] ?? null,
+            $validated['registrationPin'] ?? null,
         );
 
         $status = $result['success'] ? 200 : 422;

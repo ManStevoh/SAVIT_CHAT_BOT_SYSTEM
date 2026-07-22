@@ -953,6 +953,8 @@ export interface ConnectWhatsAppPayload {
   accessToken: string
   displayPhoneNumber?: string
   whatsappBusinessAccountId?: string
+  /** Existing Meta two-step verification PIN (6 digits), if already set on the number */
+  registrationPin?: string
 }
 
 /**

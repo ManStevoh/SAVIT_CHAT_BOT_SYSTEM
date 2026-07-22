@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Auto-migrate via scheduler (shared hosting / SPanel)
+    |--------------------------------------------------------------------------
+    |
+    | When true, `migrate:via-cron` runs every 5 minutes through schedule:run.
+    | Prefer a one-shot cron with --force for urgent deploys, then leave this off.
+    |
+    */
+
+    'auto_migrate' => (bool) env('AUTO_MIGRATE', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

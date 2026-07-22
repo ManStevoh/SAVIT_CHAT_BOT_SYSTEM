@@ -1,8 +1,11 @@
 # Essem Chat Bot — Unified Application
 
-The application lives in **`LARAVEL_BACKEND/`** — a single **Laravel 12 + Inertia.js + React** app. The old standalone Next.js frontend has been removed.
+The platform has two client surfaces:
 
-## Quick start
+- **`LARAVEL_BACKEND/`** — Laravel 12 + Inertia.js + React (web UI + API)
+- **`MOBILE_APP/`** — Flutter company companion (V1)
+
+## Quick start (web)
 
 ```bash
 cd LARAVEL_BACKEND
@@ -16,6 +19,16 @@ php -S 127.0.0.1:8080 -t public
 ```
 
 Open **http://127.0.0.1:8080**
+
+## Quick start (mobile)
+
+```bash
+cd MOBILE_APP
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api
+```
+
+See [MOBILE_APP/README.md](MOBILE_APP/README.md) and [Mobile App V1 Vision](docs/technical/MOBILE_APP_V1_VISION.md).
 
 ## Dev logins
 
@@ -40,4 +53,5 @@ npm run test:e2e:journey      # Full admin/company/public journeys
 
 - [Inertia migration guide](LARAVEL_BACKEND/INERTIA_MIGRATION.md)
 - [Technical docs](docs/technical/index.md)
+- [Mobile App V1 Vision](docs/technical/MOBILE_APP_V1_VISION.md)
 - [User guide](docs/user-guide/getting-started.md)

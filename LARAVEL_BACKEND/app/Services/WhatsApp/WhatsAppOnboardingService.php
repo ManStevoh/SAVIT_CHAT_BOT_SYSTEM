@@ -86,7 +86,8 @@ class WhatsAppOnboardingService
         string $phoneNumberId,
         string $accessToken,
         ?string $wabaId,
-        ?string $displayPhone
+        ?string $displayPhone,
+        ?string $registrationPin = null,
     ): array {
         $phoneNumberId = trim($phoneNumberId);
         $accessToken = trim($accessToken);
@@ -131,6 +132,7 @@ class WhatsAppOnboardingService
             $wabaId !== '' ? $wabaId : null,
             $displayPhone,
             $qualityRating,
+            $registrationPin,
         );
     }
 
@@ -182,8 +184,9 @@ class WhatsAppOnboardingService
         ?string $wabaId,
         ?string $displayPhone,
         ?string $qualityRating,
+        ?string $registrationPin = null,
     ): array {
-        $pin = $this->generateRegistrationPin();
+        $pin = $this->normalizeRegistrationPin($registrationPin) ?? $this->generateRegistrationPin();
         $billingModel = WhatsAppPlatformConfig::billingModel();
 
         $account = WhatsAppAccount::updateOrCreate(
@@ -284,9 +287,14 @@ class WhatsAppOnboardingService
 
             Log::warning('WhatsApp phone register failed', ['company_id' => $companyId, 'error' => $error]);
 
+            $message = 'Meta authorized but phone registration failed: '.$error;
+            if (str_contains(strtolower($error), 'pin')) {
+                $message .= ' Enter the existing 6-digit two-step verification PIN from WhatsApp Manager, or turn off two-step verification and try again.';
+            }
+
             return [
                 'success' => false,
-                'message' => 'Meta authorized but phone registration failed: ' . $error,
+                'message' => $message,
                 'account' => $account,
             ];
         }
@@ -317,5 +325,19 @@ class WhatsAppOnboardingService
     protected function generateRegistrationPin(): string
     {
         return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
+    protected function normalizeRegistrationPin(?string $pin): ?string
+    {
+        if ($pin === null) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $pin) ?? '';
+        if (strlen($digits) !== 6) {
+            return null;
+        }
+
+        return $digits;
     }
 }

@@ -52,6 +52,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('learning:sync-embeddings --missing-only')->weeklyOn(0, '03:30');
         $schedule->command('products:sync-embeddings --missing-only')->weeklyOn(0, '04:00');
         $schedule->command('ai:health-check --notify')->dailyAt('07:30');
+
+        // Shared hosting: set AUTO_MIGRATE=true to apply pending migrations via cron.
+        if (config('app.auto_migrate')) {
+            $schedule->command('migrate:via-cron')
+                ->everyFiveMinutes()
+                ->withoutOverlapping(10)
+                ->appendOutputTo(storage_path('logs/migrate-cron.log'));
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
