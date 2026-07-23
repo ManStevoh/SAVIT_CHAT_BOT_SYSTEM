@@ -1,4 +1,4 @@
-# Essem Chat Bot — Unified Application
+# RelayIQ — Unified Application
 
 The platform has two client surfaces:
 

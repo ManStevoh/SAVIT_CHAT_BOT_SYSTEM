@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Essem companion palette — matches ai.essemdigital.com (milky canvas + blue CTAs).
+/// RelayIQ companion palette — matches ai.essemdigital.com (milky canvas + blue CTAs).
 class AppColors {
   static const Color primary = Color(0xFF2563EB);
   static const Color primaryDark = Color(0xFF1D4ED8);

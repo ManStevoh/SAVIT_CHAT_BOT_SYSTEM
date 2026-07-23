@@ -37,6 +37,7 @@ class CmsPageSeeder extends Seeder
                                 ['label' => 'Home', 'href' => '/'],
                                 ['label' => 'Pricing', 'href' => '/pricing'],
                                 ['label' => 'About us', 'href' => '/about'],
+                                ['label' => 'Blog', 'href' => '/blog'],
                                 ['label' => 'Contact', 'href' => '/contact'],
                             ],
                             'loginLabel' => 'Log in',
@@ -59,11 +60,12 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Footer',
                         'sort_order' => 4,
                         'content' => [
-                            'copyright' => date('Y') . ' © Essem Chat / All rights reserved.',
+                            'copyright' => date('Y') . ' © RelayIQ / All rights reserved.',
                             'navLinks' => [
                                 ['label' => 'Home', 'href' => '/'],
                                 ['label' => 'Pricing', 'href' => '/pricing'],
                                 ['label' => 'About us', 'href' => '/about'],
+                                ['label' => 'Blog', 'href' => '/blog'],
                                 ['label' => 'Contact', 'href' => '/contact'],
                             ],
                             'socialLinks' => [
@@ -83,7 +85,7 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'home',
                 'title' => 'Home',
-                'meta_title' => 'Essem Chat — AI WhatsApp Sales & Order Automation',
+                'meta_title' => 'RelayIQ — AI WhatsApp Sales & Order Automation',
                 'meta_description' => 'Turn WhatsApp into your best sales channel. AI replies, order flows, M-Pesa & Stripe payments, multi-agent inbox, and Growth Engine attribution.',
                 'sections' => [
                     [
@@ -125,7 +127,7 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 3,
                         'content' => [
                             'title' => 'Introducing WhatsApp commerce',
-                            'description' => 'Join businesses using Essem Chat and experience AI-powered sales today!',
+                            'description' => 'Join businesses using RelayIQ and experience AI-powered sales today!',
                             'ctaText' => 'Try for free',
                             'ctaHref' => '/register',
                             'imageUrl' => $introImage,
@@ -190,7 +192,7 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Call to action',
                         'sort_order' => 8,
                         'content' => [
-                            'title' => 'Get started with Essem Chat today',
+                            'title' => 'Get started with RelayIQ today',
                             'description' => 'Start selling on WhatsApp with AI automation today.',
                             'ctaText' => 'Sign up now',
                             'ctaHref' => '/register',
@@ -202,7 +204,7 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'pricing',
                 'title' => 'Pricing',
-                'meta_title' => 'Pricing — Essem Chat',
+                'meta_title' => 'Pricing — RelayIQ',
                 'meta_description' => 'Straightforward plans for WhatsApp commerce. 14-day free trial on every plan.',
                 'sections' => [
                     [
@@ -232,15 +234,36 @@ class CmsPageSeeder extends Seeder
                             'columns' => [
                                 [
                                     'name' => 'Starter',
-                                    'features' => ['AI replies', 'Order management', 'M-Pesa payments', '1 WhatsApp number', 'Email support'],
+                                    'features' => [
+                                        'AI auto-replies',
+                                        'Order management',
+                                        'Customer payments (when enabled)',
+                                        '1 WhatsApp number',
+                                        '3 team seats',
+                                        'Growth: 20 AI posts / 1 platform',
+                                    ],
                                 ],
                                 [
                                     'name' => 'Growth',
-                                    'features' => ['Everything in Starter', 'Multi-agent inbox', 'Stripe payments', 'Analytics dashboard', 'Priority support', 'API access'],
+                                    'features' => [
+                                        'Everything in Starter',
+                                        '50k messages/month',
+                                        'Analytics dashboard',
+                                        'API access',
+                                        '10 team seats',
+                                        'Growth: 100 AI posts / 3 platforms',
+                                    ],
                                 ],
                                 [
                                     'name' => 'Enterprise',
-                                    'features' => ['Everything in Growth', 'Unlimited numbers', 'Custom AI training', 'Dedicated manager', 'SLA guarantee', 'On-premise option'],
+                                    'features' => [
+                                        'Everything in Growth',
+                                        'Unlimited messages',
+                                        '50 team seats',
+                                        'Custom AI model + company keys',
+                                        'Growth: 500 AI posts / 10 platforms',
+                                        'SLAs & custom integrations (sales)',
+                                    ],
                                 ],
                             ],
                         ],
@@ -259,7 +282,7 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Call to action',
                         'sort_order' => 5,
                         'content' => [
-                            'title' => 'Get started with Essem Chat today',
+                            'title' => 'Get started with RelayIQ today',
                             'description' => 'Start optimizing your WhatsApp sales today.',
                             'ctaText' => 'Sign up now',
                             'ctaHref' => '/register',
@@ -270,8 +293,8 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'about',
                 'title' => 'About us',
-                'meta_title' => 'About us — Essem Chat',
-                'meta_description' => 'We offer a revolutionary WhatsApp commerce platform. Join the Essem Chat community today.',
+                'meta_title' => 'About us — RelayIQ',
+                'meta_description' => 'We offer a revolutionary WhatsApp commerce platform. Join the RelayIQ community today.',
                 'sections' => [
                     [
                         'section_key' => 'hero',
@@ -279,7 +302,7 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 1,
                         'content' => [
                             'title' => 'About us',
-                            'description' => 'We offer a revolutionary solution for WhatsApp sales. Join the Essem Chat community and experience the benefits of commerce automation today!',
+                            'description' => 'We offer a revolutionary solution for WhatsApp sales. Join the RelayIQ community and experience the benefits of commerce automation today!',
                             'imageUrl' => $aboutTeamImage,
                             'imageAlt' => 'Our team',
                         ],
@@ -290,7 +313,7 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 2,
                         'content' => [
                             'title' => 'Our mission',
-                            'description' => 'At Essem Chat, we are committed to helping businesses sell more on WhatsApp. We believe AI and human agents working together can transform customer experience. Our team is dedicated to providing the best possible service and support, and we are always looking for ways to improve and innovate.',
+                            'description' => 'At RelayIQ, we are committed to helping businesses sell more on WhatsApp. We believe AI and human agents working together can transform customer experience. Our team is dedicated to providing the best possible service and support, and we are always looking for ways to improve and innovate.',
                         ],
                     ],
                     [
@@ -298,7 +321,10 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Efficiency statement',
                         'sort_order' => 3,
                         'content' => [
-                            'title' => "Let's start\nworking\nmore\nefficiently\ntoday!",
+                            'title' => "Let's start working more efficiently today!",
+                            'description' => 'Automate WhatsApp sales, keep humans in control, and grow with a platform built for commerce teams.',
+                            'ctaText' => 'Start free',
+                            'ctaHref' => '/register',
                         ],
                     ],
                     [
@@ -321,7 +347,7 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Call to action',
                         'sort_order' => 5,
                         'content' => [
-                            'title' => 'Get started with Essem Chat today',
+                            'title' => 'Get started with RelayIQ today',
                             'description' => 'Start optimizing your WhatsApp sales today.',
                             'ctaText' => 'Sign up now',
                             'ctaHref' => '/register',
@@ -332,8 +358,8 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'contact',
                 'title' => 'Contact',
-                'meta_title' => 'Contact — Essem Chat',
-                'meta_description' => 'Get in touch with the Essem Chat team. We would love to hear from you.',
+                'meta_title' => 'Contact — RelayIQ',
+                'meta_description' => 'Get in touch with the RelayIQ team. We would love to hear from you.',
                 'sections' => [
                     [
                         'section_key' => 'hero',
@@ -358,7 +384,7 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Call to action',
                         'sort_order' => 2,
                         'content' => [
-                            'title' => 'Get started with Essem Chat today',
+                            'title' => 'Get started with RelayIQ today',
                             'description' => 'Start optimizing your WhatsApp sales today.',
                             'ctaText' => 'Sign up now',
                             'ctaHref' => '/register',
@@ -369,8 +395,8 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'privacy',
                 'title' => 'Privacy Policy',
-                'meta_title' => 'Privacy Policy — Essem Chat',
-                'meta_description' => 'How Essem Chat collects, uses, and protects your data.',
+                'meta_title' => 'Privacy Policy — RelayIQ',
+                'meta_description' => 'How RelayIQ collects, uses, and protects your data.',
                 'sections' => [
                     [
                         'section_key' => 'legal_content',
@@ -379,7 +405,7 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => 'Privacy Policy',
                             'lastUpdated' => 'June 2026',
-                            'body' => "<h2>1. Who we are</h2>\n<p>Essem Chat is operated by Essem Global Solutions. We provide a multi-tenant SaaS platform for WhatsApp business messaging, AI-assisted replies, order management, and related services.</p>\n<h2>2. Information we collect</h2>\n<p>We collect information you provide when you register and use the platform, including:</p>\n<ul>\n<li>Account details (name, email, company information)</li>\n<li>WhatsApp business configuration and message content routed through the platform</li>\n<li>Customer conversation data processed on your behalf</li>\n<li>Payment and subscription records (processed by Stripe or M-Pesa providers)</li>\n<li>Usage logs for billing, security, and product improvement</li>\n</ul>\n<h2>3. How we use your information</h2>\n<p>We use collected data to provide, operate, and improve the Essem Chat platform, process AI-assisted replies, send service-related communications, and comply with legal obligations.</p>\n<h2>4. Data sharing</h2>\n<p>We do not sell your data. We share information only with service providers necessary to operate the platform (e.g. Meta/WhatsApp Cloud API, payment processors, AI providers you configure) and when required by law.</p>\n<h2>5. Security</h2>\n<p>We use industry-standard measures including encryption in transit and access controls. Each tenant's data is logically isolated in our multi-tenant architecture.</p>\n<h2>6. Your rights</h2>\n<p>Depending on your jurisdiction, you may have rights to access, correct, or delete personal data. Contact us at support@essemglobalsolutions.com to submit a request.</p>\n<h2>7. Changes</h2>\n<p>We may update this policy from time to time. Continued use of the service after changes constitutes acceptance of the updated policy.</p>",
+                            'body' => "<h2>1. Who we are</h2>\n<p>RelayIQ is operated by Essem Global Solutions. We provide a multi-tenant SaaS platform for WhatsApp business messaging, AI-assisted replies, order management, and related services.</p>\n<h2>2. Information we collect</h2>\n<p>We collect information you provide when you register and use the platform, including:</p>\n<ul>\n<li>Account details (name, email, company information)</li>\n<li>WhatsApp business configuration and message content routed through the platform</li>\n<li>Customer conversation data processed on your behalf</li>\n<li>Payment and subscription records (processed by Stripe or M-Pesa providers)</li>\n<li>Usage logs for billing, security, and product improvement</li>\n</ul>\n<h2>3. How we use your information</h2>\n<p>We use collected data to provide, operate, and improve the RelayIQ platform, process AI-assisted replies, send service-related communications, and comply with legal obligations.</p>\n<h2>4. Data sharing</h2>\n<p>We do not sell your data. We share information only with service providers necessary to operate the platform (e.g. Meta/WhatsApp Cloud API, payment processors, AI providers you configure) and when required by law.</p>\n<h2>5. Security</h2>\n<p>We use industry-standard measures including encryption in transit and access controls. Each tenant's data is logically isolated in our multi-tenant architecture.</p>\n<h2>6. Your rights</h2>\n<p>Depending on your jurisdiction, you may have rights to access, correct, or delete personal data. Contact us at support@essemglobalsolutions.com to submit a request.</p>\n<h2>7. Changes</h2>\n<p>We may update this policy from time to time. Continued use of the service after changes constitutes acceptance of the updated policy.</p>",
                         ],
                     ],
                 ],
@@ -387,8 +413,8 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'terms',
                 'title' => 'Terms of Service',
-                'meta_title' => 'Terms of Service — Essem Chat',
-                'meta_description' => 'The terms governing your use of Essem Chat.',
+                'meta_title' => 'Terms of Service — RelayIQ',
+                'meta_description' => 'The terms governing your use of RelayIQ.',
                 'sections' => [
                     [
                         'section_key' => 'legal_content',
@@ -397,7 +423,7 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => 'Terms of Service',
                             'lastUpdated' => 'June 2026',
-                            'body' => "<h2>1. Acceptance</h2>\n<p>By creating an account or using Essem Chat, you agree to these Terms of Service. If you are using the service on behalf of a company, you represent that you have authority to bind that company.</p>\n<h2>2. Service description</h2>\n<p>Essem Chat provides WhatsApp business messaging, AI-assisted automation, order management, payment integrations, and related tools. Features vary by subscription plan.</p>\n<h2>3. Your responsibilities</h2>\n<p>You agree to:</p>\n<ul>\n<li>Comply with Meta's WhatsApp Business and Commerce policies</li>\n<li>Obtain necessary consents from your customers for messaging and data processing</li>\n<li>Keep your account credentials secure</li>\n<li>Use the service only for lawful business purposes</li>\n</ul>\n<h2>4. Subscriptions and billing</h2>\n<p>Paid plans are billed according to the pricing shown at checkout. Free trials convert to paid subscriptions unless cancelled before the trial ends. WhatsApp conversation fees charged by Meta may apply separately.</p>\n<h2>5. AI-generated content</h2>\n<p>AI replies are generated based on your configuration and content. You are responsible for reviewing automated responses and ensuring they meet your business and legal requirements.</p>\n<h2>6. Limitation of liability</h2>\n<p>The service is provided \"as is\" to the maximum extent permitted by law. Essem Global Solutions is not liable for indirect, incidental, or consequential damages arising from use of the platform.</p>\n<h2>7. Termination</h2>\n<p>You may cancel your subscription at any time. We may suspend or terminate accounts that violate these terms or applicable law.</p>\n<h2>8. Contact</h2>\n<p>For questions about these terms, contact support@essemglobalsolutions.com.</p>",
+                            'body' => "<h2>1. Acceptance</h2>\n<p>By creating an account or using RelayIQ, you agree to these Terms of Service. If you are using the service on behalf of a company, you represent that you have authority to bind that company.</p>\n<h2>2. Service description</h2>\n<p>RelayIQ provides WhatsApp business messaging, AI-assisted automation, order management, payment integrations, and related tools. Features vary by subscription plan.</p>\n<h2>3. Your responsibilities</h2>\n<p>You agree to:</p>\n<ul>\n<li>Comply with Meta's WhatsApp Business and Commerce policies</li>\n<li>Obtain necessary consents from your customers for messaging and data processing</li>\n<li>Keep your account credentials secure</li>\n<li>Use the service only for lawful business purposes</li>\n</ul>\n<h2>4. Subscriptions and billing</h2>\n<p>Paid plans are billed according to the pricing shown at checkout. Free trials convert to paid subscriptions unless cancelled before the trial ends. WhatsApp conversation fees charged by Meta may apply separately.</p>\n<h2>5. AI-generated content</h2>\n<p>AI replies are generated based on your configuration and content. You are responsible for reviewing automated responses and ensuring they meet your business and legal requirements.</p>\n<h2>6. Limitation of liability</h2>\n<p>The service is provided \"as is\" to the maximum extent permitted by law. RelayIQ is not liable for indirect, incidental, or consequential damages arising from use of the platform.</p>\n<h2>7. Termination</h2>\n<p>You may cancel your subscription at any time. We may suspend or terminate accounts that violate these terms or applicable law.</p>\n<h2>8. Contact</h2>\n<p>For questions about these terms, contact support@essemglobalsolutions.com.</p>",
                         ],
                     ],
                 ],
@@ -431,8 +457,8 @@ class CmsPageSeeder extends Seeder
 
         if (Testimonial::count() === 0) {
             $samples = [
-                ['name' => 'Jack Sibire', 'role' => 'Lead Manager, Growio', 'content' => 'Since implementing Essem Chat our business has seen significant growth on WhatsApp.'],
-                ['name' => 'Adele Mouse', 'role' => 'Product Manager, Mousio', 'content' => 'I recommend Essem Chat to any business looking to improve WhatsApp sales.'],
+                ['name' => 'Jack Sibire', 'role' => 'Lead Manager, Growio', 'content' => 'Since implementing RelayIQ our business has seen significant growth on WhatsApp.'],
+                ['name' => 'Adele Mouse', 'role' => 'Product Manager, Mousio', 'content' => 'I recommend RelayIQ to any business looking to improve WhatsApp sales.'],
                 ['name' => 'Ben Clock', 'role' => 'CTO, Clockwork', 'content' => "I can't imagine running our company without it."],
             ];
             foreach ($samples as $i => $sample) {

@@ -369,7 +369,7 @@ export default function AdminSettingsPage() {
                     id="platformName"
                     value={settings?.platformName ?? ""}
                     onChange={(e) => updateSetting("platformName", e.target.value)}
-                    placeholder="e.g. Essem Chat"
+                    placeholder="e.g. RelayIQ"
                   />
                   <p className="text-xs text-muted-foreground mt-1">Used in emails, invoices, and headers across the app.</p>
                 </Field>
@@ -813,7 +813,7 @@ export default function AdminSettingsPage() {
                   <p className="font-medium text-foreground">Meta WhatsApp billing model</p>
                   <p className="text-sm text-muted-foreground">
                     Controls who pays Meta for WhatsApp conversation fees. Applies to all companies connecting after you save.
-                    Essem subscription billing (Stripe/M-Pesa) is separate.
+                    RelayIQ subscription billing (Stripe/M-Pesa) is separate.
                   </p>
                 </div>
                 <Field>
@@ -834,7 +834,7 @@ export default function AdminSettingsPage() {
                 {settings?.whatsappBillingModel === "solution_partner" && (
                   <div className="space-y-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
                     <p className="text-sm text-muted-foreground">
-                      Requires Meta Solution Partner status and an extended credit line. On connect, Essem automatically calls Meta&apos;s{" "}
+                      Requires Meta Solution Partner status and an extended credit line. On connect, RelayIQ automatically calls Meta&apos;s{" "}
                       <code className="text-xs">whatsapp_credit_sharing_and_attach</code> API for each company WABA.
                       You are the Bill-To party and liable for all WhatsApp spend on shared credit lines.
                     </p>

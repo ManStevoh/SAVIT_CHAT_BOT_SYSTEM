@@ -26,7 +26,7 @@ function OrderPaidContent() {
 
   return (
     <>
-      <Head title="Order payment — Essem Chat" />
+      <Head title="Order payment — RelayIQ" />
       <div className="lando-page min-h-screen bg-[#f3f4f6]">
         <LandoNavbar
           links={(navbarContent.links as CmsLink[]) ?? []}

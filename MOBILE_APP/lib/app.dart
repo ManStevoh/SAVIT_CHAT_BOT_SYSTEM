@@ -7,14 +7,14 @@ import 'core/onboarding/onboarding_controller.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
-class EssemApp extends StatefulWidget {
-  const EssemApp({super.key});
+class RelayApp extends StatefulWidget {
+  const RelayApp({super.key});
 
   @override
-  State<EssemApp> createState() => _EssemAppState();
+  State<RelayApp> createState() => _RelayAppState();
 }
 
-class _EssemAppState extends State<EssemApp> {
+class _RelayAppState extends State<RelayApp> {
   GoRouter? _router;
 
   @override
@@ -29,7 +29,7 @@ class _EssemAppState extends State<EssemApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Essem',
+      title: 'RelayIQ',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: _router!,

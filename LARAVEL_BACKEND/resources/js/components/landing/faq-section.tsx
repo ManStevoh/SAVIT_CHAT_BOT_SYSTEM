@@ -10,7 +10,7 @@ import { useLanding } from "@/lib/api-hooks"
 import { SectionHeader } from "@/components/shared/section-header"
 
 const FALLBACK_FAQS = [
-  { id: "1", question: "How does the WhatsApp integration work?", answer: "We use the official WhatsApp Business Cloud API. Connect your Meta Business account, verify your number, and messages route through Essem Chat. Embedded signup is available when enabled by your platform admin." },
+  { id: "1", question: "How does the WhatsApp integration work?", answer: "We use the official WhatsApp Business Cloud API. Connect your Meta Business account, verify your number, and messages route through RelayIQ. Embedded signup is available when enabled by your platform admin." },
   { id: "2", question: "Can I train the AI with my own data?", answer: "Yes. Add FAQs, product catalogs, and business policies in your dashboard. The AI uses this content plus conversation learning (when enabled) to reply in your brand voice." },
   { id: "3", question: "What happens when the AI can't answer a question?", answer: "Conversations can be handed off to a human agent at any time. Your team sees full chat history, takes over in the inbox, and the bot pauses until you release the conversation." },
   { id: "4", question: "Is my customer data secure?", answer: "Data is encrypted in transit (TLS) and stored securely. Each company's data is isolated in our multi-tenant architecture. You control your AI provider credentials and can review usage in the dashboard." },

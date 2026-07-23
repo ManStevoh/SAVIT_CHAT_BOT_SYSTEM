@@ -11,7 +11,7 @@ import AdminLayout from './layouts/AdminLayout'
 import AuthLayout from './layouts/AuthLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 
-const appName = import.meta.env.VITE_APP_NAME || 'Essem Chat'
+const appName = import.meta.env.VITE_APP_NAME || 'RelayIQ'
 
 function resolveLayout(name: string) {
   if (name.startsWith('Auth/')) return AuthLayout
@@ -21,7 +21,19 @@ function resolveLayout(name: string) {
 }
 
 createInertiaApp({
-  title: (title) => (title ? `${title} - ${appName}` : appName),
+  title: (title) => {
+    if (!title) return appName
+    const normalized = title.trim()
+    if (
+      normalized === appName ||
+      normalized.includes(` — ${appName}`) ||
+      normalized.includes(` - ${appName}`) ||
+      normalized.endsWith(appName)
+    ) {
+      return normalized
+    }
+    return `${normalized} - ${appName}`
+  },
   resolve: async (name) => {
     const pages = import.meta.glob('./Pages/**/*.tsx')
     const importPage = pages[`./Pages/${name}.tsx`]

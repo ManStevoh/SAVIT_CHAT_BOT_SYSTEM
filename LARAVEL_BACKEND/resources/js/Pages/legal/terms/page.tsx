@@ -8,14 +8,14 @@ const FALLBACK = (
 
     <h2>1. Acceptance</h2>
     <p>
-      By creating an account or using Essem Chat, you agree to these Terms of Service. If you
+      By creating an account or using RelayIQ, you agree to these Terms of Service. If you
       are using the service on behalf of a company, you represent that you have authority to
       bind that company.
     </p>
 
     <h2>2. Service description</h2>
     <p>
-      Essem Chat provides WhatsApp business messaging, AI-assisted automation, order management,
+      RelayIQ provides WhatsApp business messaging, AI-assisted automation, order management,
       payment integrations, and related tools. Features vary by subscription plan.
     </p>
 
@@ -43,8 +43,7 @@ const FALLBACK = (
 
     <h2>6. Limitation of liability</h2>
     <p>
-      The service is provided &quot;as is&quot; to the maximum extent permitted by law. Essem
-      Global Solutions is not liable for indirect, incidental, or consequential damages arising
+      The service is provided &quot;as is&quot; to the maximum extent permitted by law. RelayIQ is not liable for indirect, incidental, or consequential damages arising
       from use of the platform.
     </p>
 
@@ -62,6 +61,6 @@ const FALLBACK = (
   </>
 )
 
-export default function TermsPage() {
-  return <LegalCmsPage slug="terms" fallbackTitle="Terms of Service" fallbackBody={FALLBACK} />
+export default function TermsPage({ seo }: { seo?: import("@/components/seo/SeoHead").SeoPayload | null }) {
+  return <LegalCmsPage slug="terms" fallbackTitle="Terms of Service" fallbackBody={FALLBACK} initialSeo={seo} />
 }

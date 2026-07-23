@@ -40,7 +40,7 @@ class AuditServiceResilienceTest extends TestCase
     public function test_settings_update_succeeds_without_audit_table(): void
     {
         Schema::dropIfExists('audit_events');
-        PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'Essem']);
+        PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'RelayIQ']);
 
         Sanctum::actingAs(User::factory()->create([
             'role' => 'admin',

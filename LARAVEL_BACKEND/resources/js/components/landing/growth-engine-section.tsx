@@ -31,7 +31,7 @@ export function GrowthEngineSection() {
               align="left"
               label="Growth Engine"
               title="Connect marketing to WhatsApp sales"
-              description="Most chatbot tools stop at replies. Essem Chat tracks which campaigns turn into paid orders."
+              description="Most chatbot tools stop at replies. RelayIQ tracks which campaigns turn into paid orders."
               className="mb-0"
             />
 

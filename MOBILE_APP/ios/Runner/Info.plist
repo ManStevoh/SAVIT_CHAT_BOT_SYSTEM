@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Essem Mobile</string>
+	<string>RelayIQ</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -51,10 +51,10 @@
 		<true/>
 	</dict>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Essem needs photo access to set product images.</string>
+	<string>RelayIQ needs photo access to set product images.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Essem needs camera access to capture product photos.</string>
+	<string>RelayIQ needs camera access to capture product photos.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>Essem needs contacts access to add customers from your phone book.</string>
+	<string>RelayIQ needs contacts access to add customers from your phone book.</string>
 </dict>
 </plist>

@@ -34,7 +34,7 @@ export function LandoTrustedCompanies({
           {parsed.map((company) => (
             <div key={company.name} className="flex items-center gap-2">
               {company.logoUrl ? (
-                <img src={company.logoUrl} alt={company.name} className="h-8 max-w-[120px] object-contain opacity-60" />
+                <img src={company.logoUrl} alt={company.name} loading="lazy" decoding="async" className="h-8 max-w-[120px] object-contain opacity-60" />
               ) : (
                 <span className="text-lg font-bold text-gray-400">{company.name}</span>
               )}
@@ -249,13 +249,35 @@ export function LandoAboutHero({
   imageAlt?: string
 }) {
   return (
-    <section className="bg-[#f3f4f6] pt-28 pb-12 text-center lg:pt-32">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-black sm:text-5xl">{title}</h1>
-        {description && <p className="mx-auto mt-4 text-base text-gray-600 sm:text-lg">{description}</p>}
-        {imageUrl && (
-          <img src={imageUrl} alt={imageAlt} className="mx-auto mt-12 max-h-64 w-full object-contain" />
-        )}
+    <section className="relative overflow-hidden bg-[#eef2f7] pt-28 pb-0 lg:pt-32">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(37,99,235,0.12),_transparent_55%)]"
+      />
+      <div className="relative mx-auto grid max-w-6xl items-end gap-10 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-8">
+        <div className="pb-12 lg:pb-20">
+          <p className="text-xs font-semibold tracking-[0.2em] text-[#2563eb] uppercase">RelayIQ</p>
+          <h1 className="mt-4 max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-black sm:text-5xl lg:text-[3.4rem]">
+            {title}
+          </h1>
+          {description && (
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-gray-600 sm:text-lg">
+              {description}
+            </p>
+          )}
+        </div>
+        {imageUrl ? (
+          <div className="relative min-h-[240px] lg:min-h-[360px]">
+            <img
+              src={imageUrl}
+              alt={imageAlt}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="h-full w-full object-cover object-center lg:absolute lg:inset-0 lg:rounded-tl-[2rem]"
+            />
+          </div>
+        ) : null}
       </div>
     </section>
   )
@@ -263,27 +285,65 @@ export function LandoAboutHero({
 
 export function LandoMission({ title, description }: { title: string; description?: string }) {
   return (
-    <section className="border-t border-gray-200 bg-[#f3f4f6] py-16 text-center">
+    <section className="border-t border-gray-200/80 bg-[#f3f4f6] py-16 text-center lg:py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
-        {description && <p className="mt-6 text-base leading-relaxed text-gray-600">{description}</p>}
+        <h2 className="text-3xl font-bold tracking-tight text-black sm:text-4xl">{title}</h2>
+        {description && (
+          <p className="mt-6 text-base leading-relaxed text-gray-600 sm:text-lg">{description}</p>
+        )}
       </div>
     </section>
   )
 }
 
-export function LandoEfficiency({ title }: { title: string }) {
-  const lines = title.split("\n")
+export function LandoEfficiency({
+  title,
+  description,
+  ctaText,
+  ctaHref,
+}: {
+  title: string
+  description?: string
+  ctaText?: string
+  ctaHref?: string
+}) {
+  const lines = title.split(/\n+/).map((l) => l.trim()).filter(Boolean)
+  const displayTitle = lines.length > 1 ? lines.join(" ") : title
+
   return (
-    <section className="bg-[#f3f4f6] py-20 lg:py-28">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-4xl font-bold leading-tight text-black sm:text-5xl lg:text-6xl">
-          {lines.map((line, i) => (
-            <span key={i} className="block">
-              {line}
-            </span>
-          ))}
+    <section className="relative overflow-hidden bg-[#0f172a] py-20 text-white lg:py-28">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(37,99,235,0.35),_transparent_45%),radial-gradient(circle_at_80%_80%,_rgba(56,189,248,0.18),_transparent_40%)]"
+      />
+      <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 text-center sm:px-6 lg:px-8">
+        <h2 className="max-w-3xl text-balance text-3xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+          {displayTitle}
         </h2>
+        {description ? (
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+            {description}
+          </p>
+        ) : (
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+            Automate WhatsApp sales, keep humans in control, and grow with a platform built for commerce teams.
+          </p>
+        )}
+        {ctaText && ctaHref ? (
+          <Button
+            asChild
+            className="mt-10 h-11 rounded-lg bg-[#2563eb] px-7 text-white hover:bg-[#1d4ed8]"
+          >
+            <Link href={ctaHref}>{ctaText}</Link>
+          </Button>
+        ) : (
+          <Button
+            asChild
+            className="mt-10 h-11 rounded-lg bg-[#2563eb] px-7 text-white hover:bg-[#1d4ed8]"
+          >
+            <Link href="/register">Start free</Link>
+          </Button>
+        )}
       </div>
     </section>
   )
@@ -312,6 +372,8 @@ export function LandoTeam({
                 <img
                   src={m.imageUrl}
                   alt={m.name}
+                  loading="lazy"
+                  decoding="async"
                   className="mx-auto h-32 w-32 rounded-full object-cover"
                 />
               ) : (
@@ -386,7 +448,7 @@ export function LandoContactSection({
     <section className="bg-[#f3f4f6] pt-28 pb-16 lg:pt-32 lg:pb-24">
       <div className="mx-auto grid max-w-6xl items-start gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         {imageUrl && (
-          <img src={imageUrl} alt={imageAlt} className="max-h-[400px] w-full object-contain" />
+          <img src={imageUrl} alt={imageAlt} loading="eager" decoding="async" className="max-h-[400px] w-full object-contain" />
         )}
         <div>
           <h1 className="text-4xl font-bold text-black sm:text-5xl">{title}</h1>

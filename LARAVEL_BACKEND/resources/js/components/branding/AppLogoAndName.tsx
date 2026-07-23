@@ -1,8 +1,10 @@
 "use client"
 
-import { MessageSquare, Shield } from "lucide-react"
+import { Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
+
+const DEFAULT_MARK = "/images/branding/relaysiq-mark.png"
 
 type Variant = "sidebar" | "navbar" | "footer" | "admin"
 
@@ -28,25 +30,26 @@ export function AppLogoAndName({
 }) {
   const branding = useAppBranding()
   const sizes = sizeMap[variant]
-  const name = branding.applicationName || "Essem Chat"
+  const name = branding.applicationName || "RelayIQ"
+  const logoSrc = branding.appLogo || DEFAULT_MARK
 
   const iconBox = (
     <div
       className={cn(
         `flex ${sizes.box} items-center justify-center rounded-lg bg-foreground shrink-0 overflow-hidden`,
-        branding.appLogo && "bg-transparent"
+        "bg-transparent"
       )}
     >
-      {branding.appLogo ? (
+      {showAdminBadge && !branding.appLogo ? (
+        <div className={cn(`flex ${sizes.box} items-center justify-center rounded-lg bg-foreground`)}>
+          <Shield className={`${sizes.icon} text-background`} />
+        </div>
+      ) : (
         <img
-          src={branding.appLogo}
+          src={logoSrc}
           alt=""
           className="h-full w-full object-contain"
         />
-      ) : showAdminBadge ? (
-        <Shield className={`${sizes.icon} text-background`} />
-      ) : (
-        <MessageSquare className={`${sizes.icon} text-background`} />
       )}
     </div>
   )

@@ -27,7 +27,7 @@ class AdminPlatformSettingsTest extends TestCase
 
     public function test_admin_settings_show_survives_invalid_json_columns(): void
     {
-        $settings = PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'Essem']);
+        $settings = PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'RelayIQ']);
         DB::table('platform_settings')->where('id', $settings->id)->update([
             'ai_learning_config' => '{not-json',
             'landing_trusted_companies' => '{not-json',
@@ -40,12 +40,12 @@ class AdminPlatformSettingsTest extends TestCase
 
         $this->getJson('/api/admin/settings')
             ->assertOk()
-            ->assertJsonPath('platformName', 'Essem');
+            ->assertJsonPath('platformName', 'RelayIQ');
     }
 
     public function test_admin_settings_update_does_not_overwrite_secrets_with_mask(): void
     {
-        $settings = PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'Essem']);
+        $settings = PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'RelayIQ']);
         $settings->forceFill([
             'whatsapp_webhook_verify_token' => 'real-verify-token',
             'meta_app_secret' => 'real-meta-secret',

@@ -9,7 +9,7 @@ export function useAppBranding(): AppBranding {
   const ctx = useContext(AppBrandingContext)
   return (
     ctx ?? {
-      applicationName: "Essem Chat",
+      applicationName: "RelayIQ",
       appLogo: null,
       primaryColor: null,
       secondaryColor: null,

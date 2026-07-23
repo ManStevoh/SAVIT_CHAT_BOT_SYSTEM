@@ -41,7 +41,7 @@ class MailService
         $settings = PlatformSetting::first();
         $name = $settings && ! empty($settings->platform_name) ? $settings->platform_name : config('app.name');
 
-        return $name ?: 'Essem';
+        return $name ?: 'RelayIQ';
     }
 
     /**

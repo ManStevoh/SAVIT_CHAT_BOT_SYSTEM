@@ -11,13 +11,13 @@ class AppBranding {
   final String? primaryColor;
   final String? secondaryColor;
 
-  static const fallback = AppBranding(applicationName: 'Essem');
+  static const fallback = AppBranding(applicationName: 'RelayIQ');
 
   factory AppBranding.fromJson(Map<String, dynamic> json) {
     return AppBranding(
       applicationName: (json['applicationName'] as String?)?.trim().isNotEmpty == true
           ? json['applicationName'] as String
-          : 'Essem',
+          : 'RelayIQ',
       appLogo: json['appLogo'] as String?,
       primaryColor: json['primaryColor'] as String?,
       secondaryColor: json['secondaryColor'] as String?,

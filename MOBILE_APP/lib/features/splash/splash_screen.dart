@@ -81,11 +81,11 @@ class _SplashScreenState extends State<SplashScreen>
                     width: 96,
                     height: 96,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const _EssemMark(),
+                    errorBuilder: (_, __, ___) => const _RelayMark(),
                   ),
                 )
               else
-                const _EssemMark(),
+                const _RelayMark(),
               const SizedBox(height: 18),
               Text(
                 _branding.applicationName,
@@ -98,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Company companion',
+                'Every Conversation. Smarter.',
                 style: GoogleFonts.manrope(color: AppColors.textMuted),
               ),
             ],
@@ -109,8 +109,8 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _EssemMark extends StatelessWidget {
-  const _EssemMark();
+class _RelayMark extends StatelessWidget {
+  const _RelayMark();
 
   @override
   Widget build(BuildContext context) {
@@ -129,13 +129,20 @@ class _EssemMark extends StatelessWidget {
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
-      child: Text(
-        'E',
-        style: GoogleFonts.manrope(
-          fontSize: 46,
-          fontWeight: FontWeight.w800,
-          color: AppColors.primary,
+      child: Image.asset(
+        'assets/branding/relaysiq-mark.png',
+        width: 72,
+        height: 72,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Text(
+          'R',
+          style: GoogleFonts.manrope(
+            fontSize: 46,
+            fontWeight: FontWeight.w800,
+            color: AppColors.primary,
+          ),
         ),
       ),
     );

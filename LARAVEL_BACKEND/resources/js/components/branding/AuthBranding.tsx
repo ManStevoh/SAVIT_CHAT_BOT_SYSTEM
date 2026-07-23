@@ -18,7 +18,7 @@ export function AuthBranding({
 }) {
   const pathname = usePathname()
   const branding = useAppBranding()
-  const appName = branding.applicationName || "Essem Chat"
+  const appName = branding.applicationName || "RelayIQ"
   const { data: globalData } = useCmsGlobal()
   const globalSections = globalData?.sections ?? []
   const navbarContent = getSectionContent(globalSections, "navbar")

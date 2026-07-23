@@ -75,7 +75,7 @@
 </head>
 <body>
     <div class="sheet">
-        <h1 class="brand">{{ $order->company?->name ?? 'Essem Chat' }}</h1>
+        <h1 class="brand">{{ $order->company?->name ?? 'RelayIQ' }}</h1>
         <p class="muted">Invoice / receipt &middot; {{ $order->created_at?->timezone(config('app.timezone'))->format('M j, Y g:i A') }}</p>
 
         <p class="meta"><strong>Order number:</strong> {{ $order->order_number }}</p>

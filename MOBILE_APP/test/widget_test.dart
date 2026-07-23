@@ -24,7 +24,7 @@ void main() {
           ),
           Provider.value(
             value: BrandingRepository.seeded(
-              const AppBranding(applicationName: 'Essem'),
+              const AppBranding(applicationName: 'RelayIQ'),
             ),
           ),
         ],
@@ -36,8 +36,8 @@ void main() {
     );
 
     await tester.pump(); // post-frame bootstrap
-    expect(find.text('Essem'), findsOneWidget);
-    expect(find.text('Company companion'), findsOneWidget);
+    expect(find.text('RelayIQ'), findsOneWidget);
+    expect(find.text('Every Conversation. Smarter.'), findsOneWidget);
 
     // Advance past splash delay; no GoRouter so navigation no-ops.
     await tester.pump(const Duration(milliseconds: 800));

@@ -1319,6 +1319,24 @@ export async function completeWhatsAppEmbeddedSignup(
 // SUPER ADMIN ACTIONS
 // ============================================
 
+export interface PlanEntitlements {
+  messages?: number | null
+  messagesUnlimited?: boolean
+  team?: number
+  whatsappNumbers?: number
+  aiCostUsd?: number | null
+  aiModelModes?: string[]
+  allowByok?: boolean
+  credentialModes?: string[]
+  apiAccess?: boolean
+  analytics?: boolean
+  attribution?: boolean
+  aiPostsPerMonth?: number
+  aiImagesPerMonth?: number
+  socialPlatforms?: number
+  growthEnabled?: boolean
+}
+
 export interface CreatePlanData {
   name: string
   slug: string
@@ -1334,6 +1352,7 @@ export interface CreatePlanData {
   hasTrial?: boolean
   trialDays?: number | null
   trialElapsedAction?: string | null
+  entitlements?: PlanEntitlements
 }
 
 export interface UpdatePlanData {
@@ -1351,6 +1370,7 @@ export interface UpdatePlanData {
   hasTrial?: boolean
   trialDays?: number | null
   trialElapsedAction?: string | null
+  entitlements?: PlanEntitlements
 }
 
 /**
@@ -1447,6 +1467,114 @@ export async function adminUpdateSubscription(
   }
 }
 
+// ——— Admin Subscription Offers (coupons) ———
+
+export interface SubscriptionOffer {
+  id: string
+  name: string
+  code: string
+  description?: string | null
+  discountType: 'percent' | 'fixed'
+  discountValue: number
+  currency?: string | null
+  planId?: string | null
+  planName?: string | null
+  maxRedemptions?: number | null
+  redemptionCount: number
+  maxPerCompany: number
+  startsAt?: string | null
+  endsAt?: string | null
+  isActive: boolean
+  firstPaymentOnly: boolean
+  isCurrentlyValid: boolean
+}
+
+export interface SubscriptionOfferPayload {
+  name: string
+  code: string
+  description?: string | null
+  discountType: 'percent' | 'fixed'
+  discountValue: number
+  currency?: string | null
+  planId?: string | null
+  maxRedemptions?: number | null
+  maxPerCompany?: number | null
+  startsAt?: string | null
+  endsAt?: string | null
+  isActive?: boolean
+  firstPaymentOnly?: boolean
+}
+
+export async function createSubscriptionOffer(
+  payload: SubscriptionOfferPayload
+): Promise<{ success: boolean; offer?: SubscriptionOffer; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, offer: { id: '1', redemptionCount: 0, maxPerCompany: 1, isCurrentlyValid: true, firstPaymentOnly: true, isActive: true, ...payload } as SubscriptionOffer }
+  }
+  try {
+    return await apiRequest('/api/admin/subscription-offers', { method: 'POST', body: payload })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function updateSubscriptionOffer(
+  id: string,
+  payload: SubscriptionOfferPayload
+): Promise<{ success: boolean; offer?: SubscriptionOffer; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/subscription-offers/${id}`, { method: 'PUT', body: payload })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function deleteSubscriptionOffer(
+  id: string
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/subscription-offers/${id}`, { method: 'DELETE' })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function previewCoupon(
+  planId: string,
+  couponCode: string,
+  currency?: string
+): Promise<{
+  success: boolean
+  message?: string
+  code?: string
+  originalAmount?: number
+  discountAmount?: number
+  finalAmount?: number
+  currency?: string
+}> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, code: couponCode, originalAmount: 99, discountAmount: 10, finalAmount: 89, currency: currency ?? 'KES' }
+  }
+  try {
+    return await apiRequest('/api/company/coupon/preview', {
+      method: 'POST',
+      body: { planId, couponCode, currency },
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 // ——— Admin Testimonials ———
 
 export interface CreateTestimonialData {
@@ -1501,6 +1629,60 @@ export async function deleteTestimonial(testimonialId: string): Promise<{ succes
     return await apiRequest<{ success: boolean }>(`/api/admin/testimonials/${testimonialId}`, { method: 'DELETE' })
   } catch (e) {
     return handleApiError(e)
+  }
+}
+
+export type BlogPostPayload = {
+  title: string
+  slug?: string
+  excerpt?: string | null
+  body: string
+  coverImage?: string | null
+  metaTitle?: string | null
+  metaDescription?: string | null
+  ogImage?: string | null
+  publishedAt?: string | null
+  isPublished?: boolean
+}
+
+export async function createBlogPost(
+  data: BlogPostPayload
+): Promise<{ success: boolean; post?: unknown; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, post: { id: String(Date.now()), ...data } }
+  }
+  try {
+    return await apiRequest('/api/admin/blog-posts', { method: 'POST', body: data })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function updateBlogPost(
+  id: string,
+  data: Partial<BlogPostPayload>
+): Promise<{ success: boolean; post?: unknown; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/blog-posts/${id}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function deleteBlogPost(id: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/blog-posts/${id}`, { method: 'DELETE' })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
   }
 }
 
@@ -1563,7 +1745,17 @@ export async function deleteLandingFaq(faqId: string): Promise<{ success: boolea
 
 export async function updateCmsPage(
   slug: string,
-  data: { title?: string; metaTitle?: string; metaDescription?: string; isPublished?: boolean }
+  data: {
+    title?: string
+    metaTitle?: string
+    metaDescription?: string
+    ogImage?: string | null
+    ogTitle?: string | null
+    ogDescription?: string | null
+    canonicalUrl?: string | null
+    robots?: string | null
+    isPublished?: boolean
+  }
 ): Promise<{ success: boolean; message?: string }> {
   if (useMockApi()) {
     await delay(300)
@@ -1659,18 +1851,19 @@ export async function createCheckoutSession(
  */
 export async function createMpesaCheckout(
   planId: string,
-  phone: string
-): Promise<{ success: boolean; checkoutRequestId?: string; message?: string }> {
+  phone: string,
+  couponCode?: string
+): Promise<{ success: boolean; checkoutRequestId?: string; message?: string; amount?: number }> {
   if (useMockApi()) {
     await delay(800)
     return { success: true, checkoutRequestId: 'mock-req-'.concat(planId), message: 'Enter your M-Pesa PIN on your phone.' }
   }
   try {
-    const res = await apiRequest<{ checkoutRequestId: string; message: string }>('/api/company/mpesa/initiate', {
+    const res = await apiRequest<{ checkoutRequestId: string; message: string; amount?: number }>('/api/company/mpesa/initiate', {
       method: 'POST',
-      body: { planId, phone },
+      body: { planId, phone, ...(couponCode ? { couponCode } : {}) },
     })
-    return { success: true, checkoutRequestId: res.checkoutRequestId, message: res.message }
+    return { success: true, checkoutRequestId: res.checkoutRequestId, message: res.message, amount: res.amount }
   } catch (e) {
     return { success: false, message: e instanceof Error ? e.message : 'M-Pesa initiation failed' }
   }
@@ -1682,20 +1875,66 @@ export async function createMpesaCheckout(
  */
 export async function createPaystackCheckout(
   planId: string,
-  options?: { callbackUrl?: string }
-): Promise<{ success: boolean; url?: string; reference?: string; message?: string }> {
+  options?: { callbackUrl?: string; couponCode?: string }
+): Promise<{ success: boolean; url?: string; reference?: string; message?: string; amount?: number }> {
   if (useMockApi()) {
     await delay(600)
     return { success: true, url: 'https://checkout.paystack.com/mock-placeholder', reference: 'mock-ref-' + planId }
   }
   try {
-    const res = await apiRequest<{ authorizationUrl: string; reference: string }>('/api/company/paystack/initialize', {
+    const res = await apiRequest<{ authorizationUrl: string; reference: string; amount?: number }>('/api/company/paystack/initialize', {
       method: 'POST',
       body: { planId, ...options },
     })
-    return { success: true, url: res.authorizationUrl, reference: res.reference }
+    return { success: true, url: res.authorizationUrl, reference: res.reference, amount: res.amount }
   } catch (e) {
     return { success: false, message: e instanceof Error ? e.message : 'Paystack checkout failed' }
+  }
+}
+
+/**
+ * Verify Paystack payment after redirect (webhook fallback).
+ * Laravel: POST /api/company/paystack/verify
+ */
+export async function verifyPaystackCheckout(
+  reference: string
+): Promise<{ success: boolean; message?: string; alreadyProcessed?: boolean }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, alreadyProcessed: false }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; message?: string; alreadyProcessed?: boolean }>(
+      '/api/company/paystack/verify',
+      { method: 'POST', body: { reference } }
+    )
+    return {
+      success: !!res.success,
+      message: res.message,
+      alreadyProcessed: res.alreadyProcessed,
+    }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Paystack verification failed' }
+  }
+}
+
+/**
+ * Cancel local (Paystack / M-Pesa / trial) subscription. Stripe users should use billing portal.
+ * Laravel: POST /api/company/subscription/cancel
+ */
+export async function cancelSubscription(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, message: 'Subscription cancelled.' }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; message?: string }>('/api/company/subscription/cancel', {
+      method: 'POST',
+      body: {},
+    })
+    return { success: !!res.success, message: res.message }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Could not cancel subscription' }
   }
 }
 
@@ -2278,7 +2517,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   if (useMockApi()) {
     await delay(300)
     return {
-      platformName: 'Essem Chat',
+      platformName: 'RelayIQ',
       supportEmail: 'support@chatflow.ai',
       maintenanceMode: false,
       defaultTimezone: 'UTC',
@@ -2289,7 +2528,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
       smtpEncryption: 'tls',
       smtpUser: 'apikey',
       fromEmail: 'noreply@chatflow.ai',
-      fromName: 'Essem Chat',
+      fromName: 'RelayIQ',
       sessionTimeoutMinutes: 60,
       maxLoginAttempts: 5,
       passwordMinLength: 8,
@@ -2348,7 +2587,7 @@ export async function getAppBranding(): Promise<AppBranding> {
   if (useMockApi()) {
     await delay(100)
     return {
-      applicationName: 'Essem Chat',
+      applicationName: 'RelayIQ',
       appLogo: null,
       primaryColor: null,
       secondaryColor: null,

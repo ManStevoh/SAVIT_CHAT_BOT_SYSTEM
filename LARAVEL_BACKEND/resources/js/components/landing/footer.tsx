@@ -30,7 +30,7 @@ const footerLinks = {
 
 export function Footer() {
   const branding = useAppBranding()
-  const appName = branding.applicationName || "Essem Chat"
+  const appName = branding.applicationName || "RelayIQ"
 
   return (
     <footer className="border-t border-border/70 bg-card">

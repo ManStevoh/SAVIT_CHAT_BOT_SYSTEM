@@ -1,5 +1,5 @@
 name: essem_mobile
-description: Essem Chat Bot company companion — Flutter V1
+description: RelayIQ company companion — Flutter V1
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -25,3 +25,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/

@@ -49,7 +49,7 @@ Future<void> main() async {
         Provider.value(value: GrowthRepository(api)),
         Provider.value(value: AdminRepository(api)),
       ],
-      child: const EssemApp(),
+      child: const RelayApp(),
     ),
   );
 }

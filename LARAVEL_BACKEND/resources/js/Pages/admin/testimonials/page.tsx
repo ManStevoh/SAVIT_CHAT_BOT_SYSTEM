@@ -253,7 +253,7 @@ export default function AdminTestimonialsPage() {
                 id="content"
                 value={form.content}
                 onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-                placeholder="Essem Chat transformed our order management..."
+                placeholder="RelayIQ transformed our order management..."
                 rows={4}
               />
             </div>

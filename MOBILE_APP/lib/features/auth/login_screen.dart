@@ -208,13 +208,20 @@ class _BrandMark extends StatelessWidget {
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
-      child: Text(
-        'E',
-        style: GoogleFonts.manrope(
-          fontSize: 42,
-          fontWeight: FontWeight.w800,
-          color: AppColors.primary,
+      child: Image.asset(
+        'assets/branding/relaysiq-mark.png',
+        width: 64,
+        height: 64,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Text(
+          'R',
+          style: GoogleFonts.manrope(
+            fontSize: 42,
+            fontWeight: FontWeight.w800,
+            color: AppColors.primary,
+          ),
         ),
       ),
     );

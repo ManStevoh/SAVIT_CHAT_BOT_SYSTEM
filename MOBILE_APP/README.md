@@ -1,6 +1,6 @@
-# Essem Mobile (`MOBILE_APP`)
+# RelayIQ Mobile (`MOBILE_APP`)
 
-Flutter company companion for Essem Chat Bot (SAVIT).
+Flutter company companion for RelayIQ (SAVIT).
 
 Vision & scope: [docs/technical/MOBILE_APP_V1_VISION.md](../docs/technical/MOBILE_APP_V1_VISION.md)
 

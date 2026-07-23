@@ -8,7 +8,7 @@ const FALLBACK = (
 
     <h2>1. Who we are</h2>
     <p>
-      Essem Chat is operated by Essem Global Solutions. We provide a multi-tenant SaaS platform
+      RelayIQ is operated by Essem Global Solutions. We provide a multi-tenant SaaS platform
       for WhatsApp business messaging, AI-assisted replies, order management, and related
       services.
     </p>
@@ -26,7 +26,7 @@ const FALLBACK = (
     <h2>3. How we use your information</h2>
     <p>We use collected data to:</p>
     <ul>
-      <li>Provide, operate, and improve the Essem Chat platform</li>
+      <li>Provide, operate, and improve the RelayIQ platform</li>
       <li>Process AI-assisted replies using your configured provider and business content</li>
       <li>Send service-related communications</li>
       <li>Comply with legal obligations and prevent abuse</li>
@@ -61,6 +61,6 @@ const FALLBACK = (
   </>
 )
 
-export default function PrivacyPage() {
-  return <LegalCmsPage slug="privacy" fallbackTitle="Privacy Policy" fallbackBody={FALLBACK} />
+export default function PrivacyPage({ seo }: { seo?: import("@/components/seo/SeoHead").SeoPayload | null }) {
+  return <LegalCmsPage slug="privacy" fallbackTitle="Privacy Policy" fallbackBody={FALLBACK} initialSeo={seo} />
 }

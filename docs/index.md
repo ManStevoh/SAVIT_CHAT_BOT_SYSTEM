@@ -2,16 +2,16 @@
 title: Home
 layout: default
 nav_order: 1
-description: "Essem Chat Bot — WhatsApp AI Commerce & Growth Engine"
+description: "RelayIQ — WhatsApp AI Commerce & Growth Engine"
 permalink: /
 ---
 
-# Essem Chat Bot Documentation
+# RelayIQ Documentation
 
 > **Enable docs site:** [Settings → Pages](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/settings/pages) → Deploy from branch → `main` → `/docs` → Save.  
 > **URL:** https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/
 
-Welcome to the official documentation for **Essem Chat Bot (SAVIT)** — the **digital nervous system of a business**: WhatsApp commerce, continuous AI cognition, growth attribution, and owner intelligence in one platform.
+Welcome to the official documentation for **RelayIQ** — the **digital nervous system of a business**: WhatsApp commerce, continuous AI cognition, growth attribution, and owner intelligence in one platform.
 
 ## What is SAVIT?
 

@@ -267,7 +267,7 @@ export function LandoHeroFlowSimulation() {
               EC
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold text-white">Essem Assistant</div>
+              <div className="truncate text-sm font-semibold text-white">RelayIQ Assistant</div>
               <div className="text-xs text-white/75">AI · online</div>
             </div>
             <Smartphone className="h-4 w-4 text-white/80" />

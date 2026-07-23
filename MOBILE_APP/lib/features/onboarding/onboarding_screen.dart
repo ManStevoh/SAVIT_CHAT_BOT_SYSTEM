@@ -23,7 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.chat_bubble_outline_rounded,
       title: 'Sell on WhatsApp, from your pocket',
       body:
-          'Essem keeps your company chats, orders, and customers in one companion built for owners and agents.',
+          'RelayIQ keeps your company chats, orders, and customers in one companion built for owners and agents.',
       accent: Color(0xFF2563EB),
     ),
     _OnboardPage(
@@ -44,7 +44,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.rocket_launch_outlined,
       title: 'Ready for your workspace',
       body:
-          'Sign in with your Essem company account to manage chats, products, FAQs, and growth on the go.',
+          'Sign in with your RelayIQ company account to manage chats, products, FAQs, and growth on the go.',
       accent: Color(0xFF1D4ED8),
     ),
   ];
