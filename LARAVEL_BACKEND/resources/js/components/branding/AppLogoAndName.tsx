@@ -4,7 +4,7 @@ import { Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
-const DEFAULT_MARK = "/images/branding/relaysiq-mark.png"
+const DEFAULT_MARK = "/images/branding/relaysiq-favicon.png"
 
 type Variant = "sidebar" | "navbar" | "footer" | "admin"
 

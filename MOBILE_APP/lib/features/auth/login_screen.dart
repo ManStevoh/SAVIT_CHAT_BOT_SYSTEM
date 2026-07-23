@@ -197,7 +197,7 @@ class _BrandMark extends StatelessWidget {
       width: 88,
       height: 88,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF0B0E11),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.border),
         boxShadow: [
@@ -211,10 +211,10 @@ class _BrandMark extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
       child: Image.asset(
-        'assets/branding/relaysiq-mark.png',
-        width: 64,
-        height: 64,
-        fit: BoxFit.contain,
+        'assets/branding/relaysiq-app-icon.png',
+        width: 88,
+        height: 88,
+        fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Text(
           'R',
           style: GoogleFonts.manrope(

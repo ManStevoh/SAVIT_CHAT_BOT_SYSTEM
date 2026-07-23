@@ -20,28 +20,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _pages = <_OnboardPage>[
     _OnboardPage(
-      icon: Icons.chat_bubble_outline_rounded,
+      asset: 'assets/branding/relaysiq-app-icon.png',
       title: 'Sell on WhatsApp, from your pocket',
       body:
           'RelayIQ keeps your company chats, orders, and customers in one companion built for owners and agents.',
       accent: Color(0xFF2563EB),
     ),
     _OnboardPage(
-      icon: Icons.smart_toy_outlined,
+      asset: 'assets/branding/relaysiq-mark.png',
       title: 'AI replies — you stay in control',
       body:
           'Watch conversations in real time, jump in when a customer needs a human, then hand back to the bot.',
       accent: Color(0xFF059669),
     ),
     _OnboardPage(
-      icon: Icons.receipt_long_outlined,
+      asset: 'assets/branding/relaysiq-app-icon.png',
       title: 'Orders & contacts, always handy',
       body:
           'Track revenue signals, open order details from notifications, and start chats from your phone book.',
       accent: Color(0xFF7C3AED),
     ),
     _OnboardPage(
-      icon: Icons.rocket_launch_outlined,
+      asset: 'assets/branding/relaysiq-app-icon.png',
       title: 'Ready for your workspace',
       body:
           'Sign in with your RelayIQ company account to manage chats, products, FAQs, and growth on the go.',
@@ -122,20 +122,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           child: Column(
                             children: [
                               Container(
-                                width: 88,
-                                height: 88,
+                                width: 96,
+                                height: 96,
                                 decoration: BoxDecoration(
-                                  color: item.accent.withOpacity(0.12),
+                                  color: const Color(0xFF0B0E11),
                                   borderRadius:
                                       BorderRadius.circular(AppRadii.lg),
                                   border: Border.all(
                                     color: item.accent.withOpacity(0.22),
                                   ),
                                 ),
-                                child: Icon(
-                                  item.icon,
-                                  size: 42,
-                                  color: item.accent,
+                                clipBehavior: Clip.antiAlias,
+                                child: Image.asset(
+                                  item.asset,
+                                  fit: BoxFit.cover,
                                 ),
                               ),
                               const SizedBox(height: 28),
@@ -230,13 +230,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 class _OnboardPage {
   const _OnboardPage({
-    required this.icon,
+    required this.asset,
     required this.title,
     required this.body,
     required this.accent,
   });
 
-  final IconData icon;
+  final String asset;
   final String title;
   final String body;
   final Color accent;

@@ -18,7 +18,7 @@ class AppBrandingController extends Controller
     {
         $settings = PlatformSetting::first();
         $appName = MailService::applicationName();
-        $appLogo = asset('images/branding/relaysiq-mark.png');
+        $appLogo = asset('images/branding/relaysiq-favicon.png');
         if ($settings && ! empty($settings->app_logo) && Storage::disk('public')->exists($settings->app_logo)) {
             $appLogo = asset('storage/' . $settings->app_logo);
         }

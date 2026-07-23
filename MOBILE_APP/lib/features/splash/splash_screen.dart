@@ -118,12 +118,12 @@ class _RelayMark extends StatelessWidget {
       width: 96,
       height: 96,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF0B0E11),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.ink.withOpacity(0.06),
+            color: AppColors.ink.withOpacity(0.08),
             blurRadius: 28,
             offset: const Offset(0, 12),
           ),
@@ -132,10 +132,10 @@ class _RelayMark extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
       child: Image.asset(
-        'assets/branding/relaysiq-mark.png',
-        width: 72,
-        height: 72,
-        fit: BoxFit.contain,
+        'assets/branding/relaysiq-app-icon.png',
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Text(
           'R',
           style: GoogleFonts.manrope(
