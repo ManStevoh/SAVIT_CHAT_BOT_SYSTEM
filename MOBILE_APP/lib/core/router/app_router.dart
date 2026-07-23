@@ -11,33 +11,44 @@ import '../../features/faqs/faqs_screen.dart';
 import '../../features/growth/growth_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/more/more_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/orders/orders_screen.dart';
 import '../../features/products/products_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/splash/splash_screen.dart';
 import '../auth/auth_controller.dart';
+import '../onboarding/onboarding_controller.dart';
 
-GoRouter createAppRouter(AuthController auth) {
+GoRouter createAppRouter(
+  AuthController auth,
+  OnboardingController onboarding,
+) {
   return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: auth,
+    refreshListenable: Listenable.merge([auth, onboarding]),
     redirect: (context, state) {
       final loc = state.matchedLocation;
       final onSplash = loc == '/splash';
       final onLogin = loc == '/login';
       final onForgot = loc == '/forgot-password';
+      final onOnboarding = loc == '/onboarding';
 
-      if (!auth.isReady) {
+      if (!auth.isReady || !onboarding.isReady) {
         return onSplash ? null : '/splash';
       }
 
       if (!auth.isAuthenticated) {
-        if (onSplash || onForgot) return null;
+        if (onSplash) return null;
+        if (!onboarding.hasCompleted) {
+          return onOnboarding ? null : '/onboarding';
+        }
+        if (onOnboarding) return '/login';
+        if (onForgot) return null;
         return onLogin ? null : '/login';
       }
 
-      if (onSplash || onLogin || onForgot) {
+      if (onSplash || onLogin || onForgot || onOnboarding) {
         final user = auth.user;
         if (user?.isPlatformAdminOnly ?? false) {
           return '/more/admin';
@@ -63,6 +74,10 @@ GoRouter createAppRouter(AuthController auth) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: '/login',

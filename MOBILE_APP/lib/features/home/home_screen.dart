@@ -10,6 +10,7 @@ import '../../core/shell/shell_badges.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_skeleton.dart';
 import '../../shared/widgets/app_state_views.dart';
+import '../../shared/widgets/app_surface.dart';
 import '../orders/order_detail_screen.dart';
 import '../shell/active_shell_branch.dart';
 import 'home_repository.dart';
@@ -107,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -159,53 +160,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 8),
                 if (data.notifications.isEmpty)
-                  const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.notifications_none,
-                            color: AppColors.primary,
-                            size: 32,
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            'No notifications yet',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Order and chat updates will show up here.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: AppColors.textMuted),
-                          ),
-                        ],
-                      ),
+                  const AppSurface(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.notifications_none,
+                          color: AppColors.primary,
+                          size: 32,
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          'No notifications yet',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Order and chat updates will show up here.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.textMuted),
+                        ),
+                      ],
                     ),
                   )
                 else
                   ...data.notifications.take(8).map((n) {
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(
-                          n.read
-                              ? Icons.notifications_none
-                              : Icons.notifications_active,
-                          color: AppColors.primary,
-                        ),
-                        title: Text(
-                          n.title,
-                          style: TextStyle(
-                            fontWeight:
-                                n.read ? FontWeight.w500 : FontWeight.w700,
-                          ),
-                        ),
-                        subtitle: Text(
-                          n.body,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: AppSurface(
                         onTap: () async {
                           if (!n.read) {
                             context
@@ -235,6 +217,30 @@ class _HomeScreenState extends State<HomeScreen> {
                             await _reload();
                           }
                         },
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        child: ListTile(
+                          leading: Icon(
+                            n.read
+                                ? Icons.notifications_none
+                                : Icons.notifications_active,
+                            color: AppColors.primary,
+                          ),
+                          title: Text(
+                            n.title,
+                            style: TextStyle(
+                              fontWeight:
+                                  n.read ? FontWeight.w500 : FontWeight.w700,
+                            ),
+                          ),
+                          subtitle: Text(
+                            n.body,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ),
                     );
                   }),
@@ -262,28 +268,23 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: (MediaQuery.sizeOf(context).width - 44) / 2,
-      child: Card(
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(color: AppColors.textMuted)),
-                const SizedBox(height: 8),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-              ],
+      child: AppSurface(
+        onTap: onTap,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: AppColors.textMuted)),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink,
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

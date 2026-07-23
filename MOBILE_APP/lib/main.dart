@@ -6,6 +6,7 @@ import 'core/auth/auth_controller.dart';
 import 'core/branding/branding_repository.dart';
 import 'core/config/app_config.dart';
 import 'core/network/api_client.dart';
+import 'core/onboarding/onboarding_controller.dart';
 import 'core/shell/shell_badges.dart';
 import 'features/admin/admin_repository.dart';
 import 'features/chats/chat_repository.dart';
@@ -21,7 +22,11 @@ Future<void> main() async {
 
   final config = AppConfig.fromEnvironment();
   final auth = AuthController();
-  await auth.bootstrap();
+  final onboarding = OnboardingController();
+  await Future.wait([
+    auth.bootstrap(),
+    onboarding.bootstrap(),
+  ]);
 
   final api = ApiClient(config: config, auth: auth);
 
@@ -30,6 +35,7 @@ Future<void> main() async {
       providers: [
         Provider.value(value: config),
         ChangeNotifierProvider.value(value: auth),
+        ChangeNotifierProvider.value(value: onboarding),
         ChangeNotifierProvider(create: (_) => ShellBadges()),
         Provider.value(value: api),
         Provider.value(value: BrandingRepository(api)),

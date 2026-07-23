@@ -33,7 +33,7 @@ class AppEmptyState extends StatelessWidget {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.primaryDark,
+            color: AppColors.ink,
           ),
         ),
         const SizedBox(height: 8),

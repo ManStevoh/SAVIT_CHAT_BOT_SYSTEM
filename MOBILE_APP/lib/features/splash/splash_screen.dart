@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/branding/app_branding.dart';
 import '../../core/branding/branding_repository.dart';
+import '../../core/onboarding/onboarding_controller.dart';
 import '../../core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -46,62 +47,61 @@ class _SplashScreenState extends State<SplashScreen>
   void _continue() {
     if (!mounted) return;
     final auth = context.read<AuthController>();
-    if (!auth.isReady) {
+    final onboarding = context.read<OnboardingController>();
+    if (!auth.isReady || !onboarding.isReady) {
       Future<void>.delayed(const Duration(milliseconds: 200), _continue);
       return;
     }
     if (GoRouter.maybeOf(context) == null) return;
-    context.go(auth.isAuthenticated ? '/home' : '/login');
+
+    if (auth.isAuthenticated) {
+      final adminOnly = auth.user?.isPlatformAdminOnly ?? false;
+      context.go(adminOnly ? '/more/admin' : '/home');
+      return;
+    }
+    context.go(onboarding.hasCompleted ? '/login' : '/onboarding');
   }
 
   @override
   Widget build(BuildContext context) {
     final logo = _branding.appLogo;
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.canvasDeep, Colors.white, AppColors.canvas],
-          ),
-        ),
-        child: FadeTransition(
-          opacity: _fade,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (logo != null && logo.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Image.network(
-                      logo,
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const _EssemMark(),
-                    ),
-                  )
-                else
-                  const _EssemMark(),
-                const SizedBox(height: 18),
-                Text(
-                  _branding.applicationName,
-                  style: GoogleFonts.manrope(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
-                    letterSpacing: 0.2,
+      backgroundColor: AppColors.canvas,
+      body: FadeTransition(
+        opacity: _fade,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (logo != null && logo.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.network(
+                    logo,
+                    width: 96,
+                    height: 96,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const _EssemMark(),
                   ),
+                )
+              else
+                const _EssemMark(),
+              const SizedBox(height: 18),
+              Text(
+                _branding.applicationName,
+                style: GoogleFonts.manrope(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                  letterSpacing: 0.2,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Company companion',
-                  style: GoogleFonts.manrope(color: AppColors.textMuted),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Company companion',
+                style: GoogleFonts.manrope(color: AppColors.textMuted),
+              ),
+            ],
           ),
         ),
       ),
@@ -118,11 +118,12 @@ class _EssemMark extends StatelessWidget {
       width: 96,
       height: 96,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.14),
+            color: AppColors.ink.withOpacity(0.06),
             blurRadius: 28,
             offset: const Offset(0, 12),
           ),

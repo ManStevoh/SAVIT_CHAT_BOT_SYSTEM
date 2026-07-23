@@ -10,6 +10,7 @@ import '../../core/shell/shell_badges.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_skeleton.dart';
 import '../../shared/widgets/app_state_views.dart';
+import '../../shared/widgets/app_surface.dart';
 import '../../shared/widgets/customer_avatar.dart';
 import '../shell/active_shell_branch.dart';
 import 'chat_models.dart';
@@ -239,84 +240,90 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         }
 
                         return ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                           itemCount: chats.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final item = chats[index];
                             final unread = item.unreadCount > 0;
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 4,
+                            return AppSurface(
+                              onTap: () => _openChat(item),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
                               ),
-                              leading: CustomerAvatar(name: item.customerName),
-                              title: Text(
-                                item.customerName,
-                                style: TextStyle(
-                                  fontWeight:
-                                      unread ? FontWeight.w800 : FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Text(
-                                item.lastMessage.isEmpty
-                                    ? item.customerPhone
-                                    : item.lastMessage,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight:
-                                      unread ? FontWeight.w600 : FontWeight.w400,
-                                  color: unread
-                                      ? AppColors.primaryDark
-                                      : AppColors.textMuted,
-                                ),
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    item.lastMessageTime,
-                                    style: TextStyle(
-                                      color: unread
-                                          ? AppColors.primary
-                                          : AppColors.textMuted,
-                                      fontSize: 12,
-                                      fontWeight: unread
-                                          ? FontWeight.w700
-                                          : FontWeight.w400,
-                                    ),
+                              child: ListTile(
+                                leading: CustomerAvatar(name: item.customerName),
+                                title: Text(
+                                  item.customerName,
+                                  style: TextStyle(
+                                    fontWeight: unread
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
                                   ),
-                                  if (unread) ...[
-                                    const SizedBox(height: 6),
-                                    Container(
-                                      constraints: const BoxConstraints(
-                                        minWidth: 20,
-                                        minHeight: 20,
+                                ),
+                                subtitle: Text(
+                                  item.lastMessage.isEmpty
+                                      ? item.customerPhone
+                                      : item.lastMessage,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: unread
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: unread
+                                        ? AppColors.ink
+                                        : AppColors.textMuted,
+                                  ),
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      item.lastMessageTime,
+                                      style: TextStyle(
+                                        color: unread
+                                            ? AppColors.primary
+                                            : AppColors.textMuted,
+                                        fontSize: 12,
+                                        fontWeight: unread
+                                            ? FontWeight.w700
+                                            : FontWeight.w400,
                                       ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        item.unreadCount > 99
-                                            ? '99+'
-                                            : '${item.unreadCount}',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
+                                    ),
+                                    if (unread) ...[
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 20,
+                                          minHeight: 20,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          item.unreadCount > 99
+                                              ? '99+'
+                                              : '${item.unreadCount}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
-                              onTap: () => _openChat(item),
                             );
                           },
                         );

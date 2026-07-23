@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'core/auth/auth_controller.dart';
+import 'core/onboarding/onboarding_controller.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -19,7 +20,10 @@ class _EssemAppState extends State<EssemApp> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _router ??= createAppRouter(context.read<AuthController>());
+    _router ??= createAppRouter(
+      context.read<AuthController>(),
+      context.read<OnboardingController>(),
+    );
   }
 
   @override

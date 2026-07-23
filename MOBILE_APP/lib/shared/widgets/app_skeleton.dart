@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
+
 /// Pulsing placeholder bars for list / dashboard loading.
 class AppSkeleton extends StatefulWidget {
   const AppSkeleton({super.key, required this.child});
@@ -61,7 +63,7 @@ class SkeletonBox extends StatelessWidget {
       height: height,
       width: width,
       decoration: BoxDecoration(
-        color: const Color(0xFFE4DCF0),
+        color: AppColors.canvasDeep,
         borderRadius: BorderRadius.circular(radius),
       ),
     );

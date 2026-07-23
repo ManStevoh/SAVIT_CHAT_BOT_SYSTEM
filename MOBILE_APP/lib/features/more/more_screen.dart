@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -17,6 +18,7 @@ class MoreScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           if (isAdmin) ...[
             const _SectionLabel('Platform'),
@@ -56,7 +58,6 @@ class MoreScreen extends StatelessWidget {
             subtitle: 'Profile & password',
             onTap: () => context.go('/more/settings'),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -71,7 +72,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
       child: Text(
         label.toUpperCase(),
         style: const TextStyle(
@@ -100,16 +101,27 @@ class _MoreTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: AppColors.bubbleIncoming,
-        foregroundColor: AppColors.primaryDark,
-        child: Icon(icon, size: 22),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AppSurface(
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: ListTile(
+          leading: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+            ),
+            child: Icon(icon, size: 22, color: AppColors.primary),
+          ),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text(subtitle),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+        ),
       ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
-      onTap: onTap,
     );
   }
 }

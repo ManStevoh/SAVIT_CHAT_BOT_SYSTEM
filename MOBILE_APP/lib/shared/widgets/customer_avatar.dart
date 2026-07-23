@@ -31,7 +31,7 @@ class CustomerAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: size / 2,
       backgroundColor: AppColors.bubbleIncoming,
-      foregroundColor: AppColors.primaryDark,
+      foregroundColor: AppColors.primary,
       child: Text(
         _initials,
         style: TextStyle(

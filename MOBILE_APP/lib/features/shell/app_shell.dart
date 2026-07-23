@@ -29,25 +29,28 @@ class AppShell extends StatelessWidget {
     if (adminOnly) {
       final onSettings = loc.startsWith('/more/settings');
       return Scaffold(
+        backgroundColor: AppColors.canvas,
         body: navigationShell,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: onSettings ? 1 : 0,
-          onDestinationSelected: (index) {
-            context.go(index == 0 ? '/more/admin' : '/more/settings');
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.admin_panel_settings_outlined),
-              selectedIcon:
-                  Icon(Icons.admin_panel_settings, color: AppColors.primary),
-              label: 'Admin',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings, color: AppColors.primary),
-              label: 'Settings',
-            ),
-          ],
+        bottomNavigationBar: _NavChrome(
+          child: NavigationBar(
+            selectedIndex: onSettings ? 1 : 0,
+            onDestinationSelected: (index) {
+              context.go(index == 0 ? '/more/admin' : '/more/settings');
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.admin_panel_settings_outlined),
+                selectedIcon:
+                    Icon(Icons.admin_panel_settings, color: AppColors.primary),
+                label: 'Admin',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings, color: AppColors.primary),
+                label: 'Settings',
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -55,53 +58,73 @@ class AppShell extends StatelessWidget {
     return ActiveShellBranch(
       index: navigationShell.currentIndex,
       child: Scaffold(
+        backgroundColor: AppColors.canvas,
         body: navigationShell,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: navigationShell.currentIndex,
-          onDestinationSelected: _onTap,
-          destinations: [
-            NavigationDestination(
-              icon: _BadgeIcon(
-                icon: Icons.home_outlined,
-                count: badges.unreadNotifications,
+        bottomNavigationBar: _NavChrome(
+          child: NavigationBar(
+            selectedIndex: navigationShell.currentIndex,
+            onDestinationSelected: _onTap,
+            destinations: [
+              NavigationDestination(
+                icon: _BadgeIcon(
+                  icon: Icons.home_outlined,
+                  count: badges.unreadNotifications,
+                ),
+                selectedIcon: _BadgeIcon(
+                  icon: Icons.home,
+                  count: badges.unreadNotifications,
+                  selected: true,
+                ),
+                label: 'Home',
               ),
-              selectedIcon: _BadgeIcon(
-                icon: Icons.home,
-                count: badges.unreadNotifications,
-                selected: true,
+              NavigationDestination(
+                icon: _BadgeIcon(
+                  icon: Icons.chat_bubble_outline,
+                  count: badges.unreadChats,
+                ),
+                selectedIcon: _BadgeIcon(
+                  icon: Icons.chat_bubble,
+                  count: badges.unreadChats,
+                  selected: true,
+                ),
+                label: 'Chats',
               ),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: _BadgeIcon(
-                icon: Icons.chat_bubble_outline,
-                count: badges.unreadChats,
+              const NavigationDestination(
+                icon: Icon(Icons.people_outline),
+                selectedIcon: Icon(Icons.people, color: AppColors.primary),
+                label: 'Contacts',
               ),
-              selectedIcon: _BadgeIcon(
-                icon: Icons.chat_bubble,
-                count: badges.unreadChats,
-                selected: true,
+              const NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined),
+                selectedIcon: Icon(Icons.receipt_long, color: AppColors.primary),
+                label: 'Orders',
               ),
-              label: 'Chats',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.people_outline),
-              selectedIcon: Icon(Icons.people, color: AppColors.primary),
-              label: 'Contacts',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long, color: AppColors.primary),
-              label: 'Orders',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.menu),
-              selectedIcon: Icon(Icons.menu_open, color: AppColors.primary),
-              label: 'More',
-            ),
-          ],
+              const NavigationDestination(
+                icon: Icon(Icons.menu),
+                selectedIcon: Icon(Icons.menu_open, color: AppColors.primary),
+                label: 'More',
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _NavChrome extends StatelessWidget {
+  const _NavChrome({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: child,
     );
   }
 }
