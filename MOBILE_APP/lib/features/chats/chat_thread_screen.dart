@@ -5,14 +5,23 @@ import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_state_views.dart';
+import '../../shared/widgets/customer_avatar.dart';
 import '../shell/active_shell_branch.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 
 class ChatThreadScreen extends StatefulWidget {
-  const ChatThreadScreen({super.key, required this.chatId});
+  const ChatThreadScreen({
+    super.key,
+    required this.chatId,
+    this.customerName,
+    this.customerPhone,
+  });
 
   final String chatId;
+  final String? customerName;
+  final String? customerPhone;
 
   @override
   State<ChatThreadScreen> createState() => _ChatThreadScreenState();
@@ -26,12 +35,19 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   Timer? _poll;
   int _lastCount = 0;
   bool _didInitialScroll = false;
+  String? _customerName;
+  String? _customerPhone;
 
   @override
   void initState() {
     super.initState();
+    _customerName = widget.customerName;
+    _customerPhone = widget.customerPhone;
     _future = context.read<ChatRepository>().listMessages(widget.chatId);
     _poll = Timer.periodic(const Duration(seconds: 8), (_) => _silentReload());
+    if (_customerName == null || _customerName!.isEmpty) {
+      _resolveCustomer();
+    }
   }
 
   @override
@@ -40,6 +56,24 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     _composer.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _resolveCustomer() async {
+    try {
+      final chats = await context.read<ChatRepository>().listChats();
+      ChatSummary? match;
+      for (final chat in chats) {
+        if (chat.id == widget.chatId) {
+          match = chat;
+          break;
+        }
+      }
+      if (!mounted || match == null) return;
+      setState(() {
+        _customerName = match!.customerName;
+        _customerPhone = match.customerPhone;
+      });
+    } catch (_) {}
   }
 
   void _scrollToBottom({bool animate = true}) {
@@ -130,9 +164,44 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final title = (_customerName != null && _customerName!.trim().isNotEmpty)
+        ? _customerName!.trim()
+        : 'Chat';
+    final phone = _customerPhone?.trim() ?? '';
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chat #${widget.chatId}'),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            CustomerAvatar(name: title, size: 36),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  if (phone.isNotEmpty)
+                    Text(
+                      phone,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.85),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Hand back to bot',
@@ -156,30 +225,15 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                     final message = snapshot.error is ApiException
                         ? (snapshot.error as ApiException).message
                         : snapshot.error.toString();
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        const SizedBox(height: 80),
-                        Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(message, textAlign: TextAlign.center),
-                        ),
-                      ],
-                    );
+                    return AppErrorState(message: message, onRetry: _reload);
                   }
 
                   final messages = snapshot.data ?? [];
                   if (messages.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 80),
-                        Text(
-                          'No messages yet. Send the first reply.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.textMuted),
-                        ),
-                      ],
+                    return const AppEmptyState(
+                      icon: Icons.forum_outlined,
+                      title: 'No messages yet',
+                      subtitle: 'Send the first reply to start the conversation.',
                     );
                   }
 
@@ -191,14 +245,20 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
                   return ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final message = messages[index];
+                      final showTimestamp = index == messages.length - 1 ||
+                          messages[index].sender != messages[index + 1].sender ||
+                          messages[index].timestamp !=
+                              messages[index + 1].timestamp;
                       return _Bubble(
-                        text: message.content.isEmpty ? '[Attachment]' : message.content,
+                        text: message.content.isEmpty
+                            ? '[Attachment]'
+                            : message.content,
                         incoming: message.isIncoming,
-                        timestamp: message.timestamp,
+                        timestamp: showTimestamp ? message.timestamp : '',
                         failed: message.isFailed,
                       );
                     },
@@ -209,34 +269,44 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
           ),
           SafeArea(
             top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _composer,
-                      enabled: !_sending,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _send(),
-                      decoration: const InputDecoration(
-                        hintText: 'Type a reply…',
+            child: Material(
+              color: Colors.white,
+              elevation: 6,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _composer,
+                        enabled: !_sending,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _send(),
+                        decoration: const InputDecoration(
+                          hintText: 'Type a reply…',
+                          isDense: true,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _sending ? null : _send,
-                    style: IconButton.styleFrom(backgroundColor: AppColors.primary),
-                    icon: _sending
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.send, color: Colors.white),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: _sending ? null : _send,
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
+                      icon: _sending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.send, color: Colors.white),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -265,22 +335,34 @@ class _Bubble extends StatelessWidget {
     final color = incoming
         ? AppColors.bubbleIncoming
         : (failed ? const Color(0xFFFFE8E6) : AppColors.bubbleOutgoing);
+    final radius = BorderRadius.only(
+      topLeft: const Radius.circular(16),
+      topRight: const Radius.circular(16),
+      bottomLeft: Radius.circular(incoming ? 4 : 16),
+      bottomRight: Radius.circular(incoming ? 16 : 4),
+    );
 
     return Align(
       alignment: align,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(
+          bottom: timestamp.isEmpty ? 4 : 10,
+          left: incoming ? 0 : 48,
+          right: incoming ? 48 : 0,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.75),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+        ),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: radius,
           border: failed ? Border.all(color: Colors.red.shade200) : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(text),
+            Text(text, style: const TextStyle(height: 1.35)),
             if (failed) ...[
               const SizedBox(height: 4),
               Text(

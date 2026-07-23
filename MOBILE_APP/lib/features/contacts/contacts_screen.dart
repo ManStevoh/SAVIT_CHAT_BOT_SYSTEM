@@ -3,8 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/phone_utils.dart';
+import '../../shared/widgets/app_state_views.dart';
+import '../../shared/widgets/customer_avatar.dart';
 import '../chats/chat_models.dart';
 import '../chats/chat_repository.dart';
 import 'customer_repository.dart';
@@ -114,7 +115,10 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
   Future<void> _openOrStart(ContactDirectoryItem item) async {
     if (item.hasOpenChat) {
-      context.go('/chats/${item.chatId}');
+      context.go(
+        '/chats/${item.chatId}',
+        extra: {'name': item.name, 'phone': item.phone},
+      );
       return;
     }
     try {
@@ -123,7 +127,10 @@ class _ContactsScreenState extends State<ContactsScreen> {
             name: item.name,
           );
       if (!mounted) return;
-      context.go('/chats/${chat.id}');
+      context.go(
+        '/chats/${chat.id}',
+        extra: {'name': item.name, 'phone': item.phone},
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -173,35 +180,17 @@ class _ContactsScreenState extends State<ContactsScreen> {
                     final message = snapshot.error is ApiException
                         ? (snapshot.error as ApiException).message
                         : snapshot.error.toString();
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        const SizedBox(height: 120),
-                        Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(message, textAlign: TextAlign.center),
-                        ),
-                      ],
-                    );
+                    return AppErrorState(message: message, onRetry: _reload);
                   }
 
                   final contacts = snapshot.data ?? [];
                   if (contacts.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: 88),
-                      children: const [
-                        SizedBox(height: 120),
-                        Icon(Icons.people_outline, color: AppColors.primary, size: 40),
-                        SizedBox(height: 12),
-                        Text('No contacts yet', textAlign: TextAlign.center),
-                        SizedBox(height: 4),
-                        Text(
-                          'Add a phone number or wait for orders/chats.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.textMuted),
-                        ),
-                      ],
+                    return AppEmptyState(
+                      icon: Icons.people_outline,
+                      title: 'No contacts yet',
+                      subtitle: 'Add a phone number or wait for orders/chats.',
+                      actionLabel: 'Add contact',
+                      onAction: () => context.go('/contacts/add'),
                     );
                   }
 
@@ -211,18 +200,17 @@ class _ContactsScreenState extends State<ContactsScreen> {
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final c = contacts[index];
-                      final initial =
-                          c.name.isNotEmpty ? c.name[0].toUpperCase() : '?';
                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.bubbleIncoming,
-                          child: Text(initial),
+                        leading: CustomerAvatar(name: c.name),
+                        title: Text(
+                          c.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        title: Text(c.name),
                         subtitle: Text(
                           [
                             c.phone,
-                            if (c.subtitle != null && c.subtitle!.isNotEmpty) c.subtitle!,
+                            if (c.subtitle != null && c.subtitle!.isNotEmpty)
+                              c.subtitle!,
                           ].join(' · '),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,

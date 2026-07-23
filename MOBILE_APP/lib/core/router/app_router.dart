@@ -93,9 +93,20 @@ GoRouter createAppRouter(AuthController auth) {
                 routes: [
                   GoRoute(
                     path: ':chatId',
-                    builder: (context, state) => ChatThreadScreen(
-                      chatId: state.pathParameters['chatId']!,
-                    ),
+                    builder: (context, state) {
+                      final extra = state.extra;
+                      String? name;
+                      String? phone;
+                      if (extra is Map) {
+                        name = extra['name']?.toString();
+                        phone = extra['phone']?.toString();
+                      }
+                      return ChatThreadScreen(
+                        chatId: state.pathParameters['chatId']!,
+                        customerName: name,
+                        customerPhone: phone,
+                      );
+                    },
                   ),
                 ],
               ),

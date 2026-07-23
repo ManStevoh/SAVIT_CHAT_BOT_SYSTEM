@@ -4,8 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/shell/shell_badges.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_skeleton.dart';
+import '../../shared/widgets/app_state_views.dart';
 import '../orders/order_detail_screen.dart';
 import '../shell/active_shell_branch.dart';
 import 'home_repository.dart';
@@ -18,14 +22,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late Future<HomeOverview> _future;
+  Future<HomeOverview>? _future;
   Timer? _poll;
 
   @override
   void initState() {
     super.initState();
-    _future = context.read<HomeRepository>().load();
-    _poll = Timer.periodic(const Duration(seconds: 20), (_) => _silentReload());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _reload();
+      if (!mounted) return;
+      _poll = Timer.periodic(const Duration(seconds: 20), (_) => _silentReload());
+    });
   }
 
   @override
@@ -38,7 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _future = context.read<HomeRepository>().load();
     });
-    await _future;
+    final data = await _future;
+    if (mounted && data != null) {
+      context.read<ShellBadges>().setUnreadNotifications(data.unreadNotifications);
+    }
   }
 
   Future<void> _silentReload() async {
@@ -46,48 +57,57 @@ class _HomeScreenState extends State<HomeScreen> {
     if (ActiveShellBranch.maybeOf(context) != 0) return;
     try {
       final data = await context.read<HomeRepository>().load();
-      if (mounted) setState(() => _future = Future.value(data));
+      if (!mounted) return;
+      context.read<ShellBadges>().setUnreadNotifications(data.unreadNotifications);
+      setState(() => _future = Future.value(data));
     } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
+    final company =
+        context.watch<AuthController>().user?.companyName?.trim();
+    final greeting = (company != null && company.isNotEmpty)
+        ? company
+        : 'Your workspace';
+
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
       body: RefreshIndicator(
         onRefresh: _reload,
-        child: FutureBuilder<HomeOverview>(
+        child: _future == null
+            ? const HomeSkeleton()
+            : FutureBuilder<HomeOverview>(
           future: _future,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const HomeSkeleton();
             }
             if (snapshot.hasError) {
               final message = snapshot.error is ApiException
                   ? (snapshot.error as ApiException).message
                   : snapshot.error.toString();
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
-                children: [
-                  const SizedBox(height: 80),
-                  Text(message, textAlign: TextAlign.center),
-                ],
-              );
+              return AppErrorState(message: message, onRetry: _reload);
             }
 
             final data = snapshot.data!;
+
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
-                const Text(
-                  'Admin overview',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                Text(
+                  greeting,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryDark,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 const Text(
-                  'Last 7 days',
+                  'Last 7 days · tap a metric to open',
                   style: TextStyle(color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 16),
@@ -137,9 +157,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Card(
                     child: Padding(
                       padding: EdgeInsets.all(20),
-                      child: Text(
-                        'No notifications yet.',
-                        style: TextStyle(color: AppColors.textMuted),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.notifications_none,
+                            color: AppColors.primary,
+                            size: 32,
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'No notifications yet',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Order and chat updates will show up here.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.textMuted),
+                          ),
+                        ],
                       ),
                     ),
                   )
@@ -148,15 +184,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Card(
                       child: ListTile(
                         leading: Icon(
-                          n.read ? Icons.notifications_none : Icons.notifications_active,
+                          n.read
+                              ? Icons.notifications_none
+                              : Icons.notifications_active,
                           color: AppColors.primary,
                         ),
-                        title: Text(n.title),
-                        subtitle: Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        title: Text(
+                          n.title,
+                          style: TextStyle(
+                            fontWeight:
+                                n.read ? FontWeight.w500 : FontWeight.w700,
+                          ),
+                        ),
+                        subtitle: Text(
+                          n.body,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         onTap: () async {
                           if (!n.read) {
                             try {
-                              await context.read<HomeRepository>().markNotificationRead(n.id);
+                              await context
+                                  .read<HomeRepository>()
+                                  .markNotificationRead(n.id);
                             } catch (_) {}
                           }
                           if (!context.mounted) return;

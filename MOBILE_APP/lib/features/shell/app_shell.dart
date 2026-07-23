@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
+import '../../core/shell/shell_badges.dart';
 import '../../core/theme/app_theme.dart';
 import 'active_shell_branch.dart';
 
@@ -23,6 +24,7 @@ class AppShell extends StatelessWidget {
     final adminOnly =
         context.watch<AuthController>().user?.isPlatformAdminOnly ?? false;
     final loc = GoRouterState.of(context).uri.path;
+    final badges = context.watch<ShellBadges>();
 
     if (adminOnly) {
       final onSettings = loc.startsWith('/more/settings');
@@ -57,29 +59,42 @@ class AppShell extends StatelessWidget {
         bottomNavigationBar: NavigationBar(
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: _onTap,
-          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home, color: AppColors.primary),
+              icon: _BadgeIcon(
+                icon: Icons.home_outlined,
+                count: badges.unreadNotifications,
+              ),
+              selectedIcon: _BadgeIcon(
+                icon: Icons.home,
+                count: badges.unreadNotifications,
+                selected: true,
+              ),
               label: 'Home',
             ),
             NavigationDestination(
-              icon: Icon(Icons.chat_bubble_outline),
-              selectedIcon: Icon(Icons.chat_bubble, color: AppColors.primary),
+              icon: _BadgeIcon(
+                icon: Icons.chat_bubble_outline,
+                count: badges.unreadChats,
+              ),
+              selectedIcon: _BadgeIcon(
+                icon: Icons.chat_bubble,
+                count: badges.unreadChats,
+                selected: true,
+              ),
               label: 'Chats',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.people_outline),
               selectedIcon: Icon(Icons.people, color: AppColors.primary),
               label: 'Contacts',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.receipt_long_outlined),
               selectedIcon: Icon(Icons.receipt_long, color: AppColors.primary),
               label: 'Orders',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.menu),
               selectedIcon: Icon(Icons.menu_open, color: AppColors.primary),
               label: 'More',
@@ -87,6 +102,33 @@ class AppShell extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BadgeIcon extends StatelessWidget {
+  const _BadgeIcon({
+    required this.icon,
+    required this.count,
+    this.selected = false,
+  });
+
+  final IconData icon;
+  final int count;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Icon(
+      icon,
+      color: selected ? AppColors.primary : null,
+    );
+    if (count <= 0) return child;
+
+    final label = count > 99 ? '99+' : '$count';
+    return Badge(
+      label: Text(label, style: const TextStyle(fontSize: 10)),
+      child: child,
     );
   }
 }
