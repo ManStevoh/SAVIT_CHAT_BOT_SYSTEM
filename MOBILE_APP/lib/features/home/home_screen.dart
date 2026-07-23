@@ -25,11 +25,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<HomeOverview>? _future;
   Timer? _poll;
 
+  bool get _isAdminOnly =>
+      context.read<AuthController>().user?.isPlatformAdminOnly ?? false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
+      if (!mounted || _isAdminOnly) return;
       await _reload();
       if (!mounted) return;
       _poll = Timer.periodic(const Duration(seconds: 20), (_) => _silentReload());
@@ -53,13 +56,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _silentReload() async {
-    if (!mounted) return;
-    if (ActiveShellBranch.maybeOf(context) != 0) return;
+    if (!mounted || _isAdminOnly) return;
+    final onHome = ActiveShellBranch.maybeOf(context) == 0;
     try {
       final data = await context.read<HomeRepository>().load();
       if (!mounted) return;
       context.read<ShellBadges>().setUnreadNotifications(data.unreadNotifications);
-      setState(() => _future = Future.value(data));
+      if (onHome) {
+        setState(() => _future = Future.value(data));
+      }
     } catch (_) {}
   }
 
@@ -133,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _MetricCard(
                       label: 'Revenue',
                       value: data.totalRevenue.toStringAsFixed(0),
-                      onTap: () => context.go('/more/growth'),
+                      onTap: () => context.go('/orders'),
                     ),
                   ],
                 ),
@@ -203,6 +208,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         onTap: () async {
                           if (!n.read) {
+                            context
+                                .read<ShellBadges>()
+                                .decrementUnreadNotifications();
                             try {
                               await context
                                   .read<HomeRepository>()
@@ -211,7 +219,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           }
                           if (!context.mounted) return;
                           if (n.chatId != null) {
-                            context.go('/chats/${n.chatId}');
+                            context.go(
+                              '/chats/${n.chatId}',
+                              extra: {'name': n.title},
+                            );
                           } else if (n.orderId != null) {
                             await Navigator.of(context).push(
                               MaterialPageRoute<void>(

@@ -1,3 +1,5 @@
+import '../../core/utils/json_utils.dart';
+
 class AdminOverview {
   const AdminOverview({
     required this.totalCompanies,
@@ -135,13 +137,13 @@ class AdminCompany {
   factory AdminCompany.fromJson(Map<String, dynamic> json) {
     return AdminCompany(
       id: '${json['id']}',
-      name: (json['name'] ?? '') as String,
-      email: (json['email'] ?? '') as String,
-      plan: (json['plan'] ?? 'starter') as String,
-      status: (json['status'] ?? 'pending') as String,
+      name: jsonString(json['name']),
+      email: jsonString(json['email']),
+      plan: jsonString(json['plan'], 'starter'),
+      status: jsonString(json['status'], 'pending'),
       totalChats: (json['totalChats'] as num?)?.toInt() ?? 0,
       totalOrders: (json['totalOrders'] as num?)?.toInt() ?? 0,
-      createdAt: (json['createdAt'] ?? '') as String,
+      createdAt: jsonString(json['createdAt']),
       whatsappConnected: json['whatsappConnected'] == true,
     );
   }

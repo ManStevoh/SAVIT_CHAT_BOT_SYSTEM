@@ -101,7 +101,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   }
 
   Future<void> _submit() async {
-    final phone = normalizePhoneDigits(_phone.text);
+    final phone = phoneMergeKey(_phone.text);
     if (phone.isEmpty) {
       setState(() => _error = 'Enter a valid phone number.');
       return;
@@ -116,7 +116,13 @@ class _AddContactScreenState extends State<AddContactScreen> {
             name: _name.text.trim(),
           );
       if (!mounted) return;
-      context.go('/chats/${chat.id}');
+      context.go(
+        '/chats/${chat.id}',
+        extra: {
+          'name': _name.text.trim().isEmpty ? chat.customerName : _name.text.trim(),
+          'phone': phone,
+        },
+      );
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -125,7 +131,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   }
 
   Future<void> _addFromPhone(_PhoneContactEntry entry) async {
-    final phone = normalizePhoneDigits(entry.phone);
+    final phone = phoneMergeKey(entry.phone);
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('This contact has no valid phone number.')),
@@ -139,7 +145,13 @@ class _AddContactScreenState extends State<AddContactScreen> {
             name: entry.name,
           );
       if (!mounted) return;
-      context.go('/chats/${chat.id}');
+      context.go(
+        '/chats/${chat.id}',
+        extra: {
+          'name': entry.name.isEmpty ? chat.customerName : entry.name,
+          'phone': phone,
+        },
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));

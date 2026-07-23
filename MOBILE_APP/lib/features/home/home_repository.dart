@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/utils/json_utils.dart';
 
 class HomeOverview {
   const HomeOverview({
@@ -41,8 +42,8 @@ class AppNotification {
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
       id: '${json['id']}',
-      title: (json['title'] ?? '') as String,
-      body: (json['body'] ?? '') as String,
+      title: jsonString(json['title']),
+      body: jsonString(json['body']),
       read: json['read'] == true,
       chatId: json['chatId']?.toString(),
       orderId: json['orderId']?.toString(),

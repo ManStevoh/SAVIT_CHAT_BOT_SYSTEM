@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
+import '../../core/shell/shell_badges.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_state_views.dart';
 import '../../shared/widgets/customer_avatar.dart';
@@ -44,10 +45,23 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     _customerName = widget.customerName;
     _customerPhone = widget.customerPhone;
     _future = context.read<ChatRepository>().listMessages(widget.chatId);
+    _future.then((_) {
+      if (mounted) _syncUnreadAfterOpen();
+    });
     _poll = Timer.periodic(const Duration(seconds: 8), (_) => _silentReload());
     if (_customerName == null || _customerName!.isEmpty) {
       _resolveCustomer();
     }
+  }
+
+  /// Opening messages clears server unread; refresh the shell badge to match.
+  Future<void> _syncUnreadAfterOpen() async {
+    try {
+      final chats = await context.read<ChatRepository>().listChats();
+      if (!mounted) return;
+      final unread = chats.fold<int>(0, (sum, c) => sum + c.unreadCount);
+      context.read<ShellBadges>().setUnreadChats(unread);
+    } catch (_) {}
   }
 
   @override

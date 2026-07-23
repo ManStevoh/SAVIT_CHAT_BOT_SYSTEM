@@ -1,3 +1,5 @@
+import '../../core/utils/json_utils.dart';
+
 class GrowthSummary {
   const GrowthSummary({
     required this.period,
@@ -29,7 +31,7 @@ class GrowthSummary {
 
   factory GrowthSummary.fromJson(Map<String, dynamic> json) {
     return GrowthSummary(
-      period: (json['period'] ?? '30d') as String,
+      period: jsonString(json['period'], '30d'),
       leads: (json['leads'] as num?)?.toInt() ?? 0,
       whatsappStarts: (json['whatsappStarts'] as num?)?.toInt() ?? 0,
       clicks: (json['clicks'] as num?)?.toInt() ?? 0,
@@ -60,7 +62,7 @@ class PlatformBreakdown {
 
   factory PlatformBreakdown.fromJson(Map<String, dynamic> json) {
     return PlatformBreakdown(
-      platform: (json['platform'] ?? 'unknown') as String,
+      platform: jsonString(json['platform'], 'unknown'),
       orders: (json['orders'] as num?)?.toInt() ?? 0,
       revenue: (json['revenue'] as num?)?.toDouble() ?? 0,
       leads: (json['leads'] as num?)?.toInt() ?? 0,
@@ -98,8 +100,8 @@ class TopPost {
   factory TopPost.fromJson(Map<String, dynamic> json) {
     return TopPost(
       id: '${json['id']}',
-      title: (json['title'] ?? 'Untitled post') as String,
-      platform: (json['platform'] ?? 'unknown') as String,
+      title: jsonString(json['title'], 'Untitled post'),
+      platform: jsonString(json['platform'], 'unknown'),
       reach: (json['reach'] as num?)?.toInt() ?? 0,
       clicks: (json['clicks'] as num?)?.toInt() ?? 0,
       leads: (json['leads'] as num?)?.toInt() ?? 0,
@@ -155,7 +157,7 @@ class GrowthCelebration {
   factory GrowthCelebration.fromJson(Map<String, dynamic> json) {
     return GrowthCelebration(
       showHighlight: json['showHighlight'] == true,
-      message: (json['message'] ?? '') as String,
+      message: jsonString(json['message']),
       firstAttributedSaleAt: json['firstAttributedSaleAt']?.toString(),
     );
   }

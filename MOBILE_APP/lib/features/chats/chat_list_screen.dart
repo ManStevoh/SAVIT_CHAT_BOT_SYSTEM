@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/shell/shell_badges.dart';
 import '../../core/theme/app_theme.dart';
@@ -30,12 +31,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Timer? _poll;
   Timer? _searchDebounce;
 
+  bool get _isAdminOnly =>
+      context.read<AuthController>().user?.isPlatformAdminOnly ?? false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() => _future = _load());
+      if (!mounted || _isAdminOnly) return;
+      setState(() => _future = _loadForUi());
+      _future!.then((chats) {
+        if (mounted) _refreshUnreadBadge();
+      });
       _poll = Timer.periodic(const Duration(seconds: 12), (_) => _silentReload());
     });
   }
@@ -48,30 +55,41 @@ class _ChatListScreenState extends State<ChatListScreen> {
     super.dispose();
   }
 
-  Future<List<ChatSummary>> _load() {
+  Future<List<ChatSummary>> _loadForUi() {
     return context.read<ChatRepository>().listChats(
           search: _search.text.trim().isEmpty ? null : _search.text.trim(),
         );
   }
 
-  void _publishUnreadBadge(List<ChatSummary> chats) {
-    final unread = chats.fold<int>(0, (sum, c) => sum + c.unreadCount);
-    context.read<ShellBadges>().setUnreadChats(unread);
+  Future<void> _refreshUnreadBadge() async {
+    if (!mounted || _isAdminOnly) return;
+    try {
+      final chats = await context.read<ChatRepository>().listChats();
+      if (!mounted) return;
+      final unread = chats.fold<int>(0, (sum, c) => sum + c.unreadCount);
+      context.read<ShellBadges>().setUnreadChats(unread);
+    } catch (_) {
+      // Keep last badge on background failures.
+    }
   }
 
   Future<void> _reload() async {
-    setState(() => _future = _load());
-    final chats = await _future;
-    if (mounted && chats != null) _publishUnreadBadge(chats);
+    setState(() => _future = _loadForUi());
+    await _future;
+    if (mounted) await _refreshUnreadBadge();
   }
 
   Future<void> _silentReload() async {
-    if (!mounted || _future == null) return;
-    if (ActiveShellBranch.maybeOf(context) != 1) return;
+    if (!mounted || _future == null || _isAdminOnly) return;
+    final onChatsTab = ActiveShellBranch.maybeOf(context) == 1;
+
+    // Always refresh the nav badge from the unfiltered list.
+    await _refreshUnreadBadge();
+    if (!mounted || !onChatsTab) return;
+
     try {
-      final chats = await _load();
+      final chats = await _loadForUi();
       if (mounted) {
-        _publishUnreadBadge(chats);
         setState(() => _future = Future.value(chats));
       }
     } catch (_) {
@@ -82,7 +100,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
   void _onSearchChanged(String _) {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 350), () {
-      if (mounted) _reload();
+      if (!mounted) return;
+      setState(() => _future = _loadForUi());
+      // Do not publish badge from search results.
     });
   }
 
@@ -94,6 +114,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   void _openChat(ChatSummary item) {
+    if (item.unreadCount > 0) {
+      context.read<ShellBadges>().adjustUnreadChats(-item.unreadCount);
+      // Optimistically clear unread in the current list snapshot.
+      _future?.then((chats) {
+        if (!mounted) return;
+        final next = chats
+            .map(
+              (c) => c.id == item.id
+                  ? ChatSummary(
+                      id: c.id,
+                      customerName: c.customerName,
+                      customerPhone: c.customerPhone,
+                      lastMessage: c.lastMessage,
+                      lastMessageTime: c.lastMessageTime,
+                      unreadCount: 0,
+                      status: c.status,
+                    )
+                  : c,
+            )
+            .toList();
+        setState(() => _future = Future.value(next));
+      });
+    }
     context.go(
       '/chats/${item.id}',
       extra: {

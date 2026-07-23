@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import 'order_detail_screen.dart' show OrderDetailScreen;
@@ -26,7 +27,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   void initState() {
     super.initState();
-    _reload();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final adminOnly =
+          context.read<AuthController>().user?.isPlatformAdminOnly ?? false;
+      if (adminOnly) return;
+      _reload();
+    });
   }
 
   Future<void> _reload() async {

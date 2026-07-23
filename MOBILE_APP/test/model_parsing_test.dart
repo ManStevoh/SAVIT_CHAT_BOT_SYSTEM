@@ -69,6 +69,33 @@ void main() {
     expect(normalizePhoneDigits('(0700) 111 222'), '0700111222');
   });
 
+  test('phoneMergeKey unifies local and international Kenya numbers', () {
+    expect(phoneMergeKey('0700111222'), '254700111222');
+    expect(phoneMergeKey('+254 700 111 222'), '254700111222');
+    expect(phoneMergeKey('700111222'), '254700111222');
+    expect(phoneMergeKey('00254700111222'), '254700111222');
+  });
+
+  test('Product and notification tolerate non-string JSON values', () {
+    final product = Product.fromJson({
+      'id': 5,
+      'name': 42,
+      'description': null,
+      'price': 99.9,
+      'category': true,
+      'image': null,
+      'stock': 4,
+      'status': 'active',
+      'createdAt': 2026,
+      'images': [],
+      'variants': [],
+    });
+    expect(product.name, '42');
+    expect(product.description, '');
+    expect(product.category, 'true');
+    expect(product.price, 99.9);
+  });
+
   test('Order and Product and Faq parse list payloads', () {
     final order = Order.fromJson({
       'id': '1',

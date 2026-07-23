@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/phone_utils.dart';
 import '../../shared/widgets/app_state_views.dart';
@@ -26,6 +27,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final adminOnly =
+          context.read<AuthController>().user?.isPlatformAdminOnly ?? false;
+      if (adminOnly) return;
       setState(() => _future = _load());
     });
   }
@@ -64,7 +68,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     final byPhone = <String, ContactDirectoryItem>{};
 
     for (final chat in chats) {
-      final phone = normalizePhoneDigits(chat.customerPhone);
+      final phone = phoneMergeKey(chat.customerPhone);
       if (phone.isEmpty) continue;
       byPhone[phone] = ContactDirectoryItem(
         name: chat.customerName,
@@ -75,7 +79,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     }
 
     for (final customer in customers) {
-      final phone = normalizePhoneDigits(customer.phone);
+      final phone = phoneMergeKey(customer.phone);
       if (phone.isEmpty) continue;
       final existing = byPhone[phone];
       if (existing != null) {

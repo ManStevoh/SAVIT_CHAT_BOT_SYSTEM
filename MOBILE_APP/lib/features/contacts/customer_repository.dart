@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/utils/json_utils.dart';
 
 class CustomerContact {
   const CustomerContact({
@@ -20,11 +21,11 @@ class CustomerContact {
 
   factory CustomerContact.fromJson(Map<String, dynamic> json) {
     return CustomerContact(
-      name: (json['name'] ?? 'Customer') as String,
-      phone: (json['phone'] ?? '') as String,
+      name: jsonString(json['name'], 'Customer'),
+      phone: jsonString(json['phone']),
       totalOrders: (json['totalOrders'] as num?)?.toInt() ?? 0,
       totalSpent: (json['totalSpent'] as num?)?.toDouble() ?? 0,
-      lastOrderDate: (json['lastOrderDate'] ?? '') as String,
+      lastOrderDate: jsonString(json['lastOrderDate']),
     );
   }
 }

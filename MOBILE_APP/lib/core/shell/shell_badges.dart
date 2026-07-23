@@ -21,4 +21,14 @@ class ShellBadges extends ChangeNotifier {
     _unreadNotifications = next;
     notifyListeners();
   }
+
+  void decrementUnreadNotifications([int by = 1]) {
+    if (by <= 0) return;
+    setUnreadNotifications(_unreadNotifications - by);
+  }
+
+  void adjustUnreadChats(int delta) {
+    if (delta == 0) return;
+    setUnreadChats(_unreadChats + delta);
+  }
 }

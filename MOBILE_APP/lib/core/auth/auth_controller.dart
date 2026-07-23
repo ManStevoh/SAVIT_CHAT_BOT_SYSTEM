@@ -40,7 +40,8 @@ class AuthController extends ChangeNotifier {
         _user = null;
       }
     }
-    if (_token != null && _token!.isNotEmpty && _user == null) {
+    final hasToken = _token != null && _token!.isNotEmpty;
+    if ((hasToken && _user == null) || (!hasToken && _user != null)) {
       await clearSession();
     }
     _ready = true;
@@ -53,6 +54,8 @@ class AuthController extends ChangeNotifier {
     await _write(_tokenKey, token);
     if (user != null) {
       await _write(_userKey, jsonEncode(user.toJson()));
+    } else {
+      await _delete(_userKey);
     }
     notifyListeners();
   }

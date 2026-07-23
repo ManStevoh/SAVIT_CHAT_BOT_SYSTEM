@@ -1,3 +1,5 @@
+import '../../core/utils/json_utils.dart';
+
 class Product {
   const Product({
     required this.id,
@@ -33,14 +35,14 @@ class Product {
 
     return Product(
       id: '${json['id']}',
-      name: (json['name'] ?? '') as String,
-      description: (json['description'] ?? '') as String,
+      name: jsonString(json['name']),
+      description: jsonString(json['description']),
       price: (json['price'] as num?)?.toDouble() ?? 0,
-      category: (json['category'] ?? '') as String,
-      image: json['image'] as String?,
+      category: jsonString(json['category']),
+      image: jsonStringOrNull(json['image']),
       stock: (json['stock'] as num?)?.toInt() ?? 0,
-      status: (json['status'] ?? 'active') as String,
-      createdAt: (json['createdAt'] ?? '') as String,
+      status: jsonString(json['status'], 'active'),
+      createdAt: jsonString(json['createdAt']),
       images: imagesRaw is List
           ? imagesRaw
               .whereType<Map>()
@@ -80,8 +82,8 @@ class ProductImage {
   factory ProductImage.fromJson(Map<String, dynamic> json) {
     return ProductImage(
       id: '${json['id']}',
-      url: (json['url'] ?? '') as String,
-      altText: json['altText'] as String?,
+      url: jsonString(json['url']),
+      altText: jsonStringOrNull(json['altText']),
       isPrimary: json['isPrimary'] == true,
     );
   }
@@ -107,10 +109,10 @@ class ProductVariant {
   factory ProductVariant.fromJson(Map<String, dynamic> json) {
     return ProductVariant(
       id: '${json['id']}',
-      label: (json['label'] ?? '') as String,
+      label: jsonString(json['label']),
       price: (json['price'] as num?)?.toDouble() ?? 0,
       stock: (json['stock'] as num?)?.toInt() ?? 0,
-      status: (json['status'] ?? 'active') as String,
+      status: jsonString(json['status'], 'active'),
     );
   }
 }
