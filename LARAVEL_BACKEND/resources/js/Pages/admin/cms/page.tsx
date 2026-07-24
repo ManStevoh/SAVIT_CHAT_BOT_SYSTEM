@@ -33,11 +33,13 @@ function Field({
   value,
   onChange,
   multiline = false,
+  hint,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   multiline?: boolean
+  hint?: string
 }) {
   return (
     <div className="space-y-1.5">
@@ -47,6 +49,7 @@ function Field({
       ) : (
         <Input value={value} onChange={(e) => onChange(e.target.value)} className="text-sm" />
       )}
+      {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
   )
 }
@@ -55,10 +58,14 @@ function ImageField({
   label,
   value,
   onChange,
+  altValue,
+  onAltChange,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
+  altValue?: string
+  onAltChange?: (v: string) => void
 }) {
   const { toast } = useToast()
   const [uploading, setUploading] = useState(false)
@@ -66,9 +73,20 @@ function ImageField({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const maxBytes = 10 * 1024 * 1024
+    if (file.size > maxBytes) {
+      toast({
+        title: "Image too large",
+        description: "Max 10 MB. Compress the image or export a smaller JPEG/WebP, then try again.",
+        variant: "destructive",
+      })
+      e.target.value = ""
+      return
+    }
     setUploading(true)
     const res = await uploadCmsImage(file)
     setUploading(false)
+    e.target.value = ""
     if (res.success && res.url) {
       onChange(res.url)
       toast({ title: "Image uploaded" })
@@ -78,7 +96,7 @@ function ImageField({
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 sm:col-span-2">
       <Label className="text-xs">{label}</Label>
       <div className="flex gap-2">
         <Input value={value} onChange={(e) => onChange(e.target.value)} className="text-sm" placeholder="/images/..." />
@@ -89,7 +107,15 @@ function ImageField({
           </label>
         </Button>
       </div>
-      {value && <img src={value} alt="" className="mt-2 h-20 rounded border object-cover" />}
+      {onAltChange ? (
+        <Input
+          value={altValue ?? ""}
+          onChange={(e) => onAltChange(e.target.value)}
+          className="text-sm"
+          placeholder="Image alt text (SEO / accessibility)"
+        />
+      ) : null}
+      {value && <img src={value} alt={altValue || ""} className="mt-2 h-20 rounded border object-cover" />}
     </div>
   )
 }
@@ -157,7 +183,13 @@ function SectionEditor({
     if (key === "footer") {
       return (
         <div className="space-y-4">
-          <Field label="Copyright" value={str("copyright")} onChange={(v) => set("copyright", v)} multiline />
+          <Field
+            label="Copyright"
+            value={str("copyright")}
+            onChange={(v) => set("copyright", v)}
+            multiline
+            hint="Example: 2026 © Essem Digital Innovation Limited. RelayIQ is a product of Essem Digital Innovation Limited. All rights reserved."
+          />
           <LinkListEditor
             label="Site links"
             links={(content.navLinks as CmsLink[]) ?? []}
@@ -173,6 +205,49 @@ function SectionEditor({
             links={(content.legalLinks as CmsLink[]) ?? []}
             onChange={(links) => set("legalLinks", links)}
           />
+
+          <div className="rounded-lg border border-border p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">Mobile app section</p>
+                <p className="text-xs text-muted-foreground">
+                  Show Google Play / App Store links in the site footer. Turn off until your apps are live.
+                </p>
+              </div>
+              <Switch
+                checked={content.showMobileApp === true}
+                onCheckedChange={(v) => set("showMobileApp", v)}
+              />
+            </div>
+            {content.showMobileApp === true && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="Section title"
+                  value={str("mobileAppTitle")}
+                  onChange={(v) => set("mobileAppTitle", v)}
+                  hint='Default: "Get the mobile app"'
+                />
+                <Field
+                  label="Short description"
+                  value={str("mobileAppDescription")}
+                  onChange={(v) => set("mobileAppDescription", v)}
+                  multiline
+                />
+                <Field
+                  label="Google Play URL"
+                  value={str("playStoreUrl")}
+                  onChange={(v) => set("playStoreUrl", v)}
+                  hint="Leave empty to hide the Play badge (shows Coming soon if both empty)."
+                />
+                <Field
+                  label="App Store URL"
+                  value={str("appStoreUrl")}
+                  onChange={(v) => set("appStoreUrl", v)}
+                  hint="Leave empty to hide the App Store badge."
+                />
+              </div>
+            )}
+          </div>
         </div>
       )
     }
@@ -180,8 +255,13 @@ function SectionEditor({
     if (key === "auth_shell") {
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          <ImageField label="Auth illustration" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
-          <Field label="Image alt text" value={str("imageAlt")} onChange={(v) => set("imageAlt", v)} />
+          <ImageField
+            label="Auth illustration"
+            value={str("imageUrl")}
+            onChange={(v) => set("imageUrl", v)}
+            altValue={str("imageAlt")}
+            onAltChange={(v) => set("imageAlt", v)}
+          />
         </div>
       )
     }
@@ -191,7 +271,13 @@ function SectionEditor({
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
           <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
-          <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          <ImageField
+            label="Image"
+            value={str("imageUrl")}
+            onChange={(v) => set("imageUrl", v)}
+            altValue={str("imageAlt")}
+            onAltChange={(v) => set("imageAlt", v)}
+          />
           <Field label="Submit button text" value={str("submitText")} onChange={(v) => set("submitText", v)} />
           <Field label="Success message" value={str("successMessage")} onChange={(v) => set("successMessage", v)} />
         </div>
@@ -224,7 +310,13 @@ function SectionEditor({
               </div>
             </>
           )}
-          <ImageField label="Image (fallback)" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          <ImageField
+            label="Image (fallback)"
+            value={str("imageUrl")}
+            onChange={(v) => set("imageUrl", v)}
+            altValue={str("imageAlt")}
+            onAltChange={(v) => set("imageAlt", v)}
+          />
         </div>
       )
     }
@@ -248,19 +340,88 @@ function SectionEditor({
       )
     }
 
-    if (key === "intro_card" || key === "cta") {
+    if (key === "intro_card" || key === "cta" || key === "growth_engine") {
       return (
         <div className="grid gap-3 sm:grid-cols-2">
+          {key === "growth_engine" && (
+            <Field label="Label" value={str("label")} onChange={(v) => set("label", v)} />
+          )}
           <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
           <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
           <Field label="Button text" value={str("ctaText")} onChange={(v) => set("ctaText", v)} />
           <Field label="Button link" value={str("ctaHref")} onChange={(v) => set("ctaHref", v)} />
-          {key === "cta" && slug === "home" && (
-            <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          {key === "growth_engine" && (
+            <Field
+              label="Bullet points (one per line)"
+              value={((content.points as string[]) ?? []).join("\n")}
+              onChange={(v) =>
+                set(
+                  "points",
+                  v.split("\n").map((line) => line.trim()).filter(Boolean)
+                )
+              }
+              multiline
+            />
           )}
-          {key === "intro_card" && (
-            <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
-          )}
+          {(key === "cta" && slug === "home") || key === "intro_card" || key === "growth_engine" ? (
+            <ImageField
+              label="Image"
+              value={str("imageUrl")}
+              onChange={(v) => set("imageUrl", v)}
+              altValue={str("imageAlt")}
+              onAltChange={(v) => set("imageAlt", v)}
+            />
+          ) : null}
+        </div>
+      )
+    }
+
+    if (key === "capabilities") {
+      const items = (content.items as Array<{ title: string; description?: string; icon?: string }>) ?? []
+      return (
+        <div className="space-y-3">
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          {items.map((item, i) => (
+            <div key={i} className="rounded border p-3 space-y-2">
+              <Field
+                label={`Item ${i + 1} icon (bot, package, payment, booking, growth, inbox, mobile, sparkles)`}
+                value={item.icon ?? ""}
+                onChange={(v) => {
+                  const next = [...items]
+                  next[i] = { ...next[i], icon: v }
+                  set("items", next)
+                }}
+              />
+              <Field
+                label={`Item ${i + 1} title`}
+                value={item.title}
+                onChange={(v) => {
+                  const next = [...items]
+                  next[i] = { ...next[i], title: v }
+                  set("items", next)
+                }}
+              />
+              <Field
+                label={`Item ${i + 1} description`}
+                value={item.description ?? ""}
+                onChange={(v) => {
+                  const next = [...items]
+                  next[i] = { ...next[i], description: v }
+                  set("items", next)
+                }}
+                multiline
+              />
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("items", [...items, { title: "New capability", description: "", icon: "sparkles" }])}
+          >
+            Add capability
+          </Button>
         </div>
       )
     }
@@ -274,7 +435,13 @@ function SectionEditor({
           <Field label="Button text" value={str("ctaText")} onChange={(v) => set("ctaText", v)} />
           <Field label="Button link" value={str("ctaHref")} onChange={(v) => set("ctaHref", v)} />
           <Field label="Image position (left/right)" value={str("imagePosition")} onChange={(v) => set("imagePosition", v)} />
-          <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          <ImageField
+            label="Image"
+            value={str("imageUrl")}
+            onChange={(v) => set("imageUrl", v)}
+            altValue={str("imageAlt")}
+            onAltChange={(v) => set("imageAlt", v)}
+          />
         </div>
       )
     }
@@ -287,7 +454,13 @@ function SectionEditor({
           <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} />
           <Field label="Button text" value={str("ctaText")} onChange={(v) => set("ctaText", v)} />
           <Field label="Button link" value={str("ctaHref")} onChange={(v) => set("ctaHref", v)} />
-          <ImageField label="Image" value={str("imageUrl")} onChange={(v) => set("imageUrl", v)} />
+          <ImageField
+            label="Image"
+            value={str("imageUrl")}
+            onChange={(v) => set("imageUrl", v)}
+            altValue={str("imageAlt")}
+            onAltChange={(v) => set("imageAlt", v)}
+          />
           {steps.map((step, i) => (
             <div key={i} className="rounded border p-3 space-y-2">
               <Field
@@ -353,12 +526,12 @@ function SectionEditor({
 
     if (key === "efficiency") {
       return (
-        <Field
-          label="Title (use new lines for stacked text)"
-          value={str("title")}
-          onChange={(v) => set("title", v)}
-          multiline
-        />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} multiline />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          <Field label="CTA text" value={str("ctaText")} onChange={(v) => set("ctaText", v)} />
+          <Field label="CTA link" value={str("ctaHref")} onChange={(v) => set("ctaHref", v)} />
+        </div>
       )
     }
 
@@ -557,19 +730,52 @@ function PageEditor({ slug }: { slug: string }) {
   const { toast } = useToast()
   const [metaTitle, setMetaTitle] = useState("")
   const [metaDescription, setMetaDescription] = useState("")
+  const [ogImage, setOgImage] = useState("")
+  const [ogTitle, setOgTitle] = useState("")
+  const [ogDescription, setOgDescription] = useState("")
+  const [canonicalUrl, setCanonicalUrl] = useState("")
+  const [robots, setRobots] = useState("index, follow")
+  const [isPublished, setIsPublished] = useState(true)
 
   useEffect(() => {
     if (data) {
       setMetaTitle(data.page.metaTitle ?? "")
       setMetaDescription(data.page.metaDescription ?? "")
+      setOgImage(data.page.ogImage ?? "")
+      setOgTitle(data.page.ogTitle ?? "")
+      setOgDescription(data.page.ogDescription ?? "")
+      setCanonicalUrl(data.page.canonicalUrl ?? "")
+      setRobots(data.page.robots ?? "index, follow")
+      setIsPublished(data.page.isPublished ?? true)
     }
-  }, [data?.page.id, data?.page.metaTitle, data?.page.metaDescription])
+  }, [
+    data?.page.id,
+    data?.page.metaTitle,
+    data?.page.metaDescription,
+    data?.page.ogImage,
+    data?.page.ogTitle,
+    data?.page.ogDescription,
+    data?.page.canonicalUrl,
+    data?.page.robots,
+    data?.page.isPublished,
+  ])
 
   const saveMeta = async () => {
-    const res = await updateCmsPage(slug, { metaTitle, metaDescription })
+    const res = await updateCmsPage(slug, {
+      metaTitle,
+      metaDescription,
+      ogImage: ogImage || null,
+      ogTitle: ogTitle || null,
+      ogDescription: ogDescription || null,
+      canonicalUrl: canonicalUrl || null,
+      robots: robots || null,
+      isPublished,
+    })
     if (res.success) {
       toast({ title: "Page SEO saved" })
       mutate()
+    } else {
+      toast({ title: res.message ?? "Save failed", variant: "destructive" })
     }
   }
 
@@ -587,10 +793,31 @@ function PageEditor({ slug }: { slug: string }) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Page SEO</CardTitle>
+            <CardDescription>
+              Search titles, descriptions, social share image, and indexing controls for this page.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Published</p>
+                <p className="text-xs text-muted-foreground">Unpublished pages are hidden from the public site and sitemap.</p>
+              </div>
+              <Switch checked={isPublished} onCheckedChange={setIsPublished} />
+            </div>
             <Field label="Meta title" value={metaTitle} onChange={setMetaTitle} />
+            <p className="text-[11px] text-muted-foreground -mt-2">{metaTitle.length}/60 recommended</p>
             <Field label="Meta description" value={metaDescription} onChange={setMetaDescription} multiline />
+            <p className="text-[11px] text-muted-foreground -mt-2">{metaDescription.length}/155 recommended</p>
+            <Field label="OG / social title (optional)" value={ogTitle} onChange={setOgTitle} />
+            <Field label="OG / social description (optional)" value={ogDescription} onChange={setOgDescription} multiline />
+            <ImageField label="SEO / Open Graph image" value={ogImage} onChange={setOgImage} />
+            <p className="text-[11px] text-muted-foreground -mt-1">
+              Recommended 1200×630px. Used when sharing on WhatsApp, Facebook, X, LinkedIn.
+            </p>
+            <Field label="Canonical URL (optional)" value={canonicalUrl} onChange={setCanonicalUrl} />
+            <Field label="Robots" value={robots} onChange={setRobots} />
+            <p className="text-[11px] text-muted-foreground -mt-2">Examples: index, follow · noindex, nofollow</p>
             <div className="flex gap-2">
               <Button size="sm" onClick={saveMeta}>
                 Save SEO
@@ -628,7 +855,7 @@ export default function AdminCmsPage() {
           Website CMS
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage Lando-style public pages: content, images, and section visibility.
+          Manage public pages: SEO write-ups, share images, content sections, and visibility.
         </p>
       </div>
 

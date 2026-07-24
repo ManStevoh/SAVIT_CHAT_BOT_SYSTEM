@@ -42,6 +42,10 @@ class UserController extends Controller
             'status' => $u->status ?? 'active',
             'lastLogin' => $u->last_login_at?->toIso8601String() ?? '',
             'createdAt' => $u->created_at->format('Y-m-d'),
+            'termsAcceptedAt' => $u->terms_accepted_at?->toIso8601String(),
+            'marketingConsent' => (bool) $u->marketing_consent,
+            'marketingConsentAt' => $u->marketing_consent_at?->toIso8601String(),
+            'selectedPlanId' => $u->selected_plan_id ? (string) $u->selected_plan_id : null,
         ]);
 
         return response()->json($data->values()->all());

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/branding/app_branding.dart';
+import '../../core/branding/branding_copy.dart';
 import '../../core/branding/branding_repository.dart';
 import '../../core/onboarding/onboarding_controller.dart';
 import '../../core/theme/app_theme.dart';
@@ -98,8 +99,17 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Every Conversation. Smarter.',
+                AppBrandingCopy.tagline,
                 style: GoogleFonts.manrope(color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                AppBrandingCopy.poweredBy,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),

@@ -34,9 +34,34 @@ function LoginPageContent() {
   }, [searchParams])
 
   const planId = searchParams.get('plan')
-  const subscribeRedirect = planId ? `/dashboard/subscription?subscribe=${planId}` : null
-  const verifiedParam = searchParams.get('verified') === '1'
+  const forcePay = searchParams.get('pay') === '1'
+  const trialParam = searchParams.get('trial') === '1'
   const registeredParam = searchParams.get('registered') === '1'
+  const verifiedParam = searchParams.get('verified') === '1'
+  const registerHref = planId ? `/register?plan=${encodeURIComponent(planId)}` : '/register'
+
+  const resolvePostLoginPath = (role: string): string => {
+    if (redirectTo) return redirectTo
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('post_login_path')
+      if (stored && stored.startsWith('/')) {
+        sessionStorage.removeItem('post_login_path')
+        return stored
+      }
+    }
+    // After signup with a trial: welcome dashboard (do not force payment).
+    if (registeredParam && trialParam && !forcePay) {
+      return '/dashboard?trial_started=1'
+    }
+    // Existing user clicked a plan on Pricing, or signup for a no-trial paid plan.
+    if (planId && (forcePay || !registeredParam)) {
+      return `/dashboard/subscription?subscribe=${encodeURIComponent(planId)}`
+    }
+    if (registeredParam && planId) {
+      return '/dashboard?trial_started=1'
+    }
+    return role === 'admin' ? '/admin' : '/dashboard'
+  }
 
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -126,11 +151,7 @@ function LoginPageContent() {
         }
 
         setAuthCookie(result.user.role, !!formData.rememberMe)
-        const target =
-          redirectTo ||
-          subscribeRedirect ||
-          (result.user.role === 'admin' ? '/admin' : '/dashboard')
-        router.push(target)
+        router.push(resolvePostLoginPath(result.user.role))
       } else {
         const code = (result as { code?: string }).code
         setEmailNotVerified(code === 'email_not_verified')
@@ -144,7 +165,7 @@ function LoginPageContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [formData, redirectTo, subscribeRedirect, router])
+  }, [formData, redirectTo, planId, forcePay, trialParam, registeredParam, router])
 
   return (
     <div className="w-full">
@@ -158,7 +179,9 @@ function LoginPageContent() {
         <LandoAuthSuccess>
           {branding.requireEmailVerification
             ? 'Account created. Please check your email to verify your account, then sign in below.'
-            : 'Account created successfully. You can sign in below.'}
+            : trialParam
+              ? 'Account created — your free trial has started. Sign in to open your dashboard.'
+              : 'Account created successfully. You can sign in below.'}
         </LandoAuthSuccess>
       )}
 
@@ -247,7 +270,7 @@ function LoginPageContent() {
 
       <p className="mt-6 text-center text-sm text-gray-600">
         {"Don't have an account? "}
-        <Link href="/register" className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign up</Link>
+        <Link href={registerHref} className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign up</Link>
       </p>
     </div>
   )

@@ -17,9 +17,9 @@ use Illuminate\Support\Facades\Storage;
  */
 class SystemPromptBuilder
 {
-    private const MAX_FAQS_IN_PROMPT = 40;
+    private const MAX_FAQS_IN_PROMPT = 50;
 
-    private const MAX_PRODUCTS_IN_PROMPT = 30;
+    private const MAX_PRODUCTS_IN_PROMPT = 40;
 
     public function __construct(
         private AiLearningConfig $learningConfig,
@@ -42,8 +42,8 @@ class SystemPromptBuilder
         $budget = $this->learningConfig->maxPromptTokens();
 
         $parts = [
-            "You are the WhatsApp assistant for {$name}. You are the primary way customers get help — answer naturally in full sentences, like a knowledgeable team member.",
-            "Tone: {$tone}. Keep replies concise for WhatsApp (usually 2–5 short lines). Plain text only — no markdown, no **bold**, no bullet symbols unless listing products.",
+            "You are the primary AI employee and conversation OS for {$name}. You represent the owner with customers on WhatsApp — fluent, human, confident, and accurate.",
+            "Tone: {$tone}. Write natural full sentences (usually 2–6 short WhatsApp lines). Plain text only — no markdown.",
         ];
 
         if ($replyLanguage !== null && $replyLanguage !== '') {
@@ -52,11 +52,12 @@ class SystemPromptBuilder
         }
 
         $parts = array_merge($parts, [
-            'Use the business profile, knowledge base, and product catalog below as your single source of truth. Synthesize answers in your own words — do not copy-paste robotically.',
-            'If information is missing, say you will confirm with the team. Never invent prices, stock, delivery zones, or policies.',
-            'When customers ask about hours, location, delivery, refunds, or orders, answer from the profile and knowledge base. If they want to buy, guide them: reply "order" or "2" to start, or "prices" / "1" for the numbered catalog.',
-            'Remember conversation context. If they thanked you or said ok, respond briefly and warmly without repeating the whole catalog.',
-            'For product recommendations, reference real items and prices from the catalog only.',
+            'You are NOT a rigid menu bot. Hold a real conversation: greet warmly, ask clarifying questions when needed, remember what they already said, and guide them toward helpful outcomes (answers, purchases, support).',
+            'Use the business profile, knowledge base, product catalog, and learned examples below as your source of truth. Synthesize in your own words — never invent prices, stock, delivery zones, or policies.',
+            'When selling: understand need → recommend real catalog items with reasons → handle objections → clear next step (order, pay, or human). Be persuasive but honest.',
+            'When supporting: use order history and facts; own the problem; offer a path to resolution.',
+            'Remember conversation context. If they thank you or say ok, respond briefly without dumping the catalog.',
+            'Prefer tools when available for live catalog, orders, payments, and memory. Never contradict tool results.',
         ]);
 
         $this->appendBusinessProfile($company, $parts);

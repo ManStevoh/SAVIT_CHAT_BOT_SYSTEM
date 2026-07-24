@@ -44,7 +44,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       asset: 'assets/branding/relaysiq-app-icon.png',
       title: 'Ready for your workspace',
       body:
-          'Sign in with your RelayIQ company account to manage chats, products, FAQs, and growth on the go.',
+          'Sign in with your RelayIQ company account to manage chats, products, FAQs, and growth on the go. RelayIQ is a product of Essem Digital Innovation Limited.',
       accent: Color(0xFF1D4ED8),
     ),
   ];

@@ -1,10 +1,10 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 import { LandoNavbar } from "@/components/lando/navbar"
-import { LandoFooter } from "@/components/lando/footer"
+import { LandoFooter, mobileAppFromFooterContent } from "@/components/lando/footer"
 import { useCmsGlobal } from "@/lib/api-hooks"
+import { BRAND } from "@/lib/branding"
 import type { CmsLink, CmsSection } from "@/components/lando/types"
 
 function getSectionContent(sections: CmsSection[], key: string) {
@@ -17,8 +17,6 @@ export function AuthBranding({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const branding = useAppBranding()
-  const appName = branding.applicationName || "RelayIQ"
   const { data: globalData } = useCmsGlobal()
   const globalSections = globalData?.sections ?? []
   const navbarContent = getSectionContent(globalSections, "navbar")
@@ -54,10 +52,11 @@ export function AuthBranding({
       </div>
 
       <LandoFooter
-        copyright={String(footerContent.copyright ?? `© ${new Date().getFullYear()} ${appName}`)}
+        copyright={String(footerContent.copyright ?? BRAND.copyright())}
         navLinks={(footerContent.navLinks as CmsLink[]) ?? []}
         socialLinks={(footerContent.socialLinks as CmsLink[]) ?? []}
         legalLinks={(footerContent.legalLinks as CmsLink[]) ?? []}
+        mobileApp={mobileAppFromFooterContent(footerContent)}
       />
     </div>
   )

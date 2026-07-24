@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe } from "lucide-react"
+import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe, Cookie } from "lucide-react"
 import {
   getPlatformSettings,
   updatePlatformSettings,
@@ -34,7 +34,7 @@ const timezoneGroups = getTimezoneGroups()
 export default function AdminSettingsPage() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
-  const validTabs = ["general", "appearance", "security", "email", "integrations", "notifications", "landing"] as const
+  const validTabs = ["general", "appearance", "security", "compliance", "email", "integrations", "notifications", "landing"] as const
   const initialTab = validTabs.includes(tabParam as typeof validTabs[number])
     ? (tabParam as typeof validTabs[number])
     : "general"
@@ -45,6 +45,7 @@ export default function AdminSettingsPage() {
   const [savingEmail, setSavingEmail] = useState(false)
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [savingSecurity, setSavingSecurity] = useState(false)
+  const [savingCompliance, setSavingCompliance] = useState(false)
   const [savingIntegrations, setSavingIntegrations] = useState(false)
   const [savingNotifications, setSavingNotifications] = useState(false)
   const [savingLanding, setSavingLanding] = useState(false)
@@ -172,6 +173,35 @@ export default function AdminSettingsPage() {
       toast({ title: "Failed to save security settings", variant: "destructive" })
     } finally {
       setSavingSecurity(false)
+    }
+  }
+
+  const handleSaveCompliance = async () => {
+    if (!settings) return
+    setSavingCompliance(true)
+    try {
+      const res = await updatePlatformSettings({
+        cookieBannerEnabled: settings.cookieBannerEnabled,
+        cookieBannerText: settings.cookieBannerText ?? undefined,
+        cookiePolicyUrl: settings.cookiePolicyUrl ?? undefined,
+        recaptchaEnabled: settings.recaptchaEnabled,
+        recaptchaSiteKey: settings.recaptchaSiteKey ?? undefined,
+        recaptchaSecretKey:
+          settings.recaptchaSecretKey && settings.recaptchaSecretKey !== "********"
+            ? settings.recaptchaSecretKey
+            : undefined,
+      })
+      if (res.success) {
+        toast({ title: res.message ?? "Compliance settings saved" })
+        const refreshed = await getPlatformSettings()
+        setSettings(refreshed)
+      } else {
+        toast({ title: res.message ?? "Save failed", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Failed to save compliance settings", variant: "destructive" })
+    } finally {
+      setSavingCompliance(false)
     }
   }
 
@@ -336,6 +366,10 @@ export default function AdminSettingsPage() {
           <TabsTrigger value="security" className="gap-2">
             <Shield className="h-4 w-4" />
             Security
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="gap-2">
+            <Cookie className="h-4 w-4" />
+            Compliance
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
@@ -637,6 +671,104 @@ export default function AdminSettingsPage() {
 
               <Button onClick={handleSaveSecurity} disabled={savingSecurity}>
                 {savingSecurity ? "Saving…" : "Save Security Settings"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="compliance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compliance</CardTitle>
+              <CardDescription>
+                Cookie consent banner and Google reCAPTCHA for public forms. Privacy Policy is managed in Website CMS.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">Cookie banner</p>
+                    <p className="text-sm text-muted-foreground">Show a consent notice on public marketing pages</p>
+                  </div>
+                  <Switch
+                    checked={settings?.cookieBannerEnabled ?? true}
+                    onCheckedChange={(v) => updateSetting("cookieBannerEnabled", v)}
+                  />
+                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="cookieBannerText">Banner text</FieldLabel>
+                    <Textarea
+                      id="cookieBannerText"
+                      rows={3}
+                      value={settings?.cookieBannerText ?? ""}
+                      onChange={(e) => updateSetting("cookieBannerText", e.target.value)}
+                      placeholder="We use cookies to keep you signed in and improve RelayIQ…"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="cookiePolicyUrl">Privacy / cookie policy URL</FieldLabel>
+                    <Input
+                      id="cookiePolicyUrl"
+                      value={settings?.cookiePolicyUrl ?? "/privacy"}
+                      onChange={(e) => updateSetting("cookiePolicyUrl", e.target.value)}
+                      placeholder="/privacy"
+                    />
+                  </Field>
+                </FieldGroup>
+              </div>
+
+              <div className="space-y-4 border-t border-border pt-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">Google reCAPTCHA v2</p>
+                    <p className="text-sm text-muted-foreground">
+                      Protect Sign up and Contact forms. Create keys at{" "}
+                      <a
+                        href="https://www.google.com/recaptcha/admin"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        Google reCAPTCHA Admin
+                      </a>{" "}
+                      (choose “reCAPTCHA v2 → I’m not a robot”).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.recaptchaEnabled ?? false}
+                    onCheckedChange={(v) => updateSetting("recaptchaEnabled", v)}
+                  />
+                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="recaptchaSiteKey">Site key (public)</FieldLabel>
+                    <Input
+                      id="recaptchaSiteKey"
+                      value={settings?.recaptchaSiteKey ?? ""}
+                      onChange={(e) => updateSetting("recaptchaSiteKey", e.target.value)}
+                      placeholder="6Lc…"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="recaptchaSecretKey">Secret key</FieldLabel>
+                    <Input
+                      id="recaptchaSecretKey"
+                      type="password"
+                      value={settings?.recaptchaSecretKey ?? ""}
+                      onChange={(e) => updateSetting("recaptchaSecretKey", e.target.value)}
+                      placeholder={settings?.recaptchaSecretKey === "********" ? "Saved — enter new key to replace" : "Secret key"}
+                    />
+                  </Field>
+                </FieldGroup>
+                <p className="text-xs text-muted-foreground">
+                  Captcha only activates when enabled and both keys are set. Add your domain (and localhost for testing) in Google’s reCAPTCHA console.
+                </p>
+              </div>
+
+              <Button onClick={handleSaveCompliance} disabled={savingCompliance}>
+                {savingCompliance ? "Saving…" : "Save Compliance Settings"}
               </Button>
             </CardContent>
           </Card>

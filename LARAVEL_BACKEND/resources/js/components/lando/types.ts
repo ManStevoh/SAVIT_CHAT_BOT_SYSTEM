@@ -17,6 +17,11 @@ export interface CmsPageData {
     title: string
     metaTitle?: string | null
     metaDescription?: string | null
+    ogImage?: string | null
+    ogTitle?: string | null
+    ogDescription?: string | null
+    canonicalUrl?: string | null
+    robots?: string | null
   }
   sections: CmsSection[]
   testimonials?: Array<{
@@ -46,6 +51,11 @@ export interface AdminCmsPage {
     title: string
     metaTitle?: string | null
     metaDescription?: string | null
+    ogImage?: string | null
+    ogTitle?: string | null
+    ogDescription?: string | null
+    canonicalUrl?: string | null
+    robots?: string | null
     isPublished: boolean
   }
   sections: AdminCmsSection[]

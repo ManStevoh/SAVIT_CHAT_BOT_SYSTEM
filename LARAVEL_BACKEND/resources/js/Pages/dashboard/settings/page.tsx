@@ -119,6 +119,7 @@ export default function SettingsPage() {
   const [waStatus, setWaStatus] = useState<WhatsAppStatus | null>(null)
   const [waLoading, setWaLoading] = useState(false)
   const [waMessage, setWaMessage] = useState<string | null>(null)
+  const [waMessageError, setWaMessageError] = useState(false)
   const [waEmbeddedLoading, setWaEmbeddedLoading] = useState(false)
   const [waManualLoading, setWaManualLoading] = useState(false)
   const [waManualPhoneNumberId, setWaManualPhoneNumberId] = useState("")
@@ -236,20 +237,36 @@ export default function SettingsPage() {
   const handleManualConnect = async (e: React.FormEvent) => {
     e.preventDefault()
     setWaMessage(null)
+    setWaMessageError(false)
     if (waStatus?.platformBillingReady === false) {
       setWaMessage("Platform WhatsApp billing is enabled but not configured. Contact your administrator.")
+      setWaMessageError(true)
+      return
+    }
+    const phoneNumberId = waManualPhoneNumberId.trim()
+    const accessToken = waManualAccessToken.trim()
+    if (!phoneNumberId || !accessToken) {
+      setWaMessage("Phone Number ID and permanent access token are required.")
+      setWaMessageError(true)
+      return
+    }
+    const pin = waManualRegistrationPin.trim()
+    if (pin !== "" && pin.length !== 6) {
+      setWaMessage("Two-step verification PIN must be exactly 6 digits, or leave it blank for a new number.")
+      setWaMessageError(true)
       return
     }
     setWaManualLoading(true)
     try {
       const result = await connectWhatsApp({
-        phoneNumberId: waManualPhoneNumberId.trim(),
-        accessToken: waManualAccessToken.trim(),
+        phoneNumberId,
+        accessToken,
         whatsappBusinessAccountId: waManualWabaId.trim() || undefined,
         displayPhoneNumber: waManualDisplayPhone.trim() || undefined,
-        registrationPin: waManualRegistrationPin.trim() || undefined,
+        registrationPin: pin.length === 6 ? pin : undefined,
       })
       setWaMessage(result.message ?? (result.success ? "WhatsApp connected." : "Connection failed."))
+      setWaMessageError(!result.success)
       if (result.success) {
         setWaManualAccessToken("")
         setWaManualRegistrationPin("")
@@ -258,6 +275,7 @@ export default function SettingsPage() {
       }
     } catch (err) {
       setWaMessage(err instanceof Error ? err.message : "Manual connection failed.")
+      setWaMessageError(true)
     } finally {
       setWaManualLoading(false)
     }
@@ -1045,7 +1063,11 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
-              {waMessage && <p className="text-sm text-muted-foreground">{waMessage}</p>}
+              {waMessage && (
+                <p className={`text-sm ${waMessageError ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                  {waMessage}
+                </p>
+              )}
               {waStatus?.onboardingError && (
                 <p className="text-sm text-destructive">{waStatus.onboardingError}</p>
               )}
@@ -1358,6 +1380,9 @@ export default function SettingsPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-foreground">Agent commerce mode</p>
+                          <p className="text-sm text-muted-foreground">
+                            Tool-using AI for catalog, orders, and FAQ. Included on Growth+ plans (auto-enabled on upgrade).
+                          </p>
                           {agentCommerceEnabled && (
                             <Badge variant="default" className="text-[10px] uppercase tracking-wide">
                               ON

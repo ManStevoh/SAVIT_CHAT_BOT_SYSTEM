@@ -24,7 +24,14 @@ export { apiRequest, apiUrl, resolveBackendMediaUrl } from './api-client'
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 function handleApiError(e: unknown): { success: false; message: string; code?: string } {
-  const err = e as Error & { code?: string }
+  const err = e as Error & { code?: string; responseData?: { message?: string; errors?: Record<string, string[]> } }
+  const data = err?.responseData
+  if (data?.errors && typeof data.errors === 'object') {
+    const first = Object.values(data.errors).flat().find((m) => typeof m === 'string' && m.trim() !== '')
+    if (first) {
+      return { success: false, message: first, code: err?.code }
+    }
+  }
   return {
     success: false,
     message: err instanceof Error ? err.message : 'Request failed',
@@ -50,6 +57,9 @@ export interface RegisterData {
   password: string
   confirmPassword: string
   acceptTerms: boolean
+  marketingConsent?: boolean
+  planId?: string
+  recaptchaToken?: string
 }
 
 export interface ForgotPasswordData {
@@ -106,7 +116,18 @@ export async function login(credentials: LoginCredentials): Promise<{ success: b
  * Register new company
  * Laravel: POST /api/auth/register
  */
-export async function register(data: RegisterData): Promise<{ success: boolean; message?: string }> {
+export async function register(data: RegisterData): Promise<{
+  success: boolean
+  message?: string
+  requireEmailVerification?: boolean
+  trialStarted?: boolean
+  trialDays?: number | null
+  trialPlan?: string | null
+  trialPlanName?: string | null
+  requiresPayment?: boolean
+  selectedPlanId?: string | null
+  postLoginPath?: string | null
+}> {
   if (useMockApi()) {
     await delay(2000)
     if (data.password !== data.confirmPassword) {
@@ -115,10 +136,15 @@ export async function register(data: RegisterData): Promise<{ success: boolean; 
     if (!data.acceptTerms) {
       return { success: false, message: 'You must accept the terms and conditions' }
     }
-    return { success: true, message: 'Registration successful! Please check your email to verify your account.' }
+    return {
+      success: true,
+      message: 'Registration successful! Please check your email to verify your account.',
+      trialStarted: true,
+      trialDays: 14,
+      postLoginPath: '/dashboard?trial_started=1',
+    }
   }
   try {
-    // Laravel's 'confirmed' rule expects password_confirmation; backend also accepts confirmPassword
     const body = {
       companyName: data.companyName,
       name: data.name,
@@ -128,8 +154,10 @@ export async function register(data: RegisterData): Promise<{ success: boolean; 
       password_confirmation: data.confirmPassword,
       confirmPassword: data.confirmPassword,
       acceptTerms: data.acceptTerms,
+      marketingConsent: !!data.marketingConsent,
+      planId: data.planId || undefined,
     }
-    return await apiRequest<{ success: boolean; message?: string }>('/api/auth/register', {
+    return await apiRequest('/api/auth/register', {
       method: 'POST',
       body,
     })
@@ -316,6 +344,7 @@ export interface SendMessageData {
 export interface CreateOrderFromChatData {
   chatId: string
   items: Array<{
+    productId?: number | string
     name: string
     quantity: number
     price: number
@@ -509,8 +538,24 @@ export interface CreateProductData {
   description: string
   price: number
   category: string
+  productType?: 'physical' | 'digital' | 'service'
+  fulfillmentType?: 'shipping' | 'download' | 'link' | 'booking' | 'manual'
+  trackInventory?: boolean
+  requiresDeliveryAddress?: boolean
+  accessUrl?: string
+  serviceBookingUrl?: string
+  fulfillmentInstructions?: string
+  licenseKeyMode?: 'none' | 'auto' | 'pool'
+  licenseKeyPrefix?: string
+  accessExpiresDays?: number | null
+  maxDownloads?: number | null
+  bookable?: boolean
+  bookingDurationMinutes?: number | null
+  licenseKeys?: string
+  clearDigitalFile?: boolean
   stock: number
   image?: File
+  digitalFile?: File
 }
 
 /**
@@ -536,14 +581,29 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
     }
   }
   try {
-    if (data.image) {
+    if (data.image || data.digitalFile) {
       const formData = new FormData()
       formData.append('name', data.name)
       formData.append('description', data.description)
       formData.append('price', String(data.price))
       formData.append('category', data.category)
+      if (data.productType) formData.append('productType', data.productType)
+      if (data.fulfillmentType) formData.append('fulfillmentType', data.fulfillmentType)
+      if (data.trackInventory !== undefined) formData.append('trackInventory', data.trackInventory ? '1' : '0')
+      if (data.requiresDeliveryAddress !== undefined) formData.append('requiresDeliveryAddress', data.requiresDeliveryAddress ? '1' : '0')
+      if (data.accessUrl) formData.append('accessUrl', data.accessUrl)
+      if (data.serviceBookingUrl) formData.append('serviceBookingUrl', data.serviceBookingUrl)
+      if (data.fulfillmentInstructions) formData.append('fulfillmentInstructions', data.fulfillmentInstructions)
+      if (data.licenseKeyMode) formData.append('licenseKeyMode', data.licenseKeyMode)
+      if (data.licenseKeyPrefix) formData.append('licenseKeyPrefix', data.licenseKeyPrefix)
+      if (data.accessExpiresDays != null) formData.append('accessExpiresDays', String(data.accessExpiresDays))
+      if (data.maxDownloads != null) formData.append('maxDownloads', String(data.maxDownloads))
+      if (data.bookable !== undefined) formData.append('bookable', data.bookable ? '1' : '0')
+      if (data.bookingDurationMinutes != null) formData.append('bookingDurationMinutes', String(data.bookingDurationMinutes))
+      if (data.licenseKeys) formData.append('licenseKeys', data.licenseKeys)
       formData.append('stock', String(data.stock))
-      formData.append('image', data.image)
+      if (data.image) formData.append('image', data.image)
+      if (data.digitalFile) formData.append('digitalFile', data.digitalFile)
       return await apiRequest<{ success: boolean; product?: Product; message?: string }>('/api/company/products', {
         method: 'POST',
         body: formData,
@@ -551,7 +611,27 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
     }
     return await apiRequest<{ success: boolean; product?: Product; message?: string }>('/api/company/products', {
       method: 'POST',
-      body: { name: data.name, description: data.description, price: data.price, category: data.category, stock: data.stock },
+      body: {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        category: data.category,
+        productType: data.productType,
+        fulfillmentType: data.fulfillmentType,
+        trackInventory: data.trackInventory,
+        requiresDeliveryAddress: data.requiresDeliveryAddress,
+        accessUrl: data.accessUrl,
+        serviceBookingUrl: data.serviceBookingUrl,
+        fulfillmentInstructions: data.fulfillmentInstructions,
+        licenseKeyMode: data.licenseKeyMode,
+        licenseKeyPrefix: data.licenseKeyPrefix,
+        accessExpiresDays: data.accessExpiresDays,
+        maxDownloads: data.maxDownloads,
+        bookable: data.bookable,
+        bookingDurationMinutes: data.bookingDurationMinutes,
+        licenseKeys: data.licenseKeys,
+        stock: data.stock,
+      },
     })
   } catch (e) {
     return handleApiError(e)
@@ -571,12 +651,17 @@ export async function updateProduct(
     return { success: true, message: 'Product updated successfully' }
   }
   try {
-    if (data.image) {
+    if (data.image || data.digitalFile || data.clearDigitalFile) {
       const formData = new FormData()
       Object.entries(data).forEach(([key, value]) => {
-        if (value === undefined || value === null) return
+        if (value === undefined) return
         if (key === 'image' && value instanceof File) {
           formData.append('image', value)
+        } else if (key === 'digitalFile' && value instanceof File) {
+          formData.append('digitalFile', value)
+        } else if (value === null) {
+          // Explicit null clears nullable fields (e.g. accessExpiresDays).
+          formData.append(key, '')
         } else {
           formData.append(key, String(value))
         }
@@ -1335,6 +1420,12 @@ export interface PlanEntitlements {
   aiImagesPerMonth?: number
   socialPlatforms?: number
   growthEnabled?: boolean
+  agentCommerce?: boolean
+  allowPhysical?: boolean
+  allowDigital?: boolean
+  allowService?: boolean
+  allowBookings?: boolean
+  maxBookingsPerMonth?: number | null
 }
 
 export interface CreatePlanData {
@@ -2272,6 +2363,12 @@ export interface PlatformSettings {
   notifyUsageAlerts?: boolean
   notifyDailySummary?: boolean
   landingTrustedCompanies?: string[]
+  cookieBannerEnabled?: boolean
+  cookieBannerText?: string | null
+  cookiePolicyUrl?: string | null
+  recaptchaEnabled?: boolean
+  recaptchaSiteKey?: string | null
+  recaptchaSecretKey?: string | null
   aiLearningConfig?: AiLearningConfig
 }
 
@@ -2325,6 +2422,12 @@ export interface UpdatePlatformSettingsData {
   notifyUsageAlerts?: boolean
   notifyDailySummary?: boolean
   landingTrustedCompanies?: string[]
+  cookieBannerEnabled?: boolean
+  cookieBannerText?: string
+  cookiePolicyUrl?: string
+  recaptchaEnabled?: boolean
+  recaptchaSiteKey?: string
+  recaptchaSecretKey?: string
   aiLearningConfig?: AiLearningConfig
 }
 
@@ -2335,6 +2438,11 @@ export interface AppBranding {
   primaryColor: string | null
   secondaryColor: string | null
   requireEmailVerification?: boolean
+  cookieBannerEnabled?: boolean
+  cookieBannerText?: string | null
+  cookiePolicyUrl?: string | null
+  recaptchaEnabled?: boolean
+  recaptchaSiteKey?: string | null
 }
 
 /**

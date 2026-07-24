@@ -3,15 +3,29 @@
 namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductLicenseKey;
 use App\Models\ProductVariant;
+use App\Services\DigitalAccessService;
+use App\Services\Platform\EntitlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
+    private const PRODUCT_TYPES = ['physical', 'digital', 'service'];
+
+    private const FULFILLMENT_TYPES = ['shipping', 'download', 'link', 'booking', 'manual'];
+
+    private const LICENSE_KEY_MODES = ['none', 'auto', 'pool'];
+
+    public function __construct(
+        private readonly EntitlementService $entitlements,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
@@ -47,31 +61,56 @@ class ProductController extends Controller
             return response()->json(['success' => false, 'message' => 'No company.'], 403);
         }
 
-        if ($request->hasFile('image')) {
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'category' => 'nullable|string|max:255',
-                'stock' => 'required|integer|min:0',
-                'image' => 'image|max:5120',
-            ]);
-            $path = $request->file('image')->store('products/'.$companyId, 'public');
-            $validated['image'] = $path;
-            $validated['company_id'] = $companyId;
-            $product = Product::create($validated);
-            $this->createImageRecord($product, null, $path, true, 0, null);
-        } else {
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'category' => 'nullable|string|max:255',
-                'stock' => 'required|integer|min:0',
-            ]);
-            $validated['company_id'] = $companyId;
-            $product = Product::create($validated);
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'category' => 'nullable|string|max:255',
+            'productType' => 'nullable|in:physical,digital,service',
+            'fulfillmentType' => 'nullable|in:shipping,download,link,booking,manual',
+            'trackInventory' => 'sometimes|boolean',
+            'requiresDeliveryAddress' => 'sometimes|boolean',
+            'accessUrl' => 'nullable|url|max:2048',
+            'serviceBookingUrl' => 'nullable|url|max:2048',
+            'fulfillmentInstructions' => 'nullable|string',
+            'licenseKeyMode' => 'nullable|in:none,auto,pool',
+            'licenseKeyPrefix' => 'nullable|string|max:32',
+            'accessExpiresDays' => 'nullable|integer|min:1|max:3650',
+            'maxDownloads' => 'nullable|integer|min:1',
+            'bookable' => 'sometimes|boolean',
+            'bookingDurationMinutes' => 'nullable|integer|min:5|max:480',
+            'licenseKeys' => 'nullable|string',
+            'stock' => 'required|integer|min:0',
+            'image' => 'nullable|image|max:5120',
+            'digitalFile' => 'nullable|file|max:20480|mimetypes:application/pdf,application/epub+zip,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ]);
+        $productType = $validated['productType'] ?? 'physical';
+        if ($response = $this->catalogTypeEntitlementResponse((int) $companyId, $productType)) {
+            return $response;
         }
+        if (($validated['bookable'] ?? false)
+            && ($response = $this->bookingEntitlementResponse((int) $companyId))) {
+            return $response;
+        }
+
+        $payload = $this->normalizeProductPayload($validated, $request);
+        $payload['company_id'] = $companyId;
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products/'.$companyId, 'public');
+            $payload['image'] = $path;
+        }
+
+        if ($request->hasFile('digitalFile')) {
+            $payload = array_merge($payload, $this->storeDigitalFile($request, $companyId));
+        }
+
+        $product = Product::create($payload);
+        if (! empty($payload['image'])) {
+            $this->createImageRecord($product, null, $payload['image'], true, 0, null);
+        }
+
+        $this->importLicenseKeysFromRequest($product, $validated['licenseKeys'] ?? null);
 
         $product->load($this->productRelations());
         $this->syncProductEmbeddings($product);
@@ -208,19 +247,64 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'sometimes|numeric|min:0',
             'category' => 'nullable|string|max:255',
+            'productType' => 'sometimes|in:physical,digital,service',
+            'fulfillmentType' => 'sometimes|in:shipping,download,link,booking,manual',
+            'trackInventory' => 'sometimes|boolean',
+            'requiresDeliveryAddress' => 'sometimes|boolean',
+            'accessUrl' => 'nullable|url|max:2048',
+            'serviceBookingUrl' => 'nullable|url|max:2048',
+            'fulfillmentInstructions' => 'nullable|string',
+            'licenseKeyMode' => 'nullable|in:none,auto,pool',
+            'licenseKeyPrefix' => 'nullable|string|max:32',
+            'accessExpiresDays' => 'nullable|integer|min:1|max:3650',
+            'maxDownloads' => 'nullable|integer|min:1',
+            'bookable' => 'sometimes|boolean',
+            'bookingDurationMinutes' => 'nullable|integer|min:5|max:480',
+            'licenseKeys' => 'nullable|string',
+            'clearDigitalFile' => 'sometimes|boolean',
             'stock' => 'sometimes|integer|min:0',
             'status' => 'sometimes|in:active,inactive',
             'image' => 'nullable|image|max:5120',
+            'digitalFile' => 'nullable|file|max:20480|mimetypes:application/pdf,application/epub+zip,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ]);
+        if (array_key_exists('productType', $validated)
+            && ($response = $this->catalogTypeEntitlementResponse((int) $product->company_id, $validated['productType']))) {
+            return $response;
+        }
+        if (($validated['bookable'] ?? false)
+            && ($response = $this->bookingEntitlementResponse((int) $product->company_id))) {
+            return $response;
+        }
 
         unset($validated['image']);
-        $product->update($validated);
+        unset($validated['digitalFile']);
+        $licenseKeysRaw = $validated['licenseKeys'] ?? null;
+        unset($validated['licenseKeys']);
+        $clearDigitalFile = (bool) ($validated['clearDigitalFile'] ?? false);
+        unset($validated['clearDigitalFile']);
+        $updates = $this->normalizeProductPayload($validated, $request, true, $product);
+        $product->update($updates);
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('products/'.$product->company_id, 'public');
             $product->update(['image' => $path]);
             $this->createImageRecord($product, null, $path, true, 0, $product->name);
         }
+
+        if ($request->hasFile('digitalFile')) {
+            $this->deleteExistingDigitalFile($product);
+            $product->update($this->storeDigitalFile($request, (int) $product->company_id));
+        } elseif ($clearDigitalFile) {
+            $this->deleteExistingDigitalFile($product);
+            $product->update([
+                'digital_file_path' => null,
+                'digital_file_name' => null,
+                'digital_file_mime' => null,
+                'digital_file_size' => null,
+            ]);
+        }
+
+        $this->importLicenseKeysFromRequest($product, $licenseKeysRaw);
 
         $product->load($this->productRelations());
         $this->syncProductEmbeddings($product);
@@ -380,6 +464,7 @@ class ProductController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
+        $this->deleteExistingDigitalFile($product);
         $product->delete();
 
         return response()->json([
@@ -404,7 +489,29 @@ class ProductController extends Controller
             'description' => $product->description ?? '',
             'price' => (float) $product->price,
             'category' => $product->category ?? '',
+            'productType' => $product->product_type ?? 'physical',
+            'fulfillmentType' => $product->fulfillment_type ?? 'shipping',
             'image' => $imageUrl,
+            'trackInventory' => (bool) $product->track_inventory,
+            'requiresDeliveryAddress' => (bool) $product->requires_delivery_address,
+            'accessUrl' => $product->access_url,
+            'serviceBookingUrl' => $product->service_booking_url,
+            'fulfillmentInstructions' => $product->fulfillment_instructions,
+            'hasDigitalFile' => (bool) $product->digital_file_path,
+            'digitalFileUrl' => null,
+            'digitalFileName' => $product->digital_file_name,
+            'digitalFileMime' => $product->digital_file_mime,
+            'digitalFileSize' => $product->digital_file_size,
+            'licenseKeyMode' => $product->license_key_mode ?: 'none',
+            'licenseKeyPrefix' => $product->license_key_prefix,
+            'accessExpiresDays' => $product->access_expires_days,
+            'maxDownloads' => $product->max_downloads,
+            'bookable' => (bool) $product->bookable,
+            'bookingDurationMinutes' => $product->booking_duration_minutes,
+            'licenseKeysAvailable' => ProductLicenseKey::query()
+                ->where('product_id', $product->id)
+                ->where('status', ProductLicenseKey::STATUS_AVAILABLE)
+                ->count(),
             'stock' => $product->stock,
             'status' => $product->status,
             'createdAt' => $product->created_at->format('Y-m-d'),
@@ -512,5 +619,145 @@ class ProductController extends Controller
         } catch (\Throwable) {
             // Non-blocking — weekly sync command will backfill
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function normalizeProductPayload(array $validated, Request $request, bool $isUpdate = false, ?Product $current = null): array
+    {
+        $productType = $validated['productType'] ?? $current?->product_type ?? 'physical';
+        $fulfillmentType = $validated['fulfillmentType'] ?? $current?->fulfillment_type ?? ($productType === 'physical' ? 'shipping' : ($productType === 'service' ? 'booking' : 'download'));
+        $trackInventory = array_key_exists('trackInventory', $validated)
+            ? (bool) $validated['trackInventory']
+            : ($current?->track_inventory ?? ($productType === 'physical'));
+        $requiresDelivery = array_key_exists('requiresDeliveryAddress', $validated)
+            ? (bool) $validated['requiresDeliveryAddress']
+            : ($current?->requires_delivery_address ?? ($productType === 'physical' && $fulfillmentType === 'shipping'));
+
+        if (! in_array($productType, self::PRODUCT_TYPES, true)) {
+            $productType = 'physical';
+        }
+        if (! in_array($fulfillmentType, self::FULFILLMENT_TYPES, true)) {
+            $fulfillmentType = $productType === 'physical' ? 'shipping' : 'manual';
+        }
+
+        $licenseKeyMode = $validated['licenseKeyMode'] ?? $current?->license_key_mode ?? 'none';
+        if (! in_array($licenseKeyMode, self::LICENSE_KEY_MODES, true)) {
+            $licenseKeyMode = 'none';
+        }
+
+        $accessExpiresDays = array_key_exists('accessExpiresDays', $validated)
+            ? ($validated['accessExpiresDays'] !== null && $validated['accessExpiresDays'] !== '' ? (int) $validated['accessExpiresDays'] : null)
+            : $current?->access_expires_days;
+        $maxDownloads = array_key_exists('maxDownloads', $validated)
+            ? ($validated['maxDownloads'] !== null && $validated['maxDownloads'] !== '' ? (int) $validated['maxDownloads'] : null)
+            : $current?->max_downloads;
+        $bookable = array_key_exists('bookable', $validated)
+            ? (bool) $validated['bookable']
+            : ($current?->bookable ?? false);
+        $bookingDurationMinutes = array_key_exists('bookingDurationMinutes', $validated)
+            ? ($validated['bookingDurationMinutes'] !== null && $validated['bookingDurationMinutes'] !== ''
+                ? (int) $validated['bookingDurationMinutes']
+                : null)
+            : $current?->booking_duration_minutes;
+
+        return [
+            'name' => $validated['name'] ?? $current?->name,
+            'description' => $validated['description'] ?? $current?->description,
+            'price' => $validated['price'] ?? $current?->price ?? 0,
+            'category' => $validated['category'] ?? $current?->category,
+            'product_type' => $productType,
+            'fulfillment_type' => $fulfillmentType,
+            'track_inventory' => $trackInventory,
+            'requires_delivery_address' => $requiresDelivery,
+            'access_url' => array_key_exists('accessUrl', $validated)
+                ? (($validated['accessUrl'] ?? '') !== '' ? $validated['accessUrl'] : null)
+                : $current?->access_url,
+            'service_booking_url' => array_key_exists('serviceBookingUrl', $validated)
+                ? (($validated['serviceBookingUrl'] ?? '') !== '' ? $validated['serviceBookingUrl'] : null)
+                : $current?->service_booking_url,
+            'fulfillment_instructions' => array_key_exists('fulfillmentInstructions', $validated)
+                ? (($validated['fulfillmentInstructions'] ?? '') !== '' ? $validated['fulfillmentInstructions'] : null)
+                : $current?->fulfillment_instructions,
+            'license_key_mode' => $licenseKeyMode,
+            'license_key_prefix' => array_key_exists('licenseKeyPrefix', $validated)
+                ? (($validated['licenseKeyPrefix'] ?? '') !== '' ? $validated['licenseKeyPrefix'] : null)
+                : $current?->license_key_prefix,
+            'access_expires_days' => $accessExpiresDays,
+            'max_downloads' => $maxDownloads,
+            'bookable' => $bookable,
+            'booking_duration_minutes' => $bookingDurationMinutes,
+            'stock' => $validated['stock'] ?? $current?->stock ?? 0,
+            'status' => $validated['status'] ?? $current?->status ?? 'active',
+        ];
+    }
+
+    private function catalogTypeEntitlementResponse(int $companyId, string $productType): ?JsonResponse
+    {
+        $company = Company::findOrFail($companyId);
+        if ($this->entitlements->allowsProductType($company, $productType)) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'code' => 'catalog_type_required',
+            'message' => ucfirst($productType).' products are not available on your current plan.',
+        ], 403);
+    }
+
+    private function bookingEntitlementResponse(int $companyId): ?JsonResponse
+    {
+        $company = Company::findOrFail($companyId);
+        if ($this->entitlements->allowsBookings($company)) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'code' => 'bookings_required',
+            'message' => 'Bookings are not available on your current plan.',
+        ], 403);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function storeDigitalFile(Request $request, int $companyId): array
+    {
+        $file = $request->file('digitalFile');
+        $path = $file->store('products/'.$companyId.'/digital', 'local');
+
+        return [
+            'digital_file_path' => $path,
+            'digital_file_name' => $file->getClientOriginalName(),
+            'digital_file_mime' => $file->getClientMimeType(),
+            'digital_file_size' => $file->getSize(),
+        ];
+    }
+
+    private function deleteExistingDigitalFile(Product $product): void
+    {
+        if (! $product->digital_file_path) {
+            return;
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($product->digital_file_path)) {
+                Storage::disk($disk)->delete($product->digital_file_path);
+            }
+        }
+    }
+
+    private function importLicenseKeysFromRequest(Product $product, mixed $raw): void
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return;
+        }
+
+        $parts = preg_split('/[\r\n,;]+/', $raw) ?: [];
+        app(DigitalAccessService::class)->importLicenseKeys($product, $parts);
     }
 }

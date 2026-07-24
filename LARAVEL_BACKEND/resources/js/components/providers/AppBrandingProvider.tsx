@@ -14,6 +14,11 @@ export function useAppBranding(): AppBranding {
       primaryColor: null,
       secondaryColor: null,
       requireEmailVerification: false,
+      cookieBannerEnabled: true,
+      cookieBannerText: null,
+      cookiePolicyUrl: "/privacy",
+      recaptchaEnabled: false,
+      recaptchaSiteKey: null,
     }
   )
 }

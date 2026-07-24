@@ -6,9 +6,9 @@ nav_order: 1
 
 # Introduction
 
-## What problem does Essem Chat Bot solve?
+## What problem does RelayIQ solve?
 
-Businesses in Africa and globally increasingly sell through WhatsApp, but manually replying to every message does not scale. Essem Chat Bot gives each business:
+Businesses in Africa and globally increasingly sell through WhatsApp, but manually replying to every message does not scale. RelayIQ gives each business:
 
 1. A **connected WhatsApp Business number** with automated replies
 2. An **AI assistant** trained on their products, FAQs, and brand tone
@@ -19,9 +19,9 @@ Businesses in Africa and globally increasingly sell through WhatsApp, but manual
 
 ## How the platform is organized
 
-Essem Chat Bot is a **multi-tenant SaaS** platform:
+RelayIQ is a **multi-tenant SaaS** product of **Essem Digital Innovation Limited** ([essemdigital.com](https://essemdigital.com)):
 
-- **One platform** (operated by Essem Global Solutions) serves many **companies** (tenants)
+- **One platform** (RelayIQ, powered by Essem Digital Innovation Limited) serves many **companies** (tenants)
 - Each company has its own products, FAQs, WhatsApp number, orders, and settings
 - **Super admins** manage the platform; **company owners** manage their business
 - Customers interact only through **WhatsApp** (and payment links) — they never log into the dashboard

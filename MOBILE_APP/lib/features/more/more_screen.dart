@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
+import '../../core/branding/branding_copy.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
 
@@ -38,6 +39,12 @@ class MoreScreen extends StatelessWidget {
               onTap: () => context.go('/more/products'),
             ),
             _MoreTile(
+              icon: Icons.event_available_outlined,
+              title: 'Bookings',
+              subtitle: 'Meetings & calendar feed',
+              onTap: () => context.go('/more/bookings'),
+            ),
+            _MoreTile(
               icon: Icons.help_outline,
               title: 'FAQs',
               subtitle: 'Bot answers & keywords',
@@ -57,6 +64,28 @@ class MoreScreen extends StatelessWidget {
             title: 'Settings',
             subtitle: 'Profile & password',
             onTap: () => context.go('/more/settings'),
+          ),
+          const SizedBox(height: 28),
+          const Text(
+            AppBrandingCopy.productOf,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            AppBrandingCopy.poweredBy,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            AppBrandingCopy.companyWebsite.replaceFirst('https://', ''),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
           ),
         ],
       ),

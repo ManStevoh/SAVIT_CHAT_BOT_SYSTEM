@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/bookings/bookings_screen.dart';
 import '../../features/admin/admin_home_screen.dart';
 import '../../features/auth/forgot_password_screen.dart';
 import '../../features/auth/login_screen.dart';
@@ -159,6 +160,10 @@ GoRouter createAppRouter(
                   GoRoute(
                     path: 'products',
                     builder: (context, state) => const ProductsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'bookings',
+                    builder: (context, state) => const BookingsScreen(),
                   ),
                   GoRoute(
                     path: 'faqs',

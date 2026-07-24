@@ -885,6 +885,38 @@ export function useAdminTestimonials() {
   )
 }
 
+export interface AdminBlogPost {
+  id: string
+  title: string
+  slug: string
+  excerpt?: string | null
+  body: string
+  coverImage?: string | null
+  coverImageRaw?: string | null
+  metaTitle?: string | null
+  metaDescription?: string | null
+  ogImage?: string | null
+  ogImageRaw?: string | null
+  publishedAt?: string | null
+  isPublished: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export function useAdminBlogPosts() {
+  return useSWR<AdminBlogPost[]>(
+    'admin-blog-posts',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<AdminBlogPost[]>('/api/admin/blog-posts')
+      }
+      await delay(300)
+      return []
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
 /** Admin landing FAQ (full fields) */
 export interface AdminLandingFaq {
   id: string
@@ -931,6 +963,24 @@ export function useAdminPlans() {
         { id: '2', name: 'Growth', slug: 'professional', priceDisplay: '$99', priceAmount: 99, description: 'For growing businesses with higher volume', features: ['3 WhatsApp numbers', '10,000 messages/month', 'Advanced AI with GPT-4', 'Multi-agent inbox', 'Analytics dashboard', 'Priority support', 'API access'], popular: true, cta: 'Start Free Trial', sortOrder: 1, stripePriceId: null },
         { id: '3', name: 'Enterprise', slug: 'enterprise', priceDisplay: 'Custom', priceAmount: null, description: 'For large organizations with custom needs', features: ['Unlimited WhatsApp numbers', 'Unlimited messages', 'Custom AI training', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee', 'On-premise option'], popular: false, cta: 'Contact Sales', sortOrder: 2, stripePriceId: null },
       ]
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+/**
+ * Fetch subscription offers / coupons (admin)
+ * API Endpoint: GET /api/admin/subscription-offers
+ */
+export function useAdminSubscriptionOffers() {
+  return useSWR(
+    'admin-subscription-offers',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<import('./api-actions').SubscriptionOffer[]>('/api/admin/subscription-offers')
+      }
+      await delay(300)
+      return [] as import('./api-actions').SubscriptionOffer[]
     },
     { revalidateOnFocus: false }
   )

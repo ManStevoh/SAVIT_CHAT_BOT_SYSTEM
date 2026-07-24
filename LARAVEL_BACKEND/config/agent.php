@@ -6,25 +6,28 @@ return [
     | Agent commerce loop limits
     |--------------------------------------------------------------------------
     */
-    'max_loop_iterations' => (int) env('AGENT_MAX_LOOP_ITERATIONS', 8),
-    'max_tool_calls_per_turn' => (int) env('AGENT_MAX_TOOL_CALLS', 12),
+    'max_loop_iterations' => (int) env('AGENT_MAX_LOOP_ITERATIONS', 12),
+    'max_tool_calls_per_turn' => (int) env('AGENT_MAX_TOOL_CALLS', 16),
     'tool_result_max_chars' => (int) env('AGENT_TOOL_RESULT_MAX_CHARS', 8000),
-    'conversation_history_limit' => (int) env('AGENT_HISTORY_LIMIT', 16),
+    'conversation_history_limit' => (int) env('AGENT_HISTORY_LIMIT', 24),
 
     /*
     |--------------------------------------------------------------------------
     | Default agent mode for new companies (overridden by company_settings)
+    | Entitled plans auto-enable via AgentCommerceProvisioningService.
     |--------------------------------------------------------------------------
     */
-    'default_agent_commerce_enabled' => (bool) env('AGENT_COMMERCE_DEFAULT', false),
+    // Intelligence is the primary reply OS; entitled plans auto-provision on sync.
+    'default_agent_commerce_enabled' => (bool) env('AGENT_COMMERCE_DEFAULT', true),
+    'rate_limit_per_minute' => (int) env('AGENT_RATE_LIMIT_PER_MINUTE', 60),
 
     /*
     |--------------------------------------------------------------------------
     | Memory limits (avoid prompt bloat)
     |--------------------------------------------------------------------------
     */
-    'customer_memory_limit' => 20,
-    'agent_reflection_limit' => 10,
+    'customer_memory_limit' => (int) env('AGENT_CUSTOMER_MEMORY_LIMIT', 30),
+    'agent_reflection_limit' => (int) env('AGENT_REFLECTION_LIMIT', 12),
 
     /*
     |--------------------------------------------------------------------------
@@ -47,8 +50,8 @@ return [
     'proactive' => [
         'abandoned_cart_hours' => (int) env('AGENT_ABANDONED_CART_HOURS', 24),
         'max_outreach_per_run' => (int) env('AGENT_MAX_PROACTIVE_OUTREACH', 15),
-        'memory_extraction_delay_minutes' => (int) env('AGENT_MEMORY_EXTRACT_DELAY', 30),
-        'reflection_delay_minutes' => (int) env('AGENT_REFLECTION_DELAY', 45),
+        'memory_extraction_delay_minutes' => (int) env('AGENT_MEMORY_EXTRACT_DELAY', 5),
+        'reflection_delay_minutes' => (int) env('AGENT_REFLECTION_DELAY', 20),
     ],
 
     /*
@@ -144,9 +147,9 @@ return [
     */
     'specialists' => [
         'types' => ['sales', 'support', 'inventory'],
-        'consult_on_turn' => (bool) env('AGENT_SPECIALISTS_ON_TURN', true),
+        'consult_on_turn' => (bool) env('AGENT_SPECIALISTS_ON_TURN', false),
         'background_enabled' => (bool) env('AGENT_SPECIALISTS_BACKGROUND', true),
-        'use_llm' => (bool) env('AGENT_SPECIALISTS_USE_LLM', true),
+        'use_llm' => (bool) env('AGENT_SPECIALISTS_USE_LLM', false),
     ],
 
     'events' => [
@@ -188,7 +191,7 @@ return [
         'calendar_enabled' => (bool) env('AGENT_CALENDAR_ENABLED', true),
     ],
 
-    'max_output_chars' => (int) env('AGENT_MAX_OUTPUT_CHARS', 1200),
+    'max_output_chars' => (int) env('AGENT_MAX_OUTPUT_CHARS', 1800),
 
     /*
     |--------------------------------------------------------------------------
@@ -276,13 +279,14 @@ return [
             ],
         ],
         'workforce' => [
-            ['id' => 'ceo', 'title' => 'CEO AI', 'objective' => 'Top decisions and cross-director coordination', 'reports' => 'Morning commerce brief'],
-            ['id' => 'sales_director', 'title' => 'Sales Director AI', 'objective' => 'Conversion, upsell, lead follow-up', 'reports' => 'Pipeline and at-risk leads'],
-            ['id' => 'finance_director', 'title' => 'Finance Director AI', 'objective' => 'Margin, cash flow, discount policy', 'reports' => 'Unpaid orders and margin risks'],
-            ['id' => 'marketing_director', 'title' => 'Marketing Director AI', 'objective' => 'Campaigns, bundles, retention', 'reports' => 'Opportunity engine output'],
-            ['id' => 'support_director', 'title' => 'Support Director AI', 'objective' => 'Resolution speed and satisfaction', 'reports' => 'Unresolved issues summary'],
-            ['id' => 'operations_director', 'title' => 'Operations Director AI', 'objective' => 'Delivery and fulfillment', 'reports' => 'Pending orders and delays'],
-            ['id' => 'inventory_director', 'title' => 'Inventory Director AI', 'objective' => 'Stock levels and slow movers', 'reports' => 'Restock and clearance opportunities'],
+            // Advisory report roles (prompt/context + scheduled briefs) — not independent autonomous agents.
+            ['id' => 'ceo', 'title' => 'Executive brief', 'objective' => 'Cross-area coordination summary', 'reports' => 'Morning commerce brief'],
+            ['id' => 'sales_director', 'title' => 'Sales insights', 'objective' => 'Conversion and follow-up signals', 'reports' => 'Pipeline and at-risk leads'],
+            ['id' => 'finance_director', 'title' => 'Finance insights', 'objective' => 'Margin and unpaid-order signals', 'reports' => 'Unpaid orders and margin risks'],
+            ['id' => 'marketing_director', 'title' => 'Marketing insights', 'objective' => 'Campaign and retention ideas', 'reports' => 'Opportunity engine output'],
+            ['id' => 'support_director', 'title' => 'Support insights', 'objective' => 'Resolution and satisfaction signals', 'reports' => 'Unresolved issues summary'],
+            ['id' => 'operations_director', 'title' => 'Operations insights', 'objective' => 'Fulfillment and delay signals', 'reports' => 'Pending orders and delays'],
+            ['id' => 'inventory_director', 'title' => 'Inventory insights', 'objective' => 'Stock and slow-mover signals', 'reports' => 'Restock and clearance opportunities'],
         ],
         'platform_patterns_seed' => [
             [

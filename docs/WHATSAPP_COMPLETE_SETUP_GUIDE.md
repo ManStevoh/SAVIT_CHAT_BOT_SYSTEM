@@ -82,7 +82,7 @@ flowchart TB
 ### Step A1: Meta Business Portfolio
 
 1. Go to [business.facebook.com](https://business.facebook.com) (Meta Business Suite).
-2. Create or select a **Business Portfolio** for **Essem Global Solutions** (or your legal entity name).
+2. Create or select a **Business Portfolio** for **Essem Digital Innovation Limited** (or your legal entity name).
 3. Complete **Business Verification**:
    - Business name, address, phone, website
    - Upload documents if Meta requests them

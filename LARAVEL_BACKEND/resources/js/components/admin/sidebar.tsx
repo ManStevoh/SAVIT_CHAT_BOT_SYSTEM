@@ -18,7 +18,9 @@ import {
   Wallet,
   Quote,
   HelpCircle,
+  Newspaper,
   Layout,
+  Tag,
 } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
@@ -27,6 +29,7 @@ const navigationMain = [
   { name: "Companies", href: "/admin/companies", icon: Building2 },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Plans", href: "/admin/plans", icon: Layers },
+  { name: "Offers & Coupons", href: "/admin/offers", icon: Tag },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { name: "Growth Portfolio", href: "/admin/growth", icon: Rocket },
@@ -41,6 +44,7 @@ const navigationConfig = [
 
 const navigationOther = [
   { name: "Website CMS", href: "/admin/cms", icon: Layout },
+  { name: "Blog", href: "/admin/blog", icon: Newspaper },
   { name: "Testimonials", href: "/admin/testimonials", icon: Quote },
   { name: "Landing FAQ", href: "/admin/landing-faqs", icon: HelpCircle },
   { name: "AI Usage", href: "/admin/ai-usage", icon: Bot },

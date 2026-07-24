@@ -3,13 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Company;
 use App\Models\Order;
-use App\Models\Plan;
-use App\Models\Subscription;
-use App\Services\MailService;
 use App\Services\OrderPaymentService;
 use App\Services\PaystackService;
+use App\Services\PaystackSubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -19,7 +16,7 @@ class PaystackWebhookController extends Controller
 {
     public function __construct(
         protected PaystackService $paystack,
-        protected MailService $mailService,
+        protected PaystackSubscriptionService $subscriptions,
         protected OrderPaymentService $orderPaymentService
     ) {}
 
@@ -62,7 +59,17 @@ class PaystackWebhookController extends Controller
             return response('OK', 200);
         }
 
-        $this->handleSubscriptionPayment($reference, $metadata, $data);
+        $result = $this->subscriptions->activateFromCharge(
+            $data,
+            (string) ($data['id'] ?? $reference)
+        );
+
+        if (! ($result['success'] ?? false)) {
+            Log::warning('Paystack webhook: subscription activation failed', [
+                'reference' => $reference,
+                'message' => $result['message'] ?? null,
+            ]);
+        }
 
         return response('OK', 200);
     }
@@ -74,7 +81,7 @@ class PaystackWebhookController extends Controller
     protected function handleOrderPayment(string $reference, array $metadata, array $data): void
     {
         $pending = Cache::get(PaystackService::CACHE_KEY_ORDER_PREFIX.$reference);
-        $orderId = $pending['order_id'] ?? null;
+        $orderId = $pending['order_id'] ?? ($metadata['order_id'] ?? null);
 
         if (! $orderId) {
             Log::warning('Paystack webhook: no cached order for reference '.$reference);
@@ -91,7 +98,7 @@ class PaystackWebhookController extends Controller
 
         $amountSubunit = (int) ($data['amount'] ?? 0);
         $paidAmount = $amountSubunit > 0 ? $amountSubunit / 100 : 0;
-        if (! $this->amountsMatch($paidAmount, (float) $order->total)) {
+        if (! $this->subscriptions->amountsMatch($paidAmount, (float) $order->total)) {
             Log::warning('Paystack webhook: order amount mismatch', [
                 'reference' => $reference,
                 'paid' => $paidAmount,
@@ -103,89 +110,5 @@ class PaystackWebhookController extends Controller
 
         $this->orderPaymentService->markOrderPaid($order);
         Cache::forget(PaystackService::CACHE_KEY_ORDER_PREFIX.$reference);
-    }
-
-    /**
-     * @param  array<string, mixed>  $metadata
-     * @param  array<string, mixed>  $data
-     */
-    protected function handleSubscriptionPayment(string $reference, array $metadata, array $data): void
-    {
-        if (Subscription::where('external_payment_id', $reference)->exists()) {
-            Cache::forget(PaystackService::CACHE_KEY_SUB_PREFIX.$reference);
-
-            return;
-        }
-
-        $pending = Cache::get(PaystackService::CACHE_KEY_SUB_PREFIX.$reference);
-        if (! $pending) {
-            Log::warning('Paystack webhook: no cached subscription for reference '.$reference);
-
-            return;
-        }
-
-        $companyId = $pending['company_id'] ?? null;
-        $planSlug = $pending['plan_slug'] ?? null;
-
-        if (! $companyId || ! $planSlug) {
-            Log::warning('Paystack webhook: incomplete pending subscription for reference '.$reference);
-
-            return;
-        }
-
-        $company = Company::find($companyId);
-        $plan = Plan::where('slug', $planSlug)->first();
-        if (! $company || ! $plan) {
-            return;
-        }
-
-        $amountSubunit = (int) ($data['amount'] ?? 0);
-        $amount = $amountSubunit > 0 ? $amountSubunit / 100 : 0;
-
-        if (! $this->amountsMatch($amount, (float) $plan->price_amount)) {
-            Log::warning('Paystack webhook: subscription amount mismatch', [
-                'reference' => $reference,
-                'paid' => $amount,
-                'expected' => (float) $plan->price_amount,
-            ]);
-
-            return;
-        }
-
-        Subscription::where('company_id', $company->id)->where('status', 'active')->update(['status' => 'cancelled']);
-
-        Subscription::create([
-            'company_id' => $company->id,
-            'plan' => $plan->slug,
-            'status' => 'active',
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addMonth()->format('Y-m-d'),
-            'amount' => $amount,
-            'billing_cycle' => 'monthly',
-            'payment_method' => 'paystack',
-            'external_payment_id' => $reference,
-        ]);
-
-        Cache::forget(PaystackService::CACHE_KEY_SUB_PREFIX.$reference);
-
-        try {
-            $this->mailService->sendSubscriptionConfirmed(
-                $company->email,
-                $company->name,
-                $plan->name,
-                $amount
-            );
-        } catch (\Throwable $e) {
-            Log::warning('Paystack webhook: subscription email failed: '.$e->getMessage());
-        }
-    }
-
-    protected function amountsMatch(float $paid, float $expected): bool
-    {
-        if ($expected <= 0) {
-            return $paid > 0;
-        }
-
-        return abs($paid - $expected) <= 0.01;
     }
 }

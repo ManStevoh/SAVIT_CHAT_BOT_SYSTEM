@@ -38,6 +38,10 @@ void main() {
     await tester.pump(); // post-frame bootstrap
     expect(find.text('RelayIQ'), findsOneWidget);
     expect(find.text('Every Conversation. Smarter.'), findsOneWidget);
+    expect(
+      find.text('Powered by Essem Digital Innovation Limited'),
+      findsOneWidget,
+    );
 
     // Advance past splash delay; no GoRouter so navigation no-ops.
     await tester.pump(const Duration(milliseconds: 800));

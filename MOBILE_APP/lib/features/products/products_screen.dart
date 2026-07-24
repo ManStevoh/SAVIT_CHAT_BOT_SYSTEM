@@ -186,7 +186,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        product.category.isNotEmpty ? product.category : 'Uncategorized',
+                        '${product.category.isNotEmpty ? product.category : 'Uncategorized'} · ${product.productType} · ${product.fulfillmentType}',
                         style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
                       ),
                       const SizedBox(height: 2),

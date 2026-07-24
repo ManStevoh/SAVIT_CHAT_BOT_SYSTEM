@@ -7,7 +7,7 @@ import { Head } from '@inertiajs/react'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, XCircle } from 'lucide-react'
 import { LandoNavbar } from '@/components/lando/navbar'
-import { LandoFooter } from '@/components/lando/footer'
+import { LandoFooter, mobileAppFromFooterContent } from '@/components/lando/footer'
 import { useCmsGlobal } from '@/lib/api-hooks'
 import type { CmsLink, CmsSection } from '@/components/lando/types'
 
@@ -75,6 +75,7 @@ function OrderPaidContent() {
           navLinks={(footerContent.navLinks as CmsLink[]) ?? []}
           socialLinks={(footerContent.socialLinks as CmsLink[]) ?? []}
           legalLinks={(footerContent.legalLinks as CmsLink[]) ?? []}
+          mobileApp={mobileAppFromFooterContent(footerContent)}
         />
       </div>
     </>

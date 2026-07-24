@@ -14,6 +14,8 @@ import { useState, useEffect } from "react"
 import { createCheckoutSession } from "@/lib/api-actions"
 import { getAuthToken } from "@/lib/api-client"
 import { toast } from "sonner"
+import { RecaptchaWidget, resetRecaptchaWidget } from "@/components/compliance/RecaptchaWidget"
+import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
 export function LandoTrustedCompanies({
   title,
@@ -154,7 +156,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                   if (plan.checkoutAvailable && isLoggedIn) {
                     handleSubscribe(plan.id)
                   } else if (!isLoggedIn) {
-                    window.location.href = "/register"
+                    window.location.href = `/register?plan=${encodeURIComponent(plan.id)}`
+                  } else {
+                    window.location.href = "/dashboard/subscription"
                   }
                 }}
               >
@@ -423,21 +427,34 @@ export function LandoContactSection({
   const [message, setMessage] = useState("")
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const branding = useAppBranding()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (branding.recaptchaEnabled && !recaptchaToken) {
+      toast.error("Please complete the captcha challenge.")
+      return
+    }
     setBusy(true)
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ name, email, message }),
+        body: JSON.stringify({ name, email, message, recaptchaToken: recaptchaToken || undefined }),
       })
       if (res.ok) {
         setSent(true)
         setName("")
         setEmail("")
         setMessage("")
+        setRecaptchaToken(null)
+        resetRecaptchaWidget()
+      } else {
+        const data = await res.json().catch(() => null)
+        toast.error(data?.message || data?.errors?.recaptchaToken?.[0] || "Failed to send message")
+        resetRecaptchaWidget()
+        setRecaptchaToken(null)
       }
     } finally {
       setBusy(false)
@@ -489,6 +506,7 @@ export function LandoContactSection({
                   className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-black outline-none focus:border-[#2563eb]"
                 />
               </div>
+              <RecaptchaWidget onChange={setRecaptchaToken} />
               <Button
                 type="submit"
                 disabled={busy}

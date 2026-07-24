@@ -206,7 +206,12 @@ export default function ChatsPage() {
     try {
       const result = await createOrderFromChat({
         chatId: selectedChatId,
-        items: [{ name: selectedProduct.name, quantity: qty, price: Number(selectedProduct.price) || 0 }],
+        items: [{
+          productId: selectedProduct.id,
+          name: selectedProduct.name,
+          quantity: qty,
+          price: Number(selectedProduct.price) || 0,
+        }],
         sendWhatsApp: true,
       })
       if (result.success) {

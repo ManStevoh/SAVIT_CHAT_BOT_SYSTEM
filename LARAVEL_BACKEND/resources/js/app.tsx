@@ -1,4 +1,5 @@
 import { AppBrandingProvider } from '@/components/providers/AppBrandingProvider'
+import { CookieConsentBanner } from '@/components/compliance/CookieConsentBanner'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import { Toaster } from '@/components/ui/toaster'
@@ -53,6 +54,7 @@ createInertiaApp({
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="essem-theme">
         <AppBrandingProvider>
           <App {...props} />
+          <CookieConsentBanner />
           <Toaster />
           <SonnerToaster position="top-right" richColors closeButton />
         </AppBrandingProvider>

@@ -1,7 +1,7 @@
 ﻿import { LandoCmsPage } from "@/components/lando/cms-page"
 import { useCmsGlobal } from "@/lib/api-hooks"
 import { LandoNavbar } from "@/components/lando/navbar"
-import { LandoFooter } from "@/components/lando/footer"
+import { LandoFooter, mobileAppFromFooterContent } from "@/components/lando/footer"
 import type { CmsLink, CmsSection } from "@/components/lando/types"
 
 function getSectionContent(sections: CmsSection[], key: string) {
@@ -41,6 +41,7 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
         navLinks={(footerContent.navLinks as CmsLink[]) ?? []}
         socialLinks={(footerContent.socialLinks as CmsLink[]) ?? []}
         legalLinks={(footerContent.legalLinks as CmsLink[]) ?? []}
+        mobileApp={mobileAppFromFooterContent(footerContent)}
       />
     </div>
   )

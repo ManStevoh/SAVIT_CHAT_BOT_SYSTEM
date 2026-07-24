@@ -12,18 +12,28 @@ final class GrowthLimitService
 {
     public static function getAiPostsLimit(Company $company): int
     {
-        $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $limits = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+        $limits = PlanLimitService::getLimitsForPlan(PlanLimitService::getCurrentPlanSlug($company));
+        if (array_key_exists('ai_posts_per_month', $limits)) {
+            return (int) $limits['ai_posts_per_month'];
+        }
 
-        return (int) ($limits['ai_posts_per_month'] ?? 20);
+        $plan = PlanLimitService::getCurrentPlanSlug($company);
+        $config = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+
+        return (int) ($config['ai_posts_per_month'] ?? 20);
     }
 
     public static function getAiImagesLimit(Company $company): int
     {
-        $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $limits = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+        $limits = PlanLimitService::getLimitsForPlan(PlanLimitService::getCurrentPlanSlug($company));
+        if (array_key_exists('ai_images_per_month', $limits)) {
+            return (int) $limits['ai_images_per_month'];
+        }
 
-        return (int) ($limits['ai_images_per_month'] ?? 10);
+        $plan = PlanLimitService::getCurrentPlanSlug($company);
+        $config = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+
+        return (int) ($config['ai_images_per_month'] ?? 10);
     }
 
     public static function aiImagesUsedThisMonth(Company $company): int
@@ -43,10 +53,15 @@ final class GrowthLimitService
 
     public static function getPlatformLimit(Company $company): int
     {
-        $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $limits = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+        $limits = PlanLimitService::getLimitsForPlan(PlanLimitService::getCurrentPlanSlug($company));
+        if (array_key_exists('social_platforms', $limits)) {
+            return (int) $limits['social_platforms'];
+        }
 
-        return (int) ($limits['platforms'] ?? 1);
+        $plan = PlanLimitService::getCurrentPlanSlug($company);
+        $config = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+
+        return (int) ($config['platforms'] ?? 1);
     }
 
     public static function aiPostsUsedThisMonth(Company $company): int
@@ -91,10 +106,15 @@ final class GrowthLimitService
             return true;
         }
 
-        $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $limits = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+        $limits = PlanLimitService::getLimitsForPlan(PlanLimitService::getCurrentPlanSlug($company));
+        if (array_key_exists('growth_enabled', $limits)) {
+            return (bool) $limits['growth_enabled'];
+        }
 
-        return (bool) ($limits['growth_enabled'] ?? true);
+        $plan = PlanLimitService::getCurrentPlanSlug($company);
+        $config = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+
+        return (bool) ($config['growth_enabled'] ?? true);
     }
 
     /**

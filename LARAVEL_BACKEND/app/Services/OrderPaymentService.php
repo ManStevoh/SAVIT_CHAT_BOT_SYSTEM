@@ -24,7 +24,8 @@ class OrderPaymentService
         protected MpesaService $mpesa,
         protected StripeService $stripe,
         protected PaystackService $paystack,
-        protected WhatsAppMessageSenderService $waSender
+        protected WhatsAppMessageSenderService $waSender,
+        protected OrderFulfillmentService $fulfillmentService,
     ) {}
 
     /**
@@ -154,8 +155,12 @@ class OrderPaymentService
             'status' => 'confirmed',
         ]);
 
+        $fresh = $order->fresh(['orderProducts', 'chat', 'company.whatsappAccount']);
+        app(DigitalAccessService::class)->preparePaidOrder($fresh);
+
         $this->recordExperimentConversionIfAssigned($order);
-        $this->sendPaymentConfirmationToCustomer($order);
+        $this->sendPaymentConfirmationToCustomer($fresh->fresh(['orderProducts', 'chat', 'company.whatsappAccount']));
+        $this->fulfillmentService->sendPaidFulfillment($fresh->fresh(['orderProducts', 'chat', 'company.whatsappAccount']));
     }
 
     private function recordExperimentConversionIfAssigned(Order $order): void

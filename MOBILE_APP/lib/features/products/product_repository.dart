@@ -18,9 +18,12 @@ class ProductRepository {
       final response = await _api.dio.get(
         '/company/products',
         queryParameters: {
-          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
-          if (category != null && category.isNotEmpty && category != 'all') 'category': category,
-          if (status != null && status.isNotEmpty && status != 'all') 'status': status,
+          if (search != null && search.trim().isNotEmpty)
+            'search': search.trim(),
+          if (category != null && category.isNotEmpty && category != 'all')
+            'category': category,
+          if (status != null && status.isNotEmpty && status != 'all')
+            'status': status,
         },
       );
       final data = response.data;
@@ -34,11 +37,15 @@ class ProductRepository {
     }
   }
 
-  Future<Product> createProduct(ProductInput input, {String? imagePath}) async {
+  Future<Product> createProduct(ProductInput input,
+      {String? imagePath, String? digitalFilePath}) async {
     try {
       final response = await _api.dio.post(
         '/company/products',
-        data: await _toFormData(input, isUpdate: false, imagePath: imagePath),
+        data: await _toFormData(input,
+            isUpdate: false,
+            imagePath: imagePath,
+            digitalFilePath: digitalFilePath),
       );
       return _parseProductResponse(response.data);
     } on DioException catch (e) {
@@ -50,11 +57,15 @@ class ProductRepository {
     String id,
     ProductInput input, {
     String? imagePath,
+    String? digitalFilePath,
   }) async {
     try {
       final response = await _api.dio.post(
         '/company/products/$id',
-        data: await _toFormData(input, isUpdate: true, imagePath: imagePath),
+        data: await _toFormData(input,
+            isUpdate: true,
+            imagePath: imagePath,
+            digitalFilePath: digitalFilePath),
       );
       return _parseProductResponse(response.data);
     } on DioException catch (e) {
@@ -112,14 +123,35 @@ class ProductRepository {
     ProductInput input, {
     required bool isUpdate,
     String? imagePath,
+    String? digitalFilePath,
   }) async {
     final map = <String, dynamic>{
       ...input.toJson(isUpdate: isUpdate),
     };
+    // Multipart cannot send JSON null — empty string clears nullable ints/strings.
+    for (final key in [
+      'accessExpiresDays',
+      'maxDownloads',
+      'bookingDurationMinutes',
+      'accessUrl',
+      'serviceBookingUrl',
+      'fulfillmentInstructions',
+      'licenseKeyPrefix',
+    ]) {
+      if (map.containsKey(key) && map[key] == null) {
+        map[key] = '';
+      }
+    }
     if (imagePath != null && imagePath.isNotEmpty) {
       map['image'] = await MultipartFile.fromFile(
         imagePath,
         filename: imagePath.split(RegExp(r'[\\/]')).last,
+      );
+    }
+    if (digitalFilePath != null && digitalFilePath.isNotEmpty) {
+      map['digitalFile'] = await MultipartFile.fromFile(
+        digitalFilePath,
+        filename: digitalFilePath.split(RegExp(r'[\\/]')).last,
       );
     }
     return FormData.fromMap(map);
@@ -127,14 +159,16 @@ class ProductRepository {
 
   Product _parseProductResponse(dynamic data) {
     if (data is Map && data['product'] is Map) {
-      return Product.fromJson(Map<String, dynamic>.from(data['product'] as Map));
+      return Product.fromJson(
+          Map<String, dynamic>.from(data['product'] as Map));
     }
     throw ApiException('Unexpected product response.');
   }
 
   ProductVariant _parseVariantResponse(dynamic data) {
     if (data is Map && data['variant'] is Map) {
-      return ProductVariant.fromJson(Map<String, dynamic>.from(data['variant'] as Map));
+      return ProductVariant.fromJson(
+          Map<String, dynamic>.from(data['variant'] as Map));
     }
     throw ApiException('Unexpected variant response.');
   }

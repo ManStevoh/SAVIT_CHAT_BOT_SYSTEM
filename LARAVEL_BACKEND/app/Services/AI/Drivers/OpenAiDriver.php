@@ -8,7 +8,7 @@ use App\Services\AI\OpenAiChatResult;
 use App\Services\AI\SynthesizeResult;
 use App\Services\AI\TranscribeResult;
 
-class OpenAiDriver extends AbstractAiDriver
+class OpenAiDriver extends AbstractAiDriver implements \App\Services\AI\Drivers\Contracts\SupportsToolCalling
 {
     public function chatCompletion(
         ResolvedAiModel $resolved,

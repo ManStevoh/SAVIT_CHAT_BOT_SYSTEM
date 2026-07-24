@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Megaphone,
+  Calendar,
 } from "lucide-react"
 import { useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
@@ -33,6 +34,7 @@ export const dashboardNavigation = [
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
   { name: "Products", href: "/dashboard/products", icon: Package },
+  { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { name: "FAQ Automation", href: "/dashboard/faq", icon: HelpCircle },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Executive AI", href: "/dashboard/executive", icon: Brain },

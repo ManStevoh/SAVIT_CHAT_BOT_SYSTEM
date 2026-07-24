@@ -80,6 +80,11 @@ class MobileCompanionApiSmokeTest extends TestCase
         $this->getJson('/api/company/customers')->assertOk()->assertJsonStructure(['customers']);
         $this->getJson('/api/company/analytics')->assertOk()->assertJsonStructure(['totalMessages', 'totalOrders']);
         $this->getJson('/api/company/notifications')->assertOk()->assertJsonStructure(['items', 'unreadCount']);
+        $this->getJson('/api/company/subscription')
+            ->assertOk()
+            ->assertJsonPath('plan', 'professional')
+            ->assertJsonPath('status', 'active')
+            ->assertJsonStructure(['planName', 'daysRemaining', 'accessEndsLabel', 'isExpiringSoon']);
         $this->getJson('/api/company/growth/analytics')->assertOk();
         $this->getJson('/api/auth/me')->assertOk()->assertJsonPath('user.email', $user->email);
 
@@ -92,7 +97,19 @@ class MobileCompanionApiSmokeTest extends TestCase
             'price' => 10.5,
             'stock' => 3,
             'category' => 'Test',
-        ])->assertSuccessful()->json('product');
+            'productType' => 'digital',
+            'fulfillmentType' => 'link',
+            'trackInventory' => false,
+            'requiresDeliveryAddress' => false,
+            'accessUrl' => 'https://example.com/course-access',
+            'fulfillmentInstructions' => 'We will send your access after payment.',
+        ])->assertSuccessful()
+            ->assertJsonPath('product.productType', 'digital')
+            ->assertJsonPath('product.fulfillmentType', 'link')
+            ->assertJsonPath('product.trackInventory', false)
+            ->assertJsonPath('product.requiresDeliveryAddress', false)
+            ->assertJsonPath('product.accessUrl', 'https://example.com/course-access')
+            ->json('product');
 
         $this->assertNotEmpty($product['id'] ?? null);
 

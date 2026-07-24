@@ -56,7 +56,7 @@ const FALLBACK = (
     <h2>8. Contact</h2>
     <p>
       For questions about these terms, contact{" "}
-      <a href="mailto:support@essemglobalsolutions.com">support@essemglobalsolutions.com</a>.
+      <a href="mailto:support@essemdigital.com">support@essemdigital.com</a>.
     </p>
   </>
 )

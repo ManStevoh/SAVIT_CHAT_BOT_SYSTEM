@@ -17,7 +17,7 @@ class GrowthSchedulerInstallCommand extends Command
         $cronLine = "* * * * * cd ".base_path()." && {$php} {$artisan} schedule:run >> /dev/null 2>&1";
 
         $this->line('');
-        $this->info('Essem Growth Engine — production scheduler');
+        $this->info('RelayIQ Growth Engine — production scheduler');
         $this->line('');
         $this->line('Add this single cron entry on your server (runs Laravel scheduler every minute):');
         $this->line('');

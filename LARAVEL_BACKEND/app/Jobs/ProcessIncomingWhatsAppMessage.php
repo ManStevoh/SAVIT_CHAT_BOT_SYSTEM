@@ -108,14 +108,14 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        app(UsageMeterService::class)->increment($company, 'messages');
-
         if (! PlanLimitService::isWithinMessageLimit($company)) {
             Log::info('ProcessIncomingWhatsAppMessage: message limit reached, skipping auto-reply', ['company_id' => $company->id]);
             $this->notifyCompanyNewMessage($company, $mailService, 'message');
 
             return;
         }
+
+        app(UsageMeterService::class)->increment($company, 'messages');
 
         $settings = $company->settings;
         if (! $settings || ! $settings->auto_reply_enabled) {

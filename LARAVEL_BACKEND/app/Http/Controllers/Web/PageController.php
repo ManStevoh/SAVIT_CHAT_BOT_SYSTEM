@@ -3,29 +3,34 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Services\Cms\CmsSeoService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PageController extends Controller
 {
+    public function __construct(private readonly CmsSeoService $seo)
+    {
+    }
+
     public function home(): Response
     {
-        return Inertia::render('Home/page');
+        return $this->marketing('Home/page', 'home');
     }
 
     public function pricing(): Response
     {
-        return Inertia::render('Pricing/page');
+        return $this->marketing('Pricing/page', 'pricing');
     }
 
     public function about(): Response
     {
-        return Inertia::render('About/page');
+        return $this->marketing('About/page', 'about');
     }
 
     public function contact(): Response
     {
-        return Inertia::render('Contact/page');
+        return $this->marketing('Contact/page', 'contact');
     }
 
     public function adminCms(): Response
@@ -33,14 +38,46 @@ class PageController extends Controller
         return Inertia::render('admin/cms/page');
     }
 
+    public function adminBlog(): Response
+    {
+        return Inertia::render('admin/blog/page');
+    }
+
     public function privacy(): Response
     {
-        return Inertia::render('legal/privacy/page');
+        return $this->marketing('legal/privacy/page', 'privacy');
     }
 
     public function terms(): Response
     {
-        return Inertia::render('legal/terms/page');
+        return $this->marketing('legal/terms/page', 'terms');
+    }
+
+    public function blog(): Response
+    {
+        return Inertia::render('Blog/page', [
+            'seo' => $this->seo->forBlogIndex(),
+        ]);
+    }
+
+    public function blogShow(string $slug): Response|\Symfony\Component\HttpFoundation\Response
+    {
+        $seo = $this->seo->forBlogPost($slug);
+        if (! $seo) {
+            abort(404);
+        }
+
+        return Inertia::render('Blog/show', [
+            'slug' => $slug,
+            'seo' => $seo,
+        ]);
+    }
+
+    private function marketing(string $component, string $slug): Response
+    {
+        return Inertia::render($component, [
+            'seo' => $this->seo->forSlug($slug),
+        ]);
     }
 
     public function orderPaid(): Response
@@ -143,6 +180,11 @@ class PageController extends Controller
         return Inertia::render('dashboard/products/page');
     }
 
+    public function dashboardBookings(): Response
+    {
+        return Inertia::render('dashboard/bookings/page');
+    }
+
     public function dashboardSettings(): Response
     {
         return Inertia::render('dashboard/settings/page');
@@ -211,6 +253,11 @@ class PageController extends Controller
     public function adminPlans(): Response
     {
         return Inertia::render('admin/plans/page');
+    }
+
+    public function adminOffers(): Response
+    {
+        return Inertia::render('admin/offers/page');
     }
 
     public function adminRevenue(): Response

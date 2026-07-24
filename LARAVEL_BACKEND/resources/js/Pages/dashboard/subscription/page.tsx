@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table"
 import { Check, CreditCard, Download, MessageSquare, Smartphone, Users, Zap } from "lucide-react"
 import { useSubscription, useSubscriptionInvoices, useSubscriptionUsage, usePlans, type BillingInvoice } from "@/lib/api-hooks"
-import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout } from "@/lib/api-actions"
+import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout, verifyPaystackCheckout, cancelSubscription, previewCoupon } from "@/lib/api-actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -36,6 +36,18 @@ function SubscriptionPageContent() {
   const [mpesaWaiting, setMpesaWaiting] = useState<string | null>(null)
   const [mpesaError, setMpesaError] = useState<string | null>(null)
   const [autoSubscribeDone, setAutoSubscribeDone] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [verifyDone, setVerifyDone] = useState(false)
+  const [couponCode, setCouponCode] = useState("")
+  const [couponPreview, setCouponPreview] = useState<{
+    code: string
+    originalAmount: number
+    discountAmount: number
+    finalAmount: number
+    currency: string
+  } | null>(null)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [couponChecking, setCouponChecking] = useState(false)
 
   const planSlug = subscription?.plan ?? "starter"
 
@@ -53,12 +65,28 @@ function SubscriptionPageContent() {
   useEffect(() => {
     const q = searchParams.get("checkout")
     const paystackRef = searchParams.get("reference") || searchParams.get("trxref")
-    if (q === "success" || q === "cancelled" || paystackRef) {
-      setCheckoutMessage(q === "cancelled" ? "cancelled" : "success")
-      mutate()
+    if (!q && !paystackRef) return
+
+    const run = async () => {
+      if (paystackRef && !verifyDone) {
+        setVerifyDone(true)
+        const result = await verifyPaystackCheckout(paystackRef)
+        if (!result.success) {
+          toast.error(result.message ?? "Could not confirm Paystack payment.")
+          setCheckoutMessage("cancelled")
+        } else {
+          setCheckoutMessage("success")
+          toast.success(result.message ?? "Payment confirmed.")
+        }
+        await mutate()
+      } else if (q === "success" || q === "cancelled") {
+        setCheckoutMessage(q === "cancelled" ? "cancelled" : "success")
+        mutate()
+      }
       if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
     }
-  }, [searchParams, mutate])
+    void run()
+  }, [searchParams, mutate, verifyDone])
 
   // Auto-start checkout when redirected from register/login with ?subscribe=planId
   useEffect(() => {
@@ -68,10 +96,22 @@ function SubscriptionPageContent() {
     if (!plan?.checkoutAvailable) return
     setAutoSubscribeDone(true)
     if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
-    createCheckoutSession(subscribePlanId).then((result) => {
+    const start = async () => {
+      if (plan.paymentMethods?.paystack) {
+        const callbackUrl =
+          typeof window !== "undefined"
+            ? `${window.location.origin}/dashboard/subscription?checkout=success`
+            : undefined
+        const result = await createPaystackCheckout(subscribePlanId, { callbackUrl })
+        if (result.success && result.url) window.location.href = result.url
+        else toast.error(result.message ?? "Could not start Paystack checkout.")
+        return
+      }
+      const result = await createCheckoutSession(subscribePlanId)
       if (result.success && result.url) window.location.href = result.url
       else if (!result.success) toast.error(result.message ?? "Could not start checkout.")
-    })
+    }
+    void start()
   }, [searchParams, plansData, autoSubscribeDone])
 
   // Poll subscription when M-Pesa payment is pending
@@ -135,10 +175,55 @@ function SubscriptionPageContent() {
     )
   }
 
-  const planName = subscription?.plan === "professional" ? "Growth" : subscription?.plan === "starter" ? "Starter" : subscription?.plan === "enterprise" ? "Enterprise" : "Growth"
-  const planPrice = subscription?.amount ? `$${Number(subscription.amount)}` : "$99"
+  const planName =
+    subscription?.planName ??
+    plans.find((p) => p.slug === subscription?.plan)?.name ??
+    (subscription?.plan === "professional"
+      ? "Growth"
+      : subscription?.plan === "starter"
+        ? "Starter"
+        : subscription?.plan === "enterprise"
+          ? "Enterprise"
+          : subscription?.plan ?? "Plan")
+  const currency = (subscription?.currency || "").toUpperCase()
+  const planPrice = subscription?.amount
+    ? `${currency ? currency + " " : ""}${Number(subscription.amount).toLocaleString()}`
+    : "—"
   const renewalDate = subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"
+  const accessLabel = subscription?.accessEndsLabel ?? "Renews on"
+  const daysRemaining = subscription?.daysRemaining
   const status = subscription?.status ?? "active"
+  const isStripeManaged = subscription?.paymentMethod === "stripe"
+  const canCancelLocal =
+    !!subscription &&
+    ["active", "trial"].includes(status) &&
+    !isStripeManaged &&
+    subscription.id !== "0"
+
+  const applyCoupon = async (planId: string) => {
+    const code = couponCode.trim()
+    if (!code) {
+      setCouponPreview(null)
+      setCouponError(null)
+      return
+    }
+    setCouponChecking(true)
+    setCouponError(null)
+    const result = await previewCoupon(planId, code)
+    setCouponChecking(false)
+    if (!result.success) {
+      setCouponPreview(null)
+      setCouponError(result.message ?? "Invalid coupon")
+      return
+    }
+    setCouponPreview({
+      code: result.code ?? code,
+      originalAmount: result.originalAmount ?? 0,
+      discountAmount: result.discountAmount ?? 0,
+      finalAmount: result.finalAmount ?? 0,
+      currency: result.currency ?? "",
+    })
+  }
 
   const usage = (usageData?.items ?? [
     { name: "Messages", used: 0, limit: 5000 },
@@ -162,7 +247,10 @@ function SubscriptionPageContent() {
       typeof window !== "undefined"
         ? `${window.location.origin}/dashboard/subscription?checkout=success`
         : undefined
-    const result = await createPaystackCheckout(planId, { callbackUrl })
+    const result = await createPaystackCheckout(planId, {
+      callbackUrl,
+      couponCode: couponCode.trim() || undefined,
+    })
     setCheckoutPlanId(null)
     if (result.success && result.url) window.location.href = result.url
     else toast.error(result.message ?? "Could not start Paystack checkout.")
@@ -175,7 +263,7 @@ function SubscriptionPageContent() {
       return
     }
     setMpesaError(null)
-    const result = await createMpesaCheckout(planId, phone)
+    const result = await createMpesaCheckout(planId, phone, couponCode.trim() || undefined)
     if (!result.success) {
       setMpesaError(result.message ?? "Failed to send M-Pesa prompt")
       return
@@ -192,16 +280,28 @@ function SubscriptionPageContent() {
     if (result.success && result.url) window.location.href = result.url
     else toast.error(result.message ?? "Could not open billing portal.")
   }
+
+  const handleCancel = async () => {
+    if (!canCancelLocal) return
+    if (!window.confirm("Cancel your subscription? Access continues until the current period ends.")) return
+    setCancelLoading(true)
+    const result = await cancelSubscription()
+    setCancelLoading(false)
+    if (result.success) {
+      toast.success(result.message ?? "Subscription cancelled.")
+      mutate()
+    } else {
+      toast.error(result.message ?? "Could not cancel subscription.")
+    }
+  }
+
   const formatInvoiceDate = (d: string) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
       return new Date(d + "Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     }
     return d
   }
-  const billingList = billingHistory.length > 0 ? billingHistory : [
-    { id: "INV-001", date: "Mar 14, 2024", amount: planPrice + ".00", status: "paid" },
-    { id: "INV-002", date: "Feb 14, 2024", amount: planPrice + ".00", status: "paid" },
-  ] as BillingInvoice[]
+  const billingList = billingHistory
   const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     const s = status.toLowerCase()
     if (s === "paid") return "default"
@@ -249,16 +349,31 @@ function SubscriptionPageContent() {
                 <div className="flex items-center gap-2">
                   <h3 className="text-2xl font-bold text-foreground">{planName}</h3>
                   <Badge>{status}</Badge>
+                  {subscription?.isExpiringSoon && (
+                    <Badge variant="outline" className="border-amber-500 text-amber-700">
+                      Expiring soon
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-muted-foreground">
-                  {planPrice}/month • Renews on {renewalDate}
+                  {planPrice}/month • {accessLabel} {renewalDate}
+                  {typeof daysRemaining === "number" && status !== "expired" ? (
+                    <span> ({daysRemaining} day{daysRemaining === 1 ? "" : "s"} left)</span>
+                  ) : null}
                 </p>
               </div>
             </div>
             <div className="flex w-full gap-2 sm:w-auto">
-              <Button className="w-full sm:w-auto" variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
-                {portalLoading ? "Opening…" : "Manage billing"}
-              </Button>
+              {isStripeManaged && (
+                <Button className="w-full sm:w-auto" variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
+                  {portalLoading ? "Opening…" : "Manage billing"}
+                </Button>
+              )}
+              {canCancelLocal && (
+                <Button className="w-full sm:w-auto" variant="outline" onClick={handleCancel} disabled={cancelLoading}>
+                  {cancelLoading ? "Cancelling…" : "Cancel subscription"}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -322,9 +437,46 @@ function SubscriptionPageContent() {
       <Card id="plans">
         <CardHeader>
           <CardTitle>Available Plans</CardTitle>
-          <CardDescription>Compare and switch plans</CardDescription>
+          <CardDescription>Compare and switch plans. Apply a coupon before Paystack or M-Pesa checkout.</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-6 max-w-md space-y-2 rounded-lg border p-4 bg-muted/20">
+            <Label htmlFor="coupon-code">Coupon code</Label>
+            <div className="flex gap-2">
+              <Input
+                id="coupon-code"
+                placeholder="e.g. SAVE20"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase())
+                  setCouponPreview(null)
+                  setCouponError(null)
+                }}
+                className="bg-background"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={couponChecking || !couponCode.trim() || !plans.find((p) => !p.current && p.checkoutAvailable)}
+                onClick={() => {
+                  const target = plans.find((p) => !p.current && p.checkoutAvailable)
+                  if (target) void applyCoupon(target.id)
+                }}
+              >
+                {couponChecking ? "…" : "Apply"}
+              </Button>
+            </div>
+            {couponError && <p className="text-sm text-destructive">{couponError}</p>}
+            {couponPreview && (
+              <p className="text-sm text-muted-foreground">
+                {couponPreview.code}: {couponPreview.currency} {couponPreview.originalAmount} →{" "}
+                <span className="font-medium text-foreground">
+                  {couponPreview.currency} {couponPreview.finalAmount}
+                </span>{" "}
+                (save {couponPreview.discountAmount})
+              </p>
+            )}
+          </div>
           <div className="grid gap-6 md:grid-cols-3">
             {plans.map((plan) => (
               <div
@@ -446,14 +598,19 @@ function SubscriptionPageContent() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Billing History</CardTitle>
-            <CardDescription>Your recent invoices</CardDescription>
+            <CardDescription>Your recent payments</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={handleBillingPortal} disabled={portalLoading}>
-            <CreditCard className="h-4 w-4 mr-2" />
-            {portalLoading ? "Opening…" : "Manage billing"}
-          </Button>
+          {isStripeManaged && (
+            <Button variant="outline" size="sm" onClick={handleBillingPortal} disabled={portalLoading}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              {portalLoading ? "Opening…" : "Manage billing"}
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
+          {billingList.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">No payments yet.</p>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -490,6 +647,7 @@ function SubscriptionPageContent() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
     </div>

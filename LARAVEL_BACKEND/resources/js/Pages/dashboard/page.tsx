@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { ChartCard } from '@/components/shared/chart-card'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useAnalytics, useOrders, useChats, useCompanySettings } from '@/lib/api-hooks'
+import { useAnalytics, useOrders, useChats, useCompanySettings, useSubscription } from '@/lib/api-hooks'
 import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
 import { CHART_ACCENT, CHART_PRIMARY } from '@/lib/chart-colors'
 import { MessageSquare, ShoppingCart, Users, Bot, ArrowRight } from 'lucide-react'
@@ -33,8 +34,19 @@ function getStoredName(): string | null {
 }
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading dashboard…</div>}>
+      <DashboardPageContent />
+    </Suspense>
+  )
+}
+
+function DashboardPageContent() {
+  const searchParams = useSearchParams()
+  const trialStarted = searchParams.get('trial_started') === '1'
   const [chartPeriod, setChartPeriod] = useState('7d')
   const [firstName, setFirstName] = useState<string | null>(null)
+  const { data: subscription } = useSubscription()
 
   useEffect(() => {
     setFirstName(getStoredName())
@@ -51,8 +63,32 @@ export default function DashboardPage() {
   const periodLabel =
     chartPeriod === '7d' ? '7d' : chartPeriod === '30d' ? '30d' : '90d'
 
+  const showTrialBanner =
+    trialStarted ||
+    (subscription?.status === 'trial' && (subscription.daysRemaining ?? 0) > 0)
+
   return (
     <div className="space-y-8">
+      {showTrialBanner && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+          <p className="font-medium">
+            Welcome — your free trial
+            {subscription?.planName ? ` of ${subscription.planName}` : ''} is active
+            {typeof subscription?.daysRemaining === 'number'
+              ? ` (${subscription.daysRemaining} day${subscription.daysRemaining === 1 ? '' : 's'} left)`
+              : ''}
+            .
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            Connect WhatsApp and explore the product. You can upgrade anytime from{' '}
+            <Link href="/dashboard/subscription" className="font-medium text-primary underline">
+              Subscription
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

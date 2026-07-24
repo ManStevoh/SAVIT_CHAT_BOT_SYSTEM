@@ -104,4 +104,88 @@ class CmsSeoTest extends TestCase
         $this->assertSame('Pricing share title', $page->og_title);
         $this->assertSame('https://ai.essemdigital.com/pricing', $page->canonical_url);
     }
+
+    public function test_admin_can_toggle_footer_mobile_app_section_via_cms(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Sanctum::actingAs($admin);
+
+        $page = CmsPage::create([
+            'slug' => 'global',
+            'title' => 'Global',
+            'is_published' => true,
+        ]);
+        \App\Models\CmsSection::create([
+            'cms_page_id' => $page->id,
+            'section_key' => 'footer',
+            'label' => 'Footer',
+            'is_enabled' => true,
+            'sort_order' => 1,
+            'content' => [
+                'copyright' => '© Test',
+                'navLinks' => [],
+                'socialLinks' => [],
+                'legalLinks' => [],
+                'showMobileApp' => false,
+            ],
+        ]);
+
+        $response = $this->putJson('/api/admin/cms/pages/global/sections/footer', [
+            'content' => [
+                'copyright' => '© Test',
+                'navLinks' => [],
+                'socialLinks' => [],
+                'legalLinks' => [],
+                'showMobileApp' => true,
+                'mobileAppTitle' => 'Get the mobile app',
+                'mobileAppDescription' => 'Chats on the go',
+                'playStoreUrl' => 'https://play.google.com/store/apps/details?id=com.example',
+                'appStoreUrl' => 'https://apps.apple.com/app/id123',
+            ],
+        ]);
+
+        $response->assertOk()->assertJson(['success' => true]);
+
+        $public = $this->getJson('/api/cms/pages/global');
+        $public->assertOk();
+        $footer = collect($public->json('sections'))->firstWhere('key', 'footer');
+        $this->assertNotNull($footer);
+        $this->assertTrue((bool) ($footer['content']['showMobileApp'] ?? false));
+        $this->assertSame(
+            'https://play.google.com/store/apps/details?id=com.example',
+            $footer['content']['playStoreUrl'] ?? null
+        );
+    }
+
+    public function test_cms_image_upload_accepts_file_within_limit(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Sanctum::actingAs($admin);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('hero.jpg', 800, 600);
+
+        $response = $this->postJson('/api/admin/cms/upload-image', [
+            'image' => $file,
+        ]);
+
+        $response->assertOk()->assertJson(['success' => true]);
+        $this->assertNotEmpty($response->json('url'));
+    }
+
+    public function test_cms_image_upload_rejects_oversized_file_with_clear_message(): void
+    {
+        config(['cms.upload_max_kb' => 100]);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        Sanctum::actingAs($admin);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('huge.jpg')->size(200);
+
+        $response = $this->postJson('/api/admin/cms/upload-image', [
+            'image' => $file,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['image']);
+    }
 }

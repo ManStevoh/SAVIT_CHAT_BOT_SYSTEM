@@ -61,6 +61,7 @@ final class NotificationDispatcher
             'approval.pending', 'approval.executed' => (bool) $settings->notify_security_alerts,
             'intelligence.case_opened' => (bool) $settings->notify_daily_summary,
             'payment.received', 'subscription.confirmed' => (bool) $settings->notify_failed_payments,
+            'subscription.expiring', 'subscription.expired' => false,
             'usage.limit_warning' => (bool) $settings->notify_usage_alerts,
             default => false,
         };

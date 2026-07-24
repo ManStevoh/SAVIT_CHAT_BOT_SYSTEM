@@ -2,6 +2,7 @@
 
 namespace App\Services\WhatsApp;
 
+use App\Models\Company;
 use App\Models\WhatsAppAccount;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
@@ -186,6 +187,22 @@ class WhatsAppOnboardingService
         ?string $qualityRating,
         ?string $registrationPin = null,
     ): array {
+        $company = Company::find($companyId);
+        if (! $company) {
+            return ['success' => false, 'message' => 'Company not found.'];
+        }
+
+        if (! \App\Services\PlanLimitService::canConnectWhatsApp($company, $phoneNumberId)) {
+            $limit = \App\Services\PlanLimitService::getWhatsAppNumberLimitForPlan(
+                \App\Services\PlanLimitService::getCurrentPlanSlug($company)
+            );
+
+            return [
+                'success' => false,
+                'message' => "WhatsApp number limit reached ({$limit}) for your plan. Upgrade or disconnect an existing number.",
+            ];
+        }
+
         $pin = $this->normalizeRegistrationPin($registrationPin) ?? $this->generateRegistrationPin();
         $billingModel = WhatsAppPlatformConfig::billingModel();
 

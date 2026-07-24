@@ -19,6 +19,14 @@ final class CommerceAgentReplyService
     }
 
     /**
+     * Whether the company's plan includes agent commerce (Growth+ by default).
+     */
+    public static function isEntitledForCompany(Company $company): bool
+    {
+        return app(AgentCommerceProvisioningService::class)->isEntitled($company);
+    }
+
+    /**
      * @return array{reply: ?string, route: string, handoff: bool}|null null = fall back to legacy pipeline
      */
     public function generate(

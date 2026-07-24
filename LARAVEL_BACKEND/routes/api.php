@@ -62,6 +62,7 @@ use App\Http\Controllers\Api\Company\MemorySearchController;
 use App\Http\Controllers\Api\Company\MarketplaceController;
 use App\Http\Controllers\Api\Company\MissionControlController;
 use App\Http\Controllers\Api\Company\MpesaCheckoutController;
+use App\Http\Controllers\Api\Company\CouponController;
 use App\Http\Controllers\Api\Company\OnboardingInterviewController;
 use App\Http\Controllers\Api\Company\PolicyRuleController;
 use App\Http\Controllers\Api\Company\NotificationController;
@@ -69,6 +70,7 @@ use App\Http\Controllers\Api\Company\OrderController;
 use App\Http\Controllers\Api\Company\OwnerAnalyticsController;
 use App\Http\Controllers\Api\Company\PaystackCheckoutController;
 use App\Http\Controllers\Api\Company\ProductController;
+use App\Http\Controllers\Api\Company\BookingController;
 use App\Http\Controllers\Api\Company\SettingsController;
 use App\Http\Controllers\Api\Company\StripeCheckoutController;
 use App\Http\Controllers\Api\Company\SubscriptionController;
@@ -77,6 +79,7 @@ use App\Http\Controllers\Api\Company\WhatsAppController;
 use App\Http\Controllers\Api\Company\WhatsAppTemplateController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\AppBrandingController;
+use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\CmsPageController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\LandingController;
@@ -92,6 +95,8 @@ Route::get('plans', [PlanController::class, 'index']);
 Route::get('app-branding', [AppBrandingController::class, 'show']);
 Route::get('cms/pages/{slug}', [CmsPageController::class, 'show']);
 Route::get('cms/global', [CmsPageController::class, 'global']);
+Route::get('blog/posts', [BlogPostController::class, 'index']);
+Route::get('blog/posts/{slug}', [BlogPostController::class, 'show']);
 Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:10,1');
 Route::get('landing', [LandingController::class, 'index']);
 
@@ -170,6 +175,10 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     // POST alias for update: PHP does not populate $_FILES on multipart PUT; browsers send file uploads as POST.
     Route::post('products/{product}', [ProductController::class, 'update']);
     Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);
+    Route::get('bookings/settings', [BookingController::class, 'settings']);
+    Route::put('bookings/settings', [BookingController::class, 'updateSettings']);
+    Route::get('bookings', [BookingController::class, 'index']);
+    Route::patch('bookings/{booking}', [BookingController::class, 'updateStatus']);
     Route::get('faqs', [FaqController::class, 'index']);
     Route::apiResource('faqs', FaqController::class)->only(['store', 'update', 'destroy']);
     Route::get('analytics', [\App\Http\Controllers\Api\Company\AnalyticsController::class, 'index']);
@@ -231,7 +240,9 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('subscription', [SubscriptionController::class, 'show']);
     Route::get('subscription/invoices', [SubscriptionController::class, 'invoices']);
     Route::get('subscription/usage', [SubscriptionController::class, 'usage']);
+    Route::post('subscription/cancel', [SubscriptionController::class, 'cancel']);
     Route::get('team', [TeamController::class, 'index']);
+    Route::post('team', [TeamController::class, 'store']);
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
@@ -333,6 +344,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('billing-portal', [StripeCheckoutController::class, 'createPortalSession']);
     Route::post('mpesa/initiate', [MpesaCheckoutController::class, 'initiate']);
     Route::post('paystack/initialize', [PaystackCheckoutController::class, 'initialize']);
+    Route::post('paystack/verify', [PaystackCheckoutController::class, 'verify']);
+    Route::post('coupon/preview', [CouponController::class, 'preview']);
 });
 
 // Admin (auth:sanctum + admin role)
@@ -358,6 +371,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::post('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'store']);
     Route::put('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'update']);
     Route::delete('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'destroy']);
+    Route::get('subscription-offers', [App\Http\Controllers\Api\Admin\SubscriptionOfferController::class, 'index']);
+    Route::post('subscription-offers', [App\Http\Controllers\Api\Admin\SubscriptionOfferController::class, 'store']);
+    Route::put('subscription-offers/{offer}', [App\Http\Controllers\Api\Admin\SubscriptionOfferController::class, 'update']);
+    Route::delete('subscription-offers/{offer}', [App\Http\Controllers\Api\Admin\SubscriptionOfferController::class, 'destroy']);
     Route::get('revenue', [RevenueController::class, 'index']);
     Route::get('ai-usage', [AIUsageController::class, 'index']);
     Route::get('ai-learning/stats', [AiLearningAdminController::class, 'stats']);
@@ -399,4 +416,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::put('cms/pages/{slug}/sections/{sectionKey}', [CmsAdminController::class, 'updateSection']);
     Route::put('cms/pages/{slug}/sections-reorder', [CmsAdminController::class, 'reorderSections']);
     Route::post('cms/upload-image', [CmsAdminController::class, 'uploadImage']);
+    Route::get('blog-posts', [\App\Http\Controllers\Api\Admin\BlogPostAdminController::class, 'index']);
+    Route::post('blog-posts', [\App\Http\Controllers\Api\Admin\BlogPostAdminController::class, 'store']);
+    Route::put('blog-posts/{blogPost}', [\App\Http\Controllers\Api\Admin\BlogPostAdminController::class, 'update']);
+    Route::delete('blog-posts/{blogPost}', [\App\Http\Controllers\Api\Admin\BlogPostAdminController::class, 'destroy']);
 });

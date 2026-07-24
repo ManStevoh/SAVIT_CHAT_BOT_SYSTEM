@@ -8,9 +8,13 @@ const FALLBACK = (
 
     <h2>1. Who we are</h2>
     <p>
-      RelayIQ is operated by Essem Global Solutions. We provide a multi-tenant SaaS platform
+      RelayIQ is a product of Essem Digital Innovation Limited. We provide a multi-tenant SaaS platform
       for WhatsApp business messaging, AI-assisted replies, order management, and related
-      services.
+      services. Learn more about the company at{" "}
+      <a href="https://essemdigital.com" className="text-[#2563eb] underline" target="_blank" rel="noopener noreferrer">
+        essemdigital.com
+      </a>
+      .
     </p>
 
     <h2>2. Information we collect</h2>
@@ -49,7 +53,7 @@ const FALLBACK = (
     <p>
       Depending on your jurisdiction, you may have rights to access, correct, or delete personal
       data. Contact us at{" "}
-      <a href="mailto:support@essemglobalsolutions.com">support@essemglobalsolutions.com</a> to
+      <a href="mailto:support@essemdigital.com">support@essemdigital.com</a> to
       submit a request.
     </p>
 

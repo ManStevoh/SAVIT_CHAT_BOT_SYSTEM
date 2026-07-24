@@ -20,6 +20,9 @@ class EnsureSubscriptionActive
         'POST company/billing-portal',
         'POST company/mpesa/initiate',
         'POST company/paystack/initialize',
+        'POST company/paystack/verify',
+        'POST company/subscription/cancel',
+        'POST company/coupon/preview',
     ];
 
     public function handle(Request $request, Closure $next): Response

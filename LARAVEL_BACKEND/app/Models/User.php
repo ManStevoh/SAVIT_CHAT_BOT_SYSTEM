@@ -32,6 +32,10 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'status',
         'avatar',
         'role',
+        'terms_accepted_at',
+        'marketing_consent',
+        'marketing_consent_at',
+        'selected_plan_id',
     ];
 
     /**
@@ -54,6 +58,9 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
+            'marketing_consent_at' => 'datetime',
+            'marketing_consent' => 'boolean',
             'password' => 'hashed',
         ];
     }

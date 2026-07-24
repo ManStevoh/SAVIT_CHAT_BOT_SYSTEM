@@ -62,6 +62,11 @@ class CmsPageController extends Controller
                 'title' => $page->title,
                 'metaTitle' => $page->meta_title,
                 'metaDescription' => $page->meta_description,
+                'ogImage' => $this->resolveImageUrl($page->og_image),
+                'ogTitle' => $page->og_title,
+                'ogDescription' => $page->og_description,
+                'canonicalUrl' => $page->canonical_url,
+                'robots' => $page->robots,
             ],
             'sections' => $page->sections->map(fn ($s) => [
                 'key' => $s->section_key,

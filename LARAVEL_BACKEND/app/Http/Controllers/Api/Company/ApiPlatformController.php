@@ -34,6 +34,13 @@ class ApiPlatformController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        if (! \App\Services\PlanLimitService::companyHasApiAccess($company)) {
+            return response()->json([
+                'message' => 'API access is available on Growth and Enterprise plans. Upgrade to create API keys.',
+                'code' => 'api_access_required',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:80',
             'scopes' => 'nullable|array',

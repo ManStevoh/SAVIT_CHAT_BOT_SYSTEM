@@ -36,7 +36,7 @@ final class CustomerMemoryExtractionService
             ->limit(40)
             ->get(['sender', 'content']);
 
-        if ($messages->count() < 4) {
+        if ($messages->count() < 2) {
             return 0;
         }
 

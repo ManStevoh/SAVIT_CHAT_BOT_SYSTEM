@@ -9,12 +9,13 @@ use App\Services\AI\AiBillingService;
 use App\Services\AI\AiDriverFactory;
 use App\Services\AI\AiModelResolver;
 use App\Services\AI\AiUseCase;
+use App\Services\AI\Drivers\Contracts\SupportsToolCalling;
 use App\Services\AI\Drivers\OpenAiDriver;
 use App\Services\AI\OpenAiChatResult;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
- * Tool-capable chat completions (OpenAI-compatible providers only).
+ * Tool-capable chat completions (OpenAI, Anthropic, Gemini).
  */
 class AgentChatService
 {
@@ -72,12 +73,12 @@ class AgentChatService
         }
 
         $driver = $this->driverFactory->driverFor($resolved->provider);
-        if (! $driver instanceof OpenAiDriver) {
+        if (! $driver instanceof SupportsToolCalling) {
             return new OpenAiChatResult(
                 content: null,
                 success: false,
                 model: $resolved->model->model_key,
-                error: 'Agent tool mode requires an OpenAI-compatible chat provider.',
+                error: 'Agent tool mode requires a provider that supports function/tool calling (OpenAI-compatible, Anthropic, or Gemini).',
             );
         }
 
@@ -248,7 +249,7 @@ class AgentChatService
     protected function consumeRateLimit(int $companyId): bool
     {
         $key = 'ai-agent:company:'.$companyId.':'.now()->format('YmdHi');
-        $limit = 60;
+        $limit = (int) config('agent.rate_limit_per_minute', 60);
         if (RateLimiter::tooManyAttempts($key, $limit)) {
             return false;
         }

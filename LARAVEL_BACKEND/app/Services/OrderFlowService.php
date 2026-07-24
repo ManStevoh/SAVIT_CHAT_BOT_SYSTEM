@@ -217,9 +217,16 @@ class OrderFlowService
                 if (empty($draft['items'])) {
                     return 'You haven\'t added any items yet. Reply with a product number from the list, or type e.g. "2 x Coffee", or "cancel".';
                 }
-                $this->setStep($chat, self::STEP_ADDRESS, $this->stripPickingDraft($draft));
+                $draft = $this->stripPickingDraft($draft);
+                if ($this->draftRequiresDeliveryAddress($draft)) {
+                    $this->setStep($chat, self::STEP_ADDRESS, $draft);
 
-                return 'What is your delivery address?';
+                    return 'What is your delivery address?';
+                }
+                $this->setStep($chat, self::STEP_CONFIRM, $draft);
+                $summary = $this->formatDraftSummary($company, $draft);
+
+                return "{$summary}\n\nThis order does not need a delivery address.\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
             }
 
             $picked = $this->tryPickProductByNumber($chat, $company, $draft, $trimmed);
@@ -556,8 +563,12 @@ class OrderFlowService
             if (! $variant || $variant->status !== 'active') {
                 return 'Option not found. Reply "back".';
             }
-            if ($variant->stock < $qty) {
+            if ($product->usesInventory() && $variant->stock < $qty) {
                 return "Only {$variant->stock} in stock for this option. Enter a smaller quantity or \"back\".";
+            }
+            $poolError = app(\App\Services\DigitalAccessService::class)->assertPoolCapacity($product, $qty);
+            if ($poolError) {
+                return $poolError.' Reply "back" to choose another item.';
             }
             $line = [
                 'product_id' => $product->id,
@@ -565,19 +576,25 @@ class OrderFlowService
                 'name' => $product->name.' — '.$variant->label,
                 'price' => (float) $variant->price,
                 'quantity' => $qty,
+                'fulfillment_data' => $product->fulfillmentSnapshot($variant),
             ];
         } else {
             if ($this->productHasActiveVariants($product)) {
                 return 'This product requires choosing an option first. Reply "back".';
             }
-            if ($product->stock < $qty) {
+            if ($product->usesInventory() && $product->stock < $qty) {
                 return "Only {$product->stock} in stock. Enter a smaller quantity or \"back\".";
+            }
+            $poolError = app(\App\Services\DigitalAccessService::class)->assertPoolCapacity($product, $qty);
+            if ($poolError) {
+                return $poolError.' Reply "back" to choose another item.';
             }
             $line = [
                 'product_id' => $product->id,
                 'name' => $product->name,
                 'price' => (float) $product->price,
                 'quantity' => $qty,
+                'fulfillment_data' => $product->fulfillmentSnapshot(),
             ];
         }
 
@@ -1160,6 +1177,7 @@ class OrderFlowService
                     'name' => $product->name,
                     'price' => (float) $product->price,
                     'quantity' => $qty,
+                    'fulfillment_data' => $product->fulfillmentSnapshot(),
                 ];
             }
         }
@@ -1180,6 +1198,7 @@ class OrderFlowService
                     'name' => $product->name,
                     'price' => (float) $product->price,
                     'quantity' => $qty,
+                    'fulfillment_data' => $product->fulfillmentSnapshot(),
                 ];
             }
         }
@@ -1200,6 +1219,7 @@ class OrderFlowService
                     'name' => $product->name,
                     'price' => (float) $product->price,
                     'quantity' => $qty,
+                    'fulfillment_data' => $product->fulfillmentSnapshot(),
                 ];
             }
         }
@@ -1215,6 +1235,7 @@ class OrderFlowService
                 'name' => $product->name,
                 'price' => (float) $product->price,
                 'quantity' => 1,
+                'fulfillment_data' => $product->fulfillmentSnapshot(),
             ];
         }
 
@@ -1257,6 +1278,9 @@ class OrderFlowService
             $lines[] = '• '.$item['name'].' x '.$item['quantity'].' — '.$this->formatMoney($company, (float) $sub);
         }
         $lines[] = 'Total: '.$this->formatMoney($company, (float) $total);
+        if (! $this->draftRequiresDeliveryAddress($draft)) {
+            $lines[] = 'Delivery: No physical shipping needed';
+        }
 
         return implode("\n", $lines);
     }
@@ -1288,9 +1312,12 @@ class OrderFlowService
         foreach ($items as $item) {
             OrderProduct::create([
                 'order_id' => $order->id,
+                'product_id' => $item['product_id'] ?? null,
+                'product_variant_id' => $item['product_variant_id'] ?? null,
                 'name' => $item['name'] ?? 'Item',
                 'quantity' => (int) ($item['quantity'] ?? 1),
                 'price' => (float) ($item['price'] ?? 0),
+                'fulfillment_data' => $item['fulfillment_data'] ?? null,
             ]);
         }
 
@@ -1299,7 +1326,26 @@ class OrderFlowService
 
     protected function numberedOrderInstructions(): string
     {
-        return "How to order:\n1) Reply with a product number (we’ll ask for quantity)\n2) Or type: 2 x ProductName\n0) Done (enter delivery address)\n\nTip: Reply \"back\" anytime to return to the list.";
+        return "How to order:\n1) Reply with a product number (we’ll ask for quantity)\n2) Or type: 2 x ProductName\n0) Done (we’ll continue checkout)\n\nTip: Reply \"back\" anytime to return to the list.";
+    }
+
+    /**
+     * @param  array<string, mixed>  $draft
+     */
+    protected function draftRequiresDeliveryAddress(array $draft): bool
+    {
+        $items = $draft['items'] ?? [];
+        foreach ($items as $item) {
+            $data = $item['fulfillment_data'] ?? null;
+            if (! is_array($data)) {
+                return true;
+            }
+            if (($data['requiresDeliveryAddress'] ?? true) === true) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function beginExistingOrderCheckout(Chat $chat, Order $order): string

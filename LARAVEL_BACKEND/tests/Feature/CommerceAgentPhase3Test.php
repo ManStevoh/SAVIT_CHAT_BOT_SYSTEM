@@ -41,6 +41,7 @@ class CommerceAgentPhase3Test extends TestCase
         config([
             'agent.company.reasoning_enabled' => false,
             'agent.specialists.use_llm' => false,
+            'agent.specialists.consult_on_turn' => true,
         ]);
         $provider = AiProvider::where('slug', 'openai')->firstOrFail();
         $provider->update(['api_key' => 'sk-phase3', 'is_enabled' => true]);

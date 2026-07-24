@@ -97,6 +97,12 @@ class PlatformSettingsController extends Controller
             'notifyUsageAlerts' => (bool) ($data['notify_usage_alerts'] ?? true),
             'notifyDailySummary' => (bool) ($data['notify_daily_summary'] ?? true),
             'landingTrustedCompanies' => is_array($landingTrusted) ? $landingTrusted : [],
+            'cookieBannerEnabled' => (bool) ($data['cookie_banner_enabled'] ?? true),
+            'cookieBannerText' => $data['cookie_banner_text'] ?? null,
+            'cookiePolicyUrl' => $data['cookie_policy_url'] ?? '/privacy',
+            'recaptchaEnabled' => (bool) ($data['recaptcha_enabled'] ?? false),
+            'recaptchaSiteKey' => $data['recaptcha_site_key'] ?? null,
+            'recaptchaSecretKey' => $this->maskSecret($settings, 'recaptcha_secret_key'),
             'aiLearningConfig' => array_merge(
                 AiLearningConfig::defaults(),
                 is_array($aiLearning) ? $aiLearning : []
@@ -190,6 +196,12 @@ class PlatformSettingsController extends Controller
             'notifyDailySummary' => 'sometimes|boolean',
             'landingTrustedCompanies' => 'nullable|array',
             'landingTrustedCompanies.*' => 'string|max:255',
+            'cookieBannerEnabled' => 'sometimes|boolean',
+            'cookieBannerText' => 'nullable|string|max:2000',
+            'cookiePolicyUrl' => 'nullable|string|max:500',
+            'recaptchaEnabled' => 'sometimes|boolean',
+            'recaptchaSiteKey' => 'nullable|string|max:255',
+            'recaptchaSecretKey' => 'nullable|string|max:500',
             'aiLearningConfig' => 'sometimes|array',
             'aiLearningConfig.learningEnabled' => 'sometimes|boolean',
             'aiLearningConfig.defaultLearnFromChats' => 'sometimes|boolean',
@@ -264,6 +276,12 @@ class PlatformSettingsController extends Controller
             'notifyUsageAlerts' => 'notify_usage_alerts',
             'notifyDailySummary' => 'notify_daily_summary',
             'landingTrustedCompanies' => 'landing_trusted_companies',
+            'cookieBannerEnabled' => 'cookie_banner_enabled',
+            'cookieBannerText' => 'cookie_banner_text',
+            'cookiePolicyUrl' => 'cookie_policy_url',
+            'recaptchaEnabled' => 'recaptcha_enabled',
+            'recaptchaSiteKey' => 'recaptcha_site_key',
+            'recaptchaSecretKey' => 'recaptcha_secret_key',
         ];
         $before = $settings->exists ? $settings->only(array_values($map)) : [];
         // Never persist UI mask placeholders — those fields are returned as ******** on GET.
@@ -274,6 +292,7 @@ class PlatformSettingsController extends Controller
             'whatsapp_embedded_app_secret',
             'whatsapp_credit_sharing_system_token',
             'openai_api_key',
+            'recaptcha_secret_key',
         ];
         foreach ($validated as $key => $value) {
             if ($key === 'logo') {

@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Services\Agent\BusinessGoalService;
 use App\Services\Agent\Cognitive\BusinessDnaService;
+use App\Services\Agent\CommerceAgentReplyService;
 use App\Services\Agent\Company\CompanyDigitalTwinService;
 use App\Services\AI\AiLearningConfig;
 use App\Services\PlanLimitService;
@@ -60,6 +61,7 @@ class SettingsController extends Controller
             'aiLearningEnabled' => $learningConfig->isLearningEnabled(),
             'autoReplyEnabled' => (bool) ($settings?->auto_reply_enabled ?? false),
             'agentCommerceEnabled' => (bool) ($settings?->agent_commerce_enabled ?? config('agent.default_agent_commerce_enabled', false)),
+            'agentCommerceEntitled' => \App\Services\Agent\CommerceAgentReplyService::isEntitledForCompany($company),
             'agentProactiveEnabled' => (bool) ($settings?->agent_proactive_enabled ?? false),
             'agentBusinessGoals' => $settings?->agent_business_goals ?? app(BusinessGoalService::class)->enabledKeys($company),
             'agentBusinessGoalCatalog' => app(BusinessGoalService::class)->catalog(),
@@ -269,7 +271,13 @@ class SettingsController extends Controller
             $settings->auto_reply_enabled = $companyValidated['autoReplyEnabled'];
         }
         if (array_key_exists('agentCommerceEnabled', $companyValidated)) {
-            $settings->agent_commerce_enabled = $companyValidated['agentCommerceEnabled'];
+            $wantAgent = (bool) $companyValidated['agentCommerceEnabled'];
+            if ($wantAgent && ! CommerceAgentReplyService::isEntitledForCompany($company)) {
+                return response()->json([
+                    'message' => 'Your plan does not include the conversational AI OS. Upgrade to enable it.',
+                ], 422);
+            }
+            $settings->agent_commerce_enabled = $wantAgent;
         }
         if (array_key_exists('agentProactiveEnabled', $companyValidated)) {
             $settings->agent_proactive_enabled = $companyValidated['agentProactiveEnabled'];

@@ -8,9 +8,13 @@ use App\Models\Plan;
 use App\Models\PlatformSetting;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\MailService;
+use App\Services\Platform\NotificationDispatcher;
+use App\Services\RecaptchaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -87,7 +91,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function register(Request $request): JsonResponse
+    public function register(Request $request, RecaptchaService $recaptcha): JsonResponse
     {
         if (! PlatformSetting::allowsNewRegistrations()) {
             return response()->json([
@@ -108,9 +112,19 @@ class AuthController extends Controller
             'phone' => 'required|string|max:50',
             'password' => ['required', 'confirmed', PlatformSetting::passwordRule()],
             'acceptTerms' => 'accepted',
+            'marketingConsent' => 'sometimes|boolean',
+            'planId' => 'sometimes|nullable|string',
+            'recaptchaToken' => 'nullable|string|max:4000',
         ], [
             'acceptTerms.accepted' => 'You must accept the terms and conditions.',
         ]);
+
+        $recaptcha->assertValid($validated['recaptchaToken'] ?? null, $request->ip());
+
+        $selectedPlan = null;
+        if (! empty($validated['planId'])) {
+            $selectedPlan = Plan::find($validated['planId']);
+        }
 
         $company = Company::create([
             'name' => $validated['companyName'],
@@ -119,6 +133,8 @@ class AuthController extends Controller
             'status' => 'pending',
         ]);
 
+        $marketingConsent = (bool) ($validated['marketingConsent'] ?? false);
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -126,30 +142,50 @@ class AuthController extends Controller
             'phone' => $validated['phone'],
             'company_id' => $company->id,
             'status' => 'active',
+            'terms_accepted_at' => now(),
+            'marketing_consent' => $marketingConsent,
+            'marketing_consent_at' => $marketingConsent ? now() : null,
+            'selected_plan_id' => $selectedPlan?->id,
         ]);
         $user->role = 'company_owner';
         $user->save();
 
-        $this->createDefaultTrialSubscription($company);
+        $trial = $this->createTrialSubscriptionForRegistration($company, $selectedPlan);
+        app(\App\Services\Agent\AgentCommerceProvisioningService::class)->syncForCompany($company);
+
+        $requiresPayment = $selectedPlan
+            && ! $selectedPlan->is_free
+            && ! (bool) $selectedPlan->has_trial
+            && (float) ($selectedPlan->price_amount ?? 0) > 0;
 
         $requireVerification = PlatformSetting::requiresEmailVerification();
 
         if ($requireVerification) {
             $user->sendEmailVerificationNotification();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Registration successful! Please check your email to verify your account.',
-                'requireEmailVerification' => true,
-            ]);
+        } else {
+            $user->markEmailAsVerified();
         }
 
-        $user->markEmailAsVerified();
+        // Always send welcome (includes trial details when applicable). Verification email is separate when required.
+        $this->sendRegistrationWelcome($user, $company, $trial);
 
         return response()->json([
             'success' => true,
-            'message' => 'Registration successful! You can now sign in.',
-            'requireEmailVerification' => false,
+            'message' => $requireVerification
+                ? 'Registration successful! Please check your email to verify your account.'
+                : 'Registration successful! You can now sign in.',
+            'requireEmailVerification' => $requireVerification,
+            'trialStarted' => $trial !== null,
+            'trialDays' => $trial['days'] ?? null,
+            'trialPlan' => $trial['plan_slug'] ?? null,
+            'trialPlanName' => $trial['plan_name'] ?? null,
+            'requiresPayment' => $requiresPayment,
+            'selectedPlanId' => $selectedPlan ? (string) $selectedPlan->id : null,
+            'postLoginPath' => $requiresPayment && $selectedPlan
+                ? '/dashboard/subscription?subscribe='.$selectedPlan->id
+                : ($trial
+                    ? '/dashboard?trial_started=1'
+                    : '/dashboard'),
         ]);
     }
 
@@ -319,36 +355,122 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Start a free trial for a new company based on admin plan flags (has_trial / trial_days).
+     * Prefers the plan selected on pricing; falls back to the default trial-enabled plan.
+     *
+     * @return array{days: int, plan_slug: string, plan_name: string, end_date: string}|null
+     */
+    private function createTrialSubscriptionForRegistration(Company $company, ?Plan $selectedPlan): ?array
+    {
+        $plan = null;
+        if ($selectedPlan && $selectedPlan->has_trial && ! $selectedPlan->is_free) {
+            $plan = $selectedPlan;
+        } elseif ($selectedPlan && $selectedPlan->is_free) {
+            $plan = $selectedPlan;
+        }
+
+        if (! $plan) {
+            $defaultSlug = config('subscription.default_plan_slug', 'starter');
+            $default = Plan::where('slug', $defaultSlug)->first();
+            if ($default && ($default->has_trial || $default->is_free)) {
+                $plan = $default;
+            } else {
+                $plan = Plan::where('has_trial', true)->orderBy('sort_order')->first()
+                    ?? Plan::where('is_free', true)->orderBy('sort_order')->first();
+            }
+        }
+
+        if (! $plan) {
+            return null;
+        }
+
+        // Free plans: active (not trial). Trial-enabled paid plans: trial status.
+        if ($plan->is_free && ! $plan->has_trial) {
+            $days = max(1, (int) config('subscription.default_trial_days', 14));
+            Subscription::create([
+                'company_id' => $company->id,
+                'plan' => $plan->slug,
+                'status' => 'active',
+                'start_date' => now()->format('Y-m-d'),
+                'end_date' => now()->addYears(10)->format('Y-m-d'),
+                'amount' => 0,
+                'billing_cycle' => 'monthly',
+            ]);
+
+            return [
+                'days' => $days,
+                'plan_slug' => $plan->slug,
+                'plan_name' => $plan->name,
+                'end_date' => now()->addYears(10)->format('F j, Y'),
+                'is_free' => true,
+            ];
+        }
+
+        if (! $plan->has_trial) {
+            return null;
+        }
+
+        $days = (int) ($plan->trial_days ?: config('subscription.default_trial_days', 14));
+        if ($days < 1) {
+            $days = 14;
+        }
+        $endDate = now()->addDays($days);
+
+        Subscription::create([
+            'company_id' => $company->id,
+            'plan' => $plan->slug,
+            'status' => 'trial',
+            'start_date' => now()->format('Y-m-d'),
+            'end_date' => $endDate->format('Y-m-d'),
+            'amount' => 0,
+            'billing_cycle' => 'monthly',
+        ]);
+
+        return [
+            'days' => $days,
+            'plan_slug' => $plan->slug,
+            'plan_name' => $plan->name,
+            'end_date' => $endDate->format('F j, Y'),
+            'is_free' => false,
+        ];
+    }
+
+    /**
+     * @param  array{days: int, plan_slug: string, plan_name: string, end_date: string, is_free?: bool}|null  $trial
+     */
+    private function sendRegistrationWelcome(User $user, Company $company, ?array $trial): void
+    {
+        try {
+            if ($user->email) {
+                app(MailService::class)->sendWelcomeTrialEmail(
+                    $user->email,
+                    $user->name,
+                    $trial['plan_name'] ?? 'Starter',
+                    $trial['days'] ?? (int) config('subscription.default_trial_days', 14),
+                    $trial['end_date'] ?? now()->addDays(14)->format('F j, Y'),
+                    ! empty($trial) && empty($trial['is_free'])
+                );
+            }
+
+            if ($trial) {
+                app(NotificationDispatcher::class)->dispatch($company, 'subscription.trial_started', [
+                    'plan' => $trial['plan_name'],
+                    'days' => $trial['days'],
+                    'end_date' => $trial['end_date'],
+                    'owner_email' => $company->email,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Registration welcome failed: '.$e->getMessage());
+        }
+    }
+
     private function loginThrottleKey(Request $request): string
     {
         $email = Str::transliterate(Str::lower((string) $request->email));
 
         return 'login:'.$email.'|'.$request->ip();
-    }
-
-    /**
-     * Create default free trial subscription for a new company.
-     * All companies get a trial so they can use the system until trial ends or they subscribe.
-     */
-    private function createDefaultTrialSubscription(Company $company): void
-    {
-        $planSlug = config('subscription.default_plan_slug', 'starter');
-        $trialDays = config('subscription.default_trial_days', 14);
-
-        $plan = Plan::where('slug', $planSlug)->first();
-        if (! $plan) {
-            $planSlug = 'starter';
-        }
-
-        Subscription::create([
-            'company_id' => $company->id,
-            'plan' => $planSlug,
-            'status' => 'trial',
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays($trialDays)->format('Y-m-d'),
-            'amount' => 0,
-            'billing_cycle' => 'monthly',
-        ]);
     }
 
     private function userToArray(User $user): array
@@ -364,6 +486,10 @@ class AuthController extends Controller
             'status' => $user->status,
             'lastLogin' => $user->last_login_at?->toIso8601String(),
             'createdAt' => $user->created_at->format('Y-m-d'),
+            'termsAcceptedAt' => $user->terms_accepted_at?->toIso8601String(),
+            'marketingConsent' => (bool) $user->marketing_consent,
+            'marketingConsentAt' => $user->marketing_consent_at?->toIso8601String(),
+            'selectedPlanId' => $user->selected_plan_id ? (string) $user->selected_plan_id : null,
         ];
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\Order;
 use App\Models\OrderProduct;
+use App\Models\Product;
 use App\Models\SocialPost;
 use App\Services\OrderPaymentService;
 use App\Services\WhatsAppMessageSenderService;
@@ -30,7 +31,7 @@ class OrderController extends Controller
 
     protected function buildOrderUpdateWhatsAppMessage(Order $order, ?string $oldStatus, ?string $oldPaymentStatus): string
     {
-        $companyName = $order->company?->name ?: 'Essem Chat';
+        $companyName = $order->company?->name ?: 'RelayIQ';
         $customerName = $order->customer_name ?: 'Customer';
         $settings = $order->company?->settings;
 
@@ -219,9 +220,12 @@ class OrderController extends Controller
         $validated = $request->validate([
             'chatId' => 'required|integer|exists:chats,id',
             'items' => 'required|array|min:1',
+            'items.*.productId' => 'nullable|integer|exists:products,id',
+            'items.*.productVariantId' => 'nullable|integer|exists:product_variants,id',
             'items.*.name' => 'required|string|max:255',
             'items.*.quantity' => 'required|integer|min:1|max:9999',
             'items.*.price' => 'required|numeric|min:0',
+            'items.*.fulfillmentData' => 'nullable|array',
             'sendWhatsApp' => 'sometimes|boolean',
         ]);
 
@@ -255,13 +259,49 @@ class OrderController extends Controller
             'payment_status' => 'pending',
         ]);
 
-        foreach ($validated['items'] as $item) {
-            OrderProduct::create([
-                'order_id' => $order->id,
-                'name' => $item['name'],
-                'quantity' => (int) $item['quantity'],
-                'price' => (float) $item['price'],
-            ]);
+        $digitalAccess = app(\App\Services\DigitalAccessService::class);
+
+        try {
+            foreach ($validated['items'] as $item) {
+                $product = null;
+                $productId = $item['productId'] ?? null;
+                if ($productId) {
+                    $product = Product::query()
+                        ->where('company_id', $companyId)
+                        ->where('id', $productId)
+                        ->first();
+                    if (! $product) {
+                        throw new \RuntimeException('Invalid product for this company.');
+                    }
+
+                    $poolError = $digitalAccess->assertPoolCapacity($product, (int) $item['quantity']);
+                    if ($poolError) {
+                        throw new \RuntimeException($poolError);
+                    }
+                }
+
+                $fulfillment = is_array($item['fulfillmentData'] ?? null) ? $item['fulfillmentData'] : [];
+                // Strip any client-supplied file paths to prevent path injection.
+                unset($fulfillment['digitalFilePath'], $fulfillment['digitalFileAbsolutePath'], $fulfillment['digitalFileUrl']);
+                $fulfillment = $digitalAccess->hydrateFulfillmentData($fulfillment, $product);
+                if ($product && empty($fulfillment)) {
+                    $fulfillment = $product->fulfillmentSnapshot();
+                }
+
+                OrderProduct::create([
+                    'order_id' => $order->id,
+                    'product_id' => $product?->id,
+                    'product_variant_id' => $item['productVariantId'] ?? null,
+                    'name' => $item['name'],
+                    'quantity' => (int) $item['quantity'],
+                    'price' => (float) $item['price'],
+                    'fulfillment_data' => $fulfillment !== [] ? $fulfillment : null,
+                ]);
+            }
+        } catch (\RuntimeException $e) {
+            $order->delete();
+
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
         $whatsappSent = false;

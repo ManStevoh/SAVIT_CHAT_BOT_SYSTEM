@@ -6,6 +6,8 @@ import {
   LandoFeatureBlock,
   LandoHowToJoin,
   LandoCtaSection,
+  LandoCapabilities,
+  LandoGrowthEngine,
 } from "./sections"
 import {
   LandoTrustedCompanies,
@@ -86,6 +88,15 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
         />
       )
 
+    case "capabilities":
+      return (
+        <LandoCapabilities
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
+        />
+      )
+
     case "trusted_companies": {
       const companies = arr<{ name: string; logoUrl?: string }>(content.companies)
       const fromApi = pageData.trustedCompanies
@@ -112,6 +123,8 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
 
     case "feature_1":
     case "feature_2":
+    case "feature_3":
+    case "feature_4":
       return (
         <LandoFeatureBlock
           label={str(content.label)}
@@ -122,6 +135,20 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
           imagePosition={content.imagePosition === "right" ? "right" : "left"}
+        />
+      )
+
+    case "growth_engine":
+      return (
+        <LandoGrowthEngine
+          label={str(content.label)}
+          title={str(content.title)}
+          description={str(content.description)}
+          points={arr<string>(content.points)}
+          ctaText={str(content.ctaText)}
+          ctaHref={str(content.ctaHref)}
+          imageUrl={str(content.imageUrl)}
+          imageAlt={str(content.imageAlt)}
         />
       )
 
@@ -167,7 +194,14 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
       return <LandoMission title={str(content.title)} description={str(content.description)} />
 
     case "efficiency":
-      return <LandoEfficiency title={str(content.title)} />
+      return (
+        <LandoEfficiency
+          title={str(content.title)}
+          description={str(content.description) || undefined}
+          ctaText={str(content.ctaText) || undefined}
+          ctaHref={str(content.ctaHref) || undefined}
+        />
+      )
 
     case "team":
       return (

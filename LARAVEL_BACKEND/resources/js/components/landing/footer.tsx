@@ -6,7 +6,7 @@ import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
 const DOCS_URL = "https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/"
-const CONTACT_EMAIL = "support@essemglobalsolutions.com"
+const CONTACT_EMAIL = "support@essemdigital.com"
 
 const footerLinks = {
   Product: [
@@ -22,6 +22,7 @@ const footerLinks = {
     { name: "Product tour", href: "#demo" },
   ],
   Company: [
+    { name: "About Essem Digital", href: "https://essemdigital.com", external: true },
     { name: "Contact", href: `mailto:${CONTACT_EMAIL}` },
     { name: "Privacy", href: "/privacy" },
     { name: "Terms", href: "/terms" },
@@ -41,6 +42,7 @@ export function Footer() {
               <AppLogoAndName variant="footer" />
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
                 Automate your WhatsApp business with AI-powered chatbots, order management, and in-chat payments.
+                RelayIQ is a product of Essem Digital Innovation Limited.
               </p>
               <div className="mt-6 flex gap-4">
                 {[
@@ -101,9 +103,17 @@ export function Footer() {
         </div>
 
         <div className="flex flex-col items-center justify-between gap-3 border-t border-border/60 py-6 sm:flex-row">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} {appName}. All rights reserved.
-          </p>
+          <div className="space-y-1 text-center sm:text-left">
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} Essem Digital Innovation Limited. {appName} is a product of Essem Digital Innovation Limited.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Powered by Essem Digital Innovation Limited ·{" "}
+              <a href="https://essemdigital.com" className="hover:text-foreground underline-offset-2 hover:underline" target="_blank" rel="noopener noreferrer">
+                essemdigital.com
+              </a>
+            </p>
+          </div>
           <div className="flex gap-5">
             <Link href="/privacy" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               Privacy Policy

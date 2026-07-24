@@ -60,7 +60,7 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Footer',
                         'sort_order' => 4,
                         'content' => [
-                            'copyright' => date('Y') . ' © RelayIQ / All rights reserved.',
+                            'copyright' => date('Y') . ' © Essem Digital Innovation Limited. RelayIQ is a product of Essem Digital Innovation Limited. All rights reserved.',
                             'navLinks' => [
                                 ['label' => 'Home', 'href' => '/'],
                                 ['label' => 'Pricing', 'href' => '/pricing'],
@@ -78,6 +78,11 @@ class CmsPageSeeder extends Seeder
                                 ['label' => 'Privacy Policy', 'href' => '/privacy'],
                                 ['label' => 'Terms Of Service', 'href' => '/terms'],
                             ],
+                            'showMobileApp' => false,
+                            'mobileAppTitle' => 'Get the mobile app',
+                            'mobileAppDescription' => 'Manage chats, orders, and growth on the go.',
+                            'playStoreUrl' => '',
+                            'appStoreUrl' => '',
                         ],
                     ],
                 ],
@@ -85,39 +90,40 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'home',
                 'title' => 'Home',
-                'meta_title' => 'RelayIQ — AI WhatsApp Sales & Order Automation',
-                'meta_description' => 'Turn WhatsApp into your best sales channel. AI replies, order flows, M-Pesa & Stripe payments, multi-agent inbox, and Growth Engine attribution.',
+                'meta_title' => 'RelayIQ — AI Commerce OS for WhatsApp',
+                'meta_description' => 'Your AI commerce agent on WhatsApp: sell physical & digital products, take bookings, collect M-Pesa/Paystack/Stripe, grow with attribution — with memory and a human team inbox.',
                 'sections' => [
                     [
                         'section_key' => 'hero',
                         'label' => 'Hero',
                         'sort_order' => 1,
                         'content' => [
-                            'kicker' => 'FREE 14 DAYS TRIAL',
-                            'title' => 'The best way to sell on WhatsApp.',
-                            'description' => 'AI handles replies and orders. Your team steps in when needed. Customers pay with M-Pesa or card without leaving the chat.',
-                            'primaryCtaText' => 'Try for free',
+                            'kicker' => 'FREE 14-DAY TRIAL',
+                            'title' => 'Your AI commerce OS for WhatsApp.',
+                            'description' => 'Not a menu bot — a fluent agent that knows your catalog, takes orders, collects payment, books services, delivers digital products, and hands off to your team when needed.',
+                            'primaryCtaText' => 'Start free trial',
                             'primaryCtaHref' => '/register',
                             'secondaryCtaText' => 'See how it works',
                             'secondaryCtaHref' => '#how-to-join',
                             'showFlowSimulation' => true,
                             'imageUrl' => $heroImage,
-                            'imageAlt' => 'WhatsApp commerce platform illustration',
+                            'imageAlt' => 'RelayIQ WhatsApp commerce agent illustration',
                         ],
                     ],
                     [
-                        'section_key' => 'trusted_companies',
-                        'label' => 'Trusted companies',
+                        'section_key' => 'capabilities',
+                        'label' => 'Capabilities grid',
                         'sort_order' => 2,
                         'content' => [
-                            'title' => "Trusted by individuals and teams at the world's best companies",
-                            'companies' => [
-                                ['name' => 'FoodHub', 'logoUrl' => '/images/lando/logo-foodhub.svg'],
-                                ['name' => 'ShopEase', 'logoUrl' => '/images/lando/logo-shopease.svg'],
-                                ['name' => 'TechStore', 'logoUrl' => '/images/lando/logo-techstore.svg'],
-                                ['name' => 'FashionCo', 'logoUrl' => '/images/lando/logo-fashionco.svg'],
-                                ['name' => 'QuickBite', 'logoUrl' => '/images/lando/logo-quickbite.svg'],
-                                ['name' => 'HomeGoods', 'logoUrl' => '/images/lando/logo-homegoods.svg'],
+                            'title' => 'Everything your WhatsApp business needs',
+                            'description' => 'One platform for conversation, catalog, payments, growth — and an AI that improves as you sell.',
+                            'items' => [
+                                ['icon' => 'bot', 'title' => 'AI commerce agent', 'description' => 'Fluent sales & support with memory — not rigid numbered menus.'],
+                                ['icon' => 'package', 'title' => 'Sell anything', 'description' => 'Physical goods, digital files & licenses, and bookable services.'],
+                                ['icon' => 'payment', 'title' => 'Pay in the chat', 'description' => 'M-Pesa, Paystack, and Stripe — customers pay without leaving WhatsApp.'],
+                                ['icon' => 'booking', 'title' => 'Bookings & services', 'description' => 'Qualify needs, share availability, and convert service requests into bookings.'],
+                                ['icon' => 'growth', 'title' => 'Growth Engine', 'description' => 'AI posts, social publishing, and WhatsApp referral attribution.'],
+                                ['icon' => 'inbox', 'title' => 'Team inbox', 'description' => 'AI handles the front line; humans take over any thread instantly.'],
                             ],
                         ],
                     ],
@@ -126,77 +132,128 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Intro card',
                         'sort_order' => 3,
                         'content' => [
-                            'title' => 'Introducing WhatsApp commerce',
-                            'description' => 'Join businesses using RelayIQ and experience AI-powered sales today!',
-                            'ctaText' => 'Try for free',
-                            'ctaHref' => '/register',
+                            'title' => 'Not a chatbot. A commerce operating system.',
+                            'description' => 'RelayIQ runs the full customer journey: discover → recommend → order → pay → fulfill → follow up. It learns from conversations so every reply gets sharper over time.',
+                            'ctaText' => 'Explore pricing',
+                            'ctaHref' => '/pricing',
                             'imageUrl' => $introImage,
+                            'imageAlt' => 'RelayIQ commerce OS overview',
                         ],
                     ],
                     [
                         'section_key' => 'feature_1',
-                        'label' => 'Feature block 1',
+                        'label' => 'Feature: AI + inbox',
                         'sort_order' => 4,
                         'content' => [
-                            'label' => 'SMART INBOX',
-                            'title' => 'All your conversations in one place',
-                            'description' => 'We take customer data seriously. Every chat, order, and payment is encrypted and stored securely. Your team inbox keeps full history per customer.',
-                            'ctaText' => 'Try now',
+                            'label' => 'AI AGENT + TEAM INBOX',
+                            'title' => 'Conversations that sell — with humans in control',
+                            'description' => 'Your AI employee answers with facts from catalog, FAQ, and order history. It remembers preferences. When a customer needs a person, your team jumps in from one shared inbox — encryption and full history included.',
+                            'ctaText' => 'Try free',
                             'ctaHref' => '/register',
                             'imageUrl' => $inboxImage,
+                            'imageAlt' => 'Team inbox and AI conversation view',
                             'imagePosition' => 'left',
                         ],
                     ],
                     [
                         'section_key' => 'feature_2',
-                        'label' => 'Feature block 2',
+                        'label' => 'Feature: Payments',
                         'sort_order' => 5,
                         'content' => [
-                            'label' => 'PAY IN CHAT',
-                            'title' => 'Get paid without leaving WhatsApp',
-                            'description' => 'M-Pesa STK push and Stripe card payments built into the conversation. Customers browse, order, and pay in one thread — no redirects, no friction.',
-                            'ctaText' => 'Try now',
-                            'ctaHref' => '/register',
+                            'label' => 'PAYMENTS',
+                            'title' => 'Get paid where the conversation happens',
+                            'description' => 'Collect with M-Pesa STK, Paystack, or Stripe from the same chat thread. Merchants can use their own M-Pesa Till/PayBill. Orders mark paid automatically when payment succeeds.',
+                            'ctaText' => 'See plans',
+                            'ctaHref' => '/pricing',
                             'imageUrl' => $paymentsImage,
+                            'imageAlt' => 'In-chat payment collection',
                             'imagePosition' => 'right',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'feature_3',
+                        'label' => 'Feature: Catalog types',
+                        'sort_order' => 6,
+                        'content' => [
+                            'label' => 'CATALOG',
+                            'title' => 'Physical, digital, and bookable — in one catalog',
+                            'description' => 'Ship products, deliver download links and license keys after payment, or take service bookings. Your AI understands stock, variants, and fulfillment so customers get accurate answers every time.',
+                            'ctaText' => 'Start selling',
+                            'ctaHref' => '/register',
+                            'imageUrl' => $introImage,
+                            'imageAlt' => 'Product catalog covering physical digital and bookings',
+                            'imagePosition' => 'left',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'growth_engine',
+                        'label' => 'Growth Engine',
+                        'sort_order' => 7,
+                        'content' => [
+                            'label' => 'GROWTH ENGINE',
+                            'title' => 'Turn chats into campaigns you can measure',
+                            'description' => 'Create AI-assisted posts, publish to social platforms, and track WhatsApp referral links so you know which content drives orders.',
+                            'points' => [
+                                'AI post generation with image support',
+                                'Multi-platform publishing by plan',
+                                'Attribution via WhatsApp referral links',
+                                'Follow-ups that bring customers back',
+                            ],
+                            'ctaText' => 'See Growth plan',
+                            'ctaHref' => '/pricing',
+                            'imageUrl' => $ctaImage,
+                            'imageAlt' => 'Growth Engine campaigns and attribution',
                         ],
                     ],
                     [
                         'section_key' => 'how_to_join',
                         'label' => 'How to join',
-                        'sort_order' => 6,
+                        'sort_order' => 8,
                         'content' => [
-                            'title' => 'How to join our community',
-                            'description' => 'Just 3 simple steps to start selling on WhatsApp.',
-                            'ctaText' => 'Sign up now',
+                            'title' => 'Go live in three steps',
+                            'description' => 'From signup to your first AI-assisted sale — without a technical team.',
+                            'ctaText' => 'Create your account',
                             'ctaHref' => '/register',
                             'imageUrl' => $stepsImage,
+                            'imageAlt' => 'Three steps to go live',
                             'steps' => [
-                                ['title' => 'Step 1', 'description' => 'Create your account and connect your WhatsApp Business number.'],
-                                ['title' => 'Step 2', 'description' => 'Add your products, FAQs, and payment methods — we guide you through setup.'],
-                                ['title' => 'Step 3', 'description' => 'Go live! AI handles replies while your team takes over when needed.'],
+                                ['title' => 'Connect WhatsApp', 'description' => 'Sign up, connect your WhatsApp Business number (Embedded Signup or Cloud API).'],
+                                ['title' => 'Add catalog & payments', 'description' => 'Products (physical, digital, bookings), FAQs, and M-Pesa / Paystack / Stripe.'],
+                                ['title' => 'Let the agent sell', 'description' => 'AI handles replies and orders; your team takes over any chat when needed.'],
                             ],
+                        ],
+                    ],
+                    [
+                        'section_key' => 'trusted_companies',
+                        'label' => 'Trusted companies',
+                        'sort_order' => 9,
+                        'is_enabled' => false,
+                        'content' => [
+                            'title' => 'Built for WhatsApp-first sellers across Africa and beyond',
+                            'companies' => [],
                         ],
                     ],
                     [
                         'section_key' => 'testimonials',
                         'label' => 'Testimonials',
-                        'sort_order' => 7,
+                        'sort_order' => 10,
+                        'is_enabled' => false,
                         'content' => [
-                            'title' => 'Testimonials',
-                            'description' => 'People love what we do and we want you to know',
+                            'title' => 'What sellers say',
+                            'description' => 'Real stories from businesses running RelayIQ.',
                         ],
                     ],
                     [
                         'section_key' => 'cta',
                         'label' => 'Call to action',
-                        'sort_order' => 8,
+                        'sort_order' => 11,
                         'content' => [
-                            'title' => 'Get started with RelayIQ today',
-                            'description' => 'Start selling on WhatsApp with AI automation today.',
-                            'ctaText' => 'Sign up now',
+                            'title' => 'Put an AI employee on your WhatsApp today',
+                            'description' => '14-day free trial on Starter and Growth. No credit card required to start.',
+                            'ctaText' => 'Start free trial',
                             'ctaHref' => '/register',
                             'imageUrl' => $ctaImage,
+                            'imageAlt' => 'Start RelayIQ free trial',
                         ],
                     ],
                 ],
@@ -205,15 +262,15 @@ class CmsPageSeeder extends Seeder
                 'slug' => 'pricing',
                 'title' => 'Pricing',
                 'meta_title' => 'Pricing — RelayIQ',
-                'meta_description' => 'Straightforward plans for WhatsApp commerce. 14-day free trial on every plan.',
+                'meta_description' => 'Starter, Growth, and Enterprise plans for WhatsApp commerce. 14-day free trial on Starter and Growth.',
                 'sections' => [
                     [
                         'section_key' => 'hero',
                         'label' => 'Hero',
                         'sort_order' => 1,
                         'content' => [
-                            'title' => 'Pricing',
-                            'description' => "Our pricing is not expensive, but it's not cheap either — it's exactly what it should be.",
+                            'title' => 'Pricing that scales with your sales',
+                            'description' => 'Start with a free trial. Upgrade when volume, bookings, or Growth Engine needs grow.',
                         ],
                     ],
                     [
@@ -230,28 +287,30 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Compare features',
                         'sort_order' => 3,
                         'content' => [
-                            'title' => 'Compare Features',
+                            'title' => 'Compare features',
                             'columns' => [
                                 [
                                     'name' => 'Starter',
                                     'features' => [
-                                        'AI auto-replies',
-                                        'Order management',
-                                        'Customer payments (when enabled)',
-                                        '1 WhatsApp number',
-                                        '3 team seats',
-                                        'Growth: 20 AI posts / 1 platform',
+                                        'Conversational AI OS + memory',
+                                        'Physical & digital catalog',
+                                        'M-Pesa / Paystack / Stripe',
+                                        '5,000 messages / month',
+                                        'Growth Engine (20 AI posts)',
+                                        'Up to 3 team seats',
+                                        '14-day free trial',
                                     ],
                                 ],
                                 [
                                     'name' => 'Growth',
                                     'features' => [
                                         'Everything in Starter',
-                                        '50k messages/month',
-                                        'Analytics dashboard',
-                                        'API access',
-                                        '10 team seats',
-                                        'Growth: 100 AI posts / 3 platforms',
+                                        'Bookings & services',
+                                        '50,000 messages / month',
+                                        'Advanced AI + BYOK preferred',
+                                        'Growth Engine (100 AI posts)',
+                                        'Analytics + API access',
+                                        'Up to 10 team seats',
                                     ],
                                 ],
                                 [
@@ -259,10 +318,11 @@ class CmsPageSeeder extends Seeder
                                     'features' => [
                                         'Everything in Growth',
                                         'Unlimited messages',
-                                        '50 team seats',
-                                        'Custom AI model + company keys',
-                                        'Growth: 500 AI posts / 10 platforms',
-                                        'SLAs & custom integrations (sales)',
+                                        'Custom AI models + company keys',
+                                        'Growth Engine (500 AI posts)',
+                                        'Up to 50 team seats',
+                                        'Onboarding & SLAs',
+                                        'Contact sales (no self-serve trial)',
                                     ],
                                 ],
                             ],
@@ -274,7 +334,6 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 4,
                         'content' => [
                             'title' => 'Frequently asked questions',
-                            'useFaqsApi' => true,
                         ],
                     ],
                     [
@@ -282,9 +341,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Call to action',
                         'sort_order' => 5,
                         'content' => [
-                            'title' => 'Get started with RelayIQ today',
-                            'description' => 'Start optimizing your WhatsApp sales today.',
-                            'ctaText' => 'Sign up now',
+                            'title' => 'Ready to put AI on your WhatsApp?',
+                            'description' => 'Start your trial and connect WhatsApp in minutes.',
+                            'ctaText' => 'Start free trial',
                             'ctaHref' => '/register',
                         ],
                     ],
@@ -294,17 +353,17 @@ class CmsPageSeeder extends Seeder
                 'slug' => 'about',
                 'title' => 'About us',
                 'meta_title' => 'About us — RelayIQ',
-                'meta_description' => 'We offer a revolutionary WhatsApp commerce platform. Join the RelayIQ community today.',
+                'meta_description' => 'RelayIQ by Essem Digital Innovation — the AI commerce OS that helps businesses sell on WhatsApp.',
                 'sections' => [
                     [
                         'section_key' => 'hero',
                         'label' => 'Hero',
                         'sort_order' => 1,
                         'content' => [
-                            'title' => 'About us',
-                            'description' => 'We offer a revolutionary solution for WhatsApp sales. Join the RelayIQ community and experience the benefits of commerce automation today!',
+                            'title' => 'About RelayIQ',
+                            'description' => 'We build the AI commerce operating system for WhatsApp-first businesses — so owners can sell more without hiring a call center.',
                             'imageUrl' => $aboutTeamImage,
-                            'imageAlt' => 'Our team',
+                            'imageAlt' => 'RelayIQ by Essem Digital',
                         ],
                     ],
                     [
@@ -313,7 +372,7 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 2,
                         'content' => [
                             'title' => 'Our mission',
-                            'description' => 'At RelayIQ, we are committed to helping businesses sell more on WhatsApp. We believe AI and human agents working together can transform customer experience. Our team is dedicated to providing the best possible service and support, and we are always looking for ways to improve and innovate.',
+                            'description' => 'RelayIQ is a product of Essem Digital Innovation Limited. We believe every business deserves an intelligent front line on WhatsApp: accurate catalog answers, payments that work for Africa and the world, digital delivery, bookings, and humans in the loop. Intelligence at the center — not hard-coded menus.',
                         ],
                     ],
                     [
@@ -321,9 +380,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Efficiency statement',
                         'sort_order' => 3,
                         'content' => [
-                            'title' => "Let's start working more efficiently today!",
-                            'description' => 'Automate WhatsApp sales, keep humans in control, and grow with a platform built for commerce teams.',
-                            'ctaText' => 'Start free',
+                            'title' => 'Sell smarter. Stay in control.',
+                            'description' => 'Automate the busywork of replies and orders while your team focuses on relationships and exceptions.',
+                            'ctaText' => 'Start free trial',
                             'ctaHref' => '/register',
                         ],
                     ],
@@ -331,15 +390,11 @@ class CmsPageSeeder extends Seeder
                         'section_key' => 'team',
                         'label' => 'Team',
                         'sort_order' => 4,
+                        'is_enabled' => false,
                         'content' => [
                             'title' => 'Team',
-                            'description' => 'Meet the people behind our magical product',
-                            'members' => [
-                                ['name' => 'Hannah Mika', 'role' => 'CEO', 'imageUrl' => '/images/lando/team-ceo.png'],
-                                ['name' => 'Daniel Peter', 'role' => 'CTO', 'imageUrl' => '/images/lando/team-cto.png'],
-                                ['name' => 'Lars Mikkel', 'role' => 'Head of Operations', 'imageUrl' => '/images/lando/team-operations.png'],
-                                ['name' => 'Denis Forner', 'role' => 'Head of Product', 'imageUrl' => '/images/lando/team-product.png'],
-                            ],
+                            'description' => 'Meet the people behind RelayIQ',
+                            'members' => [],
                         ],
                     ],
                     [
@@ -347,9 +402,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Call to action',
                         'sort_order' => 5,
                         'content' => [
-                            'title' => 'Get started with RelayIQ today',
-                            'description' => 'Start optimizing your WhatsApp sales today.',
-                            'ctaText' => 'Sign up now',
+                            'title' => 'Join businesses running on RelayIQ',
+                            'description' => 'Start your free trial and connect WhatsApp today.',
+                            'ctaText' => 'Get started',
                             'ctaHref' => '/register',
                         ],
                     ],
@@ -366,8 +421,8 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Hero + form',
                         'sort_order' => 1,
                         'content' => [
-                            'title' => 'Contact Us',
-                            'description' => 'Explore the future with us. Feel free to get in touch.',
+                            'title' => 'Contact us',
+                            'description' => 'Questions about RelayIQ, partnerships, or Enterprise? Send a message — we respond as soon as we can.',
                             'imageUrl' => $contactImage,
                             'nameLabel' => 'Name',
                             'namePlaceholder' => 'Full Name',
@@ -384,9 +439,9 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Call to action',
                         'sort_order' => 2,
                         'content' => [
-                            'title' => 'Get started with RelayIQ today',
-                            'description' => 'Start optimizing your WhatsApp sales today.',
-                            'ctaText' => 'Sign up now',
+                            'title' => 'Prefer to try it yourself?',
+                            'description' => 'Start a free trial and explore the AI commerce OS on WhatsApp.',
+                            'ctaText' => 'Start free trial',
                             'ctaHref' => '/register',
                         ],
                     ],
@@ -405,7 +460,27 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => 'Privacy Policy',
                             'lastUpdated' => 'June 2026',
-                            'body' => "<h2>1. Who we are</h2>\n<p>RelayIQ is operated by Essem Global Solutions. We provide a multi-tenant SaaS platform for WhatsApp business messaging, AI-assisted replies, order management, and related services.</p>\n<h2>2. Information we collect</h2>\n<p>We collect information you provide when you register and use the platform, including:</p>\n<ul>\n<li>Account details (name, email, company information)</li>\n<li>WhatsApp business configuration and message content routed through the platform</li>\n<li>Customer conversation data processed on your behalf</li>\n<li>Payment and subscription records (processed by Stripe or M-Pesa providers)</li>\n<li>Usage logs for billing, security, and product improvement</li>\n</ul>\n<h2>3. How we use your information</h2>\n<p>We use collected data to provide, operate, and improve the RelayIQ platform, process AI-assisted replies, send service-related communications, and comply with legal obligations.</p>\n<h2>4. Data sharing</h2>\n<p>We do not sell your data. We share information only with service providers necessary to operate the platform (e.g. Meta/WhatsApp Cloud API, payment processors, AI providers you configure) and when required by law.</p>\n<h2>5. Security</h2>\n<p>We use industry-standard measures including encryption in transit and access controls. Each tenant's data is logically isolated in our multi-tenant architecture.</p>\n<h2>6. Your rights</h2>\n<p>Depending on your jurisdiction, you may have rights to access, correct, or delete personal data. Contact us at support@essemglobalsolutions.com to submit a request.</p>\n<h2>7. Changes</h2>\n<p>We may update this policy from time to time. Continued use of the service after changes constitutes acceptance of the updated policy.</p>",
+                            'body' => '<h2>1. Who we are</h2>
+<p>RelayIQ is a product of Essem Digital Innovation Limited. We provide a multi-tenant SaaS platform for WhatsApp business messaging, AI-assisted replies, order management, and related services. Learn more at <a href="https://essemdigital.com" target="_blank" rel="noopener noreferrer">essemdigital.com</a>.</p>
+<h2>2. Information we collect</h2>
+<p>We collect information you provide when you register and use the platform, including:</p>
+<ul>
+<li>Account details (name, email, company information)</li>
+<li>WhatsApp business configuration and message content routed through the platform</li>
+<li>Customer conversation data processed on your behalf</li>
+<li>Payment and subscription records (processed by Stripe, Paystack, or M-Pesa providers)</li>
+<li>Usage logs for billing, security, and product improvement</li>
+</ul>
+<h2>3. How we use your information</h2>
+<p>We use collected data to provide, operate, and improve the RelayIQ platform, process AI-assisted replies, send service-related communications, and comply with legal obligations.</p>
+<h2>4. Data sharing</h2>
+<p>We do not sell your data. We share information only with service providers necessary to operate the platform (e.g. Meta/WhatsApp Cloud API, payment processors, AI providers you configure) and when required by law.</p>
+<h2>5. Security</h2>
+<p>We use industry-standard measures including encryption in transit and access controls. Each tenant\'s data is logically isolated in our multi-tenant architecture.</p>
+<h2>6. Your rights</h2>
+<p>Depending on your jurisdiction, you may have rights to access, correct, or delete personal data. Contact us at support@essemdigital.com to submit a request.</p>
+<h2>7. Changes</h2>
+<p>We may update this policy from time to time. Continued use of the service after changes constitutes acceptance of the updated policy.</p>',
                         ],
                     ],
                 ],
@@ -423,7 +498,28 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'title' => 'Terms of Service',
                             'lastUpdated' => 'June 2026',
-                            'body' => "<h2>1. Acceptance</h2>\n<p>By creating an account or using RelayIQ, you agree to these Terms of Service. If you are using the service on behalf of a company, you represent that you have authority to bind that company.</p>\n<h2>2. Service description</h2>\n<p>RelayIQ provides WhatsApp business messaging, AI-assisted automation, order management, payment integrations, and related tools. Features vary by subscription plan.</p>\n<h2>3. Your responsibilities</h2>\n<p>You agree to:</p>\n<ul>\n<li>Comply with Meta's WhatsApp Business and Commerce policies</li>\n<li>Obtain necessary consents from your customers for messaging and data processing</li>\n<li>Keep your account credentials secure</li>\n<li>Use the service only for lawful business purposes</li>\n</ul>\n<h2>4. Subscriptions and billing</h2>\n<p>Paid plans are billed according to the pricing shown at checkout. Free trials convert to paid subscriptions unless cancelled before the trial ends. WhatsApp conversation fees charged by Meta may apply separately.</p>\n<h2>5. AI-generated content</h2>\n<p>AI replies are generated based on your configuration and content. You are responsible for reviewing automated responses and ensuring they meet your business and legal requirements.</p>\n<h2>6. Limitation of liability</h2>\n<p>The service is provided \"as is\" to the maximum extent permitted by law. RelayIQ is not liable for indirect, incidental, or consequential damages arising from use of the platform.</p>\n<h2>7. Termination</h2>\n<p>You may cancel your subscription at any time. We may suspend or terminate accounts that violate these terms or applicable law.</p>\n<h2>8. Contact</h2>\n<p>For questions about these terms, contact support@essemglobalsolutions.com.</p>",
+                            'body' => '<h2>1. Acceptance</h2>
+<p>By creating an account or using RelayIQ, you agree to these Terms of Service. If you are using the service on behalf of a company, you represent that you have authority to bind that company.</p>
+<h2>2. Service description</h2>
+<p>RelayIQ provides WhatsApp business messaging, AI-assisted automation, order management, payment integrations, digital fulfillment, bookings, and related tools. Features vary by subscription plan.</p>
+<h2>3. Your responsibilities</h2>
+<p>You agree to:</p>
+<ul>
+<li>Comply with Meta\'s WhatsApp Business and Commerce policies</li>
+<li>Obtain necessary consents from your customers for messaging and data processing</li>
+<li>Keep your account credentials secure</li>
+<li>Use the service only for lawful business purposes</li>
+</ul>
+<h2>4. Subscriptions and billing</h2>
+<p>Paid plans are billed according to the pricing shown at checkout. Free trials on eligible plans convert to paid subscriptions unless cancelled before the trial ends. WhatsApp conversation fees charged by Meta may apply separately.</p>
+<h2>5. AI-generated content</h2>
+<p>AI replies are generated based on your configuration and content. You are responsible for reviewing automated responses and ensuring they meet your business and legal requirements.</p>
+<h2>6. Limitation of liability</h2>
+<p>The service is provided "as is" to the maximum extent permitted by law. RelayIQ is not liable for indirect, incidental, or consequential damages arising from use of the platform.</p>
+<h2>7. Termination</h2>
+<p>You may cancel your subscription at any time. We may suspend or terminate accounts that violate these terms or applicable law.</p>
+<h2>8. Contact</h2>
+<p>For questions about these terms, contact support@essemdigital.com.</p>',
                         ],
                     ],
                 ],
@@ -447,7 +543,7 @@ class CmsPageSeeder extends Seeder
                     ],
                     [
                         'label' => $sectionData['label'],
-                        'is_enabled' => true,
+                        'is_enabled' => (bool) ($sectionData['is_enabled'] ?? true),
                         'sort_order' => $sectionData['sort_order'],
                         'content' => $sectionData['content'],
                     ]
@@ -471,22 +567,23 @@ class CmsPageSeeder extends Seeder
             }
         }
 
-        if (LandingFaq::count() === 0) {
-            $faqs = [
-                ['question' => 'How does WhatsApp commerce work?', 'answer' => 'Connect your WhatsApp Business number, add products and FAQs, and our AI handles customer replies, orders, and payments in the chat.'],
-                ['question' => 'What payment methods are supported?', 'answer' => 'M-Pesa STK push and Stripe card payments are built into the conversation — customers pay without leaving WhatsApp.'],
-                ['question' => 'Is there a free trial?', 'answer' => 'Yes. Every plan includes a 14-day free trial so you can test with real customers before committing.'],
-                ['question' => 'Can my team take over conversations?', 'answer' => 'Absolutely. Agents can jump into any thread from the team inbox. The AI pauses until you hand the chat back.'],
-                ['question' => 'Can I have custom pricing?', 'answer' => 'Enterprise plans support custom pricing, dedicated support, and on-premise deployment. Contact us to discuss your needs.'],
-                ['question' => 'Where do I sign up?', 'answer' => 'Click Sign up in the navigation bar or visit /register to create your account and start your free trial.'],
-            ];
-            foreach ($faqs as $i => $faq) {
-                LandingFaq::create([
-                    ...$faq,
-                    'sort_order' => $i,
-                    'is_active' => true,
-                ]);
-            }
+        // Keep landing FAQs aligned with the product story (overwrite seeded defaults).
+        $faqs = [
+            ['question' => 'How does RelayIQ work on WhatsApp?', 'answer' => 'Connect your WhatsApp Business number, add your catalog and FAQs, and our AI commerce agent handles replies, orders, payments, and handoff to your team — with memory that improves over time.'],
+            ['question' => 'What can I sell?', 'answer' => 'Physical products, digital goods (download links and license keys), and bookable services — all from one catalog the AI understands.'],
+            ['question' => 'What payment methods are supported?', 'answer' => 'M-Pesa (including your own Till/PayBill), Paystack, and Stripe. Customers can pay in the conversation flow.'],
+            ['question' => 'Is there a free trial?', 'answer' => 'Yes. Starter and Growth include a 14-day free trial. Enterprise is custom — contact sales.'],
+            ['question' => 'Can my team take over conversations?', 'answer' => 'Yes. Agents can jump into any thread from the team inbox. The AI pauses until you hand the chat back.'],
+            ['question' => 'What is the Growth Engine?', 'answer' => 'AI-assisted posts, social publishing, and WhatsApp referral attribution so you can measure which campaigns drive chats and orders.'],
+            ['question' => 'Where do I sign up?', 'answer' => 'Click Sign up in the navigation or visit /register to create your account and start your free trial.'],
+        ];
+        LandingFaq::query()->delete();
+        foreach ($faqs as $i => $faq) {
+            LandingFaq::create([
+                ...$faq,
+                'sort_order' => $i,
+                'is_active' => true,
+            ]);
         }
     }
 }

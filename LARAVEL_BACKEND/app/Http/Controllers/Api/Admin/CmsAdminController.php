@@ -19,6 +19,11 @@ class CmsAdminController extends Controller
             'title' => $p->title,
             'metaTitle' => $p->meta_title,
             'metaDescription' => $p->meta_description,
+            'ogImage' => $p->og_image,
+            'ogTitle' => $p->og_title,
+            'ogDescription' => $p->og_description,
+            'canonicalUrl' => $p->canonical_url,
+            'robots' => $p->robots,
             'isPublished' => (bool) $p->is_published,
         ]);
 
@@ -39,6 +44,11 @@ class CmsAdminController extends Controller
                 'title' => $page->title,
                 'metaTitle' => $page->meta_title,
                 'metaDescription' => $page->meta_description,
+                'ogImage' => $page->og_image,
+                'ogTitle' => $page->og_title,
+                'ogDescription' => $page->og_description,
+                'canonicalUrl' => $page->canonical_url,
+                'robots' => $page->robots,
                 'isPublished' => (bool) $page->is_published,
             ],
             'sections' => $page->sections->map(fn (CmsSection $s) => [
@@ -60,17 +70,29 @@ class CmsAdminController extends Controller
             'title' => 'sometimes|string|max:255',
             'metaTitle' => 'nullable|string|max:255',
             'metaDescription' => 'nullable|string|max:2000',
+            'ogImage' => 'nullable|string|max:2048',
+            'ogTitle' => 'nullable|string|max:255',
+            'ogDescription' => 'nullable|string|max:2000',
+            'canonicalUrl' => 'nullable|string|max:2048',
+            'robots' => 'nullable|string|max:64',
             'isPublished' => 'sometimes|boolean',
         ]);
 
-        if (array_key_exists('title', $validated)) {
-            $page->title = $validated['title'];
-        }
-        if (array_key_exists('metaTitle', $validated)) {
-            $page->meta_title = $validated['metaTitle'];
-        }
-        if (array_key_exists('metaDescription', $validated)) {
-            $page->meta_description = $validated['metaDescription'];
+        $map = [
+            'title' => 'title',
+            'metaTitle' => 'meta_title',
+            'metaDescription' => 'meta_description',
+            'ogImage' => 'og_image',
+            'ogTitle' => 'og_title',
+            'ogDescription' => 'og_description',
+            'canonicalUrl' => 'canonical_url',
+            'robots' => 'robots',
+        ];
+
+        foreach ($map as $input => $column) {
+            if (array_key_exists($input, $validated)) {
+                $page->{$column} = $validated[$input];
+            }
         }
         if (array_key_exists('isPublished', $validated)) {
             $page->is_published = (bool) $validated['isPublished'];
@@ -119,12 +141,20 @@ class CmsAdminController extends Controller
 
     public function uploadImage(Request $request): JsonResponse
     {
-        $request->validate([
-            'image' => 'required|image|max:5120',
-        ]);
+        $maxKb = (int) config('cms.upload_max_kb', 10240);
+
+        $request->validate(
+            [
+                'image' => 'required|image|max:'.$maxKb,
+            ],
+            [
+                'image.max' => 'The image may not be greater than '.round($maxKb / 1024, 1).' MB. Compress it or use a smaller file.',
+                'image.image' => 'The file must be an image (JPEG, PNG, GIF, or WebP).',
+            ]
+        );
 
         $path = $request->file('image')->store('cms_images', 'public');
-        $url = asset('storage/' . $path);
+        $url = asset('storage/'.$path);
 
         return response()->json([
             'success' => true,

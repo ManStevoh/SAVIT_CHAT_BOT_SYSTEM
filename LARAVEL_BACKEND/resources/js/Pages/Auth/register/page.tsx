@@ -6,23 +6,40 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Spinner } from "@/components/ui/spinner"
 import { Eye, EyeOff } from "lucide-react"
 import { register as registerApi, type RegisterData } from "@/lib/api-actions"
 import { LandoAuthHeader, LandoAuthError, landoBtnClass, landoInputClass } from "@/components/lando/auth-form"
+import { RecaptchaWidget, resetRecaptchaWidget } from "@/components/compliance/RecaptchaWidget"
+import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
 function RegisterPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const branding = useAppBranding()
   const planId = searchParams.get("plan")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(false)
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+
+  const loginHref = planId ? `/login?plan=${encodeURIComponent(planId)}` : "/login"
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
+    if (!acceptTerms) {
+      setError("You must accept the Terms of Service and Privacy Policy to continue.")
+      return
+    }
+    if (branding.recaptchaEnabled && !recaptchaToken) {
+      setError("Please complete the captcha challenge.")
+      return
+    }
     setIsLoading(true)
     const form = e.currentTarget
     const companyName = (form.elements.namedItem("company") as HTMLInputElement).value.trim()
@@ -44,23 +61,32 @@ function RegisterPageContent() {
       password,
       confirmPassword,
       acceptTerms: true,
+      marketingConsent,
+      planId: planId || undefined,
+      recaptchaToken: recaptchaToken || undefined,
     }
     const result = await registerApi(data)
     setIsLoading(false)
     if (!result.success) {
       setError(result.message ?? "Registration failed")
+      resetRecaptchaWidget()
+      setRecaptchaToken(null)
       return
     }
-    if (planId) {
-      router.push(`/login?registered=1&plan=${planId}`)
-    } else {
-      router.push("/login?registered=1")
+
+    const params = new URLSearchParams({ registered: "1" })
+    if (planId) params.set("plan", planId)
+    if (result.trialStarted) params.set("trial", "1")
+    if (result.requiresPayment && planId) params.set("pay", "1")
+    if (result.postLoginPath) {
+      sessionStorage.setItem("post_login_path", result.postLoginPath)
     }
+    router.push(`/login?${params.toString()}`)
   }
 
   return (
     <div className="w-full">
-      <LandoAuthHeader title="Create your account" description="Start your 14-day free trial" />
+      <LandoAuthHeader title="Create your account" description="Start your free trial — pick a plan on Pricing, or begin with our starter trial." />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <LandoAuthError>{error}</LandoAuthError>}
@@ -127,6 +153,41 @@ function RegisterPageContent() {
           </div>
         </div>
 
+        <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="acceptTerms"
+              checked={acceptTerms}
+              onCheckedChange={(v) => setAcceptTerms(v === true)}
+              className="mt-0.5"
+            />
+            <label htmlFor="acceptTerms" className="text-sm text-gray-700 leading-snug cursor-pointer">
+              I agree to the{" "}
+              <Link href="/terms" target="_blank" className="font-medium text-[#2563eb] hover:underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" target="_blank" className="font-medium text-[#2563eb] hover:underline">
+                Privacy Policy
+              </Link>
+              <span className="text-red-600"> *</span>
+            </label>
+          </div>
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="marketingConsent"
+              checked={marketingConsent}
+              onCheckedChange={(v) => setMarketingConsent(v === true)}
+              className="mt-0.5"
+            />
+            <label htmlFor="marketingConsent" className="text-sm text-gray-700 leading-snug cursor-pointer">
+              Send me product updates and marketing emails (optional)
+            </label>
+          </div>
+        </div>
+
+        <RecaptchaWidget onChange={setRecaptchaToken} />
+
         <Button type="submit" className={landoBtnClass} disabled={isLoading}>
           {isLoading ? <Spinner className="h-4 w-4" /> : "Create account"}
         </Button>
@@ -134,7 +195,7 @@ function RegisterPageContent() {
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign in</Link>
+        <Link href={loginHref} className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign in</Link>
       </p>
     </div>
   )

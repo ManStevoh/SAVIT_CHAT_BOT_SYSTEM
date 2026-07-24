@@ -10,6 +10,8 @@ use App\Models\Subscription;
 use App\Services\MailService;
 use App\Services\OrderPaymentService;
 use App\Services\Platform\BillingLedgerService;
+use App\Services\SubscriptionLifecycleService;
+use App\Services\SubscriptionPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -21,6 +23,8 @@ class MpesaCallbackController extends Controller
         protected MailService $mailService,
         protected OrderPaymentService $orderPaymentService,
         protected BillingLedgerService $billingLedger,
+        protected SubscriptionPricingService $pricing,
+        protected SubscriptionLifecycleService $lifecycle,
     ) {}
 
     /**
@@ -121,7 +125,9 @@ class MpesaCallbackController extends Controller
         $startDate = now()->format('Y-m-d');
         $endDate = now()->addMonth()->format('Y-m-d');
 
-        Subscription::where('company_id', $company->id)->where('status', 'active')->update(['status' => 'cancelled']);
+        Subscription::where('company_id', $company->id)
+            ->whereIn('status', ['active', 'trial'])
+            ->update(['status' => 'cancelled']);
 
         $subscription = Subscription::create([
             'company_id' => $company->id,
@@ -144,20 +150,38 @@ class MpesaCallbackController extends Controller
             'KES',
             'subscription',
             $transactionId ?: null,
-            ['plan' => $plan->slug],
+            [
+                'plan' => $plan->slug,
+                'coupon_code' => $pending['coupon_code'] ?? null,
+                'discount_amount' => $pending['discount_amount'] ?? 0,
+            ],
         );
+
+        if ($checkoutRequestId) {
+            $this->pricing->completeRedemption((string) $checkoutRequestId, $subscription->id);
+        }
 
         Cache::forget('mpesa_pending:'.$checkoutRequestId);
 
         try {
             $planName = $plan->name;
-            $this->mailService->sendSubscriptionConfirmed(
-                $company->email,
-                $planName,
-                now()->addMonth()->format('F j, Y')
-            );
+            $endFormatted = now()->addMonth()->format('F j, Y');
+            if ($company->email) {
+                $this->mailService->sendSubscriptionConfirmed(
+                    $company->email,
+                    $planName,
+                    $endFormatted
+                );
+            }
+            $this->lifecycle->notifySubscriptionConfirmed($company, $planName, $endFormatted);
         } catch (\Throwable $e) {
             Log::warning('M-Pesa: failed to send subscription email: '.$e->getMessage());
+        }
+
+        try {
+            app(\App\Services\Agent\AgentCommerceProvisioningService::class)->syncForCompany($company->fresh());
+        } catch (\Throwable $e) {
+            Log::warning('M-Pesa: agent commerce provision failed: '.$e->getMessage());
         }
 
         return response('OK', 200);

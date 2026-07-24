@@ -120,7 +120,26 @@ export interface Product {
   description: string
   price: number
   category: string
+  productType?: 'physical' | 'digital' | 'service'
+  fulfillmentType?: 'shipping' | 'download' | 'link' | 'booking' | 'manual'
   image?: string
+  trackInventory?: boolean
+  requiresDeliveryAddress?: boolean
+  accessUrl?: string | null
+  serviceBookingUrl?: string | null
+  fulfillmentInstructions?: string | null
+  hasDigitalFile?: boolean
+  digitalFileUrl?: string | null
+  digitalFileName?: string | null
+  digitalFileMime?: string | null
+  digitalFileSize?: number | null
+  licenseKeyMode?: 'none' | 'auto' | 'pool'
+  licenseKeyPrefix?: string | null
+  accessExpiresDays?: number | null
+  maxDownloads?: number | null
+  bookable?: boolean
+  bookingDurationMinutes?: number | null
+  licenseKeysAvailable?: number
   stock: number
   status: 'active' | 'inactive'
   createdAt: string
@@ -144,11 +163,17 @@ export interface Subscription {
   companyId: string
   companyName: string
   plan: 'starter' | 'professional' | 'enterprise'
+  planName?: string
   status: 'active' | 'cancelled' | 'expired' | 'trial'
   startDate: string
   endDate: string
   amount: number
   billingCycle: 'monthly' | 'yearly'
+  paymentMethod?: string | null
+  currency?: string | null
+  daysRemaining?: number
+  isExpiringSoon?: boolean
+  accessEndsLabel?: string
 }
 
 /** What happens to the customer account when trial ends */
@@ -192,6 +217,24 @@ export interface Plan {
   trialDays?: number | null
   /** What happens when trial elapses: downgrade, suspend, require_payment, cancel, or custom */
   trialElapsedAction?: string | null
+  /** Enforceable limits / feature gates (admin-editable) */
+  entitlements?: {
+    messages?: number | null
+    messagesUnlimited?: boolean
+    team?: number
+    whatsappNumbers?: number
+    aiCostUsd?: number | null
+    aiModelModes?: string[]
+    allowByok?: boolean
+    credentialModes?: string[]
+    apiAccess?: boolean
+    analytics?: boolean
+    attribution?: boolean
+    aiPostsPerMonth?: number
+    aiImagesPerMonth?: number
+    socialPlatforms?: number
+    growthEnabled?: boolean
+  }
 }
 
 export interface Company {
@@ -226,6 +269,10 @@ export interface User {
   status: 'active' | 'inactive'
   lastLogin: string
   createdAt: string
+  termsAcceptedAt?: string | null
+  marketingConsent?: boolean
+  marketingConsentAt?: string | null
+  selectedPlanId?: string | null
 }
 
 export interface SystemLog {
