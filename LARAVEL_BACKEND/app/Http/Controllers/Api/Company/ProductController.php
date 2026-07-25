@@ -12,6 +12,7 @@ use App\Services\DigitalAccessService;
 use App\Services\Platform\EntitlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
@@ -45,11 +46,31 @@ class ProductController extends Controller
             $query->where('name', 'like', '%'.$request->search.'%');
         }
 
-        $products = $query
-            ->with($this->productRelations())
-            ->orderBy('name')
-            ->get();
-        $data = $products->map(fn (Product $p) => $this->productToArray($p));
+        $relations = $this->productRelations();
+        $licenseCounts = $this->licenseKeyCountRelations();
+        try {
+            $productsQuery = (clone $query)
+                ->when($relations !== [], fn ($q) => $q->with($relations))
+                ->orderBy('name');
+            if ($licenseCounts !== []) {
+                $productsQuery->withCount($licenseCounts);
+            }
+            $products = $productsQuery->get();
+        } catch (\Throwable $e) {
+            report($e);
+            // Production DBs that have not run catalog migrations should still list basic products.
+            $products = $query->orderBy('name')->get();
+        }
+
+        $data = $products->map(function (Product $p) {
+            try {
+                return $this->productToArray($p);
+            } catch (\Throwable $e) {
+                report($e);
+
+                return $this->productToArrayMinimal($p);
+            }
+        });
 
         return response()->json($data->values()->all());
     }
@@ -475,13 +496,28 @@ class ProductController extends Controller
 
     private function productToArray(Product $product): array
     {
-        if (! $product->relationLoaded('variants') || ! $product->relationLoaded('images')) {
-            $product->load($this->productRelations());
+        try {
+            if (! $product->relationLoaded('variants') || ! $product->relationLoaded('images')) {
+                $relations = $this->productRelations();
+                if ($relations !== []) {
+                    $product->load($relations);
+                }
+            }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
-        $primary = $product->images->firstWhere('is_primary', true);
-        $fallback = $primary ?? $product->images->first();
-        $imageUrl = $fallback ? Storage::url($fallback->path) : ($product->image ? Storage::url($product->image) : null);
+        $images = $product->relationLoaded('images') ? $product->images : collect();
+        $variants = $product->relationLoaded('variants') ? $product->variants : collect();
+
+        $primary = $images->firstWhere('is_primary', true);
+        $fallback = $primary ?? $images->first();
+        $imageUrl = null;
+        if ($fallback && is_string($fallback->path) && $fallback->path !== '') {
+            $imageUrl = Storage::url($fallback->path);
+        } elseif (is_string($product->image) && $product->image !== '') {
+            $imageUrl = Storage::url($product->image);
+        }
 
         return [
             'id' => (string) $product->id,
@@ -492,41 +528,155 @@ class ProductController extends Controller
             'productType' => $product->product_type ?? 'physical',
             'fulfillmentType' => $product->fulfillment_type ?? 'shipping',
             'image' => $imageUrl,
-            'trackInventory' => (bool) $product->track_inventory,
-            'requiresDeliveryAddress' => (bool) $product->requires_delivery_address,
-            'accessUrl' => $product->access_url,
-            'serviceBookingUrl' => $product->service_booking_url,
-            'fulfillmentInstructions' => $product->fulfillment_instructions,
-            'hasDigitalFile' => (bool) $product->digital_file_path,
+            'trackInventory' => (bool) ($product->track_inventory ?? true),
+            'requiresDeliveryAddress' => (bool) ($product->requires_delivery_address ?? true),
+            'accessUrl' => $product->access_url ?? null,
+            'serviceBookingUrl' => $product->service_booking_url ?? null,
+            'fulfillmentInstructions' => $product->fulfillment_instructions ?? null,
+            'hasDigitalFile' => (bool) ($product->digital_file_path ?? null),
             'digitalFileUrl' => null,
-            'digitalFileName' => $product->digital_file_name,
-            'digitalFileMime' => $product->digital_file_mime,
-            'digitalFileSize' => $product->digital_file_size,
-            'licenseKeyMode' => $product->license_key_mode ?: 'none',
-            'licenseKeyPrefix' => $product->license_key_prefix,
-            'accessExpiresDays' => $product->access_expires_days,
-            'maxDownloads' => $product->max_downloads,
-            'bookable' => (bool) $product->bookable,
-            'bookingDurationMinutes' => $product->booking_duration_minutes,
-            'licenseKeysAvailable' => ProductLicenseKey::query()
+            'digitalFileName' => $product->digital_file_name ?? null,
+            'digitalFileMime' => $product->digital_file_mime ?? null,
+            'digitalFileSize' => $product->digital_file_size ?? null,
+            'licenseKeyMode' => ($product->license_key_mode ?? null) ?: 'none',
+            'licenseKeyPrefix' => $product->license_key_prefix ?? null,
+            'accessExpiresDays' => $product->access_expires_days ?? null,
+            'maxDownloads' => $product->max_downloads ?? null,
+            'bookable' => (bool) ($product->bookable ?? false),
+            'bookingDurationMinutes' => $product->booking_duration_minutes ?? null,
+            'licenseKeysAvailable' => $this->availableLicenseKeyCount($product),
+            'stock' => (int) ($product->stock ?? 0),
+            'status' => $product->status ?? 'active',
+            'createdAt' => optional($product->created_at)->format('Y-m-d') ?? '',
+            'images' => $images->map(fn (ProductImage $img) => $this->productImageToArray($img))->values()->all(),
+            'variants' => $variants->map(function (ProductVariant $v) {
+                try {
+                    return $this->variantToArray($v);
+                } catch (\Throwable $e) {
+                    report($e);
+
+                    return [
+                        'id' => (string) $v->id,
+                        'label' => $v->label,
+                        'price' => (float) $v->price,
+                        'stock' => (int) $v->stock,
+                        'status' => $v->status,
+                        'attributes' => [],
+                        'sortOrder' => (int) ($v->sort_order ?? 0),
+                        'image' => null,
+                        'images' => [],
+                    ];
+                }
+            })->values()->all(),
+        ];
+    }
+
+    /**
+     * Minimal payload used when full serialization fails (older/partial schema).
+     *
+     * @return array<string, mixed>
+     */
+    private function productToArrayMinimal(Product $product): array
+    {
+        $imageUrl = null;
+        if (is_string($product->image) && $product->image !== '') {
+            try {
+                $imageUrl = Storage::url($product->image);
+            } catch (\Throwable) {
+                $imageUrl = null;
+            }
+        }
+
+        return [
+            'id' => (string) $product->id,
+            'name' => (string) ($product->name ?? 'Product'),
+            'description' => (string) ($product->description ?? ''),
+            'price' => (float) ($product->price ?? 0),
+            'category' => (string) ($product->category ?? ''),
+            'productType' => (string) ($product->product_type ?? 'physical'),
+            'fulfillmentType' => (string) ($product->fulfillment_type ?? 'shipping'),
+            'image' => $imageUrl,
+            'trackInventory' => (bool) ($product->track_inventory ?? true),
+            'requiresDeliveryAddress' => (bool) ($product->requires_delivery_address ?? true),
+            'accessUrl' => null,
+            'serviceBookingUrl' => null,
+            'fulfillmentInstructions' => null,
+            'hasDigitalFile' => false,
+            'digitalFileUrl' => null,
+            'digitalFileName' => null,
+            'digitalFileMime' => null,
+            'digitalFileSize' => null,
+            'licenseKeyMode' => 'none',
+            'licenseKeyPrefix' => null,
+            'accessExpiresDays' => null,
+            'maxDownloads' => null,
+            'bookable' => false,
+            'bookingDurationMinutes' => null,
+            'licenseKeysAvailable' => 0,
+            'stock' => (int) ($product->stock ?? 0),
+            'status' => (string) ($product->status ?? 'active'),
+            'createdAt' => optional($product->created_at)->format('Y-m-d') ?? '',
+            'images' => [],
+            'variants' => [],
+        ];
+    }
+
+    private function availableLicenseKeyCount(Product $product): int
+    {
+        if (isset($product->license_keys_available_count)) {
+            return (int) $product->license_keys_available_count;
+        }
+
+        try {
+            if (! Schema::hasTable('product_license_keys')) {
+                return 0;
+            }
+
+            return ProductLicenseKey::query()
                 ->where('product_id', $product->id)
                 ->where('status', ProductLicenseKey::STATUS_AVAILABLE)
-                ->count(),
-            'stock' => $product->stock,
-            'status' => $product->status,
-            'createdAt' => $product->created_at->format('Y-m-d'),
-            'images' => $product->images->map(fn (ProductImage $img) => $this->productImageToArray($img))->values()->all(),
-            'variants' => $product->variants->map(fn (ProductVariant $v) => $this->variantToArray($v))->values()->all(),
+                ->count();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return 0;
+        }
+    }
+
+    /**
+     * @return array<string, \Closure>
+     */
+    private function licenseKeyCountRelations(): array
+    {
+        if (! Schema::hasTable('product_license_keys')) {
+            return [];
+        }
+
+        return [
+            'licenseKeys as license_keys_available_count' => fn ($q) => $q->where('status', ProductLicenseKey::STATUS_AVAILABLE),
         ];
     }
 
     private function variantToArray(ProductVariant $v): array
     {
-        if (! $v->relationLoaded('images')) {
-            $v->load('images');
+        try {
+            if (! $v->relationLoaded('images') && Schema::hasTable('product_images')) {
+                $v->load('images');
+            }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
-        $primary = $v->images->firstWhere('is_primary', true) ?? $v->images->first();
+        $images = $v->relationLoaded('images') ? $v->images : collect();
+        $primary = $images->firstWhere('is_primary', true) ?? $images->first();
+
+        $attributes = [];
+        try {
+            $rawAttributes = $v->getAttribute('attributes');
+            $attributes = is_array($rawAttributes) ? $rawAttributes : [];
+        } catch (\Throwable) {
+            $attributes = [];
+        }
 
         return [
             'id' => (string) $v->id,
@@ -534,10 +684,12 @@ class ProductController extends Controller
             'price' => (float) $v->price,
             'stock' => (int) $v->stock,
             'status' => $v->status,
-            'attributes' => $v->attributes ?? [],
+            'attributes' => $attributes,
             'sortOrder' => (int) $v->sort_order,
-            'image' => $primary ? Storage::url($primary->path) : null,
-            'images' => $v->images->map(fn (ProductImage $img) => $this->productImageToArray($img))->values()->all(),
+            'image' => ($primary && is_string($primary->path) && $primary->path !== '')
+                ? Storage::url($primary->path)
+                : null,
+            'images' => $images->map(fn (ProductImage $img) => $this->productImageToArray($img))->values()->all(),
         ];
     }
 
@@ -547,7 +699,7 @@ class ProductController extends Controller
             'id' => (string) $image->id,
             'productId' => (string) $image->product_id,
             'productVariantId' => $image->product_variant_id ? (string) $image->product_variant_id : null,
-            'url' => Storage::url($image->path),
+            'url' => (is_string($image->path) && $image->path !== '') ? Storage::url($image->path) : null,
             'path' => $image->path,
             'altText' => $image->alt_text,
             'isPrimary' => (bool) $image->is_primary,
@@ -599,13 +751,24 @@ class ProductController extends Controller
 
     private function productRelations(): array
     {
-        return [
-            'images' => fn ($q) => $q->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id'),
-            'variants' => fn ($q) => $q
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->with(['images' => fn ($iq) => $iq->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id')]),
-        ];
+        $relations = [];
+
+        if (Schema::hasTable('product_images')) {
+            $relations['images'] = fn ($q) => $q->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id');
+        }
+
+        if (Schema::hasTable('product_variants')) {
+            $relations['variants'] = function ($q) {
+                $q->orderBy('sort_order')->orderBy('id');
+                if (Schema::hasTable('product_images')) {
+                    $q->with([
+                        'images' => fn ($iq) => $iq->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id'),
+                    ]);
+                }
+            };
+        }
+
+        return $relations;
     }
 
     private function syncProductEmbeddings(Product $product): void
