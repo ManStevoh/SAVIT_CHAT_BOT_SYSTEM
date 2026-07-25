@@ -1563,6 +1563,7 @@ export interface AdminUpdateSubscriptionPayload {
   status: 'active' | 'trial' | 'cancelled' | 'expired'
   plan?: string
   billingCycle?: 'monthly' | 'yearly'
+  amount?: number
 }
 
 /**
@@ -1583,12 +1584,18 @@ export async function adminUpdateSubscription(
     if (payload.status === 'cancelled' || payload.status === 'expired') {
       mockSubscriptions[idx] = { ...cur, status: payload.status === 'expired' ? 'expired' : 'cancelled' }
     } else if (payload.plan) {
+      const nextAmount =
+        payload.amount != null
+          ? payload.amount
+          : payload.status === 'trial'
+            ? 0
+            : cur.amount
       mockSubscriptions[idx] = {
         ...cur,
         plan: payload.plan as Subscription['plan'],
         status: payload.status,
         billingCycle: payload.billingCycle ?? cur.billingCycle,
-        amount: payload.status === 'trial' ? 0 : cur.amount,
+        amount: nextAmount,
       }
     }
     return { success: true, message: 'Subscription updated.', subscription: mockSubscriptions[idx] }

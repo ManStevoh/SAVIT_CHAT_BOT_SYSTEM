@@ -85,10 +85,19 @@ export default function AdminSubscriptionsPage() {
     if (!changeSub || !changePlanSlug) return
     setSavingPlan(true)
     try {
+      const selectedPlan = (plans ?? []).find((p) => p.slug === changePlanSlug)
+      const monthly = selectedPlan?.priceAmount ?? null
+      let amount: number | undefined
+      if (changeStatus === "trial") {
+        amount = 0
+      } else if (monthly != null) {
+        amount = changeBilling === "yearly" ? Number(monthly) * 12 : Number(monthly)
+      }
       const res = await adminUpdateSubscription(changeSub.id, {
         status: changeStatus,
         plan: changePlanSlug,
         billingCycle: changeStatus === "active" ? changeBilling : undefined,
+        ...(amount != null ? { amount } : {}),
       })
       if (res.success) {
         toast({ title: res.message ?? "Subscription updated" })
@@ -169,8 +178,11 @@ export default function AdminSubscriptionsPage() {
     { name: "Past Due", value: "—", icon: AlertCircle },
   ]
 
-  const formatAmount = (s: Subscription) =>
-    s.amount === 0 ? "Trial" : `$${s.amount}/${s.billingCycle === "yearly" ? "yr" : "mo"}`
+  const formatAmount = (s: Subscription) => {
+    if (s.status === "trial") return "Trial"
+    if (s.amount === 0) return `$0/${s.billingCycle === "yearly" ? "yr" : "mo"} (comped)`
+    return `$${s.amount}/${s.billingCycle === "yearly" ? "yr" : "mo"}`
+  }
 
   return (
     <div className="space-y-6">
