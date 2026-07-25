@@ -359,6 +359,9 @@ return [
             'trace_customer_graph',
             'transfer_to_human',
             'process_order_message',
+            'send_order_invoice',
+            'check_delivery_status',
+            'check_mpesa_payment',
         ],
         'plan_rank' => [
             'starter' => 1,

@@ -22,6 +22,7 @@ use App\Services\Agent\Tools\SearchFaqTool;
 use App\Services\Agent\Tools\SearchKnowledgeTool;
 use App\Services\Agent\Tools\SearchOrdersTool;
 use App\Services\Agent\Tools\SearchProductsTool;
+use App\Services\Agent\Tools\SendOrderInvoiceTool;
 use App\Services\Agent\Tools\SendWhatsAppCampaignTool;
 use App\Services\Agent\Tools\TraceCustomerGraphTool;
 use App\Services\Agent\Tools\TransferToHumanTool;
@@ -47,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
                 SearchOrdersTool::class,
                 GetCatalogTool::class,
                 ProcessOrderMessageTool::class,
+                SendOrderInvoiceTool::class,
                 TransferToHumanTool::class,
                 RememberCustomerTool::class,
                 GetBusinessInfoTool::class,
