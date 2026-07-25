@@ -40,13 +40,23 @@ final class CommerceAgentReplyService
             return null;
         }
 
-        $result = $this->orchestrator->run(
-            $company,
-            $chat,
-            $customerPhone,
-            $customerName,
-            $incomingMessage,
-        );
+        try {
+            $result = $this->orchestrator->run(
+                $company,
+                $chat,
+                $customerPhone,
+                $customerName,
+                $incomingMessage,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('CommerceAgentReplyService: generate failed, falling back', [
+                'company_id' => $company->id,
+                'chat_id' => $chat->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
 
         if ($result['reply'] === null || trim($result['reply']) === '') {
             return null;

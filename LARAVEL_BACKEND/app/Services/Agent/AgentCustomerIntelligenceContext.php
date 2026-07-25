@@ -28,16 +28,25 @@ final class AgentCustomerIntelligenceContext
         $who = $customerName ? trim($customerName) : 'Customer';
         $parts[] = "Live customer session:\n- Name: {$who}\n- Phone: {$customerPhone}";
 
-        $orders = Order::query()
-            ->where('company_id', $company->id)
-            ->where(function ($q) use ($phone, $customerPhone) {
-                $q->where('customer_phone', $customerPhone)
-                    ->orWhere('customer_phone', $phone)
-                    ->orWhere('customer_phone', 'like', '%'.substr($phone, -9).'%');
-            })
-            ->orderByDesc('id')
-            ->limit(8)
-            ->get(['id', 'order_number', 'status', 'payment_status', 'total', 'currency', 'created_at', 'customer_name']);
+        $orders = collect();
+        try {
+            $orders = Order::query()
+                ->where('company_id', $company->id)
+                ->where(function ($q) use ($phone, $customerPhone) {
+                    $q->where('customer_phone', $customerPhone)
+                        ->orWhere('customer_phone', $phone)
+                        ->orWhere('customer_phone', 'like', '%'.substr($phone, -9).'%');
+                })
+                ->orderByDesc('id')
+                ->limit(8)
+                ->get(['id', 'order_number', 'status', 'payment_status', 'total', 'created_at', 'customer_name']);
+        } catch (\Throwable $e) {
+            // Don't let schema drift (e.g. missing optional columns) kill auto-replies.
+            \Illuminate\Support\Facades\Log::warning('AgentCustomerIntelligenceContext: orders lookup failed', [
+                'company_id' => $company->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         if ($orders->isNotEmpty()) {
             $ccy = $company->settings?->displayCurrencyCode() ?? 'USD';
