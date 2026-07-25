@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\ProcessIncomingWhatsAppMessage;
 use App\Models\Chat;
 use App\Models\Company;
 use App\Models\CompanySetting;
+use App\Models\Faq;
 use App\Models\Message;
 use App\Models\PlatformSetting;
 use App\Models\Subscription;
@@ -13,7 +13,7 @@ use App\Models\User;
 use App\Models\WhatsAppAccount;
 use App\Services\WhatsApp\WhatsAppPlatformConfig;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -42,7 +42,7 @@ class HandBackToBotTest extends TestCase
         CompanySetting::create([
             'company_id' => $company->id,
             'auto_reply_enabled' => true,
-            'agent_commerce_enabled' => true,
+            'ai_reply_mode' => 'balanced',
         ]);
 
         Subscription::create([
@@ -73,9 +73,13 @@ class HandBackToBotTest extends TestCase
         ]);
     }
 
-    public function test_hand_back_reprocesses_latest_unanswered_customer_message(): void
+    public function test_hand_back_sends_ai_reply_synchronously(): void
     {
-        Queue::fake();
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.bot-hb']],
+            ], 200),
+        ]);
 
         $user = $this->companyUser();
         $chat = Chat::create([
@@ -95,7 +99,7 @@ class HandBackToBotTest extends TestCase
             'status' => 'sent',
         ]);
 
-        $customer = Message::create([
+        Message::create([
             'chat_id' => $chat->id,
             'content' => 'Hi',
             'sender' => 'customer',
@@ -103,32 +107,36 @@ class HandBackToBotTest extends TestCase
             'whatsapp_message_id' => 'wamid.customer-hi',
         ]);
 
+        Faq::create([
+            'company_id' => $user->company_id,
+            'question' => 'Hi',
+            'answer' => 'Hello! How can we help you today?',
+            'keywords' => ['hi', 'hello'],
+            'is_active' => true,
+        ]);
+
         Sanctum::actingAs($user);
 
         $this->postJson("/api/company/chats/{$chat->id}/hand-back")
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('reprocessed', true);
+            ->assertJsonPath('reprocessed', true)
+            ->assertJsonPath('replied', true);
 
         $this->assertNull($chat->fresh()->agent_handling_at);
-
-        Queue::assertPushed(ProcessIncomingWhatsAppMessage::class, function ($job) use ($chat, $customer) {
-            return $job->chatId === (int) $chat->id
-                && $job->forceReply === true
-                && $job->incomingMessageId === (int) $customer->id
-                && $job->messageText === 'Hi';
-        });
+        $this->assertDatabaseHas('messages', [
+            'chat_id' => $chat->id,
+            'sender' => 'bot',
+        ]);
     }
 
     public function test_hand_back_skips_reprocess_when_agent_already_replied_after_customer(): void
     {
-        Queue::fake();
-
         $user = $this->companyUser();
         $chat = Chat::create([
             'company_id' => $user->company_id,
             'customer_name' => 'Essem',
-            'customer_phone' => '254728210962',
+            'customer_phone' => '254728210963',
             'status' => 'active',
             'agent_handling_at' => now(),
         ]);
@@ -141,7 +149,7 @@ class HandBackToBotTest extends TestCase
         ]);
         Message::create([
             'chat_id' => $chat->id,
-            'content' => 'Thanks, agent here',
+            'content' => 'Thanks, we are on it',
             'sender' => 'agent',
             'status' => 'sent',
         ]);
@@ -150,8 +158,9 @@ class HandBackToBotTest extends TestCase
 
         $this->postJson("/api/company/chats/{$chat->id}/hand-back")
             ->assertOk()
-            ->assertJsonPath('reprocessed', false);
+            ->assertJsonPath('reprocessed', false)
+            ->assertJsonPath('replied', false);
 
-        Queue::assertNotPushed(ProcessIncomingWhatsAppMessage::class);
+        $this->assertNull($chat->fresh()->agent_handling_at);
     }
 }

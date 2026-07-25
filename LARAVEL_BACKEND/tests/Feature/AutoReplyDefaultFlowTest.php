@@ -45,6 +45,7 @@ class AutoReplyDefaultFlowTest extends TestCase
             CompanySetting::create([
                 'company_id' => $company->id,
                 'auto_reply_enabled' => $autoReply,
+                'ai_reply_mode' => 'balanced',
             ]);
         }
 
@@ -175,10 +176,9 @@ class AutoReplyDefaultFlowTest extends TestCase
 
     public function test_agent_send_takes_over_then_handback_returns_to_ai(): void
     {
-        Queue::fake();
         Http::fake([
-            'graph.facebook.com/*/messages' => Http::response([
-                'messages' => [['id' => 'wamid.agent-1']],
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.agent-or-bot']],
             ], 200),
         ]);
 
@@ -216,17 +216,34 @@ class AutoReplyDefaultFlowTest extends TestCase
             'whatsapp_message_id' => 'wamid.still-need-help',
         ]);
 
+        \App\Models\Faq::create([
+            'company_id' => $user->company_id,
+            'question' => 'Still need help',
+            'answer' => 'We are here to help.',
+            'keywords' => ['help'],
+            'is_active' => true,
+        ]);
+
         $this->postJson("/api/company/chats/{$chat->id}/hand-back")
             ->assertOk()
-            ->assertJsonPath('reprocessed', true);
+            ->assertJsonPath('reprocessed', true)
+            ->assertJsonPath('replied', true);
 
         $this->assertNull($chat->fresh()->agent_handling_at);
-        Queue::assertPushed(ProcessIncomingWhatsAppMessage::class, fn ($job) => $job->forceReply === true);
+        $this->assertDatabaseHas('messages', [
+            'chat_id' => $chat->id,
+            'sender' => 'bot',
+        ]);
     }
 
     public function test_process_job_still_replies_when_company_settings_row_missing(): void
     {
-        Queue::fake();
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.bot-nosettings']],
+            ], 200),
+        ]);
+
         // Missing settings should default auto-reply ON for handback reprocess.
         $user = $this->companyUser(withSettings: false);
         $chat = Chat::create([
@@ -244,12 +261,24 @@ class AutoReplyDefaultFlowTest extends TestCase
             'whatsapp_message_id' => 'wamid.hello',
         ]);
 
+        \App\Models\Faq::create([
+            'company_id' => $user->company_id,
+            'question' => 'Hello?',
+            'answer' => 'Hi there!',
+            'keywords' => ['hello'],
+            'is_active' => true,
+        ]);
+
         Sanctum::actingAs($user);
         $this->postJson("/api/company/chats/{$chat->id}/hand-back")
             ->assertOk()
-            ->assertJsonPath('reprocessed', true);
+            ->assertJsonPath('reprocessed', true)
+            ->assertJsonPath('replied', true);
 
-        Queue::assertPushed(ProcessIncomingWhatsAppMessage::class);
+        $this->assertDatabaseHas('messages', [
+            'chat_id' => $chat->id,
+            'sender' => 'bot',
+        ]);
     }
 
     public function test_trial_subscription_gets_ai_reply_not_unavailable_message(): void
@@ -337,7 +366,12 @@ class AutoReplyDefaultFlowTest extends TestCase
 
     public function test_ask_ai_replies_to_unanswered_customer_without_agent_lock(): void
     {
-        Queue::fake();
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.bot-ask']],
+            ], 200),
+        ]);
+
         $user = $this->companyUser();
         $chat = Chat::create([
             'company_id' => $user->company_id,
@@ -354,12 +388,24 @@ class AutoReplyDefaultFlowTest extends TestCase
             'whatsapp_message_id' => 'wamid.stuck-hello',
         ]);
 
+        \App\Models\Faq::create([
+            'company_id' => $user->company_id,
+            'question' => 'Hello',
+            'answer' => 'Hi from AI.',
+            'keywords' => ['hello'],
+            'is_active' => true,
+        ]);
+
         Sanctum::actingAs($user);
         $this->postJson("/api/company/chats/{$chat->id}/hand-back")
             ->assertOk()
-            ->assertJsonPath('reprocessed', true);
+            ->assertJsonPath('reprocessed', true)
+            ->assertJsonPath('replied', true);
 
-        Queue::assertPushed(ProcessIncomingWhatsAppMessage::class, fn ($job) => $job->forceReply === true);
+        $this->assertDatabaseHas('messages', [
+            'chat_id' => $chat->id,
+            'sender' => 'bot',
+        ]);
     }
 
     public function test_expired_agent_lock_allows_auto_reply_on_new_message(): void

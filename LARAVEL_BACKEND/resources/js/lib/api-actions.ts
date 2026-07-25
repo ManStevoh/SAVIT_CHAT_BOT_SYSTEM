@@ -407,18 +407,22 @@ export async function sendMessage(data: SendMessageData): Promise<{
  * Hand back chat to bot (clear agent_handling_at so auto-reply resumes).
  * Laravel: POST /api/company/chats/:chatId/hand-back
  */
-export async function handBackToBot(chatId: string): Promise<{ success: boolean; message?: string }> {
+export async function handBackToBot(
+  chatId: string
+): Promise<{ success: boolean; message?: string; reprocessed?: boolean; replied?: boolean }> {
   if (useMockApi()) {
     await delay(300)
-    return { success: true, message: 'Chat handed back to bot.' }
+    return { success: true, message: 'Chat handed back to bot.', reprocessed: true, replied: true }
   }
   try {
-    return await apiRequest<{ success: boolean; message?: string }>(
-      `/api/company/chats/${chatId}/hand-back`,
-      { method: 'POST' }
-    )
+    return await apiRequest<{
+      success: boolean
+      message?: string
+      reprocessed?: boolean
+      replied?: boolean
+    }>(`/api/company/chats/${chatId}/hand-back`, { method: 'POST' })
   } catch (e) {
-    return handleApiError(e)
+    return { ...handleApiError(e), success: false }
   }
 }
 

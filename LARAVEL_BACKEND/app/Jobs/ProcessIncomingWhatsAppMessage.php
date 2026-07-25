@@ -37,10 +37,16 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
     public array $backoff = [10, 60, 300];
 
+    /** Seconds to hold the unique lock (avoids stuck locks when a job never runs). */
+    public int $uniqueFor = 120;
+
     /**
      * Dispatch auto-reply without requiring php artisan queue:work by default.
      * Runs in the same PHP process after the HTTP response is sent to Meta/the dashboard.
      * Set WHATSAPP_AUTO_REPLY_VIA_QUEUE=true to use a real queue worker instead (retries/backoff).
+     *
+     * Hand-back / "Ask AI to reply" uses dispatchSyncIncoming() so the reply is generated
+     * before the API returns (afterResponse is easy to lose on some hosts).
      */
     public static function dispatchIncoming(
         int $companyId,
@@ -81,17 +87,46 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
     }
 
     /**
+     * Run auto-reply immediately in this request (used by Ask AI / hand-back).
+     */
+    public static function dispatchSyncIncoming(
+        int $companyId,
+        int $chatId,
+        string $customerPhone,
+        string $phoneNumberId,
+        string $messageText,
+        ?string $customerName = null,
+        ?string $whatsappMessageId = null,
+        ?int $incomingMessageId = null,
+        bool $forceReply = false,
+    ): void {
+        static::dispatchSync(
+            $companyId,
+            $chatId,
+            $customerPhone,
+            $phoneNumberId,
+            $messageText,
+            $customerName,
+            $whatsappMessageId,
+            $incomingMessageId,
+            $forceReply,
+        );
+    }
+
+    /**
      * Unique key so only one job runs per incoming message (avoids duplicate replies when Meta retries the webhook).
      */
     public function uniqueId(): string
     {
-        $suffix = $this->forceReply ? ':handback' : '';
-
-        if ($this->whatsappMessageId) {
-            return "wa_incoming:{$this->chatId}:{$this->whatsappMessageId}{$suffix}";
+        if ($this->forceReply) {
+            return 'wa_handback:'.$this->chatId.':'.($this->whatsappMessageId ?: md5($this->messageText.':'.$this->customerPhone));
         }
 
-        return "wa_incoming:{$this->chatId}:".md5($this->messageText.':'.$this->customerPhone).$suffix;
+        if ($this->whatsappMessageId) {
+            return "wa_incoming:{$this->chatId}:{$this->whatsappMessageId}";
+        }
+
+        return "wa_incoming:{$this->chatId}:".md5($this->messageText.':'.$this->customerPhone);
     }
 
     public function __construct(
@@ -104,7 +139,12 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         public ?string $whatsappMessageId = null,
         public ?int $incomingMessageId = null,
         public bool $forceReply = false,
-    ) {}
+    ) {
+        // Allow quick retries of "Ask AI to reply" if a previous attempt failed.
+        if ($forceReply) {
+            $this->uniqueFor = 15;
+        }
+    }
 
     public function handle(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
     {
@@ -186,7 +226,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        if ($this->alreadyRepliedToThisMessage()) {
+        if ($this->alreadyRepliedToThisMessage() && ! $this->forceReply) {
             return;
         }
 

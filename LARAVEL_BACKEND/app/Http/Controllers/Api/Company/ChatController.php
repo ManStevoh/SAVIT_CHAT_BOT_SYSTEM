@@ -176,19 +176,49 @@ class ChatController extends Controller
         $chat->update(['agent_handling_at' => null]);
         $chat->load(['company.settings', 'company.whatsappAccount']);
 
+        $botCountBefore = Message::query()
+            ->where('chat_id', $chat->id)
+            ->where('sender', 'bot')
+            ->count();
+
         $reprocessed = $this->dispatchBotReplyForLatestCustomerMessage($chat);
 
+        $botCountAfter = Message::query()
+            ->where('chat_id', $chat->id)
+            ->where('sender', 'bot')
+            ->count();
+        $replied = $botCountAfter > $botCountBefore;
+
+        if (! $reprocessed) {
+            $settings = $chat->company?->settings;
+            $account = $chat->company?->whatsappAccount;
+            $message = 'Chat handed back to bot. Auto-reply will resume for the next customer message.';
+            if ($settings && $settings->auto_reply_enabled === false) {
+                $message = 'Chat unlocked, but auto-reply is disabled in Settings.';
+            } elseif (! $account || ! $account->isActive()) {
+                $message = 'Chat unlocked, but WhatsApp is not connected/active.';
+            }
+
+            return response()->json([
+                'success' => true,
+                'reprocessed' => false,
+                'replied' => false,
+                'message' => $message,
+            ]);
+        }
+
         return response()->json([
-            'success' => true,
-            'reprocessed' => $reprocessed,
-            'message' => $reprocessed
-                ? 'Chat handed back to bot. Generating a reply to the latest customer message…'
-                : 'Chat handed back to bot. Auto-reply will resume for the next customer message.',
-        ]);
+            'success' => $replied,
+            'reprocessed' => true,
+            'replied' => $replied,
+            'message' => $replied
+                ? 'AI reply sent to the customer.'
+                : 'Asked AI to reply, but no message was sent. Check subscription, message limits, and AI provider settings.',
+        ], $replied ? 200 : 422);
     }
 
     /**
-     * If the latest customer message has no later bot/agent reply, queue auto-reply for it.
+     * If the latest customer message has no later bot/agent reply, run auto-reply now (sync).
      */
     protected function dispatchBotReplyForLatestCustomerMessage(Chat $chat): bool
     {
@@ -223,7 +253,7 @@ class ChatController extends Controller
             return false;
         }
 
-        ProcessIncomingWhatsAppMessage::dispatchIncoming(
+        ProcessIncomingWhatsAppMessage::dispatchSyncIncoming(
             (int) $chat->company_id,
             (int) $chat->id,
             (string) $chat->customer_phone,

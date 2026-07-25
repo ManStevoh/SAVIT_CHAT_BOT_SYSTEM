@@ -156,18 +156,19 @@ export default function ChatsPage() {
     setIsHandingBack(true)
     try {
       const result = await handBackToBot(selectedChatId)
-      if (result.success) {
-        mutate(['chats', { status: statusFilter, search: searchQuery, attributedOnly }])
-        mutate(['messages', selectedChatId])
-        // Bot may reply asynchronously via queue — keep refreshing briefly.
-        window.setTimeout(() => mutate(['messages', selectedChatId]), 1500)
-        window.setTimeout(() => mutate(['messages', selectedChatId]), 4000)
-        toast({
-          title: result.message ?? 'Handed back to bot',
-        })
-      }
+      mutate(['chats', { status: statusFilter, search: searchQuery, attributedOnly }])
+      mutate(['messages', selectedChatId])
+      window.setTimeout(() => mutate(['messages', selectedChatId]), 800)
+      toast({
+        title: result.message ?? (result.success ? 'AI reply sent' : 'AI reply failed'),
+        variant: result.success ? 'default' : 'destructive',
+      })
     } catch (e) {
       console.error('Hand back failed:', e)
+      toast({
+        title: 'Could not ask AI to reply',
+        variant: 'destructive',
+      })
     } finally {
       setIsHandingBack(false)
     }
