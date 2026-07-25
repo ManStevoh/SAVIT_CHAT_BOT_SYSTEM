@@ -259,6 +259,12 @@ class CmsSeoService
 
     public function faviconUrl(): ?string
     {
+        $settings = \App\Models\PlatformSetting::query()->first();
+        $path = $settings?->app_favicon;
+        if (is_string($path) && $path !== '' && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return asset('storage/'.$path);
+        }
+
         return asset('images/branding/relaysiq-favicon.png');
     }
 

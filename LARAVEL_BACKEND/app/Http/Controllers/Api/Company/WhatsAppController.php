@@ -188,6 +188,7 @@ class WhatsAppController extends Controller
             'connected' => (bool) $account,
             'phoneNumberId' => $account?->phone_number_id,
             'displayPhoneNumber' => $account?->display_phone_number,
+            'whatsappBusinessAccountId' => $account?->whatsapp_business_account_id,
             'onboardingStatus' => $account?->onboarding_status,
             'displayNameStatus' => $account?->display_name_status,
             'qualityRating' => $account?->quality_rating,
@@ -205,6 +206,35 @@ class WhatsAppController extends Controller
                 ? WhatsAppPlatformConfig::isSolutionPartnerBillingReady()
                 : true,
         ]);
+    }
+
+    public function resubscribeWebhooks(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $companyId = $user->company_id;
+        if (! $companyId) {
+            return response()->json(['success' => false, 'message' => 'No company.'], 403);
+        }
+
+        $account = WhatsAppAccount::where('company_id', $companyId)
+            ->where('status', 'active')
+            ->first();
+
+        if (! $account) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active WhatsApp connection found.',
+            ], 422);
+        }
+
+        $result = $this->onboarding->resubscribeWebhooks($account);
+        $status = $result['success'] ? 200 : 422;
+
+        return response()->json([
+            'success' => $result['success'],
+            'message' => $result['message'] ?? null,
+            'webhookSubscribed' => ($result['account'] ?? $account)->fresh()?->webhook_subscribed_at !== null,
+        ], $status);
     }
 
     public function numbers(Request $request): JsonResponse

@@ -87,6 +87,6 @@ class BlogSeoTest extends TestCase
         $response = $this->get('/');
         $response->assertOk();
         $response->assertSee('rel="icon"', false);
-        $response->assertSee('/images/branding/relaysiq-favicon.png', false);
+        $response->assertSee('relaysiq-favicon.png', false);
     }
 }

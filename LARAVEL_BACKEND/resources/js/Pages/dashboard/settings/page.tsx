@@ -50,6 +50,7 @@ import {
   exportLearningSamples,
   getWhatsAppStatus,
   disconnectWhatsApp,
+  resubscribeWhatsAppWebhooks,
   connectWhatsApp,
   getWhatsAppEmbeddedConfig,
   completeWhatsAppEmbeddedSignup,
@@ -234,6 +235,23 @@ export default function SettingsPage() {
     loadWhatsAppStatus()
   }
 
+  const handleResubscribeWebhooks = async () => {
+    setWaMessage(null)
+    setWaMessageError(false)
+    setWaLoading(true)
+    try {
+      const result = await resubscribeWhatsAppWebhooks()
+      setWaMessage(result.message ?? (result.success ? "Webhook subscribed." : "Failed to subscribe webhook."))
+      setWaMessageError(!result.success)
+      await loadWhatsAppStatus()
+    } catch (err) {
+      setWaMessage(err instanceof Error ? err.message : "Failed to subscribe webhook.")
+      setWaMessageError(true)
+    } finally {
+      setWaLoading(false)
+    }
+  }
+
   const handleManualConnect = async (e: React.FormEvent) => {
     e.preventDefault()
     setWaMessage(null)
@@ -245,8 +263,14 @@ export default function SettingsPage() {
     }
     const phoneNumberId = waManualPhoneNumberId.trim()
     const accessToken = waManualAccessToken.trim()
+    const wabaId = waManualWabaId.trim()
     if (!phoneNumberId || !accessToken) {
       setWaMessage("Phone Number ID and permanent access token are required.")
+      setWaMessageError(true)
+      return
+    }
+    if (!wabaId) {
+      setWaMessage("WhatsApp Business Account ID is required so inbound messages can be received.")
       setWaMessageError(true)
       return
     }
@@ -261,7 +285,7 @@ export default function SettingsPage() {
       const result = await connectWhatsApp({
         phoneNumberId,
         accessToken,
-        whatsappBusinessAccountId: waManualWabaId.trim() || undefined,
+        whatsappBusinessAccountId: wabaId,
         displayPhoneNumber: waManualDisplayPhone.trim() || undefined,
         registrationPin: pin.length === 6 ? pin : undefined,
       })
@@ -930,6 +954,19 @@ export default function SettingsPage() {
                       <p>Platform credit line: {waStatus.creditLineShared ? "Attached" : "Pending"}</p>
                     )}
                   </div>
+                  {!waStatus.webhookSubscribed && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+                      <p className="text-sm text-foreground">
+                        Inbound messages will not arrive until the webhook is subscribed. This usually means the WhatsApp Business Account ID was missing during connect.
+                      </p>
+                      {waStatus.onboardingError && (
+                        <p className="text-xs text-muted-foreground">{waStatus.onboardingError}</p>
+                      )}
+                      <Button type="button" onClick={handleResubscribeWebhooks} disabled={waLoading}>
+                        {waLoading ? "Subscribing…" : "Fix inbound messages"}
+                      </Button>
+                    </div>
+                  )}
                   {whatsappNumbers.length > 0 && (
                     <div className="rounded-lg border border-border p-3 space-y-2">
                       <p className="text-sm font-medium text-foreground">Connected numbers</p>
@@ -1000,12 +1037,13 @@ export default function SettingsPage() {
                           />
                         </Field>
                         <Field>
-                          <FieldLabel htmlFor="waManualWabaId">WhatsApp Business Account ID (optional)</FieldLabel>
+                          <FieldLabel htmlFor="waManualWabaId">WhatsApp Business Account ID</FieldLabel>
                           <Input
                             id="waManualWabaId"
                             value={waManualWabaId}
                             onChange={(e) => setWaManualWabaId(e.target.value)}
-                            placeholder="Recommended for webhook subscription"
+                            placeholder="Required for receiving inbound messages"
+                            required
                           />
                         </Field>
                         <Field>

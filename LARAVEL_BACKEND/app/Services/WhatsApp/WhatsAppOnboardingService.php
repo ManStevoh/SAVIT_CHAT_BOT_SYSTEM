@@ -168,11 +168,83 @@ class WhatsAppOnboardingService
             'status' => 'inactive',
             'onboarding_status' => 'disconnected',
             'disconnected_at' => now(),
+            'webhook_subscribed_at' => null,
+            'phone_registered_at' => null,
             'credit_allocation_config_id' => null,
             'credit_line_shared_at' => null,
         ]);
 
         return ['success' => true, 'message' => 'WhatsApp disconnected.'];
+    }
+
+    /**
+     * Repair inbound messaging for an already-connected account by (re)subscribing the app to the WABA.
+     *
+     * @return array{success: bool, message?: string, account?: WhatsAppAccount}
+     */
+    public function resubscribeWebhooks(WhatsAppAccount $account): array
+    {
+        $token = (string) ($account->access_token ?? '');
+        if ($token === '') {
+            return [
+                'success' => false,
+                'message' => 'No access token stored for this WhatsApp connection. Disconnect and reconnect.',
+            ];
+        }
+
+        $wabaId = trim((string) ($account->whatsapp_business_account_id ?? ''));
+        if ($wabaId === '') {
+            $discovered = $this->graph->discoverPhoneData($token);
+            $wabaId = trim((string) ($discovered['whatsappBusinessAccountId'] ?? ''));
+            if ($wabaId !== '') {
+                $account->whatsapp_business_account_id = $wabaId;
+                if (empty($account->display_phone_number) && ! empty($discovered['displayPhoneNumber'])) {
+                    $account->display_phone_number = $discovered['displayPhoneNumber'];
+                }
+                if (empty($account->quality_rating) && ! empty($discovered['qualityRating'])) {
+                    $account->quality_rating = $discovered['qualityRating'];
+                }
+            }
+        }
+
+        if ($wabaId === '') {
+            return [
+                'success' => false,
+                'message' => 'WhatsApp Business Account ID is missing. Disconnect and reconnect with your WABA ID (Meta → WhatsApp → API Setup), or use Connect with Facebook.',
+            ];
+        }
+
+        $subscribe = $this->graph->subscribeWabaWebhooks($wabaId, $token);
+        if (! ($subscribe['ok'] || $this->graph->isAlreadySubscribedError($subscribe))) {
+            $error = $subscribe['data']['error']['message'] ?? 'Webhook subscription failed';
+            $account->onboarding_error = $error;
+            $account->save();
+
+            Log::warning('WhatsApp webhook resubscribe failed', [
+                'company_id' => $account->company_id,
+                'waba_id' => $wabaId,
+                'error' => $error,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Webhook subscription failed: '.$error,
+                'account' => $account,
+            ];
+        }
+
+        $account->webhook_subscribed_at = now();
+        $account->onboarding_error = null;
+        if ($account->status === 'active') {
+            $account->onboarding_status = 'active';
+        }
+        $account->save();
+
+        return [
+            'success' => true,
+            'message' => 'Webhook subscribed. You should now receive inbound WhatsApp messages.',
+            'account' => $account->fresh(),
+        ];
     }
 
     /**
@@ -203,6 +275,14 @@ class WhatsAppOnboardingService
             ];
         }
 
+        $wabaId = trim((string) ($wabaId ?? ''));
+        if ($wabaId === '') {
+            return [
+                'success' => false,
+                'message' => 'WhatsApp Business Account ID is required so RelayIQ can receive inbound messages. Provide the WABA ID from Meta → WhatsApp → API Setup, or reconnect with Facebook.',
+            ];
+        }
+
         $pin = $this->normalizeRegistrationPin($registrationPin) ?? $this->generateRegistrationPin();
         $billingModel = WhatsAppPlatformConfig::billingModel();
 
@@ -221,34 +301,34 @@ class WhatsAppOnboardingService
                 'registration_pin' => Crypt::encryptString($pin),
                 'connected_at' => now(),
                 'disconnected_at' => null,
+                'webhook_subscribed_at' => null,
+                'phone_registered_at' => null,
                 'credit_allocation_config_id' => null,
                 'credit_line_shared_at' => null,
             ]
         );
 
-        if ($wabaId !== null && $wabaId !== '') {
-            $subscribe = $this->graph->subscribeWabaWebhooks($wabaId, $accessToken);
-            if ($subscribe['ok'] || $this->graph->isAlreadySubscribedError($subscribe)) {
-                $account->webhook_subscribed_at = now();
-                $account->onboarding_status = 'webhook_subscribed';
-            } else {
-                $error = $subscribe['data']['error']['message'] ?? 'Webhook subscription failed';
-                $account->onboarding_status = 'error';
-                $account->onboarding_error = $error;
-                $account->save();
+        $subscribe = $this->graph->subscribeWabaWebhooks($wabaId, $accessToken);
+        if ($subscribe['ok'] || $this->graph->isAlreadySubscribedError($subscribe)) {
+            $account->webhook_subscribed_at = now();
+            $account->onboarding_status = 'webhook_subscribed';
+        } else {
+            $error = $subscribe['data']['error']['message'] ?? 'Webhook subscription failed';
+            $account->onboarding_status = 'error';
+            $account->onboarding_error = $error;
+            $account->save();
 
-                Log::warning('WhatsApp webhook subscribe failed', ['company_id' => $companyId, 'error' => $error]);
+            Log::warning('WhatsApp webhook subscribe failed', ['company_id' => $companyId, 'error' => $error]);
 
-                return [
-                    'success' => false,
-                    'message' => 'Connected to Meta but webhook subscription failed: ' . $error,
-                    'account' => $account,
-                ];
-            }
+            return [
+                'success' => false,
+                'message' => 'Connected to Meta but webhook subscription failed: '.$error,
+                'account' => $account,
+            ];
         }
 
         if ($billingModel === WhatsAppBillingModel::SOLUTION_PARTNER) {
-            if ($wabaId === null || $wabaId === '') {
+            if ($wabaId === '') {
                 $account->onboarding_status = 'error';
                 $account->onboarding_error = 'WhatsApp Business Account ID is required for platform billing.';
                 $account->save();

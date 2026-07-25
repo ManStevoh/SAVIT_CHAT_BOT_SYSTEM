@@ -53,6 +53,8 @@ export default function AdminSettingsPage() {
   const [testEmailTo, setTestEmailTo] = useState("")
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [faviconFile, setFaviconFile] = useState<File | null>(null)
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -102,11 +104,14 @@ export default function AdminSettingsPage() {
         primaryColor: settings.primaryColor ?? undefined,
         secondaryColor: settings.secondaryColor ?? undefined,
         logo: logoFile ?? undefined,
+        favicon: faviconFile ?? undefined,
       })
       if (res.success) {
         toast({ title: res.message ?? "Appearance saved" })
         setLogoFile(null)
         setLogoPreview(null)
+        setFaviconFile(null)
+        setFaviconPreview(null)
         getPlatformSettings().then((data) => setSettings(data))
       } else {
         toast({ title: res.message ?? "Save failed", variant: "destructive" })
@@ -124,6 +129,15 @@ export default function AdminSettingsPage() {
       setLogoFile(file)
       const url = URL.createObjectURL(file)
       setLogoPreview(url)
+    }
+  }
+
+  const onFaviconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setFaviconFile(file)
+      const url = URL.createObjectURL(file)
+      setFaviconPreview(url)
     }
   }
 
@@ -505,7 +519,7 @@ export default function AdminSettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Appearance & branding</CardTitle>
-              <CardDescription>Primary and secondary colours, logo, and app name. Applied to the landing page, dashboard theme, emails, and invoices.</CardDescription>
+              <CardDescription>Primary and secondary colours, logo, favicon, and app name. Applied to the landing page, dashboard theme, emails, and invoices.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FieldGroup>
@@ -576,6 +590,38 @@ export default function AdminSettingsPage() {
                         </Button>
                         {logoFile && (
                           <span className="text-xs text-muted-foreground">{logoFile.name}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Field>
+                <Field>
+                  <FieldLabel>Favicon</FieldLabel>
+                  <p className="text-xs text-muted-foreground mb-2">Browser tab icon. Square PNG (32×32 to 512×512) recommended. Max 1 MB.</p>
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="h-12 w-12 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={faviconPreview ?? settings?.appFavicon ?? "/images/branding/relaysiq-favicon.png"}
+                          alt="Favicon"
+                          className="max-h-10 max-w-10 object-contain"
+                        />
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <Button type="button" variant="outline" size="sm" asChild>
+                          <label className="cursor-pointer flex items-center gap-2">
+                            <Upload className="h-4 w-4" />
+                            {settings?.appFavicon && !faviconFile ? "Replace favicon" : "Upload favicon"}
+                            <input
+                              type="file"
+                              accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/jpeg,image/webp,image/svg+xml"
+                              className="sr-only"
+                              onChange={onFaviconChange}
+                            />
+                          </label>
+                        </Button>
+                        {faviconFile && (
+                          <span className="text-xs text-muted-foreground">{faviconFile.name}</span>
                         )}
                       </div>
                     </div>

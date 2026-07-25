@@ -319,6 +319,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('whatsapp/embedded/config', [WhatsAppController::class, 'embeddedConfig']);
     Route::post('whatsapp/embedded/complete', [WhatsAppController::class, 'completeEmbeddedSignup']);
     Route::post('whatsapp/disconnect', [WhatsAppController::class, 'disconnect']);
+    Route::post('whatsapp/webhooks/subscribe', [WhatsAppController::class, 'resubscribeWebhooks']);
     Route::get('whatsapp/templates', [WhatsAppTemplateController::class, 'index']);
     Route::post('whatsapp/templates', [WhatsAppTemplateController::class, 'store']);
     Route::post('whatsapp/templates/sync', [WhatsAppTemplateController::class, 'sync']);

@@ -513,4 +513,66 @@ class WhatsAppOnboardingTest extends TestCase
             ->assertJsonPath('requiresMetaPaymentMethod', false)
             ->assertJsonPath('platformBillingReady', false);
     }
+
+    public function test_manual_connect_without_waba_does_not_activate(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/phone-manual*' => Http::response([
+                'id' => 'phone-manual',
+                'display_phone_number' => '+254700000001',
+                'quality_rating' => 'GREEN',
+            ], 200),
+            'graph.facebook.com/*/me*' => Http::response(['whatsapp_business_accounts' => ['data' => []]], 200),
+        ]);
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseMissing('whatsapp_accounts', [
+            'phone_number_id' => 'phone-manual',
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_resubscribe_webhooks_repairs_active_account(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/waba-fix/subscribed_apps' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        WhatsAppAccount::create([
+            'company_id' => $user->company_id,
+            'phone_number_id' => 'phone-fix',
+            'access_token' => 'token-fix',
+            'display_phone_number' => '+254763032390',
+            'whatsapp_business_account_id' => 'waba-fix',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'webhook_subscribed_at' => null,
+            'phone_registered_at' => now(),
+            'connected_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/webhooks/subscribe')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('webhookSubscribed', true);
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertNotNull($account?->webhook_subscribed_at);
+
+        $this->getJson('/api/company/whatsapp/status')
+            ->assertOk()
+            ->assertJsonPath('connected', true)
+            ->assertJsonPath('webhookSubscribed', true);
+    }
 }

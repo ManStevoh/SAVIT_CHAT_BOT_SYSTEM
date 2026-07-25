@@ -18,14 +18,19 @@ class AppBrandingController extends Controller
     {
         $settings = PlatformSetting::first();
         $appName = MailService::applicationName();
-        $appLogo = asset('images/branding/relaysiq-favicon.png');
+        $appLogo = asset('images/branding/relaysiq-mark.png');
         if ($settings && ! empty($settings->app_logo) && Storage::disk('public')->exists($settings->app_logo)) {
             $appLogo = asset('storage/' . $settings->app_logo);
+        }
+        $appFavicon = asset('images/branding/relaysiq-favicon.png');
+        if ($settings && ! empty($settings->app_favicon) && Storage::disk('public')->exists($settings->app_favicon)) {
+            $appFavicon = asset('storage/' . $settings->app_favicon);
         }
 
         return response()->json([
             'applicationName' => $appName,
             'appLogo' => $appLogo,
+            'appFavicon' => $appFavicon,
             'primaryColor' => $settings ? $settings->primary_color : null,
             'secondaryColor' => $settings ? $settings->secondary_color : null,
             'requireEmailVerification' => PlatformSetting::requiresEmailVerification(),

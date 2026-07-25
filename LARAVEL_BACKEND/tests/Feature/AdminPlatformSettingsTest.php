@@ -70,4 +70,36 @@ class AdminPlatformSettingsTest extends TestCase
         $this->assertSame('real-embedded-secret', $settings->getRawOriginal('whatsapp_embedded_app_secret'));
         $this->assertSame('846055524940193', $settings->whatsapp_embedded_app_id);
     }
+
+    public function test_admin_can_upload_logo_and_favicon(): void
+    {
+        PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'RelayIQ']);
+
+        Sanctum::actingAs(User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]));
+
+        $logo = \Illuminate\Http\UploadedFile::fake()->image('logo.png', 200, 80);
+        $favicon = \Illuminate\Http\UploadedFile::fake()->image('favicon.png', 64, 64);
+
+        $this->post('/api/admin/settings', [
+            'primaryColor' => '#6D28D9',
+            'logo' => $logo,
+            'favicon' => $favicon,
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $settings = PlatformSetting::first();
+        $this->assertNotNull($settings?->app_logo);
+        $this->assertNotNull($settings?->app_favicon);
+        $this->assertTrue(\Illuminate\Support\Facades\Storage::disk('public')->exists($settings->app_logo));
+        $this->assertTrue(\Illuminate\Support\Facades\Storage::disk('public')->exists($settings->app_favicon));
+
+        $this->getJson('/api/admin/settings')
+            ->assertOk()
+            ->assertJsonPath('primaryColor', '#6D28D9')
+            ->assertJsonStructure(['appLogo', 'appFavicon']);
+    }
 }

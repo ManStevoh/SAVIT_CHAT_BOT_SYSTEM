@@ -1072,6 +1072,7 @@ export interface WhatsAppStatus {
   connected: boolean
   phoneNumberId: string | null
   displayPhoneNumber: string | null
+  whatsappBusinessAccountId?: string | null
   onboardingStatus?: string | null
   displayNameStatus?: string | null
   qualityRating?: string | null
@@ -1135,6 +1136,23 @@ export async function disconnectWhatsApp(): Promise<{ success: boolean; message?
   }
   try {
     return await apiRequest<{ success: boolean; message?: string }>('/api/company/whatsapp/disconnect', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/** Repair inbound messaging by subscribing the Meta app to the company's WABA webhooks. */
+export async function resubscribeWhatsAppWebhooks(): Promise<{
+  success: boolean
+  message?: string
+  webhookSubscribed?: boolean
+}> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true, message: 'Webhook subscribed.', webhookSubscribed: true }
+  }
+  try {
+    return await apiRequest('/api/company/whatsapp/webhooks/subscribe', { method: 'POST' })
   } catch (e) {
     return handleApiError(e)
   }
@@ -2312,6 +2330,7 @@ export interface PlatformSettings {
   primaryColor?: string | null
   secondaryColor?: string | null
   appLogo?: string | null
+  appFavicon?: string | null
   supportEmail?: string | null
   maintenanceMode?: boolean
   defaultTimezone?: string | null
@@ -2377,6 +2396,7 @@ export interface UpdatePlatformSettingsData {
   primaryColor?: string
   secondaryColor?: string
   logo?: File
+  favicon?: File
   supportEmail?: string
   maintenanceMode?: boolean
   defaultTimezone?: string
@@ -2435,6 +2455,7 @@ export interface UpdatePlatformSettingsData {
 export interface AppBranding {
   applicationName: string
   appLogo: string | null
+  appFavicon?: string | null
   primaryColor: string | null
   secondaryColor: string | null
   requireEmailVerification?: boolean
@@ -2655,8 +2676,8 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
 }
 
 /**
- * Update platform settings (admin only). Use FormData when logo is included.
- * Laravel: PUT /api/admin/settings (JSON or multipart with logo)
+ * Update platform settings (admin only). Use FormData when logo/favicon is included.
+ * Laravel: PUT /api/admin/settings (JSON or multipart with logo/favicon)
  */
 export async function updatePlatformSettings(data: UpdatePlatformSettingsData): Promise<{ success: boolean; message?: string }> {
   if (useMockApi()) {
@@ -2664,11 +2685,12 @@ export async function updatePlatformSettings(data: UpdatePlatformSettingsData): 
     return { success: true, message: 'Platform settings updated successfully' }
   }
   try {
-    const hasLogo = data.logo != null
-    if (hasLogo) {
+    const hasFiles = data.logo != null || data.favicon != null
+    if (hasFiles) {
       const form = new FormData()
-      const { logo, ...rest } = data
-      form.append('logo', logo!)
+      const { logo, favicon, ...rest } = data
+      if (logo) form.append('logo', logo)
+      if (favicon) form.append('favicon', favicon)
       Object.entries(rest).forEach(([k, v]) => {
         if (v === undefined || v === null) return
         form.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v))
@@ -2697,6 +2719,7 @@ export async function getAppBranding(): Promise<AppBranding> {
     return {
       applicationName: 'RelayIQ',
       appLogo: null,
+      appFavicon: null,
       primaryColor: null,
       secondaryColor: null,
       requireEmailVerification: false,

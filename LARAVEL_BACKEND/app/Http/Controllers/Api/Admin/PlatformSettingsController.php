@@ -38,6 +38,18 @@ class PlatformSettingsController extends Controller
             }
         }
 
+        $appFaviconUrl = null;
+        $faviconPath = $data['app_favicon'] ?? null;
+        if (is_string($faviconPath) && $faviconPath !== '') {
+            try {
+                $appFaviconUrl = Storage::disk('public')->exists($faviconPath)
+                    ? asset('storage/'.$faviconPath)
+                    : null;
+            } catch (\Throwable) {
+                $appFaviconUrl = null;
+            }
+        }
+
         $landingTrusted = $this->decodeJsonColumn($data['landing_trusted_companies'] ?? null);
         $aiLearning = $this->decodeJsonColumn($data['ai_learning_config'] ?? null);
 
@@ -46,6 +58,7 @@ class PlatformSettingsController extends Controller
             'primaryColor' => $data['primary_color'] ?? null,
             'secondaryColor' => $data['secondary_color'] ?? null,
             'appLogo' => $appLogoUrl,
+            'appFavicon' => $appFaviconUrl,
             'supportEmail' => $data['support_email'] ?? null,
             'maintenanceMode' => (bool) ($data['maintenance_mode'] ?? false),
             'defaultTimezone' => $data['default_timezone'] ?? 'UTC',
@@ -150,6 +163,7 @@ class PlatformSettingsController extends Controller
             'primaryColor' => 'nullable|string|max:50',
             'secondaryColor' => 'nullable|string|max:50',
             'logo' => 'nullable|image|max:2048',
+            'favicon' => 'nullable|image|max:1024',
             'supportEmail' => 'nullable|email',
             'maintenanceMode' => 'sometimes|boolean',
             'defaultTimezone' => 'nullable|string|max:50',
@@ -295,7 +309,7 @@ class PlatformSettingsController extends Controller
             'recaptcha_secret_key',
         ];
         foreach ($validated as $key => $value) {
-            if ($key === 'logo') {
+            if ($key === 'logo' || $key === 'favicon') {
                 continue;
             }
             $col = $map[$key] ?? null;
@@ -314,6 +328,14 @@ class PlatformSettingsController extends Controller
             }
             $path = $request->file('logo')->store('app_logos', 'public');
             $settings->app_logo = $path;
+        }
+
+        if ($request->hasFile('favicon')) {
+            if ($settings->app_favicon) {
+                Storage::disk('public')->delete($settings->app_favicon);
+            }
+            $path = $request->file('favicon')->store('app_favicons', 'public');
+            $settings->app_favicon = $path;
         }
 
         if (array_key_exists('aiLearningConfig', $validated)) {

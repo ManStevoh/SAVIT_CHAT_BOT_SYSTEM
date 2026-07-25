@@ -12,6 +12,7 @@ class PlatformSetting extends Model
         'primary_color',
         'secondary_color',
         'app_logo',
+        'app_favicon',
         'support_email',
         'maintenance_mode',
         'default_timezone',
