@@ -45,7 +45,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       _future!.then((chats) {
         if (mounted) _refreshUnreadBadge();
       });
-      _poll = Timer.periodic(const Duration(seconds: 12), (_) => _silentReload());
+      _poll = Timer.periodic(const Duration(seconds: 5), (_) => _silentReload());
     });
   }
 
@@ -83,7 +83,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   Future<void> _silentReload() async {
     if (!mounted || _future == null || _isAdminOnly) return;
-    final onChatsTab = ActiveShellBranch.maybeOf(context) == 1;
+    // When branch provider is missing, still refresh — otherwise list never updates.
+    final branch = ActiveShellBranch.maybeOf(context);
+    final onChatsTab = branch == null || branch == 1;
 
     await _refreshUnreadBadge();
     if (!mounted || !onChatsTab) return;

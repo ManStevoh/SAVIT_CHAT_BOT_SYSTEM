@@ -229,7 +229,7 @@ export function useChats(filters?: { status?: string; search?: string; limit?: n
       }
       return data
     },
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: true, refreshInterval: 5_000 }
   )
 }
 
@@ -278,7 +278,10 @@ export function useMessages(chatId: string | null) {
       await delay(500)
       return mockMessages.filter(m => m.chatId === chatId)
     },
-    { revalidateOnFocus: false }
+    {
+      revalidateOnFocus: true,
+      refreshInterval: chatId ? 3_000 : 0,
+    }
   )
 }
 

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessIncomingWhatsAppMessage;
 use App\Models\Chat;
+use App\Models\Message;
 use App\Models\SocialPost;
 use App\Support\PhoneSearch;
 use Carbon\Carbon;
@@ -156,6 +158,8 @@ class ChatController extends Controller
 
     /**
      * Clear agent_handling_at for this chat so the bot can auto-reply again (hand back to bot).
+     * Also re-processes the latest unanswered customer message so the bot replies immediately
+     * without waiting for another inbound WhatsApp message.
      * POST /api/company/chats/{chatId}/hand-back
      */
     public function handBack(Request $request, string $chatId): JsonResponse
@@ -171,10 +175,66 @@ class ChatController extends Controller
         }
 
         $chat->update(['agent_handling_at' => null]);
+        $chat->load(['company.settings', 'company.whatsappAccount']);
+
+        $reprocessed = $this->dispatchBotReplyForLatestCustomerMessage($chat);
 
         return response()->json([
             'success' => true,
-            'message' => 'Chat handed back to bot. Auto-reply will resume for new messages.',
+            'reprocessed' => $reprocessed,
+            'message' => $reprocessed
+                ? 'Chat handed back to bot. Generating a reply to the latest customer message…'
+                : 'Chat handed back to bot. Auto-reply will resume for the next customer message.',
         ]);
+    }
+
+    /**
+     * If the latest customer message has no later bot/agent reply, queue auto-reply for it.
+     */
+    protected function dispatchBotReplyForLatestCustomerMessage(Chat $chat): bool
+    {
+        $settings = $chat->company?->settings;
+        if (! $settings || ! $settings->auto_reply_enabled) {
+            return false;
+        }
+
+        $account = $chat->company?->whatsappAccount;
+        if (! $account || ! $account->isActive()) {
+            return false;
+        }
+
+        $lastCustomer = Message::query()
+            ->where('chat_id', $chat->id)
+            ->where('sender', 'customer')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $lastCustomer) {
+            return false;
+        }
+
+        $hasLaterHumanOrBotReply = Message::query()
+            ->where('chat_id', $chat->id)
+            ->whereIn('sender', ['bot', 'agent'])
+            ->where('id', '>', $lastCustomer->id)
+            ->exists();
+
+        if ($hasLaterHumanOrBotReply) {
+            return false;
+        }
+
+        ProcessIncomingWhatsAppMessage::dispatch(
+            (int) $chat->company_id,
+            (int) $chat->id,
+            (string) $chat->customer_phone,
+            (string) $account->phone_number_id,
+            (string) ($lastCustomer->content ?? ''),
+            $chat->customer_name,
+            $lastCustomer->whatsapp_message_id,
+            (int) $lastCustomer->id,
+            true,
+        );
+
+        return true;
     }
 }

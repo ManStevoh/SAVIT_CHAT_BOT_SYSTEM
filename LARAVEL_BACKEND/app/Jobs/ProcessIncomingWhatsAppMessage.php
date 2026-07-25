@@ -42,11 +42,13 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
      */
     public function uniqueId(): string
     {
+        $suffix = $this->forceReply ? ':handback' : '';
+
         if ($this->whatsappMessageId) {
-            return "wa_incoming:{$this->chatId}:{$this->whatsappMessageId}";
+            return "wa_incoming:{$this->chatId}:{$this->whatsappMessageId}{$suffix}";
         }
 
-        return "wa_incoming:{$this->chatId}:".md5($this->messageText.':'.$this->customerPhone);
+        return "wa_incoming:{$this->chatId}:".md5($this->messageText.':'.$this->customerPhone).$suffix;
     }
 
     public function __construct(
@@ -58,6 +60,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         public ?string $customerName = null,
         public ?string $whatsappMessageId = null,
         public ?int $incomingMessageId = null,
+        public bool $forceReply = false,
     ) {}
 
     public function handle(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void

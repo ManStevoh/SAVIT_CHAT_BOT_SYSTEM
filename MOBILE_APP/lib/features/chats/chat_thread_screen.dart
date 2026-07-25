@@ -9,7 +9,6 @@ import '../../core/shell/shell_badges.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_state_views.dart';
 import '../../shared/widgets/customer_avatar.dart';
-import '../shell/active_shell_branch.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 
@@ -29,13 +28,15 @@ class ChatThreadScreen extends StatefulWidget {
   State<ChatThreadScreen> createState() => _ChatThreadScreenState();
 }
 
-class _ChatThreadScreenState extends State<ChatThreadScreen> {
+class _ChatThreadScreenState extends State<ChatThreadScreen>
+    with WidgetsBindingObserver {
   final _composer = TextEditingController();
   final _scrollController = ScrollController();
   late Future<List<ChatMessage>> _future;
   bool _sending = false;
   Timer? _poll;
   int _lastCount = 0;
+  String? _lastFingerprint;
   bool _didInitialScroll = false;
   String? _customerName;
   String? _customerPhone;
@@ -44,15 +45,23 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _customerName = widget.customerName;
     _customerPhone = widget.customerPhone;
     _future = context.read<ChatRepository>().listMessages(widget.chatId);
     _future.then((_) {
       if (mounted) _syncUnreadAfterOpen();
     });
-    _poll = Timer.periodic(const Duration(seconds: 8), (_) => _silentReload());
+    _poll = Timer.periodic(const Duration(seconds: 4), (_) => _silentReload());
     if (_customerName == null || _customerName!.isEmpty) {
       _resolveCustomer();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _silentReload();
     }
   }
 
@@ -67,6 +76,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
     _composer.dispose();
     _scrollController.dispose();
@@ -118,14 +128,20 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
   Future<void> _silentReload() async {
     if (!mounted || _sending) return;
-    if (ActiveShellBranch.maybeOf(context) != 1) return;
     try {
       final messages =
           await context.read<ChatRepository>().listMessages(widget.chatId);
       if (!mounted) return;
+      final fingerprint = messages.isEmpty
+          ? 'empty'
+          : '${messages.length}:${messages.last.id}:${messages.last.status}:${messages.last.content.hashCode}';
+      final changed = fingerprint != _lastFingerprint;
       final grew = messages.length > _lastCount;
       _lastCount = messages.length;
-      setState(() => _future = Future.value(messages));
+      _lastFingerprint = fingerprint;
+      if (changed) {
+        setState(() => _future = Future.value(messages));
+      }
       if (grew) _scrollToBottom();
     } catch (_) {}
   }

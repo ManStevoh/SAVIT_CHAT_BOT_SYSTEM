@@ -157,14 +157,21 @@ export default function ChatsPage() {
     try {
       const result = await handBackToBot(selectedChatId)
       if (result.success) {
-        mutate(['chats', { status: statusFilter, search: searchQuery }])
+        mutate(['chats', { status: statusFilter, search: searchQuery, attributedOnly }])
+        mutate(['messages', selectedChatId])
+        // Bot may reply asynchronously via queue — keep refreshing briefly.
+        window.setTimeout(() => mutate(['messages', selectedChatId]), 1500)
+        window.setTimeout(() => mutate(['messages', selectedChatId]), 4000)
+        toast({
+          title: result.message ?? 'Handed back to bot',
+        })
       }
     } catch (e) {
       console.error('Hand back failed:', e)
     } finally {
       setIsHandingBack(false)
     }
-  }, [selectedChatId, statusFilter, searchQuery, mutate])
+  }, [selectedChatId, statusFilter, searchQuery, attributedOnly, mutate, toast])
 
   // Handle keyboard shortcut for sending
   const handleKeyDown = (e: React.KeyboardEvent) => {
