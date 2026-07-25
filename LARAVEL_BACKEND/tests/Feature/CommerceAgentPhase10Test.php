@@ -125,6 +125,7 @@ class CommerceAgentPhase10Test extends TestCase
 
         $this->assertContains('search_products', $names);
         $this->assertContains('send_order_invoice', $names);
+        $this->assertContains('share_payment_details', $names);
         $this->assertNotContains('issue_order_refund', $names);
     }
 

@@ -197,14 +197,17 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
 
         // Agent lock only blocks while fresh. Expired locks must resume AI (and clear the stamp).
+        // Also unlock when the customer explicitly rejects a handoff so AI can resume.
         if ($chat->agent_handling_at !== null) {
-            if ($chat->isAgentHandling(30) && ! $this->forceReply) {
+            $rejectHandoff = $this->customerRejectsHandoffText($this->messageText);
+            if ($rejectHandoff) {
+                $chat->update(['agent_handling_at' => null]);
+                $chat->refresh();
+            } elseif ($chat->isAgentHandling(30) && ! $this->forceReply) {
                 $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
 
                 return;
-            }
-
-            if (! $chat->isAgentHandling(30)) {
+            } elseif (! $chat->isAgentHandling(30)) {
                 $chat->update(['agent_handling_at' => null]);
                 $chat->refresh();
             }
@@ -372,6 +375,18 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
 
         return false;
+    }
+
+    protected function customerRejectsHandoffText(string $messageText): bool
+    {
+        $lower = mb_strtolower(trim($messageText));
+
+        return str_contains($lower, 'do not transfer')
+            || str_contains($lower, "don't transfer")
+            || str_contains($lower, 'dont transfer')
+            || str_contains($lower, 'no transfer')
+            || str_contains($lower, 'no human')
+            || (str_contains($lower, 'no') && str_contains($lower, 'transfer'));
     }
 
     protected function humanHandoffCustomerMessage(): string

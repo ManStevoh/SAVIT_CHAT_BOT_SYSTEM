@@ -41,8 +41,12 @@ final class GetBusinessInfoTool implements AgentTool
                 'stripe' => (bool) ($settings?->orders_accept_stripe ?? false),
                 'paystack' => (bool) ($settings?->orders_accept_paystack ?? false),
                 'manual' => $settings?->hasOrderPaymentManualInstructions() ?? false,
+                'manual_instructions' => $settings?->hasOrderPaymentManualInstructions()
+                    ? trim((string) $settings->order_payment_manual_instructions)
+                    : null,
             ],
             'industry' => $company->industry ?? null,
+            'note' => 'If payments.manual_instructions is set, share those exact details when the customer wants to pay. Never invent till numbers or claim methods are being set up.',
         ];
     }
 }

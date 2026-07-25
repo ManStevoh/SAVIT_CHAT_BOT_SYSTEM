@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
 use App\Support\MoneyFormatter;
+use App\Services\Orders\OrderPaymentDetailsService;
 use Illuminate\Support\Carbon;
 
 /**
@@ -94,6 +95,8 @@ final class AgentCustomerIntelligenceContext
         $productCount = Product::where('company_id', $company->id)->where('status', 'active')->count();
         $parts[] = "Catalog size: {$productCount} active products. Prefer tools search_products / get_catalog for precise stock and variants; never invent SKUs or prices.";
 
+        $parts[] = app(OrderPaymentDetailsService::class)->promptBlockForCompany($company);
+
         if ($incomingMessage !== null && trim($incomingMessage) !== '') {
             $parts[] = 'Current customer message (respond to this intent fully): '.trim($incomingMessage);
         }
@@ -104,11 +107,12 @@ Operating rules (business OS — not a rigid script):
 2. Infer intent from meaning — any wording, language, or shorthand. Never require fixed phrases.
 3. Use tools for facts and for do-actions (orders, payments, documents, delivery, refunds, memory). Reason from tool results — do not guess or invent.
 4. When the customer wants something done, call the matching capability immediately. Do not say you will send/check/create something and then skip the tool.
-5. Remember the person: use customer memory + order history; persist new facts with remember_customer.
-6. Sell with integrity: recommend real catalog items, explain value briefly, offer clear next steps.
-7. Own the full journey conversationally (discover → recommend → order → pay → track → resolve) via tools — not menu robots.
-8. Escalate with transfer_to_human only when the customer wants a person, risk is high, or no available tool can fulfill the request.
-9. You ARE the front line of this business. Act with the owner's knowledge and care.
+5. Invoice / bill / receipt: call send_order_invoice. Pay / payment details / till / how to pay: call share_payment_details. Do not transfer_to_human for those.
+6. Remember the person: use customer memory + order history; persist new facts with remember_customer.
+7. Sell with integrity: recommend real catalog items, explain value briefly, offer clear next steps.
+8. Own the full journey conversationally (discover → recommend → order → pay → track → resolve) via tools — not menu robots.
+9. Escalate with transfer_to_human only when the customer clearly wants a person, risk is high, or no available tool can fulfill the request. If they say not to transfer, do not transfer.
+10. You ARE the front line of this business. Act with the owner's knowledge and care.
 OS;
 
         return implode("\n\n", $parts);

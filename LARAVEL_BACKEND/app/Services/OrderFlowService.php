@@ -142,9 +142,16 @@ class OrderFlowService
             }
             $order->update(['delivery_address' => $address]);
             $draft['order_id'] = $order->id;
-            $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, $draft);
-
             $pay = $this->resolvePaymentAcceptance($company->settings);
+
+            // Only manual configured → share till/bank details immediately (no empty menu).
+            if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack']) {
+                $this->clearState($chat);
+
+                return "Delivery address saved: {$address}\n\n".$this->formatOrderWithManualPaymentInstructions($order);
+            }
+
+            $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, $draft);
 
             return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
         }
@@ -875,8 +882,14 @@ class OrderFlowService
 
     protected function wantsManual(string $lower): bool
     {
-        return in_array($lower, ['3', 'manual', 'bank', 'bank transfer', 'pay manually', 'other'], true)
-            || str_contains($lower, 'bank') || str_contains($lower, 'manual');
+        return in_array($lower, ['3', 'manual', 'bank', 'bank transfer', 'pay manually', 'other', 'till', 'paybill', 'pay bill'], true)
+            || str_contains($lower, 'bank')
+            || str_contains($lower, 'manual')
+            || str_contains($lower, 'till')
+            || str_contains($lower, 'paybill')
+            || str_contains($lower, 'payment detail')
+            || str_contains($lower, 'how to pay')
+            || str_contains($lower, 'want to pay');
     }
 
     protected function wantsMpesa(string $lower): bool
