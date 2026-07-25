@@ -48,10 +48,22 @@ final class ProcessOrderMessageTool implements AgentTool
 
         $chat->refresh();
 
+        if ($reply === null || trim($reply) === '') {
+            return [
+                'order_flow_reply' => null,
+                'conversation_step' => $chat->conversation_step,
+                'has_reply' => false,
+                'error' => 'order_flow_no_progress',
+                'message' => 'Checkout did not advance on that message. '
+                    .'If the customer is confirming a purchase that is not in an active checkout step, call process_order_message again with a concrete line such as "order" or "10 x Headphones" (product name from the conversation), then share_payment_details. '
+                    .'Do not transfer_to_human for this.',
+            ];
+        }
+
         return [
             'order_flow_reply' => $reply,
             'conversation_step' => $chat->conversation_step,
-            'has_reply' => $reply !== null && trim($reply) !== '',
+            'has_reply' => true,
         ];
     }
 }

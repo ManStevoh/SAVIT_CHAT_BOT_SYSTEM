@@ -37,7 +37,10 @@ class OrderPaymentDetailsService
             return [
                 'success' => false,
                 'error' => 'no_unpaid_order',
-                'message' => 'No unpaid order found for this customer. Create/confirm an order first, then share payment details.',
+                'message' => 'No unpaid order found for this customer yet. '
+                    .'Next: call process_order_message with a concrete order message (e.g. "10 x Headphones" or "order") to create/confirm the order, then call share_payment_details again. '
+                    .'Do not transfer_to_human and do not invent payment setup messages.',
+                'customer_message' => null,
             ];
         }
 

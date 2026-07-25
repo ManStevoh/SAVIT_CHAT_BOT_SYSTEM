@@ -240,7 +240,7 @@ final class CommerceAgentOrchestrator
      */
     private function shouldForceDoActionTool(string $actionKind, array $toolsUsed, string $incomingMessage): bool
     {
-        $lower = mb_strtolower($incomingMessage);
+        $lower = mb_strtolower(trim($incomingMessage));
         $needsInvoice = $actionKind === 'send_document'
             || str_contains($lower, 'invoice')
             || str_contains($lower, 'receipt')
@@ -249,6 +249,14 @@ final class CommerceAgentOrchestrator
             || str_contains($lower, 'pay')
             || str_contains($lower, 'till')
             || str_contains($lower, 'payment');
+        $needsOrder = $actionKind === 'create_order'
+            || (
+                $this->isShortAffirmative($lower)
+                && in_array($actionKind, ['create_order', 'pay', 'other', ''], true)
+            )
+            || str_contains($lower, 'confirm')
+            || str_contains($lower, 'place order')
+            || str_contains($lower, 'proceed');
 
         if ($needsInvoice && ! in_array('send_order_invoice', $toolsUsed, true)) {
             return true;
@@ -256,6 +264,13 @@ final class CommerceAgentOrchestrator
         if ($needsPay && ! in_array('share_payment_details', $toolsUsed, true)
             && ! in_array('process_order_message', $toolsUsed, true)
             && ! in_array('check_mpesa_payment', $toolsUsed, true)) {
+            return true;
+        }
+        if ($needsOrder && ! $needsInvoice
+            && $actionKind !== 'handoff'
+            && ! in_array('process_order_message', $toolsUsed, true)
+            && ! in_array('share_payment_details', $toolsUsed, true)
+            && ! in_array('send_order_invoice', $toolsUsed, true)) {
             return true;
         }
 
@@ -268,8 +283,21 @@ final class CommerceAgentOrchestrator
         if ($actionKind === 'send_document' || str_contains($lower, 'invoice') || str_contains($lower, 'receipt')) {
             return 'SYSTEM: You promised or need to fulfill a document request. Call send_order_invoice now. Do not transfer_to_human.';
         }
+        if ($actionKind === 'pay' || str_contains($lower, 'pay') || str_contains($lower, 'payment') || str_contains($lower, 'till')) {
+            return 'SYSTEM: Customer wants payment help. Call share_payment_details now with the real configured options. Do not invent methods or transfer_to_human.';
+        }
 
-        return 'SYSTEM: Customer wants payment help. Call share_payment_details now with the real configured options. Do not invent methods or transfer_to_human.';
+        return 'SYSTEM: Customer is confirming/ordering. Call process_order_message with a concrete checkout message (e.g. "order" or "2 x ProductName" / "1" to confirm if already in checkout). Do not transfer_to_human. If checkout has no draft, start ordering then share_payment_details.';
+    }
+
+    private function isShortAffirmative(string $lower): bool
+    {
+        $trimmed = trim($lower);
+
+        return in_array($trimmed, [
+            'yes', 'y', 'ok', 'okay', 'sure', 'proceed', 'confirm', 'go ahead',
+            'yes please', 'yes i want to proceed', 'i want to proceed', 'continue',
+        ], true);
     }
 
     private function customerRejectsHandoff(string $incomingMessage): bool
@@ -298,7 +326,7 @@ final class CommerceAgentOrchestrator
             return true;
         }
 
-        $lower = mb_strtolower($incomingMessage);
+        $lower = mb_strtolower(trim($incomingMessage));
         $wantsPerson = str_contains($lower, 'human')
             || str_contains($lower, 'real person')
             || str_contains($lower, 'talk to someone')
@@ -308,7 +336,7 @@ final class CommerceAgentOrchestrator
             return false;
         }
 
-        // Invoice / payment requests must be fulfilled by tools — never hand off instead.
+        // Invoice / payment / confirm-order must be fulfilled by tools — never hand off instead.
         $needsInvoice = $actionKind === 'send_document'
             || str_contains($lower, 'invoice')
             || str_contains($lower, 'receipt')
@@ -317,8 +345,16 @@ final class CommerceAgentOrchestrator
             || str_contains($lower, 'pay')
             || str_contains($lower, 'till')
             || str_contains($lower, 'payment');
+        $needsOrder = $actionKind === 'create_order'
+            || (
+                $this->isShortAffirmative($lower)
+                && in_array($actionKind, ['create_order', 'pay', 'other', ''], true)
+            )
+            || str_contains($lower, 'confirm the order')
+            || str_contains($lower, 'place order')
+            || str_contains($lower, 'i want to proceed');
 
-        return $needsInvoice || $needsPay;
+        return $needsInvoice || $needsPay || $needsOrder;
     }
 
     /**
