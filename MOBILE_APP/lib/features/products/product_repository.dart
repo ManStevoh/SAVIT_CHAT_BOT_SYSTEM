@@ -142,6 +142,13 @@ class ProductRepository {
         map[key] = '';
       }
     }
+    // Laravel boolean rule accepts 0/1, not Dio's default "true"/"false" strings.
+    for (final entry in map.entries.toList()) {
+      final value = entry.value;
+      if (value is bool) {
+        map[entry.key] = value ? '1' : '0';
+      }
+    }
     if (imagePath != null && imagePath.isNotEmpty) {
       map['image'] = await MultipartFile.fromFile(
         imagePath,

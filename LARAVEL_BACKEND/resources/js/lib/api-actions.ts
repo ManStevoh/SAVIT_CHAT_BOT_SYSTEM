@@ -23,6 +23,33 @@ export { apiRequest, apiUrl, resolveBackendMediaUrl } from './api-client'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+/**
+ * Append a value to FormData in a Laravel-friendly way.
+ * Booleans must be "1"/"0" (not "true"/"false"); nested objects use bracket keys.
+ */
+function appendToFormData(form: FormData, key: string, value: unknown): void {
+  if (value === undefined || value === null) return
+  if (value instanceof File) {
+    form.append(key, value)
+    return
+  }
+  if (typeof value === 'boolean') {
+    form.append(key, value ? '1' : '0')
+    return
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => appendToFormData(form, `${key}[${index}]`, item))
+    return
+  }
+  if (typeof value === 'object') {
+    Object.entries(value as Record<string, unknown>).forEach(([childKey, childValue]) => {
+      appendToFormData(form, `${key}[${childKey}]`, childValue)
+    })
+    return
+  }
+  form.append(key, String(value))
+}
+
 function handleApiError(e: unknown): { success: false; message: string; code?: string } {
   const err = e as Error & { code?: string; responseData?: { message?: string; errors?: Record<string, string[]> } }
   const data = err?.responseData
@@ -666,16 +693,12 @@ export async function updateProduct(
       const formData = new FormData()
       Object.entries(data).forEach(([key, value]) => {
         if (value === undefined) return
-        if (key === 'image' && value instanceof File) {
-          formData.append('image', value)
-        } else if (key === 'digitalFile' && value instanceof File) {
-          formData.append('digitalFile', value)
-        } else if (value === null) {
-          // Explicit null clears nullable fields (e.g. accessExpiresDays).
+        if (value === null || value === '') {
+          // Explicit null/empty clears nullable fields (e.g. accessExpiresDays, accessUrl).
           formData.append(key, '')
-        } else {
-          formData.append(key, String(value))
+          return
         }
+        appendToFormData(formData, key, value)
       })
       // Multipart file uploads must use POST: PHP does not populate uploaded files for PUT.
       return await apiRequest<{ success: boolean; message?: string; product?: Product }>(
@@ -1023,12 +1046,12 @@ export async function updateSettings(data: UpdateSettingsData): Promise<{ succes
     if (data.logo) {
       const formData = new FormData()
       Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          formData.append(key, value instanceof File ? value : String(value))
-        }
+        if (value === undefined || value === null) return
+        appendToFormData(formData, key, value)
       })
+      // Multipart file uploads must use POST: PHP does not populate uploaded files for PUT.
       return await apiRequest<{ success: boolean; message?: string }>('/api/company/settings', {
-        method: 'PUT',
+        method: 'POST',
         body: formData,
       })
     }
@@ -2731,7 +2754,7 @@ export async function updatePlatformSettings(data: UpdatePlatformSettingsData): 
       if (favicon) form.append('favicon', favicon)
       Object.entries(rest).forEach(([k, v]) => {
         if (v === undefined || v === null) return
-        form.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v))
+        appendToFormData(form, k, v)
       })
       return await apiRequest<{ success: boolean; message?: string }>('/api/admin/settings', {
         method: 'POST',

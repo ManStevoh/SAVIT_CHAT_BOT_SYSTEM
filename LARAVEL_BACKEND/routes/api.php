@@ -248,6 +248,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::get('settings', [SettingsController::class, 'show']);
     Route::put('settings', [SettingsController::class, 'update']);
+    Route::post('settings', [SettingsController::class, 'update']); // multipart logo (PHP files require POST)
     Route::get('commerce-brief', [CommerceBriefController::class, 'today']);
     Route::get('executive-ai/dashboard', [ExecutiveAiController::class, 'dashboard']);
     Route::get('executive-ai/opportunities', [ExecutiveAiController::class, 'opportunities']);
