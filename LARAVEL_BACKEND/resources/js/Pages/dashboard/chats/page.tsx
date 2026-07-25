@@ -29,6 +29,9 @@ import {
   X,
   ThumbsUp,
   ThumbsDown,
+  Check,
+  CheckCheck,
+  Reply,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
@@ -69,6 +72,7 @@ export default function ChatsPage() {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null)
   const [feedbackBusy, setFeedbackBusy] = useState<string | null>(null)
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' })
 
   const {
@@ -120,11 +124,13 @@ export default function ChatsPage() {
         chatId: selectedChatId,
         content: messageInput,
         attachment: selectedAttachment ?? undefined,
+        replyToMessageId: replyingTo?.id,
       })
 
       if (result.success) {
         setMessageInput('')
         setSelectedAttachment(null)
+        setReplyingTo(null)
         mutate(['messages', selectedChatId])
         if (result.whatsappSent === false && result.whatsappError) {
           toast({
@@ -139,7 +145,11 @@ export default function ChatsPage() {
     } finally {
       setIsSending(false)
     }
-  }, [messageInput, selectedAttachment, selectedChatId, mutate, toast])
+  }, [messageInput, selectedAttachment, selectedChatId, replyingTo, mutate, toast])
+
+  useEffect(() => {
+    setReplyingTo(null)
+  }, [selectedChatId])
 
   const handleHandBackToBot = useCallback(async () => {
     if (!selectedChatId) return
@@ -513,17 +523,25 @@ export default function ChatsPage() {
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex ${
+                      className={`group flex ${
                         msg.sender === 'customer' ? 'justify-end' : 'justify-start'
                       }`}
                     >
                       <div
-                        className={`w-fit max-w-full rounded-2xl px-4 py-2 sm:max-w-[85%] lg:max-w-[70%] ${
+                        className={`relative w-fit max-w-full rounded-2xl px-4 py-2 sm:max-w-[85%] lg:max-w-[70%] ${
                           msg.sender === 'customer'
                             ? 'rounded-br-md bg-primary text-primary-foreground'
                             : 'rounded-bl-md bg-secondary text-secondary-foreground'
                         }`}
                       >
+                        <button
+                          type="button"
+                          className="absolute -top-2 right-1 hidden rounded-full border border-border/60 bg-background p-1 text-muted-foreground shadow-sm group-hover:inline-flex hover:text-foreground"
+                          title="Reply"
+                          onClick={() => setReplyingTo(msg)}
+                        >
+                          <Reply className="h-3 w-3" />
+                        </button>
                         {msg.sender === 'bot' && (
                           <div className="mb-1 flex items-center gap-1 text-xs text-primary">
                             <Bot className="h-3 w-3" />
@@ -534,6 +552,13 @@ export default function ChatsPage() {
                           <div className="mb-1 flex items-center gap-1 text-xs text-blue-500">
                             <User className="h-3 w-3" />
                             Agent
+                          </div>
+                        )}
+                        {msg.replyTo && (
+                          <div className="mb-2 rounded-md border-l-2 border-primary/70 bg-background/20 px-2 py-1 text-xs opacity-90">
+                            <p className="line-clamp-2 whitespace-pre-wrap [overflow-wrap:anywhere]">
+                              {msg.replyTo.content || '[Attachment]'}
+                            </p>
                           </div>
                         )}
                         <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere] break-all">
@@ -563,13 +588,24 @@ export default function ChatsPage() {
                           </div>
                         )}
                         <span
-                          className={`mt-1 block text-[10px] ${
+                          className={`mt-1 flex items-center gap-1 text-[10px] ${
                             msg.sender === 'customer'
                               ? 'text-primary-foreground/70'
                               : 'text-muted-foreground'
                           }`}
                         >
                           {msg.timestamp}
+                          {msg.sender !== 'customer' && (
+                            msg.status === 'failed' ? (
+                              <AlertCircle className="h-3 w-3 text-destructive" />
+                            ) : msg.status === 'read' ? (
+                              <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
+                            ) : msg.status === 'delivered' ? (
+                              <CheckCheck className="h-3.5 w-3.5" />
+                            ) : (
+                              <Check className="h-3.5 w-3.5" />
+                            )
+                          )}
                         </span>
                         {msg.sender === 'bot' && (msg.learningSampleId || msg.replySource === 'openai' || msg.replySource === 'faq') && (
                           <div className="mt-2 flex items-center gap-1 border-t border-border/30 pt-2">
@@ -633,6 +669,28 @@ export default function ChatsPage() {
                 className="sr-only"
                 onChange={handleAttachmentSelected}
               />
+              {replyingTo && (
+                <div className="mb-2 flex items-start justify-between rounded-md border border-border/60 bg-secondary/40 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-primary">
+                      Replying to {replyingTo.sender === 'customer' ? 'customer' : replyingTo.sender}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {replyingTo.content || '[Attachment]'}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => setReplyingTo(null)}
+                    aria-label="Cancel reply"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Button asChild variant="ghost" size="icon">
                   <label htmlFor="chat-attachment-input" aria-label="Attach a file" className="cursor-pointer">

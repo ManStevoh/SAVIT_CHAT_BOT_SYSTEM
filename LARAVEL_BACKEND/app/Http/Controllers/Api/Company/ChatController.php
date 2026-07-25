@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Company;
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\SocialPost;
+use App\Support\PhoneSearch;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,10 +25,13 @@ class ChatController extends Controller
             $query->where('status', $request->status);
         }
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('customer_name', 'like', "%{$search}%")
-                    ->orWhere('customer_phone', 'like', "%{$search}%");
+            $search = (string) $request->search;
+            $patterns = PhoneSearch::likePatterns($search);
+            $query->where(function ($q) use ($search, $patterns) {
+                $q->where('customer_name', 'like', "%{$search}%");
+                foreach ($patterns as $pattern) {
+                    $q->orWhere('customer_phone', 'like', $pattern);
+                }
             });
         }
 

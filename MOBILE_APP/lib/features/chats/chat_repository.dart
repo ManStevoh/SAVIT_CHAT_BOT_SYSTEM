@@ -42,11 +42,19 @@ class ChatRepository {
     }
   }
 
-  Future<SendMessageResult> sendMessage(String chatId, String content) async {
+  Future<SendMessageResult> sendMessage(
+    String chatId,
+    String content, {
+    String? replyToMessageId,
+  }) async {
     try {
       final response = await _api.dio.post(
         '/company/chats/$chatId/messages',
-        data: {'content': content},
+        data: {
+          'content': content,
+          if (replyToMessageId != null && replyToMessageId.isNotEmpty)
+            'replyToMessageId': int.tryParse(replyToMessageId) ?? replyToMessageId,
+        },
       );
       final data = response.data;
       if (data is! Map) {

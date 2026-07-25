@@ -26,7 +26,10 @@ class ChatMessageController extends Controller
             $chat->update(['unread_count' => 0]);
         }
 
-        $messages = Message::where('chat_id', $chat->id)->orderBy('created_at')->get();
+        $messages = Message::where('chat_id', $chat->id)
+            ->with('replyTo:id,content,sender,message_type')
+            ->orderBy('created_at')
+            ->get();
 
         $data = $messages->map(fn (Message $m) => [
             'id' => (string) $m->id,
@@ -43,6 +46,13 @@ class ChatMessageController extends Controller
             'replySource' => $m->reply_source,
             'learningFeedback' => $m->learning_feedback,
             'learningSampleId' => $m->learning_sample_id ? (string) $m->learning_sample_id : null,
+            'replyToMessageId' => $m->reply_to_message_id ? (string) $m->reply_to_message_id : null,
+            'replyTo' => $m->replyTo ? [
+                'id' => (string) $m->replyTo->id,
+                'content' => $m->replyTo->content,
+                'sender' => $m->replyTo->sender,
+                'messageType' => $m->replyTo->message_type ?? 'text',
+            ] : null,
         ]);
 
         return response()->json($data);
@@ -53,18 +63,40 @@ class ChatMessageController extends Controller
         $request->validate([
             'content' => 'nullable|string',
             'attachment' => 'nullable|file|max:10240',
+            'replyToMessageId' => 'nullable|integer',
+            'reply_to_message_id' => 'nullable|integer',
         ]);
 
         $user = $request->user();
         $chat = Chat::where('id', $chatId)->where('company_id', $user->company_id)->firstOrFail();
         $text = trim((string) $request->input('content', ''));
         $attachment = $request->file('attachment');
+        $replyToId = (int) ($request->input('replyToMessageId') ?? $request->input('reply_to_message_id') ?? 0);
 
         if ($text === '' && ! $attachment) {
             return response()->json([
                 'success' => false,
                 'message' => 'Message text or attachment is required.',
             ], 422);
+        }
+
+        $replyTo = null;
+        $contextWaId = null;
+        if ($replyToId > 0) {
+            $replyTo = Message::query()
+                ->where('id', $replyToId)
+                ->where('chat_id', $chat->id)
+                ->first();
+            if (! $replyTo) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Quoted message not found in this chat.',
+                ], 422);
+            }
+            $contextWaId = trim((string) ($replyTo->whatsapp_message_id ?? ''));
+            if ($contextWaId === '') {
+                $contextWaId = null;
+            }
         }
 
         $whatsappSent = false;
@@ -119,7 +151,7 @@ class ChatMessageController extends Controller
                     $result = $waSender->sendDocument($account, $chat->customer_phone, $attachmentUrl, $attachmentName, $text !== '' ? $text : null);
                 }
             } else {
-                $result = $waSender->sendText($account, $chat->customer_phone, $text);
+                $result = $waSender->sendText($account, $chat->customer_phone, $text, $contextWaId);
             }
             $whatsappSent = $result['success'];
             $whatsappError = $result['error'] ?? null;
@@ -137,6 +169,7 @@ class ChatMessageController extends Controller
             'sender' => 'agent',
             'status' => $whatsappSent ? 'sent' : 'failed',
             'whatsapp_message_id' => $waMessageId,
+            'reply_to_message_id' => $replyTo?->id,
         ]);
 
         $chat->update([

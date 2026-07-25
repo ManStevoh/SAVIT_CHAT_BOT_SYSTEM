@@ -339,6 +339,7 @@ export interface SendMessageData {
   chatId: string
   content?: string
   attachment?: File
+  replyToMessageId?: string
 }
 
 export interface CreateOrderFromChatData {
@@ -373,14 +374,20 @@ export async function sendMessage(data: SendMessageData): Promise<{
       return { success: false, message: 'Message text or attachment is required' }
     }
 
-    const body: { content: string } | FormData = hasAttachment
+    const body: { content: string; replyToMessageId?: string } | FormData = hasAttachment
       ? (() => {
           const formData = new FormData()
           formData.append('content', trimmedContent)
           formData.append('attachment', data.attachment as File)
+          if (data.replyToMessageId) {
+            formData.append('replyToMessageId', data.replyToMessageId)
+          }
           return formData
         })()
-      : { content: trimmedContent }
+      : {
+          content: trimmedContent,
+          ...(data.replyToMessageId ? { replyToMessageId: data.replyToMessageId } : {}),
+        }
 
     return await apiRequest<{
       success: boolean

@@ -20,10 +20,15 @@ class WhatsAppMessageSenderService
      * @param  WhatsAppAccount  $account  Company's WhatsApp account (phone_number_id + access_token)
      * @param  string  $to  Recipient phone number with country code, no + (e.g. 201234567890)
      * @param  string  $text  Message body (max 4096 chars for text)
+     * @param  string|null  $contextMessageId  Meta wamid to quote/reply to
      * @return array{success: bool, message_id?: string, error?: string}
      */
-    public function sendText(WhatsAppAccount $account, string $to, string $text): array
-    {
+    public function sendText(
+        WhatsAppAccount $account,
+        string $to,
+        string $text,
+        ?string $contextMessageId = null,
+    ): array {
         $to = preg_replace('/\D/', '', $to);
         if ($to === '') {
             return ['success' => false, 'error' => 'Invalid recipient phone number'];
@@ -39,6 +44,11 @@ class WhatsAppMessageSenderService
                 'body' => mb_substr($text, 0, 4096),
             ],
         ];
+
+        $contextMessageId = trim((string) $contextMessageId);
+        if ($contextMessageId !== '') {
+            $body['context'] = ['message_id' => $contextMessageId];
+        }
 
         $response = Http::withToken($account->access_token)
             ->timeout(15)

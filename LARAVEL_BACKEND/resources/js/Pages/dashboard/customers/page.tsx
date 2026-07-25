@@ -224,7 +224,7 @@ export default function CustomersPage() {
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search customers..."
+              placeholder="Search name or phone…"
               className="pl-10"
               value={searchQuery}
               onChange={(e) => {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -24,6 +26,7 @@ class ContactsScreen extends StatefulWidget {
 class _ContactsScreenState extends State<ContactsScreen> {
   Future<List<ContactDirectoryItem>>? _future;
   final _search = TextEditingController();
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -39,6 +42,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -120,6 +124,14 @@ class _ContactsScreenState extends State<ContactsScreen> {
     await _future;
   }
 
+  void _onSearchChanged(String _) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      _reload();
+    });
+  }
+
   Future<void> _openOrStart(ContactDirectoryItem item) async {
     if (item.hasOpenChat) {
       context.go(
@@ -167,6 +179,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             child: TextField(
               controller: _search,
               textInputAction: TextInputAction.search,
+              onChanged: _onSearchChanged,
               onSubmitted: (_) => _reload(),
               decoration: InputDecoration(
                 hintText: 'Search name or phone',
@@ -174,11 +187,17 @@ class _ContactsScreenState extends State<ContactsScreen> {
                     const Icon(Icons.search, color: AppColors.textMuted),
                 filled: true,
                 fillColor: AppColors.surface,
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.tune),
-                  tooltip: 'Search',
-                  onPressed: _reload,
-                ),
+                suffixIcon: _search.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          _search.clear();
+                          _reload();
+                          setState(() {});
+                        },
+                      ),
               ),
             ),
           ),
@@ -208,13 +227,21 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
                         final contacts = snapshot.data ?? [];
                         if (contacts.isEmpty) {
+                          final searching = _search.text.trim().isNotEmpty;
                           return AppEmptyState(
-                            icon: Icons.people_outline,
-                            title: 'No contacts yet',
-                            subtitle:
-                                'Add a phone number or wait for orders/chats.',
-                            actionLabel: 'Add contact',
-                            onAction: () => context.go('/contacts/add'),
+                            icon: searching
+                                ? Icons.search_off
+                                : Icons.people_outline,
+                            title: searching
+                                ? 'No matches'
+                                : 'No contacts yet',
+                            subtitle: searching
+                                ? 'Try another name or phone number.'
+                                : 'Add a phone number or wait for orders/chats.',
+                            actionLabel: searching ? null : 'Add contact',
+                            onAction: searching
+                                ? null
+                                : () => context.go('/contacts/add'),
                           );
                         }
 

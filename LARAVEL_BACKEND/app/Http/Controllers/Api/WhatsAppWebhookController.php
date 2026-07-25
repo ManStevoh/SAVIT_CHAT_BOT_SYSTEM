@@ -361,6 +361,7 @@ class WhatsAppWebhookController extends Controller
         $waMessageId = $msg['id'] ?? null;
         $companyId = (int) $account->company_id;
         $phoneNumberId = (string) $account->phone_number_id;
+        $contextWaId = trim((string) ($msg['context']['id'] ?? ''));
 
         if ($type === 'reaction') {
             return;
@@ -368,7 +369,16 @@ class WhatsAppWebhookController extends Controller
 
         if ($type === 'text') {
             $text = $msg['text']['body'] ?? '';
-            $this->saveIncomingAndDispatchReply($companyId, $phoneNumberId, $from, $customerName, $text, $waMessageId);
+            $this->saveIncomingAndDispatchReply(
+                $companyId,
+                $phoneNumberId,
+                $from,
+                $customerName,
+                $text,
+                $waMessageId,
+                null,
+                $contextWaId !== '' ? $contextWaId : null,
+            );
             return;
         }
 
@@ -389,7 +399,8 @@ class WhatsAppWebhookController extends Controller
                 $customerName,
                 $text,
                 $waMessageId,
-                $mediaMeta
+                $mediaMeta,
+                $contextWaId !== '' ? $contextWaId : null,
             );
         }
     }
@@ -398,11 +409,21 @@ class WhatsAppWebhookController extends Controller
     {
         foreach ($value['statuses'] ?? [] as $status) {
             $waId = $status['id'] ?? null;
-            $statusValue = $status['status'] ?? null;
-            if (! $waId || ! $statusValue) {
+            $statusValue = strtolower((string) ($status['status'] ?? ''));
+            if (! $waId || $statusValue === '') {
                 continue;
             }
-            Message::where('whatsapp_message_id', $waId)->update(['status' => $statusValue]);
+
+            $message = Message::where('whatsapp_message_id', $waId)->first();
+            if (! $message) {
+                continue;
+            }
+
+            if (! Message::shouldAdvanceStatus($message->status, $statusValue)) {
+                continue;
+            }
+
+            $message->update(['status' => $statusValue]);
         }
     }
 
@@ -413,7 +434,8 @@ class WhatsAppWebhookController extends Controller
         ?string $customerName,
         string $text,
         ?string $waMessageId,
-        ?array $mediaMeta = null
+        ?array $mediaMeta = null,
+        ?string $contextWaId = null,
     ): void {
         $chat = Chat::firstOrCreate(
             [
@@ -451,6 +473,15 @@ class WhatsAppWebhookController extends Controller
             return;
         }
 
+        $replyToId = null;
+        $contextWaId = trim((string) $contextWaId);
+        if ($contextWaId !== '') {
+            $replyToId = Message::query()
+                ->where('chat_id', $chat->id)
+                ->where('whatsapp_message_id', $contextWaId)
+                ->value('id');
+        }
+
         $message = Message::create([
             'chat_id' => $chat->id,
             'content' => $text,
@@ -462,6 +493,7 @@ class WhatsAppWebhookController extends Controller
             'sender' => 'customer',
             'status' => 'received',
             'whatsapp_message_id' => $waMessageId,
+            'reply_to_message_id' => $replyToId,
         ]);
 
         ProcessIncomingWhatsAppMessage::dispatch(

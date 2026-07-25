@@ -28,6 +28,7 @@ class AddContactScreen extends StatefulWidget {
 class _AddContactScreenState extends State<AddContactScreen> {
   final _phone = TextEditingController();
   final _name = TextEditingController();
+  final _deviceSearch = TextEditingController();
   bool _saving = false;
   String? _error;
 
@@ -49,7 +50,22 @@ class _AddContactScreenState extends State<AddContactScreen> {
   void dispose() {
     _phone.dispose();
     _name.dispose();
+    _deviceSearch.dispose();
     super.dispose();
+  }
+
+  List<_PhoneContactEntry> get _filteredPhoneContacts {
+    final q = _deviceSearch.text.trim().toLowerCase();
+    if (q.isEmpty) return _phoneContacts;
+    final digits = q.replaceAll(RegExp(r'\D'), '');
+    return _phoneContacts.where((entry) {
+      final name = entry.name.toLowerCase();
+      final phone = entry.phone.toLowerCase();
+      final phoneDigits = entry.phone.replaceAll(RegExp(r'\D'), '');
+      return name.contains(q) ||
+          phone.contains(q) ||
+          (digits.isNotEmpty && phoneDigits.contains(digits));
+    }).toList();
   }
 
   Future<void> _loadPhoneContacts() async {
@@ -215,13 +231,25 @@ class _AddContactScreenState extends State<AddContactScreen> {
       );
     }
 
+    final filtered = _filteredPhoneContacts;
+    if (filtered.isEmpty) {
+      return AppSurface(
+        padding: const EdgeInsets.all(20),
+        child: Text(
+          'No contacts match “${_deviceSearch.text.trim()}”.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(color: AppColors.textMuted),
+        ),
+      );
+    }
+
     return Column(
       children: [
-        for (var i = 0; i < _phoneContacts.length; i++) ...[
+        for (var i = 0; i < filtered.length; i++) ...[
           if (i > 0) const SizedBox(height: 10),
           Builder(
             builder: (context) {
-              final entry = _phoneContacts[i];
+              final entry = filtered[i];
               final isAdding = _addingPhone == entry.phone;
               return AppSurface(
                 padding: const EdgeInsets.symmetric(
@@ -347,6 +375,32 @@ class _AddContactScreenState extends State<AddContactScreen> {
             ),
           ),
           const SizedBox(height: 10),
+          if (!_loadingContacts &&
+              !_permissionDenied &&
+              _phoneContacts.isNotEmpty) ...[
+            TextField(
+              controller: _deviceSearch,
+              textInputAction: TextInputAction.search,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'Search device contacts',
+                prefixIcon:
+                    const Icon(Icons.search, color: AppColors.textMuted),
+                filled: true,
+                fillColor: AppColors.surface,
+                suffixIcon: _deviceSearch.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _deviceSearch.clear();
+                          setState(() {});
+                        },
+                      ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           _buildPhoneContactsSection(),
           const SizedBox(height: 24),
           AppSurface(

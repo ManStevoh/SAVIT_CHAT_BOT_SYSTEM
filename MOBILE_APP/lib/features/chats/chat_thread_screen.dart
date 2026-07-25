@@ -39,6 +39,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   bool _didInitialScroll = false;
   String? _customerName;
   String? _customerPhone;
+  ChatMessage? _replyingTo;
 
   @override
   void initState() {
@@ -133,11 +134,16 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     final text = _composer.text.trim();
     if (text.isEmpty || _sending) return;
 
+    final replyId = _replyingTo?.id;
     setState(() => _sending = true);
     try {
-      final result =
-          await context.read<ChatRepository>().sendMessage(widget.chatId, text);
+      final result = await context.read<ChatRepository>().sendMessage(
+            widget.chatId,
+            text,
+            replyToMessageId: replyId,
+          );
       _composer.clear();
+      setState(() => _replyingTo = null);
       await _reload();
       if (!mounted) return;
       if (!result.whatsappSent) {
@@ -178,6 +184,10 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
             .showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
+  }
+
+  void _setReply(ChatMessage message) {
+    setState(() => _replyingTo = message);
   }
 
   @override
@@ -284,12 +294,9 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                             messages[index].timestamp !=
                                 messages[index + 1].timestamp;
                         return _Bubble(
-                          text: message.content.isEmpty
-                              ? '[Attachment]'
-                              : message.content,
-                          incoming: message.isIncoming,
-                          timestamp: showTimestamp ? message.timestamp : '',
-                          failed: message.isFailed,
+                          message: message,
+                          showTimestamp: showTimestamp,
+                          onReply: () => _setReply(message),
                         );
                       },
                     );
@@ -298,6 +305,56 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
               ),
             ),
           ),
+          if (_replyingTo != null)
+            Container(
+              width: double.infinity,
+              color: AppColors.surface,
+              padding: const EdgeInsets.fromLTRB(14, 10, 8, 0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 3,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Replying to ${_replyingTo!.isIncoming ? 'customer' : _replyingTo!.sender}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        Text(
+                          _replyingTo!.content.isEmpty
+                              ? '[Attachment]'
+                              : _replyingTo!.content,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Cancel reply',
+                    onPressed: () => setState(() => _replyingTo = null),
+                    icon: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+            ),
           SafeArea(
             top: false,
             child: Container(
@@ -393,19 +450,22 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
 class _Bubble extends StatelessWidget {
   const _Bubble({
-    required this.text,
-    required this.incoming,
-    required this.timestamp,
-    this.failed = false,
+    required this.message,
+    required this.showTimestamp,
+    required this.onReply,
   });
 
-  final String text;
-  final bool incoming;
-  final String timestamp;
-  final bool failed;
+  final ChatMessage message;
+  final bool showTimestamp;
+  final VoidCallback onReply;
 
   @override
   Widget build(BuildContext context) {
+    final incoming = message.isIncoming;
+    final failed = message.isFailed;
+    final text =
+        message.content.isEmpty ? '[Attachment]' : message.content;
+    final timestamp = showTimestamp ? message.timestamp : '';
     final align = incoming ? Alignment.centerLeft : Alignment.centerRight;
     final color = incoming
         ? AppColors.bubbleIncoming
@@ -419,67 +479,131 @@ class _Bubble extends StatelessWidget {
 
     return Align(
       alignment: align,
-      child: Container(
-        margin: EdgeInsets.only(
-          bottom: timestamp.isEmpty ? 5 : 12,
-          left: incoming ? 0 : 48,
-          right: incoming ? 48 : 0,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
-        ),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: radius,
-          border: failed
-              ? Border.all(color: Colors.red.shade200)
-              : (incoming
-                  ? Border.all(color: AppColors.border.withOpacity(0.8))
-                  : null),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.ink.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              text,
-              style: GoogleFonts.manrope(
-                height: 1.4,
-                fontSize: 15,
-                color: AppColors.ink,
-              ),
-            ),
-            if (failed) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Not delivered via WhatsApp',
-                style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  color: Colors.red.shade700,
-                ),
+      child: GestureDetector(
+        onLongPress: onReply,
+        child: Container(
+          margin: EdgeInsets.only(
+            bottom: timestamp.isEmpty ? 5 : 12,
+            left: incoming ? 0 : 48,
+            right: incoming ? 48 : 0,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+          ),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: radius,
+            border: failed
+                ? Border.all(color: Colors.red.shade200)
+                : (incoming
+                    ? Border.all(color: AppColors.border.withOpacity(0.8))
+                    : null),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.ink.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
-            if (timestamp.isNotEmpty) ...[
-              const SizedBox(height: 5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (message.replyTo != null) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.ink.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border(
+                      left: BorderSide(color: AppColors.primary, width: 3),
+                    ),
+                  ),
+                  child: Text(
+                    message.replyTo!.content.isEmpty
+                        ? '[Attachment]'
+                        : message.replyTo!.content,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
               Text(
-                timestamp,
+                text,
                 style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                  fontSize: 15,
+                  color: AppColors.ink,
                 ),
               ),
+              if (failed) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Not delivered via WhatsApp',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ],
+              if (timestamp.isNotEmpty || message.isOutbound) ...[
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (timestamp.isNotEmpty)
+                      Text(
+                        timestamp,
+                        style: GoogleFonts.manrope(
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    if (message.isOutbound) ...[
+                      if (timestamp.isNotEmpty) const SizedBox(width: 4),
+                      _DeliveryTicks(status: message.status, failed: failed),
+                    ],
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _DeliveryTicks extends StatelessWidget {
+  const _DeliveryTicks({required this.status, required this.failed});
+
+  final String? status;
+  final bool failed;
+
+  @override
+  Widget build(BuildContext context) {
+    if (failed || status == 'failed') {
+      return Icon(Icons.error_outline, size: 14, color: Colors.red.shade600);
+    }
+
+    final normalized = (status ?? 'sent').toLowerCase();
+    final isRead = normalized == 'read';
+    final isDelivered = normalized == 'delivered' || isRead;
+    final color = isRead ? const Color(0xFF34B7F1) : AppColors.textMuted;
+
+    return Icon(
+      isDelivered ? Icons.done_all : Icons.done,
+      size: 15,
+      color: color,
     );
   }
 }

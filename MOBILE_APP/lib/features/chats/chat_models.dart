@@ -32,6 +32,29 @@ class ChatSummary {
   }
 }
 
+class QuotedMessage {
+  const QuotedMessage({
+    required this.id,
+    required this.content,
+    required this.sender,
+    this.messageType,
+  });
+
+  final String id;
+  final String content;
+  final String sender;
+  final String? messageType;
+
+  factory QuotedMessage.fromJson(Map<String, dynamic> json) {
+    return QuotedMessage(
+      id: '${json['id']}',
+      content: jsonString(json['content']),
+      sender: jsonString(json['sender'], 'customer'),
+      messageType: jsonStringOrNull(json['messageType']),
+    );
+  }
+}
+
 class ChatMessage {
   const ChatMessage({
     required this.id,
@@ -39,6 +62,7 @@ class ChatMessage {
     required this.sender,
     required this.timestamp,
     this.status,
+    this.replyTo,
   });
 
   final String id;
@@ -46,18 +70,28 @@ class ChatMessage {
   final String sender;
   final String timestamp;
   final String? status;
+  final QuotedMessage? replyTo;
 
   bool get isIncoming => sender == 'customer';
 
   bool get isFailed => status == 'failed';
 
+  bool get isOutbound => sender == 'agent' || sender == 'bot';
+
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    QuotedMessage? replyTo;
+    final rawReply = json['replyTo'];
+    if (rawReply is Map) {
+      replyTo = QuotedMessage.fromJson(Map<String, dynamic>.from(rawReply));
+    }
+
     return ChatMessage(
       id: '${json['id']}',
       content: jsonString(json['content']),
       sender: jsonString(json['sender'], 'customer'),
       timestamp: jsonString(json['timestamp']),
       status: jsonStringOrNull(json['status']),
+      replyTo: replyTo,
     );
   }
 }

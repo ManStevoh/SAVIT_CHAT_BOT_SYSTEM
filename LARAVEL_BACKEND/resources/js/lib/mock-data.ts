@@ -51,10 +51,17 @@ export interface Message {
   attachmentSize?: number | null
   sender: 'customer' | 'bot' | 'agent'
   timestamp: string
-  status: 'sent' | 'delivered' | 'read'
+  status: 'sent' | 'delivered' | 'read' | 'failed' | 'received'
   replySource?: string | null
   learningFeedback?: number | null
   learningSampleId?: string | null
+  replyToMessageId?: string | null
+  replyTo?: {
+    id: string
+    content: string
+    sender: string
+    messageType?: string
+  } | null
 }
 
 export interface Order {
