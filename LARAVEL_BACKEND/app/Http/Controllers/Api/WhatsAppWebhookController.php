@@ -496,7 +496,7 @@ class WhatsAppWebhookController extends Controller
             'reply_to_message_id' => $replyToId,
         ]);
 
-        ProcessIncomingWhatsAppMessage::dispatch(
+        ProcessIncomingWhatsAppMessage::dispatchIncoming(
             $companyId,
             (int) $chat->id,
             $customerPhone,

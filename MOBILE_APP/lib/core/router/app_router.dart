@@ -114,14 +114,17 @@ GoRouter createAppRouter(
                       final extra = state.extra;
                       String? name;
                       String? phone;
+                      var isAgentHandling = false;
                       if (extra is Map) {
                         name = extra['name']?.toString();
                         phone = extra['phone']?.toString();
+                        isAgentHandling = extra['isAgentHandling'] == true;
                       }
                       return ChatThreadScreen(
                         chatId: state.pathParameters['chatId']!,
                         customerName: name,
                         customerPhone: phone,
+                        isAgentHandling: isAgentHandling,
                       );
                     },
                   ),

@@ -28,7 +28,10 @@ final class AgentCommerceProvisioningService
 
         $settings = CompanySetting::firstOrCreate(
             ['company_id' => $company->id],
-            ['agent_commerce_enabled' => $entitled]
+            [
+                'agent_commerce_enabled' => $entitled,
+                'auto_reply_enabled' => true,
+            ]
         );
 
         if ($entitled && ! $settings->agent_commerce_enabled) {

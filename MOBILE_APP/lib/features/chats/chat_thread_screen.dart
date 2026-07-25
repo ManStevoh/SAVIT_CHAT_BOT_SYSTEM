@@ -18,11 +18,13 @@ class ChatThreadScreen extends StatefulWidget {
     required this.chatId,
     this.customerName,
     this.customerPhone,
+    this.isAgentHandling = false,
   });
 
   final String chatId;
   final String? customerName;
   final String? customerPhone;
+  final bool isAgentHandling;
 
   @override
   State<ChatThreadScreen> createState() => _ChatThreadScreenState();
@@ -40,6 +42,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
   bool _didInitialScroll = false;
   String? _customerName;
   String? _customerPhone;
+  bool _isAgentHandling = false;
   ChatMessage? _replyingTo;
 
   @override
@@ -48,14 +51,13 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
     WidgetsBinding.instance.addObserver(this);
     _customerName = widget.customerName;
     _customerPhone = widget.customerPhone;
+    _isAgentHandling = widget.isAgentHandling;
     _future = context.read<ChatRepository>().listMessages(widget.chatId);
     _future.then((_) {
       if (mounted) _syncUnreadAfterOpen();
     });
     _poll = Timer.periodic(const Duration(seconds: 4), (_) => _silentReload());
-    if (_customerName == null || _customerName!.isEmpty) {
-      _resolveCustomer();
-    }
+    _resolveCustomer();
   }
 
   @override
@@ -97,6 +99,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
       setState(() {
         _customerName = match!.customerName;
         _customerPhone = match.customerPhone;
+        _isAgentHandling = match.isAgentHandling;
       });
     } catch (_) {}
   }
@@ -159,7 +162,10 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
             replyToMessageId: replyId,
           );
       _composer.clear();
-      setState(() => _replyingTo = null);
+      setState(() {
+        _replyingTo = null;
+        _isAgentHandling = true;
+      });
       await _reload();
       if (!mounted) return;
       if (!result.whatsappSent) {
@@ -189,11 +195,13 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
     try {
       await context.read<ChatRepository>().handBack(widget.chatId);
       if (!mounted) return;
+      setState(() => _isAgentHandling = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Handed back to bot. Auto-reply will resume.'),
+          content: Text('Handed back to AI. Auto-reply will resume.'),
         ),
       );
+      await _reload();
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -236,28 +244,36 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
                       color: AppColors.ink,
                     ),
                   ),
-                  if (phone.isNotEmpty)
-                    Text(
-                      phone,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
-                        fontSize: 12,
-                        color: AppColors.textMuted,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  Text(
+                    _isAgentHandling
+                        ? (phone.isNotEmpty
+                            ? 'Agent handling · $phone'
+                            : 'Agent handling')
+                        : (phone.isNotEmpty
+                            ? 'AI auto-reply · $phone'
+                            : 'AI auto-reply'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: _isAgentHandling
+                          ? AppColors.accentAmber
+                          : AppColors.textMuted,
+                      fontWeight: FontWeight.w500,
                     ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Hand back to bot',
-            onPressed: _handBack,
-            icon: const Icon(Icons.smart_toy_outlined),
-          ),
+          if (_isAgentHandling)
+            IconButton(
+              tooltip: 'Hand back to AI',
+              onPressed: _handBack,
+              icon: const Icon(Icons.smart_toy_outlined),
+            ),
         ],
       ),
       body: Column(

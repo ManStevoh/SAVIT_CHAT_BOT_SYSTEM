@@ -36,6 +36,8 @@ export interface Chat {
   aiHandled: boolean
   /** When set, an agent is handling this chat; bot is paused. Clear via "Hand back to bot". */
   agentHandlingAt?: string | null
+  /** True when an agent currently owns the chat (bot should not auto-reply). */
+  isAgentHandling?: boolean
   isAttributed?: boolean
   attribution?: { socialPostId: string | null; postTitle: string; platform: string | null } | null
 }

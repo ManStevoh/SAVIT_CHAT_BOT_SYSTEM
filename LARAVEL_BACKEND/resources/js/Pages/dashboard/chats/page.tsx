@@ -192,7 +192,7 @@ export default function ChatsPage() {
     e.target.value = ''
   }
 
-  const isAgentHandling = selectedChat?.agentHandlingAt != null
+  const isAgentHandling = selectedChat?.isAgentHandling ?? selectedChat?.agentHandlingAt != null
 
   const handleCreateOrder = useCallback(() => {
     if (!selectedChat) return
@@ -451,13 +451,12 @@ export default function ChatsPage() {
                     {selectedChat.customerName}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {selectedChat.aiHandled && (
+                    {!isAgentHandling ? (
                       <div className="flex items-center gap-1 text-xs text-primary">
                         <Bot className="h-3 w-3" />
-                        AI is handling
+                        AI auto-reply
                       </div>
-                    )}
-                    {isAgentHandling && (
+                    ) : (
                       <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                         <User className="h-3 w-3" />
                         Agent handling
@@ -468,6 +467,17 @@ export default function ChatsPage() {
                 </div>
               </div>
               <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+                {isAgentHandling && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleHandBackToBot}
+                    disabled={isHandingBack}
+                  >
+                    <Bot className="mr-1.5 h-3.5 w-3.5" />
+                    {isHandingBack ? 'Handing back…' : 'Hand back to AI'}
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" className="hidden md:inline-flex">
                   <Phone className="h-4 w-4" />
                 </Button>
@@ -489,7 +499,7 @@ export default function ChatsPage() {
                     </DropdownMenuItem>
                     {isAgentHandling && (
                       <DropdownMenuItem onClick={handleHandBackToBot} disabled={isHandingBack}>
-                        {isHandingBack ? 'Handing back…' : 'Hand back to bot'}
+                        {isHandingBack ? 'Handing back…' : 'Hand back to AI'}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>

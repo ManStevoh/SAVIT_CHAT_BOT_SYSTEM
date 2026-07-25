@@ -92,14 +92,21 @@ This one SHOULD stay on cron permanently (not the same as Step 3):
 (If your host requires full path + cd, use:)
   * * * * * cd /home/youruser/LARAVEL_BACKEND && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1
 
-STEP 5 — Queue worker (WhatsApp campaigns + AI replies)
+STEP 5 — Queue worker (campaigns / Growth / optional AI queue mode)
 -------------------------------------------------------
-Ideal: Supervisor or a host “long-running process” (if your plan includes it):
+WhatsApp AI auto-replies do NOT need a queue worker by default — they run after the
+webhook/dashboard HTTP response in the same PHP process.
+
+A queue worker is still useful for WhatsApp campaigns, Growth Engine, and notifications:
   php artisan queue:work --sleep=3 --tries=3
 
-**No SSH?** Some hosts cannot run a permanent queue worker. Workaround — cron every 1–5 minutes:
+To force AI replies onto the queue instead: WHATSAPP_AUTO_REPLY_VIA_QUEUE=true in .env
+(then a worker is required for bot replies).
+
+**No SSH?** Cron every 1–5 minutes still works for campaign/other jobs:
   */5 * * * * cd /home/youruser/LARAVEL_BACKEND && /usr/local/bin/php artisan queue:work --stop-when-empty --max-time=240 >> /dev/null 2>&1
-This processes pending jobs in batches (slower than a real worker, but works on basic cPanel).
+
+Or set QUEUE_CONNECTION=sync to run all jobs inline (no worker; slower requests).
 
 STEP 6 — Verify
 ---------------

@@ -129,6 +129,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       lastMessageTime: c.lastMessageTime,
                       unreadCount: 0,
                       status: c.status,
+                      isAgentHandling: c.isAgentHandling,
                     )
                   : c,
             )
@@ -141,6 +142,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       extra: {
         'name': item.customerName,
         'phone': item.customerPhone,
+        'isAgentHandling': item.isAgentHandling,
       },
     );
   }

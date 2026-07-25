@@ -59,7 +59,7 @@ class SettingsController extends Controller
             'learnFromConversationsEditable' => $learningConfig->isLearningEnabled()
                 && (bool) ($learningConfig->all()['allowCompanyOverride'] ?? true),
             'aiLearningEnabled' => $learningConfig->isLearningEnabled(),
-            'autoReplyEnabled' => (bool) ($settings?->auto_reply_enabled ?? false),
+            'autoReplyEnabled' => ($settings?->auto_reply_enabled ?? true) !== false,
             'agentCommerceEnabled' => (bool) ($settings?->agent_commerce_enabled ?? config('agent.default_agent_commerce_enabled', false)),
             'agentCommerceEntitled' => \App\Services\Agent\CommerceAgentReplyService::isEntitledForCompany($company),
             'agentProactiveEnabled' => (bool) ($settings?->agent_proactive_enabled ?? false),

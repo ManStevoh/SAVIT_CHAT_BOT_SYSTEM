@@ -38,7 +38,7 @@ class ProcessIncomingChannelMessage implements ShouldQueue
             return;
         }
 
-        if (! ($company->settings?->auto_reply_enabled ?? false)) {
+        if (! ($company->settings?->auto_reply_enabled ?? true)) {
             return;
         }
 

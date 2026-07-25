@@ -38,6 +38,49 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
     public array $backoff = [10, 60, 300];
 
     /**
+     * Dispatch auto-reply without requiring php artisan queue:work by default.
+     * Runs in the same PHP process after the HTTP response is sent to Meta/the dashboard.
+     * Set WHATSAPP_AUTO_REPLY_VIA_QUEUE=true to use a real queue worker instead (retries/backoff).
+     */
+    public static function dispatchIncoming(
+        int $companyId,
+        int $chatId,
+        string $customerPhone,
+        string $phoneNumberId,
+        string $messageText,
+        ?string $customerName = null,
+        ?string $whatsappMessageId = null,
+        ?int $incomingMessageId = null,
+        bool $forceReply = false,
+    ): \Illuminate\Foundation\Bus\PendingDispatch {
+        if (config('whatsapp.auto_reply_via_queue', false)) {
+            return static::dispatch(
+                $companyId,
+                $chatId,
+                $customerPhone,
+                $phoneNumberId,
+                $messageText,
+                $customerName,
+                $whatsappMessageId,
+                $incomingMessageId,
+                $forceReply,
+            );
+        }
+
+        return static::dispatchAfterResponse(
+            $companyId,
+            $chatId,
+            $customerPhone,
+            $phoneNumberId,
+            $messageText,
+            $customerName,
+            $whatsappMessageId,
+            $incomingMessageId,
+            $forceReply,
+        );
+    }
+
+    /**
      * Unique key so only one job runs per incoming message (avoids duplicate replies when Meta retries the webhook).
      */
     public function uniqueId(): string
@@ -121,7 +164,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         app(UsageMeterService::class)->increment($company, 'messages');
 
         $settings = $company->settings;
-        if (! $settings || ! $settings->auto_reply_enabled) {
+        // Default ON: missing settings row must not disable AI auto-reply.
+        if ($settings && $settings->auto_reply_enabled === false) {
             $this->notifyCompanyNewMessage($company, $mailService, 'message');
 
             return;

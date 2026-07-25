@@ -68,6 +68,7 @@ class ChatController extends Controller
                 'status' => $chat->status,
                 'aiHandled' => (bool) $chat->ai_handled,
                 'agentHandlingAt' => $chat->agent_handling_at?->toIso8601String(),
+                'isAgentHandling' => $chat->isAgentHandling(30),
                 'isAttributed' => (bool) ($chat->social_post_id || $chat->attribution_link_id),
                 'attribution' => $post ? [
                     'socialPostId' => (string) $post->id,
@@ -122,18 +123,14 @@ class ChatController extends Controller
                 'unread_count' => 0,
                 'status' => 'active',
                 'ai_handled' => false,
-                'agent_handling_at' => now(),
+                // Default: AI auto-reply owns the chat. Agent takeover happens only when an agent sends.
+                'agent_handling_at' => null,
             ]
         );
 
         $created = $chat->wasRecentlyCreated;
         if (! $created && $name !== 'Customer') {
-            $chat->update([
-                'customer_name' => $name,
-                'agent_handling_at' => now(),
-            ]);
-        } elseif (! $created) {
-            $chat->update(['agent_handling_at' => now()]);
+            $chat->update(['customer_name' => $name]);
         }
 
         $chat->refresh();
@@ -152,6 +149,7 @@ class ChatController extends Controller
                 'status' => $chat->status,
                 'aiHandled' => (bool) $chat->ai_handled,
                 'agentHandlingAt' => $chat->agent_handling_at?->toIso8601String(),
+                'isAgentHandling' => $chat->isAgentHandling(30),
             ],
         ], $created ? 201 : 200);
     }
@@ -194,7 +192,8 @@ class ChatController extends Controller
     protected function dispatchBotReplyForLatestCustomerMessage(Chat $chat): bool
     {
         $settings = $chat->company?->settings;
-        if (! $settings || ! $settings->auto_reply_enabled) {
+        // Default ON when settings are missing.
+        if ($settings && $settings->auto_reply_enabled === false) {
             return false;
         }
 
@@ -223,7 +222,7 @@ class ChatController extends Controller
             return false;
         }
 
-        ProcessIncomingWhatsAppMessage::dispatch(
+        ProcessIncomingWhatsAppMessage::dispatchIncoming(
             (int) $chat->company_id,
             (int) $chat->id,
             (string) $chat->customer_phone,

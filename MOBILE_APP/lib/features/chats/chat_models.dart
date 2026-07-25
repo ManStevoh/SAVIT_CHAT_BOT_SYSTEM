@@ -9,6 +9,7 @@ class ChatSummary {
     required this.lastMessageTime,
     required this.unreadCount,
     required this.status,
+    this.isAgentHandling = false,
   });
 
   final String id;
@@ -18,6 +19,7 @@ class ChatSummary {
   final String lastMessageTime;
   final int unreadCount;
   final String status;
+  final bool isAgentHandling;
 
   factory ChatSummary.fromJson(Map<String, dynamic> json) {
     return ChatSummary(
@@ -28,6 +30,7 @@ class ChatSummary {
       lastMessageTime: jsonString(json['lastMessageTime']),
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
       status: jsonString(json['status'], 'active'),
+      isAgentHandling: json['isAgentHandling'] == true,
     );
   }
 }
