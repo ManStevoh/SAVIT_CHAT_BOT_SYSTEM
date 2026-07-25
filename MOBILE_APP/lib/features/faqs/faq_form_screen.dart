@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 import 'faq_models.dart';
 import 'faq_repository.dart';
 
@@ -99,96 +101,130 @@ class _FaqFormScreenState extends State<FaqFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edit FAQ' : 'Add FAQ'),
+        title: Text(
+          widget.isEditing ? 'Edit FAQ' : 'Add FAQ',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          const Text(
+          Text(
             'FAQ DETAILS',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
+            style: GoogleFonts.manrope(
+              fontWeight: FontWeight.w800,
               color: AppColors.textMuted,
-              letterSpacing: 0.6,
+              letterSpacing: 0.7,
+              fontSize: 12,
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _question,
-            textInputAction: TextInputAction.next,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Question',
-              prefixIcon: Icon(Icons.help_outline),
+          const SizedBox(height: 10),
+          AppSurface(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _question,
+                  textInputAction: TextInputAction.next,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Question',
+                    prefixIcon: Icon(Icons.help_outline),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _answer,
+                  textInputAction: TextInputAction.next,
+                  minLines: 3,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    labelText: 'Answer',
+                    prefixIcon: Icon(Icons.chat_bubble_outline),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _category,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Category (optional)',
+                    prefixIcon: Icon(Icons.category_outlined),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _keywords,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _saving ? null : _submit(),
+                  decoration: const InputDecoration(
+                    labelText: 'Keywords (comma-separated)',
+                    prefixIcon: Icon(Icons.label_outline),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                ],
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _saving ? null : _submit,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          widget.isEditing ? Icons.save_outlined : Icons.add,
+                        ),
+                  label: Text(
+                    _saving
+                        ? 'Saving…'
+                        : widget.isEditing
+                            ? 'Save changes'
+                            : 'Create FAQ',
+                  ),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _answer,
-            textInputAction: TextInputAction.next,
-            minLines: 3,
-            maxLines: 6,
-            decoration: const InputDecoration(
-              labelText: 'Answer',
-              prefixIcon: Icon(Icons.chat_bubble_outline),
-              alignLabelWithHint: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _category,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Category (optional)',
-              prefixIcon: Icon(Icons.category_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _keywords,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _saving ? null : _submit(),
-            decoration: const InputDecoration(
-              labelText: 'Keywords (comma-separated)',
-              prefixIcon: Icon(Icons.label_outline),
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-          ],
           const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _saving ? null : _submit,
-            icon: _saving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(widget.isEditing ? Icons.save_outlined : Icons.add),
-            label: Text(_saving
-                ? 'Saving…'
-                : widget.isEditing
-                    ? 'Save changes'
-                    : 'Create FAQ'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: AppColors.primary),
+          AppSurface(
+            padding: const EdgeInsets.all(16),
+            color: AppColors.primarySoft,
+            elevation: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tip',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Clear questions and concise answers help the AI match customer messages. '
+                  'Keywords improve matching when wording differs.',
+                  style: GoogleFonts.manrope(
+                    color: AppColors.ink.withOpacity(0.75),
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 28),
-          const Text(
-            'Tip',
-            style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Clear questions and concise answers help the AI match customer messages. '
-            'Keywords improve matching when wording differs.',
-            style: TextStyle(color: AppColors.textMuted),
           ),
         ],
       ),

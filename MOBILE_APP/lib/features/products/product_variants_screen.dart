@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 import 'product_models.dart';
 import 'product_repository.dart';
 
@@ -77,10 +79,11 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete variant?'),
-        content: Text(
-          'Remove "${variant.label}" from "${widget.product.name}"? This cannot be undone.',
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.lg),
         ),
+        title: const Text('Delete variant?'),
+        content: Text('Remove "${variant.label}"? This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -124,13 +127,17 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: Text('Variants · ${widget.product.name}'),
+        title: Text(
+          'Variants',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _loading ? null : () => _openForm(),
-        tooltip: 'Add variant',
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Add'),
       ),
       body: RefreshIndicator(
         onRefresh: _reload,
@@ -147,17 +154,20 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
     if (_error != null && _variants.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
         children: [
-          const SizedBox(height: 120),
-          Icon(Icons.error_outline, color: Colors.red.shade300, size: 40),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(_error!, textAlign: TextAlign.center),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: TextButton(onPressed: _reload, child: const Text('Retry')),
+          const SizedBox(height: 80),
+          AppSurface(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red.shade300, size: 40),
+                const SizedBox(height: 12),
+                Text(_error!, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: _reload, child: const Text('Retry')),
+              ],
+            ),
           ),
         ],
       );
@@ -166,83 +176,153 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
     if (_variants.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 120),
-          Icon(Icons.view_list_outlined, color: AppColors.primary, size: 40),
-          SizedBox(height: 12),
-          Text('No variants yet', textAlign: TextAlign.center),
-          SizedBox(height: 4),
-          Text(
-            'Tap + to add size, color, or other options.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textMuted),
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 60),
+          AppSurface(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              children: [
+                const AppIconChip(
+                  icon: Icons.view_list_outlined,
+                  color: AppColors.accentBlue,
+                  size: 56,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'No variants yet',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Tap + to add size, color, or other options for ${widget.product.name}.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(color: AppColors.textMuted),
+                ),
+              ],
+            ),
           ),
         ],
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 88),
-      itemCount: _variants.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final variant = _variants[index];
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: CircleAvatar(
-            backgroundColor: AppColors.bubbleIncoming,
-            child: Text(
-              variant.label.isNotEmpty ? variant.label[0].toUpperCase() : '?',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          title: Text(
-            variant.label,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Text(
-            'Stock: ${variant.stock}',
-            style: TextStyle(
-              fontSize: 12,
-              color: variant.stock > 0 ? AppColors.textMuted : Colors.orange.shade700,
-            ),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+      children: [
+        AppSurface(
+          padding: const EdgeInsets.all(16),
+          color: AppColors.primarySoft,
+          elevation: false,
+          child: Row(
             children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _formatPrice(variant.price),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  _StatusChip(active: variant.isActive),
-                ],
+              const AppIconChip(
+                icon: Icons.inventory_2_outlined,
+                color: AppColors.primary,
+                size: 44,
               ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    _openForm(variant: variant);
-                  } else if (value == 'delete') {
-                    _confirmDelete(variant);
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  PopupMenuItem(value: 'delete', child: Text('Delete')),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.product.name,
+                      style: GoogleFonts.manrope(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      '${_variants.length} variant${_variants.length == 1 ? '' : 's'}',
+                      style: GoogleFonts.manrope(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          onTap: () => _openForm(variant: variant),
-        );
-      },
+        ),
+        const SizedBox(height: 12),
+        ..._variants.map((variant) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: AppSurface(
+              onTap: () => _openForm(variant: variant),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.primarySoft,
+                  child: Text(
+                    variant.label.isNotEmpty
+                        ? variant.label[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  variant.label,
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(
+                  'Stock: ${variant.stock}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: variant.stock > 0
+                        ? AppColors.textMuted
+                        : Colors.orange.shade700,
+                  ),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _formatPrice(variant.price),
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        _StatusChip(active: variant.isActive),
+                      ],
+                    ),
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _openForm(variant: variant);
+                        } else if (value == 'delete') {
+                          _confirmDelete(variant);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }
@@ -347,7 +427,13 @@ class _VariantFormDialogState extends State<_VariantFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.isEditing ? 'Edit Variant' : 'Add Variant'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+      ),
+      title: Text(
+        widget.isEditing ? 'Edit Variant' : 'Add Variant',
+        style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -363,7 +449,8 @@ class _VariantFormDialogState extends State<_VariantFormDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _price,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: 'Price *',
@@ -392,7 +479,10 @@ class _VariantFormDialogState extends State<_VariantFormDialog> {
                   isExpanded: true,
                   items: const [
                     DropdownMenuItem(value: 'active', child: Text('Active')),
-                    DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                    DropdownMenuItem(
+                      value: 'inactive',
+                      child: Text('Inactive'),
+                    ),
                   ],
                   onChanged: _saving
                       ? null
@@ -417,15 +507,14 @@ class _VariantFormDialogState extends State<_VariantFormDialog> {
         ),
         FilledButton(
           onPressed: _saving ? null : _submit,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-          ),
           child: _saving
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : Text(widget.isEditing ? 'Save' : 'Add'),
         ),
@@ -444,16 +533,14 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: active
-            ? AppColors.primary.withOpacity(0.12)
-            : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(999),
+        color: active ? AppColors.primarySoft : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
         active ? 'Active' : 'Inactive',
         style: TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: active ? AppColors.primary : AppColors.textMuted,
         ),
       ),

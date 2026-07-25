@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 import 'product_form_screen.dart';
 import 'product_models.dart';
 import 'product_repository.dart';
@@ -105,6 +106,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final apiBaseUrl = context.read<AppConfig>().apiBaseUrl;
 
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(title: const Text('Products')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openForm(),
@@ -141,101 +143,142 @@ class _ProductsScreenState extends State<ProductsScreen> {
             if (products.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
                 children: const [
-                  SizedBox(height: 120),
-                  Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 40),
-                  SizedBox(height: 12),
-                  Text('No products yet', textAlign: TextAlign.center),
-                  SizedBox(height: 4),
-                  Text(
-                    'Tap + to add your first product.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textMuted),
+                  SizedBox(height: 80),
+                  AppSurface(
+                    padding: EdgeInsets.all(28),
+                    child: Column(
+                      children: [
+                        AppIconChip(
+                          icon: Icons.inventory_2_outlined,
+                          color: AppColors.accentBlue,
+                          size: 56,
+                        ),
+                        SizedBox(height: 14),
+                        Text(
+                          'No products yet',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Tap + to add your first product.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               );
             }
 
             return ListView.separated(
-              padding: const EdgeInsets.only(bottom: 88),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
               itemCount: products.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final product = products[index];
-                final imageUrl = Product.resolveImageUrl(product.image, apiBaseUrl);
+                final imageUrl =
+                    Product.resolveImageUrl(product.image, apiBaseUrl);
 
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: imageUrl != null
-                        ? Image.network(
-                            imageUrl,
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _placeholderAvatar(product.name),
-                          )
-                        : _placeholderAvatar(product.name),
-                  ),
-                  title: Text(
-                    product.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${product.category.isNotEmpty ? product.category : 'Uncategorized'} · ${product.productType} · ${product.fulfillmentType}',
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Stock: ${product.stock}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: product.stock > 0 ? AppColors.textMuted : Colors.orange.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            _formatPrice(product.price),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          _StatusChip(active: product.isActive),
-                        ],
-                      ),
-                      PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _openForm(product: product);
-                          } else if (value == 'variants') {
-                            _openVariants(product);
-                          } else if (value == 'delete') {
-                            _confirmDelete(product);
-                          }
-                        },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          PopupMenuItem(value: 'variants', child: Text('Variants')),
-                          PopupMenuItem(value: 'delete', child: Text('Delete')),
-                        ],
-                      ),
-                    ],
-                  ),
+                return AppSurface(
                   onTap: () => _openForm(product: product),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                      child: imageUrl != null
+                          ? Image.network(
+                              imageUrl,
+                              width: 52,
+                              height: 52,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _placeholderAvatar(product.name),
+                            )
+                          : _placeholderAvatar(product.name),
+                    ),
+                    title: Text(
+                      product.name,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${product.category.isNotEmpty ? product.category : 'Uncategorized'} · ${product.productType} · ${product.fulfillmentType}',
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Stock: ${product.stock}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: product.stock > 0
+                                ? AppColors.textMuted
+                                : Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              _formatPrice(product.price),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _StatusChip(active: product.isActive),
+                          ],
+                        ),
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _openForm(product: product);
+                            } else if (value == 'variants') {
+                              _openVariants(product);
+                            } else if (value == 'delete') {
+                              _confirmDelete(product);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(
+                              value: 'variants',
+                              child: Text('Variants'),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             );
@@ -247,10 +290,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Widget _placeholderAvatar(String name) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    return CircleAvatar(
-      radius: 24,
-      backgroundColor: AppColors.bubbleIncoming,
-      child: Text(initial, style: const TextStyle(fontWeight: FontWeight.w600)),
+    return Container(
+      width: 52,
+      height: 52,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          color: AppColors.primaryDark,
+        ),
+      ),
     );
   }
 }

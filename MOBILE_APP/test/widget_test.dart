@@ -22,7 +22,7 @@ void main() {
           ChangeNotifierProvider.value(
             value: OnboardingController.memory(completed: true),
           ),
-          Provider.value(
+          ChangeNotifierProvider.value(
             value: BrandingRepository.seeded(
               const AppBranding(applicationName: 'RelayIQ'),
             ),

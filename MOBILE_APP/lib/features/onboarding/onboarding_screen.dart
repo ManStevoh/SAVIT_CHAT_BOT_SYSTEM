@@ -20,32 +20,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _pages = <_OnboardPage>[
     _OnboardPage(
-      asset: 'assets/branding/relaysiq-app-icon.png',
       title: 'Sell on WhatsApp, from your pocket',
       body:
           'RelayIQ keeps your company chats, orders, and customers in one companion built for owners and agents.',
-      accent: Color(0xFF2563EB),
+      accent: AppColors.primary,
+      icon: Icons.chat_bubble_rounded,
     ),
     _OnboardPage(
-      asset: 'assets/branding/relaysiq-mark.png',
       title: 'AI replies — you stay in control',
       body:
           'Watch conversations in real time, jump in when a customer needs a human, then hand back to the bot.',
-      accent: Color(0xFF059669),
+      accent: AppColors.accentTeal,
+      icon: Icons.smart_toy_rounded,
     ),
     _OnboardPage(
-      asset: 'assets/branding/relaysiq-app-icon.png',
       title: 'Orders & contacts, always handy',
       body:
           'Track revenue signals, open order details from notifications, and start chats from your phone book.',
-      accent: Color(0xFF7C3AED),
+      accent: AppColors.accentAmber,
+      icon: Icons.receipt_long_rounded,
     ),
     _OnboardPage(
-      asset: 'assets/branding/relaysiq-app-icon.png',
       title: 'Ready for your workspace',
       body:
-          'Sign in with your RelayIQ company account to manage chats, products, FAQs, and growth on the go. RelayIQ is a product of Essem Digital Innovation Limited.',
-      accent: Color(0xFF1D4ED8),
+          'Sign in with your RelayIQ company account to manage chats, products, FAQs, and growth on the go.',
+      accent: AppColors.primaryDark,
+      icon: Icons.rocket_launch_rounded,
     ),
   ];
 
@@ -113,48 +113,77 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemBuilder: (context, i) {
                   final item = _pages[i];
                   return Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-                    child: Column(
-                      children: [
-                        const Spacer(flex: 2),
-                        AppSurface(
-                          padding: const EdgeInsets.all(28),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                    child: Center(
+                      child: SingleChildScrollView(
+                        child: AppSurface(
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                           child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Container(
-                                width: 96,
-                                height: 96,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0B0E11),
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadii.lg),
-                                  border: Border.all(
-                                    color: item.accent.withOpacity(0.22),
-                                  ),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: Image.asset(
-                                  item.asset,
-                                  fit: BoxFit.cover,
-                                ),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final heroH =
+                                      (MediaQuery.sizeOf(context).height * 0.18)
+                                          .clamp(88.0, 160.0);
+                                  return Container(
+                                    width: double.infinity,
+                                    height: heroH,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          item.accent,
+                                          item.accent.withOpacity(0.72),
+                                        ],
+                                      ),
+                                      borderRadius:
+                                          BorderRadius.circular(AppRadii.lg),
+                                    ),
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Positioned(
+                                          right: -20,
+                                          top: -20,
+                                          child: Container(
+                                            width: 100,
+                                            height: 100,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.white
+                                                  .withOpacity(0.12),
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(
+                                          item.icon,
+                                          size: heroH * 0.4,
+                                          color: Colors.white,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
-                              const SizedBox(height: 28),
+                              const SizedBox(height: 22),
                               Text(
                                 item.title,
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.manrope(
-                                  fontSize: 28,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.w800,
-                                  height: 1.15,
+                                  height: 1.2,
                                   color: AppColors.ink,
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 12),
                               Text(
                                 item.body,
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.manrope(
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   height: 1.45,
                                   color: AppColors.textMuted,
                                 ),
@@ -162,8 +191,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ],
                           ),
                         ),
-                        const Spacer(flex: 3),
-                      ],
+                      ),
                     ),
                   );
                 },
@@ -181,11 +209,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         duration: const Duration(milliseconds: 220),
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         height: 8,
-                        width: active ? 22 : 8,
+                        width: active ? 24 : 8,
                         decoration: BoxDecoration(
-                          color: active
-                              ? page.accent
-                              : AppColors.borderStrong,
+                          color:
+                              active ? page.accent : AppColors.borderStrong,
                           borderRadius: BorderRadius.circular(AppRadii.pill),
                         ),
                       );
@@ -206,12 +233,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                       if (_index > 0) const SizedBox(width: 12),
                       Expanded(
-                        flex: _index > 0 ? 1 : 1,
                         child: FilledButton(
                           onPressed: _next,
                           style: FilledButton.styleFrom(
                             backgroundColor: page.accent,
-                            minimumSize: const Size.fromHeight(52),
+                            minimumSize: const Size.fromHeight(54),
                           ),
                           child: Text(_isLast ? 'Get started' : 'Next'),
                         ),
@@ -230,14 +256,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 class _OnboardPage {
   const _OnboardPage({
-    required this.asset,
     required this.title,
     required this.body,
     required this.accent,
+    required this.icon,
   });
 
-  final String asset;
   final String title;
   final String body;
   final Color accent;
+  final IconData icon;
 }

@@ -31,7 +31,7 @@ class AppShell extends StatelessWidget {
       return Scaffold(
         backgroundColor: AppColors.canvas,
         body: navigationShell,
-        bottomNavigationBar: _NavChrome(
+        bottomNavigationBar: _FloatingNav(
           child: NavigationBar(
             selectedIndex: onSettings ? 1 : 0,
             onDestinationSelected: (index) {
@@ -40,13 +40,12 @@ class AppShell extends StatelessWidget {
             destinations: const [
               NavigationDestination(
                 icon: Icon(Icons.admin_panel_settings_outlined),
-                selectedIcon:
-                    Icon(Icons.admin_panel_settings, color: AppColors.primary),
+                selectedIcon: Icon(Icons.admin_panel_settings),
                 label: 'Admin',
               ),
               NavigationDestination(
                 icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings, color: AppColors.primary),
+                selectedIcon: Icon(Icons.settings),
                 label: 'Settings',
               ),
             ],
@@ -60,7 +59,7 @@ class AppShell extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.canvas,
         body: navigationShell,
-        bottomNavigationBar: _NavChrome(
+        bottomNavigationBar: _FloatingNav(
           child: NavigationBar(
             selectedIndex: navigationShell.currentIndex,
             onDestinationSelected: _onTap,
@@ -91,17 +90,17 @@ class AppShell extends StatelessWidget {
               ),
               const NavigationDestination(
                 icon: Icon(Icons.people_outline),
-                selectedIcon: Icon(Icons.people, color: AppColors.primary),
+                selectedIcon: Icon(Icons.people),
                 label: 'Contacts',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.receipt_long_outlined),
-                selectedIcon: Icon(Icons.receipt_long, color: AppColors.primary),
+                selectedIcon: Icon(Icons.receipt_long),
                 label: 'Orders',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.menu),
-                selectedIcon: Icon(Icons.menu_open, color: AppColors.primary),
+                selectedIcon: Icon(Icons.menu_open),
                 label: 'More',
               ),
             ],
@@ -112,19 +111,29 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class _NavChrome extends StatelessWidget {
-  const _NavChrome({required this.child});
+class _FloatingNav extends StatelessWidget {
+  const _FloatingNav({required this.child});
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadii.xl),
+          boxShadow: AppShadows.floated,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadii.xl),
+          child: SafeArea(
+            top: false,
+            child: child,
+          ),
+        ),
       ),
-      child: child,
     );
   }
 }
@@ -144,12 +153,13 @@ class _BadgeIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final child = Icon(
       icon,
-      color: selected ? AppColors.primary : null,
+      color: selected ? AppColors.primary : AppColors.textMuted,
     );
     if (count <= 0) return child;
 
     final label = count > 99 ? '99+' : '$count';
     return Badge(
+      backgroundColor: AppColors.accentRose,
       label: Text(label, style: const TextStyle(fontSize: 10)),
       child: child,
     );

@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
@@ -62,7 +64,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
       });
     } on DioException catch (e) {
       final api = ApiException.fromDio(e);
-      final code = e.response?.data is Map ? (e.response!.data as Map)['code'] : null;
+      final code =
+          e.response?.data is Map ? (e.response!.data as Map)['code'] : null;
       if (code == 'bookings_required' || e.response?.statusCode == 403) {
         setState(() => _blocked = api.message);
       } else {
@@ -85,8 +88,12 @@ class _BookingsScreenState extends State<BookingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text('Bookings'),
+        title: Text(
+          'Bookings',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
         actions: [
           IconButton(
             onPressed: _loading ? null : _load,
@@ -99,13 +106,16 @@ class _BookingsScreenState extends State<BookingsScreen> {
           : _blocked != null
               ? Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(
-                    _blocked!,
-                    style: const TextStyle(color: AppColors.textMuted),
+                  child: AppSurface(
+                    padding: const EdgeInsets.all(20),
+                    child: Text(
+                      _blocked!,
+                      style: GoogleFonts.manrope(color: AppColors.textMuted),
+                    ),
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                   children: [
                     if (_error != null)
                       Padding(
@@ -115,78 +125,167 @@ class _BookingsScreenState extends State<BookingsScreen> {
                           style: const TextStyle(color: Colors.redAccent),
                         ),
                       ),
-                    Text(
-                      'This month: $_used${_max == null ? ' · unlimited' : ' / $_max'}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    AppSurface(
+                      padding: const EdgeInsets.all(18),
+                      color: AppColors.primarySoft,
+                      elevation: false,
+                      child: Row(
+                        children: [
+                          const AppIconChip(
+                            icon: Icons.event_available,
+                            color: AppColors.accentTeal,
+                            size: 48,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'This month',
+                                  style: GoogleFonts.manrope(
+                                    color: AppColors.textMuted,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  '$_used${_max == null ? ' · unlimited' : ' / $_max'}',
+                                  style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 22,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Public booking page'),
-                      subtitle: Text(
-                        _publicUrl ?? '',
-                        style: const TextStyle(fontSize: 12),
+                    AppSurface(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.copy),
-                        onPressed: () => _copy(_publicUrl),
-                      ),
-                    ),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Calendar feed (ICS)'),
-                      subtitle: Text(
-                        _calendarUrl ?? '',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.copy),
-                        onPressed: () => _copy(_calendarUrl),
-                      ),
-                    ),
-                    if (_settings != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Timezone: ${_settings!['timezone']} · '
-                        '${_settings!['defaultDurationMinutes']} min slots',
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Upcoming',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_bookings.isEmpty)
-                      const Text(
-                        'No upcoming bookings.',
-                        style: TextStyle(color: AppColors.textMuted),
-                      ),
-                    ..._bookings.map((b) {
-                      final starts = b['startsAt']?.toString() ?? '';
-                      final title = b['title']?.toString() ?? 'Meeting';
-                      final customer = b['customerName']?.toString() ?? '';
-                      final status = b['status']?.toString() ?? '';
-                      final google = b['googleCalendarUrl']?.toString();
-                      return Card(
-                        child: ListTile(
-                          title: Text(title),
-                          subtitle: Text('$customer\n$starts\n$status'),
-                          isThreeLine: true,
-                          trailing: google == null
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.copy_all_outlined),
-                                  tooltip: 'Copy Google Calendar link',
-                                  onPressed: () => _copy(google),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: Text(
+                              'Public booking page',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              _publicUrl ?? '',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.copy),
+                              onPressed: () => _copy(_publicUrl),
+                            ),
+                          ),
+                          ListTile(
+                            title: Text(
+                              'Calendar feed (ICS)',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              _calendarUrl ?? '',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.copy),
+                              onPressed: () => _copy(_calendarUrl),
+                            ),
+                          ),
+                          if (_settings != null)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Timezone: ${_settings!['timezone']} · '
+                                  '${_settings!['defaultDurationMinutes']} min slots',
+                                  style: GoogleFonts.manrope(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                  ),
                                 ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Text(
+                      'Upcoming',
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_bookings.isEmpty)
+                      AppSurface(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(
+                          'No upcoming bookings.',
+                          style: GoogleFonts.manrope(
+                            color: AppColors.textMuted,
+                          ),
                         ),
-                      );
-                    }),
+                      )
+                    else
+                      ..._bookings.map((b) {
+                        final starts = b['startsAt']?.toString() ?? '';
+                        final title = b['title']?.toString() ?? 'Meeting';
+                        final customer = b['customerName']?.toString() ?? '';
+                        final status = b['status']?.toString() ?? '';
+                        final google = b['googleCalendarUrl']?.toString();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: AppSurface(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            child: ListTile(
+                              leading: const AppIconChip(
+                                icon: Icons.event,
+                                color: AppColors.accentTeal,
+                                size: 42,
+                              ),
+                              title: Text(
+                                title,
+                                style: GoogleFonts.manrope(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '$customer\n$starts\n$status',
+                                style: GoogleFonts.manrope(
+                                  color: AppColors.textMuted,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              isThreeLine: true,
+                              trailing: google == null
+                                  ? null
+                                  : IconButton(
+                                      icon: const Icon(
+                                        Icons.copy_all_outlined,
+                                      ),
+                                      tooltip: 'Copy Google Calendar link',
+                                      onPressed: () => _copy(google),
+                                    ),
+                            ),
+                          ),
+                        );
+                      }),
                   ],
                 ),
     );

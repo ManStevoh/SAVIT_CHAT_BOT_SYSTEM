@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/phone_utils.dart';
+import '../../shared/widgets/app_surface.dart';
+import '../../shared/widgets/customer_avatar.dart';
 import '../chats/chat_repository.dart';
 
 class _PhoneContactEntry {
@@ -82,7 +85,9 @@ class _AddContactScreenState extends State<AddContactScreen> {
         }
       }
 
-      entries.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      entries.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
 
       if (mounted) {
         setState(() {
@@ -119,7 +124,9 @@ class _AddContactScreenState extends State<AddContactScreen> {
       context.go(
         '/chats/${chat.id}',
         extra: {
-          'name': _name.text.trim().isEmpty ? chat.customerName : _name.text.trim(),
+          'name': _name.text.trim().isEmpty
+              ? chat.customerName
+              : _name.text.trim(),
           'phone': phone,
         },
       );
@@ -134,7 +141,9 @@ class _AddContactScreenState extends State<AddContactScreen> {
     final phone = phoneMergeKey(entry.phone);
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This contact has no valid phone number.')),
+        const SnackBar(
+          content: Text('This contact has no valid phone number.'),
+        ),
       );
       return;
     }
@@ -154,7 +163,8 @@ class _AddContactScreenState extends State<AddContactScreen> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => _addingPhone = null);
     }
@@ -169,150 +179,201 @@ class _AddContactScreenState extends State<AddContactScreen> {
     }
 
     if (_permissionDenied) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Icon(Icons.contacts_outlined, color: AppColors.textMuted, size: 36),
-          const SizedBox(height: 12),
-          const Text(
-            'Contacts access was denied. You can still add a number manually above.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: _loadPhoneContacts,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary),
+      return AppSurface(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const AppIconChip(
+              icon: Icons.contacts_outlined,
+              color: AppColors.textMuted,
+              size: 48,
             ),
-            child: const Text('Try again'),
-          ),
-        ],
-      );
-    }
-
-    if (_phoneContacts.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Text(
-          'No phone contacts found on this device.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textMuted),
+            const SizedBox(height: 12),
+            Text(
+              'Contacts access was denied. You can still add a number manually above.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: _loadPhoneContacts,
+              child: const Text('Try again'),
+            ),
+          ],
         ),
       );
     }
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _phoneContacts.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final entry = _phoneContacts[index];
-        final initial = entry.name.isNotEmpty ? entry.name[0].toUpperCase() : '?';
-        final isAdding = _addingPhone == entry.phone;
+    if (_phoneContacts.isEmpty) {
+      return AppSurface(
+        padding: const EdgeInsets.all(20),
+        child: Text(
+          'No phone contacts found on this device.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(color: AppColors.textMuted),
+        ),
+      );
+    }
 
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            backgroundColor: AppColors.bubbleIncoming,
-            child: Text(initial),
+    return Column(
+      children: [
+        for (var i = 0; i < _phoneContacts.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          Builder(
+            builder: (context) {
+              final entry = _phoneContacts[i];
+              final isAdding = _addingPhone == entry.phone;
+              return AppSurface(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                child: ListTile(
+                  leading: CustomerAvatar(name: entry.name, size: 44),
+                  title: Text(
+                    entry.name,
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    entry.phone,
+                    style: GoogleFonts.manrope(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                    ),
+                  ),
+                  trailing: TextButton(
+                    onPressed:
+                        isAdding ? null : () => _addFromPhone(entry),
+                    child: isAdding
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('+ Add'),
+                  ),
+                ),
+              );
+            },
           ),
-          title: Text(entry.name),
-          subtitle: Text(entry.phone),
-          trailing: TextButton(
-            onPressed: isAdding ? null : () => _addFromPhone(entry),
-            child: isAdding
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('+ Add'),
-          ),
-        );
-      },
+        ],
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Contacts')),
+      backgroundColor: AppColors.canvas,
+      appBar: AppBar(
+        title: Text(
+          'Add Contacts',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          const Text(
-            'ADD NEW CONTACT',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
+          Text(
+            'NEW CONTACT',
+            style: GoogleFonts.manrope(
+              fontWeight: FontWeight.w800,
               color: AppColors.textMuted,
-              letterSpacing: 0.6,
+              letterSpacing: 0.7,
+              fontSize: 12,
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _name,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              prefixIcon: Icon(Icons.person_outline),
+          const SizedBox(height: 10),
+          AppSurface(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _name,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _saving ? null : _submit(),
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _saving ? null : _submit,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.add),
+                  label: Text(_saving ? 'Adding…' : 'Add contact'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _phone,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _saving ? null : _submit(),
-            decoration: const InputDecoration(
-              labelText: 'Phone Number',
-              prefixIcon: Icon(Icons.phone_outlined),
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-          ],
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _saving ? null : _submit,
-            icon: _saving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.add),
-            label: Text(_saving ? 'Adding…' : 'Add Contacts'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: AppColors.primary),
-            ),
-          ),
-          const SizedBox(height: 28),
-          const Text(
-            'EXISTING CONTACT IN PHONE',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
+          const SizedBox(height: 24),
+          Text(
+            'FROM YOUR PHONE',
+            style: GoogleFonts.manrope(
+              fontWeight: FontWeight.w800,
               color: AppColors.textMuted,
-              letterSpacing: 0.6,
+              letterSpacing: 0.7,
+              fontSize: 12,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _buildPhoneContactsSection(),
-          const SizedBox(height: 28),
-          const Text(
-            'Tip',
-            style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Use the customer WhatsApp number in international format. '
-            'If a chat already exists for that phone, we open it.',
-            style: TextStyle(color: AppColors.textMuted),
+          const SizedBox(height: 24),
+          AppSurface(
+            padding: const EdgeInsets.all(16),
+            color: AppColors.primarySoft,
+            elevation: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tip',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Use the customer WhatsApp number in international format. '
+                  'If a chat already exists for that phone, we open it.',
+                  style: GoogleFonts.manrope(
+                    color: AppColors.ink.withOpacity(0.75),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

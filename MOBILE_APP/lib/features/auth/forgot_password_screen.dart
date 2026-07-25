@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -32,7 +34,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _success = null;
     });
     try {
-      await context.read<AuthRepository>().forgotPassword(email: _email.text.trim());
+      await context
+          .read<AuthRepository>()
+          .forgotPassword(email: _email.text.trim());
       if (!mounted) return;
       setState(() {
         _success =
@@ -48,60 +52,77 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text('Forgot password'),
+        title: Text(
+          'Forgot password',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/login'),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          const Text(
-            'Reset your password',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+          AppSurface(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Reset your password',
+                  style: GoogleFonts.manrope(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Enter your account email and we\'ll send a reset link.',
+                  style: GoogleFonts.manrope(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 22),
+                TextField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                ],
+                if (_success != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _success!,
+                    style: const TextStyle(color: AppColors.success),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _loading ? null : _submit,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                  child: _loading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Send reset link'),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Enter your account email and we\'ll send a reset link.',
-            style: TextStyle(color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _email,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              prefixIcon: Icon(Icons.email_outlined),
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-          ],
-          if (_success != null) ...[
-            const SizedBox(height: 12),
-            Text(_success!, style: const TextStyle(color: Colors.green)),
-          ],
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _loading ? null : _submit,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: _loading
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('Send reset link'),
           ),
         ],
       ),

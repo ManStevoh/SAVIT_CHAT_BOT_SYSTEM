@@ -6,7 +6,7 @@ class CustomerAvatar extends StatelessWidget {
   const CustomerAvatar({
     super.key,
     required this.name,
-    this.size = 44,
+    this.size = 48,
   });
 
   final String name;
@@ -28,15 +28,28 @@ class CustomerAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: AppColors.bubbleIncoming,
-      foregroundColor: AppColors.primary,
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withOpacity(0.18),
+            AppColors.primarySoft,
+          ],
+        ),
+        border: Border.all(color: AppColors.primary.withOpacity(0.12)),
+      ),
+      alignment: Alignment.center,
       child: Text(
         _initials,
         style: TextStyle(
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           fontSize: size * 0.32,
+          color: AppColors.primaryDark,
         ),
       ),
     );

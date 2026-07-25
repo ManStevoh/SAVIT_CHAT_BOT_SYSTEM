@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
@@ -17,7 +18,13 @@ class MoreScreen extends StatelessWidget {
     final adminOnly = user?.isPlatformAdminOnly ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('More')),
+      backgroundColor: AppColors.canvas,
+      appBar: AppBar(
+        title: Text(
+          'More',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
@@ -27,6 +34,7 @@ class MoreScreen extends StatelessWidget {
               icon: Icons.admin_panel_settings_outlined,
               title: 'Platform Admin',
               subtitle: 'Companies, health, overview',
+              color: AppColors.primary,
               onTap: () => context.go('/more/admin'),
             ),
           ],
@@ -36,18 +44,21 @@ class MoreScreen extends StatelessWidget {
               icon: Icons.inventory_2_outlined,
               title: 'Products',
               subtitle: 'Items, variants, images',
+              color: AppColors.accentBlue,
               onTap: () => context.go('/more/products'),
             ),
             _MoreTile(
               icon: Icons.event_available_outlined,
               title: 'Bookings',
               subtitle: 'Meetings & calendar feed',
+              color: AppColors.accentTeal,
               onTap: () => context.go('/more/bookings'),
             ),
             _MoreTile(
               icon: Icons.help_outline,
               title: 'FAQs',
               subtitle: 'Bot answers & keywords',
+              color: AppColors.accentAmber,
               onTap: () => context.go('/more/faqs'),
             ),
             const _SectionLabel('Growth'),
@@ -55,6 +66,7 @@ class MoreScreen extends StatelessWidget {
               icon: Icons.trending_up,
               title: 'Growth',
               subtitle: 'Posts, approve & publish',
+              color: AppColors.primary,
               onTap: () => context.go('/more/growth'),
             ),
           ],
@@ -63,27 +75,34 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.settings_outlined,
             title: 'Settings',
             subtitle: 'Profile & password',
+            color: AppColors.textMuted,
             onTap: () => context.go('/more/settings'),
           ),
           const SizedBox(height: 28),
-          const Text(
+          Text(
             AppBrandingCopy.productOf,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: AppColors.textMuted,
+            ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             AppBrandingCopy.poweredBy,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: AppColors.textMuted,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             AppBrandingCopy.companyWebsite.replaceFirst('https://', ''),
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: GoogleFonts.manrope(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: AppColors.primary,
             ),
           ),
@@ -104,10 +123,10 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: GoogleFonts.manrope(
           fontSize: 12,
           letterSpacing: 0.8,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           color: AppColors.textMuted,
         ),
       ),
@@ -120,12 +139,14 @@ class _MoreTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.color,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -134,21 +155,24 @@ class _MoreTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: AppSurface(
         onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         child: ListTile(
-          leading: Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withOpacity(0.18)),
-            ),
-            child: Icon(icon, size: 22, color: AppColors.primary),
+          leading: AppIconChip(icon: icon, color: color, size: 44),
+          title: Text(
+            title,
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+          subtitle: Text(
+            subtitle,
+            style: GoogleFonts.manrope(
+              color: AppColors.textMuted,
+              fontSize: 13,
+            ),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.textMuted,
+          ),
         ),
       ),
     );

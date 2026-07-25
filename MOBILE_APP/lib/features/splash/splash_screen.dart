@@ -8,7 +8,6 @@ import '../../core/branding/app_branding.dart';
 import '../../core/branding/branding_copy.dart';
 import '../../core/branding/branding_repository.dart';
 import '../../core/onboarding/onboarding_controller.dart';
-import '../../core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _fade = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 600),
     )..forward();
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
@@ -66,52 +65,70 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final logo = _branding.appLogo;
+    final brandingRepo = context.watch<BrandingRepository>();
+    final brand = brandingRepo.primary;
+    final dark = brandingRepo.primaryDark;
     return Scaffold(
-      backgroundColor: AppColors.canvas,
-      body: FadeTransition(
-        opacity: _fade,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (logo != null && logo.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Image.network(
-                    logo,
-                    width: 96,
-                    height: 96,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const _RelayMark(),
-                  ),
-                )
-              else
-                const _RelayMark(),
-              const SizedBox(height: 18),
-              Text(
-                _branding.applicationName,
-                style: GoogleFonts.manrope(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppBrandingCopy.tagline,
-                style: GoogleFonts.manrope(color: AppColors.textMuted),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                AppBrandingCopy.poweredBy,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  color: AppColors.textMuted,
-                ),
-              ),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              brand,
+              dark,
+              Color.lerp(dark, const Color(0xFF000000), 0.35)!,
             ],
+          ),
+        ),
+        child: FadeTransition(
+          opacity: _fade,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (logo != null && logo.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.network(
+                      logo,
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const _RelayMark(),
+                    ),
+                  )
+                else
+                  const _RelayMark(),
+                const SizedBox(height: 20),
+                Text(
+                  _branding.applicationName,
+                  style: GoogleFonts.manrope(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  AppBrandingCopy.tagline,
+                  style: GoogleFonts.manrope(
+                    color: Colors.white.withOpacity(0.82),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  AppBrandingCopy.poweredBy,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.55),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -130,10 +147,10 @@ class _RelayMark extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0B0E11),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.ink.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.25),
             blurRadius: 28,
             offset: const Offset(0, 12),
           ),
@@ -151,7 +168,7 @@ class _RelayMark extends StatelessWidget {
           style: GoogleFonts.manrope(
             fontSize: 46,
             fontWeight: FontWeight.w800,
-            color: AppColors.primary,
+            color: Colors.white,
           ),
         ),
       ),

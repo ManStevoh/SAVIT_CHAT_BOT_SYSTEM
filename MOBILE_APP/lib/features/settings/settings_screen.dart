@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/auth/auth_user.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -113,193 +116,309 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthController>().user;
+    final topPad = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      backgroundColor: AppColors.canvas,
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: AppColors.primary.withOpacity(0.12),
-                    child: const Icon(Icons.person, color: AppColors.primary, size: 32),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user?.name ?? 'Profile',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primaryDark,
-                          ),
+          AppHeroBand(
+            padding: EdgeInsets.fromLTRB(20, topPad + 12, 20, 28),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    } else {
+                      context.go('/more');
+                    }
+                  },
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Settings',
+                        style: GoogleFonts.manrope(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
                         ),
-                        if (user?.email != null) ...[
-                          const SizedBox(height: 4),
-                          Text(user!.email, style: const TextStyle(color: AppColors.textMuted)),
-                        ],
-                        if (user?.companyName != null) ...[
-                          const SizedBox(height: 2),
-                          Text(user!.companyName!, style: const TextStyle(color: AppColors.textMuted)),
-                        ],
-                        if (user?.role != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            user!.role!,
-                            style: TextStyle(
-                              color: AppColors.primary.withOpacity(0.8),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
+                      Text(
+                        user?.companyName ?? 'Account',
+                        style: GoogleFonts.manrope(
+                          color: Colors.white.withOpacity(0.78),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  child: Text(
+                    (user?.name.isNotEmpty == true)
+                        ? user!.name[0].toUpperCase()
+                        : '?',
+                    style: GoogleFonts.manrope(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'EDIT PROFILE',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textMuted,
-              letterSpacing: 0.6,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppSurface(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const AppIconChip(
+                        icon: Icons.person,
+                        color: AppColors.primary,
+                        size: 52,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.name ?? 'Profile',
+                              style: GoogleFonts.manrope(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            if (user?.email != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                user!.email,
+                                style: GoogleFonts.manrope(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                            if (user?.role != null) ...[
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primarySoft,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadii.pill),
+                                ),
+                                child: Text(
+                                  user!.role!,
+                                  style: GoogleFonts.manrope(
+                                    color: AppColors.primaryDark,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'EDIT PROFILE',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.7,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                AppSurface(
+                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _name,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Name',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.email],
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone (optional)',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                      ),
+                      if (_profileError != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _profileError!,
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ],
+                      if (_profileSuccess != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _profileSuccess!,
+                          style: const TextStyle(color: AppColors.success),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: _savingProfile ? null : _saveProfile,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                        ),
+                        child: _savingProfile
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Save profile'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'CHANGE PASSWORD',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.7,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                AppSurface(
+                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _currentPassword,
+                        obscureText: true,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Current password',
+                          prefixIcon: Icon(Icons.lock_outline),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _newPassword,
+                        obscureText: true,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'New password',
+                          prefixIcon: Icon(Icons.lock_reset_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _confirmPassword,
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) =>
+                            _savingPassword ? null : _changePassword(),
+                        decoration: const InputDecoration(
+                          labelText: 'Confirm new password',
+                          prefixIcon: Icon(Icons.lock_outline),
+                        ),
+                      ),
+                      if (_passwordError != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _passwordError!,
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ],
+                      if (_passwordSuccess != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _passwordSuccess!,
+                          style: const TextStyle(color: AppColors.success),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      OutlinedButton(
+                        onPressed: _savingPassword ? null : _changePassword,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                        ),
+                        child: _savingPassword
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Update password'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                AppSurface(
+                  onTap: _signOut,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  child: const ListTile(
+                    leading: Icon(Icons.logout, color: Colors.redAccent),
+                    title: Text(
+                      'Sign out',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _name,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              prefixIcon: Icon(Icons.person_outline),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _email,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.email],
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              prefixIcon: Icon(Icons.email_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _phone,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              labelText: 'Phone (optional)',
-              prefixIcon: Icon(Icons.phone_outlined),
-            ),
-          ),
-          if (_profileError != null) ...[
-            const SizedBox(height: 12),
-            Text(_profileError!, style: const TextStyle(color: Colors.redAccent)),
-          ],
-          if (_profileSuccess != null) ...[
-            const SizedBox(height: 12),
-            Text(_profileSuccess!, style: const TextStyle(color: AppColors.primary)),
-          ],
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _savingProfile ? null : _saveProfile,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: _savingProfile
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('Save profile'),
-          ),
-          const SizedBox(height: 32),
-          const Text(
-            'CHANGE PASSWORD',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textMuted,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _currentPassword,
-            obscureText: true,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Current password',
-              prefixIcon: Icon(Icons.lock_outline),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _newPassword,
-            obscureText: true,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'New password',
-              prefixIcon: Icon(Icons.lock_reset_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _confirmPassword,
-            obscureText: true,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _savingPassword ? null : _changePassword(),
-            decoration: const InputDecoration(
-              labelText: 'Confirm new password',
-              prefixIcon: Icon(Icons.lock_outline),
-            ),
-          ),
-          if (_passwordError != null) ...[
-            const SizedBox(height: 12),
-            Text(_passwordError!, style: const TextStyle(color: Colors.redAccent)),
-          ],
-          if (_passwordSuccess != null) ...[
-            const SizedBox(height: 12),
-            Text(_passwordSuccess!, style: const TextStyle(color: AppColors.primary)),
-          ],
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: _savingPassword ? null : _changePassword,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: AppColors.primary),
-            ),
-            child: _savingPassword
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Update password'),
-          ),
-          const SizedBox(height: 32),
-          const Divider(),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('Sign out'),
-            onTap: _signOut,
           ),
         ],
       ),

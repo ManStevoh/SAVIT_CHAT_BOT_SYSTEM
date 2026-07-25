@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
@@ -84,7 +85,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (!mounted || _future == null || _isAdminOnly) return;
     final onChatsTab = ActiveShellBranch.maybeOf(context) == 1;
 
-    // Always refresh the nav badge from the unfiltered list.
     await _refreshUnreadBadge();
     if (!mounted || !onChatsTab) return;
 
@@ -93,9 +93,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       if (mounted) {
         setState(() => _future = Future.value(chats));
       }
-    } catch (_) {
-      // Keep last good snapshot during background poll failures.
-    }
+    } catch (_) {}
   }
 
   void _onSearchChanged(String _) {
@@ -103,7 +101,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _searchDebounce = Timer(const Duration(milliseconds: 350), () {
       if (!mounted) return;
       setState(() => _future = _loadForUi());
-      // Do not publish badge from search results.
     });
   }
 
@@ -117,7 +114,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
   void _openChat(ChatSummary item) {
     if (item.unreadCount > 0) {
       context.read<ShellBadges>().adjustUnreadChats(-item.unreadCount);
-      // Optimistically clear unread in the current list snapshot.
       _future?.then((chats) {
         if (!mounted) return;
         final next = chats
@@ -150,18 +146,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chats')),
+      backgroundColor: AppColors.canvas,
+      appBar: AppBar(
+        title: Text(
+          'Chats',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: TextField(
               controller: _search,
               onChanged: _onSearchChanged,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: 'Search name or phone…',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                filled: true,
+                fillColor: AppColors.surface,
                 suffixIcon: _search.text.isEmpty
                     ? null
                     : IconButton(
@@ -176,24 +180,27 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: SegmentedButton<_ChatFilter>(
-              segments: const [
-                ButtonSegment(
-                  value: _ChatFilter.all,
-                  label: Text('All'),
-                  icon: Icon(Icons.forum_outlined),
-                ),
-                ButtonSegment(
-                  value: _ChatFilter.unread,
-                  label: Text('Unread'),
-                  icon: Icon(Icons.mark_email_unread_outlined),
-                ),
-              ],
-              selected: {_filter},
-              onSelectionChanged: (value) {
-                setState(() => _filter = value.first);
-              },
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<_ChatFilter>(
+                segments: const [
+                  ButtonSegment(
+                    value: _ChatFilter.all,
+                    label: Text('All'),
+                    icon: Icon(Icons.forum_outlined, size: 18),
+                  ),
+                  ButtonSegment(
+                    value: _ChatFilter.unread,
+                    label: Text('Unread'),
+                    icon: Icon(Icons.mark_email_unread_outlined, size: 18),
+                  ),
+                ],
+                selected: {_filter},
+                onSelectionChanged: (value) {
+                  setState(() => _filter = value.first);
+                },
+              ),
             ),
           ),
           Expanded(
@@ -204,7 +211,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     child: FutureBuilder<List<ChatSummary>>(
                       future: _future,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting &&
+                        if (snapshot.connectionState ==
+                                ConnectionState.waiting &&
                             !snapshot.hasData) {
                           return const ChatListSkeleton();
                         }
@@ -212,7 +220,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           final message = snapshot.error is ApiException
                               ? (snapshot.error as ApiException).message
                               : snapshot.error.toString();
-                          return AppErrorState(message: message, onRetry: _reload);
+                          return AppErrorState(
+                            message: message,
+                            onRetry: _reload,
+                          );
                         }
 
                         final chats = _applyFilter(snapshot.data ?? []);
@@ -230,36 +241,46 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 : (_filter == _ChatFilter.unread
                                     ? "You're all caught up."
                                     : 'Add a contact to start a conversation.'),
-                            actionLabel: searching || _filter == _ChatFilter.unread
-                                ? null
-                                : 'Add contact',
-                            onAction: searching || _filter == _ChatFilter.unread
-                                ? null
-                                : () => context.go('/contacts/add'),
+                            actionLabel:
+                                searching || _filter == _ChatFilter.unread
+                                    ? null
+                                    : 'Add contact',
+                            onAction:
+                                searching || _filter == _ChatFilter.unread
+                                    ? null
+                                    : () => context.go('/contacts/add'),
                           );
                         }
 
                         return ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
                           itemCount: chats.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final item = chats[index];
                             final unread = item.unreadCount > 0;
                             return AppSurface(
                               onTap: () => _openChat(item),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 2,
+                                horizontal: 8,
+                                vertical: 6,
                               ),
                               child: ListTile(
-                                leading: CustomerAvatar(name: item.customerName),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                leading: CustomerAvatar(
+                                  name: item.customerName,
+                                ),
                                 title: Text(
                                   item.customerName,
-                                  style: TextStyle(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: unread
                                         ? FontWeight.w800
-                                        : FontWeight.w600,
+                                        : FontWeight.w700,
+                                    fontSize: 15,
                                   ),
                                 ),
                                 subtitle: Text(
@@ -268,13 +289,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       : item.lastMessage,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: unread
                                         ? FontWeight.w600
                                         : FontWeight.w400,
                                     color: unread
                                         ? AppColors.ink
                                         : AppColors.textMuted,
+                                    fontSize: 13,
                                   ),
                                 ),
                                 trailing: Column(
@@ -283,40 +305,49 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   children: [
                                     Text(
                                       item.lastMessageTime,
-                                      style: TextStyle(
+                                      style: GoogleFonts.manrope(
                                         color: unread
                                             ? AppColors.primary
                                             : AppColors.textMuted,
                                         fontSize: 12,
                                         fontWeight: unread
                                             ? FontWeight.w700
-                                            : FontWeight.w400,
+                                            : FontWeight.w500,
                                       ),
                                     ),
                                     if (unread) ...[
                                       const SizedBox(height: 6),
                                       Container(
                                         constraints: const BoxConstraints(
-                                          minWidth: 20,
-                                          minHeight: 20,
+                                          minWidth: 22,
+                                          minHeight: 22,
                                         ),
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
+                                          horizontal: 7,
                                         ),
                                         decoration: BoxDecoration(
                                           color: AppColors.primary,
-                                          borderRadius:
-                                              BorderRadius.circular(999),
+                                          borderRadius: BorderRadius.circular(
+                                            AppRadii.pill,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.primary
+                                                  .withOpacity(0.35),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
                                         ),
                                         alignment: Alignment.center,
                                         child: Text(
                                           item.unreadCount > 99
                                               ? '99+'
                                               : '${item.unreadCount}',
-                                          style: const TextStyle(
+                                          style: GoogleFonts.manrope(
                                             fontSize: 11,
                                             color: Colors.white,
-                                            fontWeight: FontWeight.w700,
+                                            fontWeight: FontWeight.w800,
                                           ),
                                         ),
                                       ),

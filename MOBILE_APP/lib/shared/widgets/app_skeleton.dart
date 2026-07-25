@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import 'app_surface.dart';
 
 /// Pulsing placeholder bars for list / dashboard loading.
 class AppSkeleton extends StatefulWidget {
@@ -50,7 +51,7 @@ class SkeletonBox extends StatelessWidget {
     super.key,
     required this.height,
     this.width,
-    this.radius = 12,
+    this.radius = AppRadii.md,
   });
 
   final double height;
@@ -76,31 +77,75 @@ class HomeSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tileW = (MediaQuery.sizeOf(context).width - 44) / 2;
+    final topPad = MediaQuery.paddingOf(context).top;
     return AppSkeleton(
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         children: [
-          const SkeletonBox(height: 28, width: 180),
-          const SizedBox(height: 10),
-          const SkeletonBox(height: 14, width: 220),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: List.generate(
-              4,
-              (_) => SkeletonBox(height: 96, width: tileW, radius: 16),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(20, topPad + 16, 20, 28),
+            decoration: const BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(AppRadii.xl),
+                bottomRight: Radius.circular(AppRadii.xl),
+              ),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(height: 14, width: 100, radius: 8),
+                SizedBox(height: 10),
+                SkeletonBox(height: 24, width: 180, radius: 10),
+                SizedBox(height: 18),
+                SkeletonBox(height: 14, width: 80, radius: 8),
+                SizedBox(height: 8),
+                SkeletonBox(height: 36, width: 140, radius: 10),
+              ],
             ),
           ),
-          const SizedBox(height: 28),
-          const SkeletonBox(height: 18, width: 140),
-          const SizedBox(height: 12),
-          const SkeletonBox(height: 72, radius: 16),
-          const SizedBox(height: 10),
-          const SkeletonBox(height: 72, radius: 16),
-          const SizedBox(height: 10),
-          const SkeletonBox(height: 72, radius: 16),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SkeletonBox(height: 16, width: 120),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    4,
+                    (_) => const SkeletonBox(height: 52, width: 52, radius: 16),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                const SkeletonBox(height: 16, width: 100),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: List.generate(
+                    4,
+                    (_) => SkeletonBox(
+                      height: 110,
+                      width: tileW,
+                      radius: AppRadii.lg,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                const SkeletonBox(height: 16, width: 130),
+                const SizedBox(height: 12),
+                const AppSurface(
+                  elevation: false,
+                  padding: EdgeInsets.all(16),
+                  child: SkeletonBox(height: 48, radius: 12),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -117,24 +162,28 @@ class ChatListSkeleton extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         itemCount: 8,
-        separatorBuilder: (_, __) => const SizedBox(height: 14),
-        itemBuilder: (_, __) => const Row(
-          children: [
-            SkeletonBox(height: 44, width: 44, radius: 22),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SkeletonBox(height: 14, width: 140),
-                  SizedBox(height: 8),
-                  SkeletonBox(height: 12),
-                ],
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (_, __) => const AppSurface(
+          elevation: false,
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              SkeletonBox(height: 48, width: 48, radius: 24),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonBox(height: 14, width: 140),
+                    SizedBox(height: 8),
+                    SkeletonBox(height: 12),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(width: 12),
-            SkeletonBox(height: 12, width: 36),
-          ],
+              SizedBox(width: 12),
+              SkeletonBox(height: 12, width: 36),
+            ],
+          ),
         ),
       ),
     );

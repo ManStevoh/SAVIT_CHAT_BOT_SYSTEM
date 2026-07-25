@@ -38,7 +38,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: onboarding),
         ChangeNotifierProvider(create: (_) => ShellBadges()),
         Provider.value(value: api),
-        Provider.value(value: BrandingRepository(api)),
+        ChangeNotifierProvider(create: (_) => BrandingRepository(api)),
         Provider.value(value: AuthRepository(api.dio, auth)),
         Provider.value(value: ChatRepository(api)),
         Provider.value(value: CustomerRepository(api)),

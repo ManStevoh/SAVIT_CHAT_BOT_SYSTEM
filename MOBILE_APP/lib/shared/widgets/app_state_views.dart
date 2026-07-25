@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
+import 'app_surface.dart';
 
 /// Full-width empty / error placeholder for list screens.
 class AppEmptyState extends StatelessWidget {
@@ -21,37 +23,48 @@ class AppEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = Theme.of(context).colorScheme.primary;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(32, 80, 32, 32),
+      padding: const EdgeInsets.fromLTRB(24, 72, 24, 32),
       children: [
-        Icon(icon, size: 48, color: AppColors.primary.withOpacity(0.85)),
-        const SizedBox(height: 16),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.ink,
+        AppSurface(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            children: [
+              AppIconChip(icon: icon, color: brand, size: 56),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.manrope(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.manrope(
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: onAction,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  child: Text(actionLabel!),
+                ),
+              ],
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.textMuted, height: 1.4),
-        ),
-        if (actionLabel != null && onAction != null) ...[
-          const SizedBox(height: 20),
-          Center(
-            child: FilledButton(
-              onPressed: onAction,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-              child: Text(actionLabel!),
-            ),
-          ),
-        ],
       ],
     );
   }

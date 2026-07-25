@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 import 'product_models.dart';
 import 'product_repository.dart';
 
@@ -262,44 +263,54 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     final existingUrl = Product.resolveImageUrl(widget.product?.image, apiBase);
 
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
         title: Text(widget.isEditing ? 'Edit Product' : 'Add Product'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          Center(
-            child: InkWell(
-              onTap: _saving ? null : _pickImage,
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.canvas,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade300),
+          AppSurface(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+            child: Column(
+              children: [
+                Center(
+                  child: InkWell(
+                    onTap: _saving ? null : _pickImage,
+                    borderRadius: BorderRadius.circular(AppRadii.lg),
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: AppColors.canvas,
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: _imagePath != null
+                          ? Image.file(File(_imagePath!), fit: BoxFit.cover)
+                          : existingUrl != null
+                              ? Image.network(
+                                  existingUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const _ImagePlaceholder(),
+                                )
+                              : const _ImagePlaceholder(),
+                    ),
+                  ),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: _imagePath != null
-                    ? Image.file(File(_imagePath!), fit: BoxFit.cover)
-                    : existingUrl != null
-                        ? Image.network(
-                            existingUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const _ImagePlaceholder(),
-                          )
-                        : const _ImagePlaceholder(),
-              ),
+                TextButton.icon(
+                  onPressed: _saving ? null : _pickImage,
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: Text(
+                    _imagePath == null
+                        ? 'Add product image'
+                        : 'Change image',
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _saving ? null : _pickImage,
-            icon: const Icon(Icons.photo_library_outlined),
-            label:
-                Text(_imagePath == null ? 'Add product image' : 'Change image'),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -632,9 +643,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     ? 'Save Changes'
                     : 'Create Product'),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
+              minimumSize: const Size.fromHeight(52),
             ),
           ),
         ],

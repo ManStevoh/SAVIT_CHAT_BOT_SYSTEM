@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 import 'growth_models.dart';
 import 'growth_post_form_screen.dart';
 import 'growth_repository.dart';
@@ -105,6 +106,7 @@ class _GrowthScreenState extends State<GrowthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(title: const Text('Growth')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openNewPostForm,
@@ -155,14 +157,14 @@ class _GrowthScreenState extends State<GrowthScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.bubbleIncoming,
-                          borderRadius: BorderRadius.circular(8),
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
                         ),
                         child: const Text(
                           'Demo',
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.primaryDark,
                           ),
                         ),
@@ -179,38 +181,37 @@ class _GrowthScreenState extends State<GrowthScreen> {
                       label: Text(period),
                       selected: selected,
                       onSelected: (_) => _selectPeriod(period),
-                      selectedColor: AppColors.primary.withOpacity(0.18),
+                      selectedColor: AppColors.primarySoft,
                       labelStyle: TextStyle(
                         color: selected ? AppColors.primaryDark : AppColors.textMuted,
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                       ),
                       side: BorderSide(
-                        color: selected ? AppColors.primary : Colors.grey.shade300,
+                        color: selected ? AppColors.primary : AppColors.border,
                       ),
                     );
                   }).toList(),
                 ),
                 if (analytics.celebration?.showHighlight == true) ...[
                   const SizedBox(height: 16),
-                  Card(
-                    color: AppColors.bubbleIncoming,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.celebration, color: AppColors.primary),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              analytics.celebration!.message,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primaryDark,
-                              ),
+                  AppSurface(
+                    color: AppColors.primarySoft,
+                    elevation: false,
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.celebration, color: AppColors.primary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            analytics.celebration!.message,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryDark,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -314,24 +315,22 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: (MediaQuery.sizeOf(context).width - 44) / 2,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(color: AppColors.textMuted)),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
-                ),
+      child: AppSurface(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: AppColors.textMuted)),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primaryDark,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -345,13 +344,11 @@ class _EmptyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Text(
-          message,
-          style: const TextStyle(color: AppColors.textMuted),
-        ),
+    return AppSurface(
+      padding: const EdgeInsets.all(20),
+      child: Text(
+        message,
+        style: const TextStyle(color: AppColors.textMuted),
       ),
     );
   }
@@ -364,28 +361,32 @@ class _PlatformBreakdownTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppColors.bubbleIncoming,
-          child: Text(
-            _platformInitial(item.platform),
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDark,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AppSurface(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: AppColors.primarySoft,
+            child: Text(
+              _platformInitial(item.platform),
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: AppColors.primaryDark,
+              ),
             ),
           ),
-        ),
-        title: Text(
-          _formatPlatform(item.platform),
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text('${item.leads} leads · ${item.orders} orders'),
-        trailing: Text(
-          formatGrowthMoney(item.revenue),
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.primaryDark,
+          title: Text(
+            _formatPlatform(item.platform),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text('${item.leads} leads · ${item.orders} orders'),
+          trailing: Text(
+            formatGrowthMoney(item.revenue),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.primaryDark,
+            ),
           ),
         ),
       ),
@@ -408,8 +409,9 @@ class _TopPostTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AppSurface(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,7 +424,7 @@ class _TopPostTile extends StatelessWidget {
                   Text(
                     formatGrowthMoney(post.revenue),
                     style: const TextStyle(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                       color: AppColors.primary,
                     ),
                   ),
@@ -431,7 +433,7 @@ class _TopPostTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               post.title,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: const TextStyle(fontWeight: FontWeight.w700),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -469,8 +471,9 @@ class _RecentPostTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AppSurface(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,7 +482,7 @@ class _RecentPostTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  backgroundColor: AppColors.bubbleOutgoing,
+                  backgroundColor: AppColors.primarySoft,
                   child: Icon(
                     _statusIcon(post.status),
                     color: AppColors.primaryDark,
@@ -495,7 +498,7 @@ class _RecentPostTile extends StatelessWidget {
                         post.displayTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -605,14 +608,14 @@ class _PlatformChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.bubbleIncoming,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
         _formatPlatform(platform),
         style: const TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: AppColors.primaryDark,
         ),
       ),
@@ -631,7 +634,7 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: _statusColor(status).withOpacity(0.15),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
         status,

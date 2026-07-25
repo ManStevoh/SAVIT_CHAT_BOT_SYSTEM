@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 import 'growth_models.dart';
 import 'growth_repository.dart';
 
@@ -50,8 +52,8 @@ class _GrowthPostFormScreenState extends State<GrowthPostFormScreen> {
 
     final media = _mediaUrl.text.trim();
     if (_isInstagram && media.isEmpty) {
-      setState(() =>
-          _error = 'Instagram drafts need an image URL before you can publish.');
+      setState(() => _error =
+          'Instagram drafts need an image URL before you can publish.');
       return;
     }
 
@@ -81,107 +83,139 @@ class _GrowthPostFormScreenState extends State<GrowthPostFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('New post')),
+      backgroundColor: AppColors.canvas,
+      appBar: AppBar(
+        title: Text(
+          'New post',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          const Text(
-            'POST DETAILS',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textMuted,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: _platform,
-            decoration: const InputDecoration(
-              labelText: 'Platform',
-              prefixIcon: Icon(Icons.share_outlined),
-            ),
-            items: growthPlatforms
-                .map(
-                  (p) => DropdownMenuItem(
-                    value: p,
-                    child: Text(p[0].toUpperCase() + p.substring(1)),
-                  ),
-                )
-                .toList(),
-            onChanged: _saving
-                ? null
-                : (value) {
-                    if (value != null) setState(() => _platform = value);
-                  },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _title,
-            textInputAction: TextInputAction.next,
-            enabled: !_saving,
-            decoration: const InputDecoration(
-              labelText: 'Title (optional)',
-              prefixIcon: Icon(Icons.title),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _content,
-            textInputAction: TextInputAction.next,
-            enabled: !_saving,
-            minLines: 4,
-            maxLines: 8,
-            decoration: const InputDecoration(
-              labelText: 'Content',
-              prefixIcon: Icon(Icons.edit_outlined),
-              alignLabelWithHint: true,
-            ),
-          ),
-          if (_isInstagram) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _mediaUrl,
-              textInputAction: TextInputAction.done,
-              enabled: !_saving,
-              onSubmitted: (_) => _saving ? null : _submit(),
-              decoration: const InputDecoration(
-                labelText: 'Image URL (required for Instagram)',
-                prefixIcon: Icon(Icons.image_outlined),
-              ),
-            ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-          ],
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _saving ? null : _submit,
-            icon: _saving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.add),
-            label: Text(_saving ? 'Creating…' : 'Create post'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: AppColors.primary),
-            ),
-          ),
-          const SizedBox(height: 28),
-          const Text(
-            'Tip',
-            style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 8),
           Text(
-            _isInstagram
-                ? 'Instagram publish requires a public image URL. Posts are saved as drafts until you approve and publish.'
-                : 'Posts are saved as drafts. Approve and publish them from the Growth screen once you are ready to go live.',
-            style: const TextStyle(color: AppColors.textMuted),
+            'POST DETAILS',
+            style: GoogleFonts.manrope(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textMuted,
+              letterSpacing: 0.7,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 10),
+          AppSurface(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _platform,
+                  decoration: const InputDecoration(
+                    labelText: 'Platform',
+                    prefixIcon: Icon(Icons.share_outlined),
+                  ),
+                  items: growthPlatforms
+                      .map(
+                        (p) => DropdownMenuItem(
+                          value: p,
+                          child: Text(p[0].toUpperCase() + p.substring(1)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _saving
+                      ? null
+                      : (value) {
+                          if (value != null) setState(() => _platform = value);
+                        },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _title,
+                  textInputAction: TextInputAction.next,
+                  enabled: !_saving,
+                  decoration: const InputDecoration(
+                    labelText: 'Title (optional)',
+                    prefixIcon: Icon(Icons.title),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _content,
+                  textInputAction: TextInputAction.next,
+                  enabled: !_saving,
+                  minLines: 4,
+                  maxLines: 8,
+                  decoration: const InputDecoration(
+                    labelText: 'Content',
+                    prefixIcon: Icon(Icons.edit_outlined),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                if (_isInstagram) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _mediaUrl,
+                    textInputAction: TextInputAction.done,
+                    enabled: !_saving,
+                    onSubmitted: (_) => _saving ? null : _submit(),
+                    decoration: const InputDecoration(
+                      labelText: 'Image URL (required for Instagram)',
+                      prefixIcon: Icon(Icons.image_outlined),
+                    ),
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                ],
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _saving ? null : _submit,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.add),
+                  label: Text(_saving ? 'Creating…' : 'Create post'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppSurface(
+            padding: const EdgeInsets.all(16),
+            color: AppColors.primarySoft,
+            elevation: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tip',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _isInstagram
+                      ? 'Instagram publish requires a public image URL. Posts are saved as drafts until you approve and publish.'
+                      : 'Posts are saved as drafts. Approve and publish them from the Growth screen once you are ready to go live.',
+                  style: GoogleFonts.manrope(
+                    color: AppColors.ink.withOpacity(0.75),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

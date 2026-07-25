@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
@@ -54,7 +55,6 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     }
   }
 
-  /// Opening messages clears server unread; refresh the shell badge to match.
   Future<void> _syncUnreadAfterOpen() async {
     try {
       final chats = await context.read<ChatRepository>().listChats();
@@ -155,7 +155,8 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -167,11 +168,14 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       await context.read<ChatRepository>().handBack(widget.chatId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Handed back to bot. Auto-reply will resume.')),
+        const SnackBar(
+          content: Text('Handed back to bot. Auto-reply will resume.'),
+        ),
       );
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -184,11 +188,13 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     final phone = _customerPhone?.trim() ?? '';
 
     return Scaffold(
+      backgroundColor: AppColors.chatCanvas,
       appBar: AppBar(
+        backgroundColor: AppColors.surface,
         titleSpacing: 0,
         title: Row(
           children: [
-            CustomerAvatar(name: title, size: 36),
+            CustomerAvatar(name: title, size: 40),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -198,17 +204,21 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
                   ),
                   if (phone.isNotEmpty)
                     Text(
                       phone,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: GoogleFonts.manrope(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.85),
-                        fontWeight: FontWeight.w400,
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                 ],
@@ -227,100 +237,151 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       body: Column(
         children: [
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: _reload,
-              child: FutureBuilder<List<ChatMessage>>(
-                future: _future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    final message = snapshot.error is ApiException
-                        ? (snapshot.error as ApiException).message
-                        : snapshot.error.toString();
-                    return AppErrorState(message: message, onRetry: _reload);
-                  }
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                color: AppColors.chatCanvas,
+              ),
+              child: RefreshIndicator(
+                onRefresh: _reload,
+                child: FutureBuilder<List<ChatMessage>>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      final message = snapshot.error is ApiException
+                          ? (snapshot.error as ApiException).message
+                          : snapshot.error.toString();
+                      return AppErrorState(message: message, onRetry: _reload);
+                    }
 
-                  final messages = snapshot.data ?? [];
-                  if (messages.isEmpty) {
-                    return const AppEmptyState(
-                      icon: Icons.forum_outlined,
-                      title: 'No messages yet',
-                      subtitle: 'Send the first reply to start the conversation.',
-                    );
-                  }
-
-                  if (!_didInitialScroll) {
-                    _didInitialScroll = true;
-                    _lastCount = messages.length;
-                    _scrollToBottom(animate: false);
-                  }
-
-                  return ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final message = messages[index];
-                      final showTimestamp = index == messages.length - 1 ||
-                          messages[index].sender != messages[index + 1].sender ||
-                          messages[index].timestamp !=
-                              messages[index + 1].timestamp;
-                      return _Bubble(
-                        text: message.content.isEmpty
-                            ? '[Attachment]'
-                            : message.content,
-                        incoming: message.isIncoming,
-                        timestamp: showTimestamp ? message.timestamp : '',
-                        failed: message.isFailed,
+                    final messages = snapshot.data ?? [];
+                    if (messages.isEmpty) {
+                      return const AppEmptyState(
+                        icon: Icons.forum_outlined,
+                        title: 'No messages yet',
+                        subtitle:
+                            'Send the first reply to start the conversation.',
                       );
-                    },
-                  );
-                },
+                    }
+
+                    if (!_didInitialScroll) {
+                      _didInitialScroll = true;
+                      _lastCount = messages.length;
+                      _scrollToBottom(animate: false);
+                    }
+
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final message = messages[index];
+                        final showTimestamp = index == messages.length - 1 ||
+                            messages[index].sender !=
+                                messages[index + 1].sender ||
+                            messages[index].timestamp !=
+                                messages[index + 1].timestamp;
+                        return _Bubble(
+                          text: message.content.isEmpty
+                              ? '[Attachment]'
+                              : message.content,
+                          incoming: message.isIncoming,
+                          timestamp: showTimestamp ? message.timestamp : '',
+                          failed: message.isFailed,
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
             ),
           ),
           SafeArea(
             top: false,
-            child: Material(
-              color: Colors.white,
-              elevation: 6,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _composer,
-                        enabled: !_sending,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _send(),
-                        decoration: const InputDecoration(
-                          hintText: 'Type a reply…',
-                          isDense: true,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.ink.withOpacity(0.06),
+                    blurRadius: 16,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _composer,
+                      enabled: !_sending,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                      decoration: InputDecoration(
+                        hintText: 'Type a reply…',
+                        isDense: true,
+                        filled: true,
+                        fillColor: AppColors.canvas,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.pill),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.pill),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.pill),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                            width: 1.4,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
-                      onPressed: _sending ? null : _send,
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Material(
+                    color: AppColors.primary,
+                    shape: const CircleBorder(),
+                    elevation: 2,
+                    shadowColor: AppColors.primary.withOpacity(0.4),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _sending ? null : _send,
+                      child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Center(
+                          child: _sending
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.send_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                        ),
                       ),
-                      icon: _sending
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.send, color: Colors.white),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -350,45 +411,70 @@ class _Bubble extends StatelessWidget {
         ? AppColors.bubbleIncoming
         : (failed ? const Color(0xFFFFE8E6) : AppColors.bubbleOutgoing);
     final radius = BorderRadius.only(
-      topLeft: const Radius.circular(16),
-      topRight: const Radius.circular(16),
-      bottomLeft: Radius.circular(incoming ? 4 : 16),
-      bottomRight: Radius.circular(incoming ? 16 : 4),
+      topLeft: const Radius.circular(20),
+      topRight: const Radius.circular(20),
+      bottomLeft: Radius.circular(incoming ? 6 : 20),
+      bottomRight: Radius.circular(incoming ? 20 : 6),
     );
 
     return Align(
       alignment: align,
       child: Container(
         margin: EdgeInsets.only(
-          bottom: timestamp.isEmpty ? 4 : 10,
+          bottom: timestamp.isEmpty ? 5 : 12,
           left: incoming ? 0 : 48,
           right: incoming ? 48 : 0,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.78,
         ),
         decoration: BoxDecoration(
           color: color,
           borderRadius: radius,
-          border: failed ? Border.all(color: Colors.red.shade200) : null,
+          border: failed
+              ? Border.all(color: Colors.red.shade200)
+              : (incoming
+                  ? Border.all(color: AppColors.border.withOpacity(0.8))
+                  : null),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.ink.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(text, style: const TextStyle(height: 1.35)),
+            Text(
+              text,
+              style: GoogleFonts.manrope(
+                height: 1.4,
+                fontSize: 15,
+                color: AppColors.ink,
+              ),
+            ),
             if (failed) ...[
               const SizedBox(height: 4),
               Text(
                 'Not delivered via WhatsApp',
-                style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  color: Colors.red.shade700,
+                ),
               ),
             ],
             if (timestamp.isNotEmpty) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 5),
               Text(
                 timestamp,
-                style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ],

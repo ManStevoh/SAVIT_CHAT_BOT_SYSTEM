@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/phone_utils.dart';
 import '../../shared/widgets/app_state_views.dart';
+import '../../shared/widgets/app_surface.dart';
 import '../../shared/widgets/customer_avatar.dart';
 import '../chats/chat_models.dart';
 import '../chats/chat_repository.dart';
@@ -137,14 +140,21 @@ class _ContactsScreenState extends State<ContactsScreen> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Contacts')),
+      backgroundColor: AppColors.canvas,
+      appBar: AppBar(
+        title: Text(
+          'Contacts',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/contacts/add'),
         icon: const Icon(Icons.person_add_alt_1),
@@ -153,14 +163,17 @@ class _ContactsScreenState extends State<ContactsScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: TextField(
               controller: _search,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _reload(),
               decoration: InputDecoration(
                 hintText: 'Search name or phone',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon:
+                    const Icon(Icons.search, color: AppColors.textMuted),
+                filled: true,
+                fillColor: AppColors.surface,
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.tune),
                   tooltip: 'Search',
@@ -173,62 +186,109 @@ class _ContactsScreenState extends State<ContactsScreen> {
             child: _future == null
                 ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
-              onRefresh: _reload,
-              child: FutureBuilder<List<ContactDirectoryItem>>(
-                future: _future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    final message = snapshot.error is ApiException
-                        ? (snapshot.error as ApiException).message
-                        : snapshot.error.toString();
-                    return AppErrorState(message: message, onRetry: _reload);
-                  }
+                    onRefresh: _reload,
+                    child: FutureBuilder<List<ContactDirectoryItem>>(
+                      future: _future,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        if (snapshot.hasError) {
+                          final message = snapshot.error is ApiException
+                              ? (snapshot.error as ApiException).message
+                              : snapshot.error.toString();
+                          return AppErrorState(
+                            message: message,
+                            onRetry: _reload,
+                          );
+                        }
 
-                  final contacts = snapshot.data ?? [];
-                  if (contacts.isEmpty) {
-                    return AppEmptyState(
-                      icon: Icons.people_outline,
-                      title: 'No contacts yet',
-                      subtitle: 'Add a phone number or wait for orders/chats.',
-                      actionLabel: 'Add contact',
-                      onAction: () => context.go('/contacts/add'),
-                    );
-                  }
+                        final contacts = snapshot.data ?? [];
+                        if (contacts.isEmpty) {
+                          return AppEmptyState(
+                            icon: Icons.people_outline,
+                            title: 'No contacts yet',
+                            subtitle:
+                                'Add a phone number or wait for orders/chats.',
+                            actionLabel: 'Add contact',
+                            onAction: () => context.go('/contacts/add'),
+                          );
+                        }
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.only(bottom: 88),
-                    itemCount: contacts.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final c = contacts[index];
-                      return ListTile(
-                        leading: CustomerAvatar(name: c.name),
-                        title: Text(
-                          c.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          [
-                            c.phone,
-                            if (c.subtitle != null && c.subtitle!.isNotEmpty)
-                              c.subtitle!,
-                          ].join(' · '),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: TextButton(
-                          onPressed: () => _openOrStart(c),
-                          child: Text(c.hasOpenChat ? 'Open' : '+ Add'),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
+                        return ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
+                          itemCount: contacts.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final c = contacts[index];
+                            return AppSurface(
+                              onTap: () => _openOrStart(c),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                leading: CustomerAvatar(name: c.name),
+                                title: Text(
+                                  c.name,
+                                  style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  [
+                                    c.phone,
+                                    if (c.subtitle != null &&
+                                        c.subtitle!.isNotEmpty)
+                                      c.subtitle!,
+                                  ].join(' · '),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.manrope(
+                                    color: AppColors.textMuted,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                trailing: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: c.hasOpenChat
+                                        ? AppColors.primarySoft
+                                        : AppColors.primary,
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadii.pill,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    c.hasOpenChat ? 'Open' : '+ Add',
+                                    style: GoogleFonts.manrope(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
+                                      color: c.hasOpenChat
+                                          ? AppColors.primary
+                                          : Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),

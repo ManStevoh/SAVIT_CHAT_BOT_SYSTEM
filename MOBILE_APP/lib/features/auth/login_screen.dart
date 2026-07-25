@@ -72,63 +72,76 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final logo = _branding.appLogo;
+    final topPad = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-          children: [
-            const SizedBox(height: 24),
-            Center(
-              child: logo != null && logo.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
-                      child: Image.network(
-                        logo,
-                        width: 88,
-                        height: 88,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const _BrandMark(),
-                      ),
-                    )
-                  : const _BrandMark(),
+      body: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          AppHeroBand(
+            padding: EdgeInsets.fromLTRB(24, topPad + 28, 24, 36),
+            child: Column(
+              children: [
+                logo != null && logo.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image.network(
+                          logo,
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const _BrandMark(),
+                        ),
+                      )
+                    : const _BrandMark(compact: true),
+                const SizedBox(height: 16),
+                Text(
+                  _branding.applicationName,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppBrandingCopy.tagline,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.82),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            Text(
-              _branding.applicationName,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
-                fontSize: 34,
-                fontWeight: FontWeight.w800,
-                color: AppColors.ink,
-                height: 1.1,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Sign in to your company workspace',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
-                fontSize: 15,
-                color: AppColors.textMuted,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              AppBrandingCopy.poweredBy,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
-                fontSize: 12,
-                color: AppColors.textMuted,
-              ),
-            ),
-            const SizedBox(height: 32),
-            AppSurface(
-              padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+            child: AppSurface(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Text(
+                    'Login here',
+                    style: GoogleFonts.manrope(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Welcome back — you’ve been missed!',
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
                   TextField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
@@ -175,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   FilledButton(
                     onPressed: _loading ? null : _submit,
                     style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(52),
+                      minimumSize: const Size.fromHeight(54),
                     ),
                     child: _loading
                         ? const SizedBox(
@@ -186,35 +199,47 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Continue'),
+                        : const Text('Sign in'),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    AppBrandingCopy.poweredBy,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _BrandMark extends StatelessWidget {
-  const _BrandMark();
+  const _BrandMark({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final size = compact ? 72.0 : 88.0;
     return Container(
-      width: 88,
-      height: 88,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: const Color(0xFF0B0E11),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.ink.withOpacity(0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -222,15 +247,15 @@ class _BrandMark extends StatelessWidget {
       alignment: Alignment.center,
       child: Image.asset(
         'assets/branding/relaysiq-app-icon.png',
-        width: 88,
-        height: 88,
+        width: size,
+        height: size,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Text(
           'R',
           style: GoogleFonts.manrope(
-            fontSize: 42,
+            fontSize: size * 0.48,
             fontWeight: FontWeight.w800,
-            color: AppColors.primary,
+            color: Colors.white,
           ),
         ),
       ),

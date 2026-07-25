@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_surface.dart';
 import 'admin_models.dart';
 import 'admin_repository.dart';
 
@@ -50,7 +52,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Platform Admin')),
+      backgroundColor: AppColors.canvas,
+      appBar: AppBar(
+        title: Text(
+          'Platform Admin',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: _reload,
         child: FutureBuilder<AdminDashboard>(
@@ -82,173 +90,244 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.zero,
               children: [
-                const Text(
-                  'Platform overview',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                AppHeroBand(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Platform overview',
+                        style: GoogleFonts.manrope(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${overview.activeCompanies} active of ${overview.totalCompanies} companies',
+                        style: GoogleFonts.manrope(
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${overview.activeCompanies} active of ${overview.totalCompanies} companies',
-                  style: const TextStyle(color: AppColors.textMuted),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _MetricCard(
-                      label: 'Companies',
-                      value: '${overview.totalCompanies}',
-                      subtitle: _formatChange(overview.companiesChange),
-                    ),
-                    _MetricCard(
-                      label: 'Users',
-                      value: '${overview.totalUsers}',
-                      subtitle: _formatChange(overview.usersChange),
-                    ),
-                    _MetricCard(
-                      label: 'Revenue',
-                      value: overview.totalRevenue.toStringAsFixed(0),
-                      subtitle: _formatChange(overview.revenueChange),
-                    ),
-                    _MetricCard(
-                      label: 'Messages',
-                      value: '${overview.totalMessages}',
-                      subtitle: _formatChange(overview.messagesChange),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'System health',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          _MetricCard(
+                            label: 'Companies',
+                            value: '${overview.totalCompanies}',
+                            subtitle: _formatChange(overview.companiesChange),
+                            icon: Icons.business_outlined,
+                            color: AppColors.primary,
+                          ),
+                          _MetricCard(
+                            label: 'Users',
+                            value: '${overview.totalUsers}',
+                            subtitle: _formatChange(overview.usersChange),
+                            icon: Icons.people_outline,
+                            color: AppColors.accentTeal,
+                          ),
+                          _MetricCard(
+                            label: 'Revenue',
+                            value: overview.totalRevenue.toStringAsFixed(0),
+                            subtitle: _formatChange(overview.revenueChange),
+                            icon: Icons.payments_outlined,
+                            color: AppColors.accentAmber,
+                          ),
+                          _MetricCard(
+                            label: 'Messages',
+                            value: '${overview.totalMessages}',
+                            subtitle: _formatChange(overview.messagesChange),
+                            icon: Icons.forum_outlined,
+                            color: AppColors.accentBlue,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'System health',
+                        style: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      AppSurface(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              health.queue.healthy ? Icons.check_circle : Icons.warning_amber_rounded,
-                              color: health.queue.healthy ? Colors.green.shade700 : Colors.orange.shade700,
+                            Row(
+                              children: [
+                                AppIconChip(
+                                  icon: health.queue.healthy
+                                      ? Icons.check_circle
+                                      : Icons.warning_amber_rounded,
+                                  color: health.queue.healthy
+                                      ? AppColors.success
+                                      : AppColors.accentAmber,
+                                  size: 42,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  health.queue.healthy
+                                      ? 'Queue healthy'
+                                      : 'Queue needs attention',
+                                  style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(height: 14),
                             Text(
-                              health.queue.healthy ? 'Queue healthy' : 'Queue needs attention',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              'Pending jobs: ${health.queue.pending}',
+                              style: const TextStyle(color: AppColors.textMuted),
                             ),
+                            Text(
+                              'Failed jobs: ${health.queue.failed}',
+                              style: const TextStyle(color: AppColors.textMuted),
+                            ),
+                            Text(
+                              'Meta OAuth: ${health.integrations.metaOAuthConfigured ? 'configured' : 'not configured'}',
+                              style: const TextStyle(color: AppColors.textMuted),
+                            ),
+                            if (health.integrations.expiringTokens > 0)
+                              Text(
+                                'Expiring tokens: ${health.integrations.expiringTokens}',
+                                style: const TextStyle(color: AppColors.textMuted),
+                              ),
+                            if (health.alerts.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              const Divider(height: 1),
+                              const SizedBox(height: 12),
+                              ...health.alerts.map(
+                                (alert) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.info_outline,
+                                        size: 16,
+                                        color: AppColors.primary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: Text(alert)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Pending jobs: ${health.queue.pending}',
-                          style: const TextStyle(color: AppColors.textMuted),
-                        ),
-                        Text(
-                          'Failed jobs: ${health.queue.failed}',
-                          style: const TextStyle(color: AppColors.textMuted),
-                        ),
-                        Text(
-                          'Meta OAuth: ${health.integrations.metaOAuthConfigured ? 'configured' : 'not configured'}',
-                          style: const TextStyle(color: AppColors.textMuted),
-                        ),
-                        if (health.integrations.expiringTokens > 0)
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
                           Text(
-                            'Expiring tokens: ${health.integrations.expiringTokens}',
-                            style: const TextStyle(color: AppColors.textMuted),
+                            'Recent companies',
+                            style: GoogleFonts.manrope(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        if (health.alerts.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          const Divider(height: 1),
-                          const SizedBox(height: 12),
-                          ...health.alerts.map(
-                            (alert) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.info_outline, size: 16, color: AppColors.primary),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text(alert)),
-                                ],
-                              ),
+                          const Spacer(),
+                          Text(
+                            '${data.companies.length} shown',
+                            style: GoogleFonts.manrope(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    const Text(
-                      'Recent companies',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${data.companies.length} shown',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (data.companies.isEmpty)
-                  const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        'No companies found.',
-                        style: TextStyle(color: AppColors.textMuted),
                       ),
-                    ),
-                  )
-                else
-                  ...data.companies.map((company) {
-                    return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.primary.withOpacity(0.12),
+                      const SizedBox(height: 10),
+                      if (data.companies.isEmpty)
+                        AppSurface(
+                          padding: const EdgeInsets.all(20),
                           child: Text(
-                            company.name.isNotEmpty ? company.name[0].toUpperCase() : '?',
-                            style: const TextStyle(
-                              color: AppColors.primaryDark,
-                              fontWeight: FontWeight.w700,
+                            'No companies found.',
+                            style: GoogleFonts.manrope(
+                              color: AppColors.textMuted,
                             ),
                           ),
-                        ),
-                        title: Text(company.name),
-                        subtitle: Text(
-                          '${company.plan} · ${company.totalOrders} orders · ${company.totalChats} chats',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              company.status,
-                              style: TextStyle(
-                                color: _statusColor(company.status),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
+                        )
+                      else
+                        ...data.companies.map((company) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: AppSurface(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: AppColors.primarySoft,
+                                  child: Text(
+                                    company.name.isNotEmpty
+                                        ? company.name[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      color: AppColors.primaryDark,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  company.name,
+                                  style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${company.plan} · ${company.totalOrders} orders · ${company.totalChats} chats',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.manrope(
+                                    color: AppColors.textMuted,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      company.status,
+                                      style: TextStyle(
+                                        color: _statusColor(company.status),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    if (company.whatsappConnected)
+                                      const Icon(
+                                        Icons.chat,
+                                        size: 14,
+                                        color: AppColors.primary,
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                            if (company.whatsappConnected)
-                              const Icon(Icons.chat, size: 14, color: AppColors.primary),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
               ],
             );
           },
@@ -263,42 +342,55 @@ class _MetricCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.subtitle,
+    required this.icon,
+    required this.color,
   });
 
   final String label;
   final String value;
   final String subtitle;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: (MediaQuery.sizeOf(context).width - 44) / 2,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(color: AppColors.textMuted)),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
-                ),
+      child: AppSurface(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppIconChip(icon: icon, color: color, size: 40),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: GoogleFonts.manrope(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: subtitle.startsWith('-') ? Colors.red.shade700 : Colors.green.shade700,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: GoogleFonts.manrope(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primaryDark,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: subtitle.startsWith('-')
+                    ? Colors.red.shade700
+                    : Colors.green.shade700,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
+import 'app_surface.dart';
 
 class PlaceholderState extends StatelessWidget {
   const PlaceholderState({
@@ -16,22 +18,24 @@ class PlaceholderState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Icon(icon, size: 36, color: AppColors.primary),
-            const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textMuted),
-            ),
-          ],
-        ),
+    final brand = Theme.of(context).colorScheme.primary;
+    return AppSurface(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          AppIconChip(icon: icon, color: brand, size: 52),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.manrope(color: AppColors.textMuted),
+          ),
+        ],
       ),
     );
   }
