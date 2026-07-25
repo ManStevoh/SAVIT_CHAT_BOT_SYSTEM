@@ -47,11 +47,15 @@ class AgentAutonomousDoActionTest extends TestCase
             'understanding' => 'Customer wants proof of purchase sent now',
             'action_required' => true,
             'action_kind' => 'send_document',
+            'customer_stance' => 'affirm',
+            'dialogue_continuity' => 'Affirming the prior invoice offer',
             'chosen_plan' => 'Fulfill document delivery via available tools',
         ], ['label' => 'neutral', 'score' => 0]);
 
         $this->assertStringContainsString('Action required: yes', $block);
         $this->assertStringContainsString('Action kind: send_document', $block);
+        $this->assertStringContainsString('Customer stance: affirm', $block);
+        $this->assertStringContainsString('Dialogue continuity:', $block);
         $this->assertStringContainsString('execute matching tool(s) this turn', $block);
     }
 
@@ -92,8 +96,25 @@ class AgentAutonomousDoActionTest extends TestCase
         );
 
         $this->assertStringContainsString('Infer intent from meaning', $text);
-        $this->assertStringContainsString('do-actions', $text);
-        $this->assertStringNotContainsString('Invoice / receipt / bill requests: use send_order_invoice', $text);
+        $this->assertStringContainsString('Continuity:', $text);
+        $this->assertStringNotContainsString('Invoice / bill / receipt: call send_order_invoice', $text);
+    }
+
+    public function test_handoff_gates_use_ai_stance_not_phrases(): void
+    {
+        $orch = app(\App\Services\Agent\CommerceAgentOrchestrator::class);
+        $force = new ReflectionMethod(\App\Services\Agent\CommerceAgentOrchestrator::class, 'shouldForceDoActionTool');
+        $force->setAccessible(true);
+        $block = new ReflectionMethod(\App\Services\Agent\CommerceAgentOrchestrator::class, 'shouldBlockHandoff');
+        $block->setAccessible(true);
+
+        $this->assertTrue($force->invoke($orch, true, 'create_order', [], false));
+        $this->assertFalse($force->invoke($orch, true, 'create_order', ['process_order_message'], false));
+        $this->assertFalse($force->invoke($orch, true, 'pay', [], true), 'want_human should not force other tools');
+
+        $this->assertTrue($block->invoke($orch, true, 'create_order', false, false, []));
+        $this->assertTrue($block->invoke($orch, true, 'pay', false, true, []), 'reject_human blocks handoff');
+        $this->assertFalse($block->invoke($orch, true, 'handoff', true, false, []), 'want_human allows handoff');
     }
 
     public function test_keyword_handoff_disabled_when_agent_owns_intent(): void

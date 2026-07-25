@@ -81,11 +81,17 @@ final class CommerceAgentOrchestrator
         $orderFlowReply = null;
         $paymentDetailsReply = null;
         $forcedToolNudgeUsed = false;
-        $actionKind = mb_strtolower(trim((string) (($reasoning['trace']['action_kind'] ?? '') ?: '')));
-        $customerRejectsHandoff = $this->customerRejectsHandoff($incomingMessage);
+        $trace = is_array($reasoning['trace'] ?? null) ? $reasoning['trace'] : [];
+        $actionKind = mb_strtolower(trim((string) ($trace['action_kind'] ?? '')));
+        $actionRequired = array_key_exists('action_required', $trace)
+            ? filter_var($trace['action_required'], FILTER_VALIDATE_BOOLEAN)
+            : false;
+        $customerStance = mb_strtolower(trim((string) ($trace['customer_stance'] ?? '')));
+        $wantsHuman = $actionKind === 'handoff' || $customerStance === 'want_human';
+        $rejectsHuman = $customerStance === 'reject_human';
 
         // Low confidence is guidance for the model (clarify / try tools), not an automatic
-        // human lock — handoff only happens when transfer_to_human (or pending approval) runs.
+        // human lock — handoff only happens when transfer_to_human runs and AI stance allows it.
 
         for ($i = 0; $i < $maxIterations; $i++) {
             $result = $this->agentChat->completeWithTools(
@@ -101,12 +107,12 @@ final class CommerceAgentOrchestrator
 
             if ($result->toolCalls === []) {
                 if ($result->content !== null && trim($result->content) !== '') {
-                    if (! $forcedToolNudgeUsed && $this->shouldForceDoActionTool($actionKind, $toolsUsed, $incomingMessage)) {
+                    if (! $forcedToolNudgeUsed && $this->shouldForceDoActionTool($actionRequired, $actionKind, $toolsUsed, $wantsHuman)) {
                         $forcedToolNudgeUsed = true;
                         $messages[] = ['role' => 'assistant', 'content' => trim($result->content)];
                         $messages[] = [
                             'role' => 'user',
-                            'content' => $this->forcedDoActionNudge($actionKind, $incomingMessage),
+                            'content' => $this->forcedDoActionNudge($actionKind),
                         ];
                         continue;
                     }
@@ -150,11 +156,11 @@ final class CommerceAgentOrchestrator
                 }
 
                 if ($tc['name'] === 'transfer_to_human'
-                    && $this->shouldBlockHandoff($actionKind, $incomingMessage, $customerRejectsHandoff, $toolsUsed)) {
+                    && $this->shouldBlockHandoff($actionRequired, $actionKind, $wantsHuman, $rejectsHuman, $toolsUsed)) {
                     $toolResult = [
                         'handoff' => false,
                         'blocked' => true,
-                        'message' => 'Handoff blocked. Complete the customer request with send_order_invoice, share_payment_details, process_order_message, search_orders, or check_delivery_status instead. Only transfer if they clearly insist on a human after tools fail.',
+                        'message' => 'Handoff blocked by dialogue intent. Continue the open customer request with the matching capability tool(s). Only transfer_to_human when customer_stance is want_human.',
                     ];
                 } else {
                     $toolResult = $this->toolRunner->run($tc['name'], $context, $args);
@@ -236,125 +242,75 @@ final class CommerceAgentOrchestrator
     }
 
     /**
+     * Force a tool turn from AI-classified intent only (no customer phrase lists).
+     *
      * @param  list<string>  $toolsUsed
      */
-    private function shouldForceDoActionTool(string $actionKind, array $toolsUsed, string $incomingMessage): bool
+    private function shouldForceDoActionTool(bool $actionRequired, string $actionKind, array $toolsUsed, bool $wantsHuman): bool
     {
-        $lower = mb_strtolower(trim($incomingMessage));
-        $needsInvoice = $actionKind === 'send_document'
-            || str_contains($lower, 'invoice')
-            || str_contains($lower, 'receipt')
-            || (str_contains($lower, 'bill') && ! str_contains($lower, 'billing'));
-        $needsPay = $actionKind === 'pay'
-            || str_contains($lower, 'pay')
-            || str_contains($lower, 'till')
-            || str_contains($lower, 'payment');
-        $needsOrder = $actionKind === 'create_order'
-            || (
-                $this->isShortAffirmative($lower)
-                && in_array($actionKind, ['create_order', 'pay', 'other', ''], true)
-            )
-            || str_contains($lower, 'confirm')
-            || str_contains($lower, 'place order')
-            || str_contains($lower, 'proceed');
+        if ($wantsHuman || ! $actionRequired) {
+            return false;
+        }
 
-        if ($needsInvoice && ! in_array('send_order_invoice', $toolsUsed, true)) {
+        $fulfillmentTools = match ($actionKind) {
+            'send_document' => ['send_order_invoice'],
+            'pay' => ['share_payment_details', 'process_order_message', 'check_mpesa_payment'],
+            'create_order' => ['process_order_message', 'share_payment_details'],
+            'track', 'lookup' => ['search_orders', 'check_delivery_status', 'check_mpesa_payment', 'get_customer_profile'],
+            'refund' => ['issue_order_refund', 'search_orders', 'transfer_to_human'],
+            'remember' => ['remember_customer'],
+            default => ['process_order_message', 'share_payment_details', 'send_order_invoice', 'search_orders', 'get_business_info'],
+        };
+
+        foreach ($fulfillmentTools as $tool) {
+            if (in_array($tool, $toolsUsed, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function forcedDoActionNudge(string $actionKind): string
+    {
+        return match ($actionKind) {
+            'send_document' => 'SYSTEM: Intent is send_document. Call send_order_invoice now and continue the open thread. Do not transfer_to_human.',
+            'pay' => 'SYSTEM: Intent is pay. Call share_payment_details (or process_order_message if checkout is mid-flow) with real configured options. Do not invent payment setup or transfer_to_human.',
+            'create_order' => 'SYSTEM: Intent is create_order (customer affirmed or requested ordering). Call process_order_message with a concrete checkout message continuing the prior offer, then share_payment_details if unpaid. Do not transfer_to_human.',
+            'track', 'lookup' => 'SYSTEM: Intent is lookup/track. Call search_orders or check_delivery_status now. Do not transfer_to_human.',
+            default => 'SYSTEM: action_required=true. Execute the matching capability tool for this dialogue turn. Continue smoothly from the bot\'s last offer. Do not transfer_to_human unless customer_stance is want_human.',
+        };
+    }
+
+    /**
+     * Block premature handoff using AI stance/action_kind only — not message keyword lists.
+     *
+     * @param  list<string>  $toolsUsed
+     */
+    private function shouldBlockHandoff(
+        bool $actionRequired,
+        string $actionKind,
+        bool $wantsHuman,
+        bool $rejectsHuman,
+        array $toolsUsed,
+    ): bool {
+        if ($rejectsHuman) {
             return true;
         }
-        if ($needsPay && ! in_array('share_payment_details', $toolsUsed, true)
-            && ! in_array('process_order_message', $toolsUsed, true)
-            && ! in_array('check_mpesa_payment', $toolsUsed, true)) {
+        if ($wantsHuman) {
+            return false;
+        }
+
+        // Any do-action intent must not be replaced by handoff.
+        if ($actionRequired && $actionKind !== 'handoff' && $actionKind !== 'inform') {
             return true;
         }
-        if ($needsOrder && ! $needsInvoice
-            && $actionKind !== 'handoff'
-            && ! in_array('process_order_message', $toolsUsed, true)
-            && ! in_array('share_payment_details', $toolsUsed, true)
-            && ! in_array('send_order_invoice', $toolsUsed, true)) {
+
+        if ($this->shouldForceDoActionTool($actionRequired, $actionKind, $toolsUsed, $wantsHuman)) {
             return true;
         }
 
         return false;
-    }
-
-    private function forcedDoActionNudge(string $actionKind, string $incomingMessage): string
-    {
-        $lower = mb_strtolower($incomingMessage);
-        if ($actionKind === 'send_document' || str_contains($lower, 'invoice') || str_contains($lower, 'receipt')) {
-            return 'SYSTEM: You promised or need to fulfill a document request. Call send_order_invoice now. Do not transfer_to_human.';
-        }
-        if ($actionKind === 'pay' || str_contains($lower, 'pay') || str_contains($lower, 'payment') || str_contains($lower, 'till')) {
-            return 'SYSTEM: Customer wants payment help. Call share_payment_details now with the real configured options. Do not invent methods or transfer_to_human.';
-        }
-
-        return 'SYSTEM: Customer is confirming/ordering. Call process_order_message with a concrete checkout message (e.g. "order" or "2 x ProductName" / "1" to confirm if already in checkout). Do not transfer_to_human. If checkout has no draft, start ordering then share_payment_details.';
-    }
-
-    private function isShortAffirmative(string $lower): bool
-    {
-        $trimmed = trim($lower);
-
-        return in_array($trimmed, [
-            'yes', 'y', 'ok', 'okay', 'sure', 'proceed', 'confirm', 'go ahead',
-            'yes please', 'yes i want to proceed', 'i want to proceed', 'continue',
-        ], true);
-    }
-
-    private function customerRejectsHandoff(string $incomingMessage): bool
-    {
-        $lower = mb_strtolower($incomingMessage);
-
-        return str_contains($lower, 'do not transfer')
-            || str_contains($lower, "don't transfer")
-            || str_contains($lower, 'dont transfer')
-            || str_contains($lower, 'no transfer')
-            || str_contains($lower, 'no human')
-            || str_contains($lower, 'stay with')
-            || (str_contains($lower, 'no') && str_contains($lower, 'transfer'));
-    }
-
-    /**
-     * @param  list<string>  $toolsUsed
-     */
-    private function shouldBlockHandoff(
-        string $actionKind,
-        string $incomingMessage,
-        bool $customerRejectsHandoff,
-        array $toolsUsed,
-    ): bool {
-        if ($customerRejectsHandoff) {
-            return true;
-        }
-
-        $lower = mb_strtolower(trim($incomingMessage));
-        $wantsPerson = str_contains($lower, 'human')
-            || str_contains($lower, 'real person')
-            || str_contains($lower, 'talk to someone')
-            || str_contains($lower, 'speak to')
-            || str_contains($lower, 'representative');
-        if ($wantsPerson) {
-            return false;
-        }
-
-        // Invoice / payment / confirm-order must be fulfilled by tools — never hand off instead.
-        $needsInvoice = $actionKind === 'send_document'
-            || str_contains($lower, 'invoice')
-            || str_contains($lower, 'receipt')
-            || (str_contains($lower, 'bill') && ! str_contains($lower, 'billing'));
-        $needsPay = $actionKind === 'pay'
-            || str_contains($lower, 'pay')
-            || str_contains($lower, 'till')
-            || str_contains($lower, 'payment');
-        $needsOrder = $actionKind === 'create_order'
-            || (
-                $this->isShortAffirmative($lower)
-                && in_array($actionKind, ['create_order', 'pay', 'other', ''], true)
-            )
-            || str_contains($lower, 'confirm the order')
-            || str_contains($lower, 'place order')
-            || str_contains($lower, 'i want to proceed');
-
-        return $needsInvoice || $needsPay || $needsOrder;
     }
 
     /**
@@ -403,13 +359,11 @@ final class CommerceAgentOrchestrator
         $persona = <<<'TEXT'
 You are this business's conversational operating system — the main front line with customers.
 
-Understand intent from meaning (any language or phrasing) — never wait for fixed keywords or sample phrases.
-Classify each turn: inform vs do. If the customer wants something done (order, pay, send a document, check status, refund, book, remember a preference, talk to a person), execute the matching tool(s) in this turn. Do not only promise to do it.
-Your available tools are the full capability surface — pick by what the action needs, not by memorized example sentences.
-Prefer completing the action yourself. Use transfer_to_human only when the customer clearly wants a person, risk/policy needs a human, or no tool can fulfill the request.
-If they ask for an invoice: call send_order_invoice (do not only promise). If they want to pay: call share_payment_details with real configured options (never invent "payment methods are being set up").
-If they say not to transfer, do not call transfer_to_human.
-Be fluent and human. Never invent prices, stock, or policies. Never expose tool names, reasoning labels, or confidence scores to the customer.
+Understand intent from meaning in any language or style — never wait for fixed keywords.
+Read the full thread: if you asked a question or offered a next step, interpret the customer's reply as a response to that offer (affirmations, slang, short replies all count).
+Classify each turn: inform vs do. If something must be done, execute the matching tool(s) in this turn. Do not only promise. Do not jump to transfer_to_human when a capability can finish the open thread.
+Your available tools are the full capability surface — pick by what the action needs.
+Be fluent and human; keep replies continuous with the prior turn so the chat never feels confusing. Never invent prices, stock, payment methods, or policies. Never expose tool names or internal labels to the customer.
 TEXT;
 
         $learningSamples = $this->learningService->getSamplesForPrompt($company, $incomingMessage);

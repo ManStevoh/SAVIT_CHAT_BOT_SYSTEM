@@ -196,18 +196,24 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Agent lock only blocks while fresh. Expired locks must resume AI (and clear the stamp).
-        // Also unlock when the customer explicitly rejects a handoff so AI can resume.
+        // Agent lock: only silence AI when a human teammate has actually replied after the lock.
+        // AI-initiated transfer notifies the team but must not strand the customer if nobody took over.
         if ($chat->agent_handling_at !== null) {
-            $rejectHandoff = $this->customerRejectsHandoffText($this->messageText);
-            if ($rejectHandoff) {
+            if (! $chat->isAgentHandling(30)) {
                 $chat->update(['agent_handling_at' => null]);
                 $chat->refresh();
-            } elseif ($chat->isAgentHandling(30) && ! $this->forceReply) {
-                $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
+            } elseif (! $this->forceReply) {
+                $humanTookOver = Message::query()
+                    ->where('chat_id', $chat->id)
+                    ->where('sender', 'agent')
+                    ->where('created_at', '>=', $chat->agent_handling_at)
+                    ->exists();
+                if ($humanTookOver) {
+                    $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
 
-                return;
-            } elseif (! $chat->isAgentHandling(30)) {
+                    return;
+                }
+                // No human reply yet — resume AI frontline.
                 $chat->update(['agent_handling_at' => null]);
                 $chat->refresh();
             }
@@ -375,18 +381,6 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
 
         return false;
-    }
-
-    protected function customerRejectsHandoffText(string $messageText): bool
-    {
-        $lower = mb_strtolower(trim($messageText));
-
-        return str_contains($lower, 'do not transfer')
-            || str_contains($lower, "don't transfer")
-            || str_contains($lower, 'dont transfer')
-            || str_contains($lower, 'no transfer')
-            || str_contains($lower, 'no human')
-            || (str_contains($lower, 'no') && str_contains($lower, 'transfer'));
     }
 
     protected function humanHandoffCustomerMessage(): string
