@@ -107,6 +107,7 @@ return [
             'get_shipping_quote' => 'low',
             'check_calendar_availability' => 'low',
             'get_marketing_performance' => 'low',
+            'send_order_invoice' => 'low',
             'send_whatsapp_campaign' => 'high',
             'issue_order_refund' => 'high',
             'process_order_message' => 'medium',
@@ -362,6 +363,8 @@ return [
             'send_order_invoice',
             'check_delivery_status',
             'check_mpesa_payment',
+            'get_shipping_quote',
+            'issue_order_refund',
         ],
         'plan_rank' => [
             'starter' => 1,

@@ -19,7 +19,7 @@ final class ProcessOrderMessageTool implements AgentTool
 
     public function description(): string
     {
-        return 'Advance the WhatsApp order/checkout state machine. Pass the customer message verbatim when they want to order, select products, confirm, or pay.';
+        return 'Advance checkout when the customer intends to buy, add items, confirm an order, set address, or pay — any natural phrasing. Pass their message verbatim into the order flow.';
     }
 
     public function parametersSchema(): array

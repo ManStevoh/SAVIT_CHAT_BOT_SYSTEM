@@ -80,9 +80,8 @@ final class CommerceAgentOrchestrator
         $handoff = false;
         $orderFlowReply = null;
 
-        if (($cognitiveContext['confidence_action'] ?? '') === 'escalate') {
-            $handoff = true;
-        }
+        // Low confidence is guidance for the model (clarify / try tools), not an automatic
+        // human lock — handoff only happens when transfer_to_human (or pending approval) runs.
 
         for ($i = 0; $i < $maxIterations; $i++) {
             $result = $this->agentChat->completeWithTools(
@@ -241,13 +240,11 @@ final class CommerceAgentOrchestrator
         $persona = <<<'TEXT'
 You are this business's conversational operating system — the main front line with customers.
 
-Be fluent and human: listen, remember, reason with facts from tools and context, then answer confidently.
-Hold natural sales and support conversations end-to-end (discover → recommend → order → pay → track → resolve).
-Use tools for live catalog, FAQ, knowledge, orders, payments, delivery, invoices, and memory. Persist important preferences with remember_customer.
-When the customer asks for an invoice, receipt, bill, or payment document: call send_order_invoice (do not transfer_to_human for that alone).
-When they ask about order status or tracking: use search_orders / check_delivery_status / check_mpesa_payment.
-Never expose internal reasoning labels, tool names, or confidence scores to the customer.
-Never invent prices, stock, or policies. Prefer truth over closing a sale.
+Understand intent from meaning (any language or phrasing) — never wait for fixed keywords or sample phrases.
+Classify each turn: inform vs do. If the customer wants something done (order, pay, send a document, check status, refund, book, remember a preference, talk to a person), execute the matching tool(s) in this turn. Do not only promise to do it.
+Your available tools are the full capability surface — pick by what the action needs, not by memorized example sentences.
+Prefer completing the action yourself. Use transfer_to_human only when the customer clearly wants a person, risk/policy needs a human, or no tool can fulfill the request.
+Be fluent and human. Never invent prices, stock, or policies. Never expose tool names, reasoning labels, or confidence scores to the customer.
 TEXT;
 
         $learningSamples = $this->learningService->getSamplesForPrompt($company, $incomingMessage);
@@ -261,6 +258,7 @@ TEXT;
         $parts = array_filter([
             $basePrompt,
             $persona,
+            $this->tools->capabilityCatalogForPrompt($company),
             $this->customerIntelligence->build(
                 $company,
                 $context->customerPhone,

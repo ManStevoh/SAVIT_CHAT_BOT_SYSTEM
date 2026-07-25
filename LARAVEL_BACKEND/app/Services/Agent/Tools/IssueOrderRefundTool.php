@@ -16,7 +16,7 @@ final class IssueOrderRefundTool implements AgentTool
 
     public function description(): string
     {
-        return 'Issue a refund for a paid order by order number. Requires owner approval before execution.';
+        return 'Start a refund for a paid order when the customer wants money back or a return. Requires owner approval before money moves. Prefer this over handoff when refund intent is clear.';
     }
 
     public function parametersSchema(): array

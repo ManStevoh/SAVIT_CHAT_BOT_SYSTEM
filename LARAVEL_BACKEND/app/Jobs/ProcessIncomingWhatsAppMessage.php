@@ -210,7 +210,11 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             }
         }
 
-        if ($this->wantsHumanEscalation($chat)) {
+        // Keyword handoff only for legacy (non-agent) bots. With agent commerce, the AI
+        // layer owns intent — including "talk to a person" via transfer_to_human — so we
+        // do not short-circuit on phrases like "support" / "agent" before tools run.
+        // Exception: explicit quick-menu "3" still escalates immediately.
+        if ($this->wantsHumanEscalation($chat, allowKeywordMatch: ! CommerceAgentReplyService::isEnabledForCompany($company))) {
             $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
             app(OrderFlowService::class)->resetOrderState($chat);
             $chat->refresh();
@@ -349,12 +353,16 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
     /**
      * Quick menu "3. Talk to agent" (only when not in an order step where "3" means e.g. product or payment option).
+     * Keyword matching is optional — disabled when the commerce agent owns intent understanding.
      */
-    protected function wantsHumanEscalation(Chat $chat): bool
+    protected function wantsHumanEscalation(Chat $chat, bool $allowKeywordMatch = true): bool
     {
         $lower = mb_strtolower(trim($this->messageText));
         if ($lower === '3') {
             return ! filled($chat->conversation_step);
+        }
+        if (! $allowKeywordMatch) {
+            return false;
         }
         $keywords = ['agent', 'human', 'representative', 'talk to someone', 'real person', 'support', 'speak to'];
         foreach ($keywords as $kw) {

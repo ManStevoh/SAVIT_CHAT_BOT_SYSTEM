@@ -16,7 +16,7 @@ final class CheckDeliveryStatusTool implements AgentTool
 
     public function description(): string
     {
-        return 'Check order delivery/shipping status for a customer by order number or recent orders for their phone.';
+        return 'Check delivery / shipping / fulfillment progress for this customer\'s order(s). Use when they want to know where an order is, if it shipped, or ETA — any wording.';
     }
 
     public function parametersSchema(): array

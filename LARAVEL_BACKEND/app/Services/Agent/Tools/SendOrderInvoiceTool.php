@@ -19,10 +19,9 @@ final class SendOrderInvoiceTool implements AgentTool
 
     public function description(): string
     {
-        return 'Generate an invoice/receipt PDF for the customer\'s order and send it on WhatsApp with payment status and a view/pay link. '
-            .'Use this when the customer asks for an invoice, receipt, bill, or payment document. '
-            .'Do NOT transfer_to_human just to send an invoice — use this tool first. '
-            .'Requires an existing order; if none exists, ask them to complete ordering via process_order_message first.';
+        return 'Fulfill a customer request to receive their order invoice, receipt, bill, or payment document: generate a PDF and send it on WhatsApp with status and a view/pay link. '
+            .'Use whenever intent is to get / see / receive / download / share that document — any wording. '
+            .'Do not transfer_to_human just for this. Requires an existing order; if none, guide them through ordering (process_order_message) first.';
     }
 
     public function parametersSchema(): array

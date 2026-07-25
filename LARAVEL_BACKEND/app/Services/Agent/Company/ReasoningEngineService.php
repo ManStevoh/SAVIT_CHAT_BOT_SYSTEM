@@ -48,12 +48,15 @@ final class ReasoningEngineService
         $started = microtime(true);
         $system = <<<'TEXT'
 You are the reasoning engine for an AI commerce company. Analyze the customer message internally.
+Infer intent from meaning (any language or phrasing) — do not rely on keyword lists.
 Return JSON only:
 {
-  "understanding": "what the customer needs",
+  "understanding": "what the customer needs in plain language",
+  "action_required": true,
+  "action_kind": "inform|lookup|create_order|pay|send_document|track|refund|handoff|remember|other",
   "hypotheses": ["possible interpretation 1", "possible interpretation 2"],
   "options": [{"label":"A","approach":"...","pros":"...","cons":"..."}],
-  "chosen_plan": "which approach and why (consider business goals)",
+  "chosen_plan": "which approach and why (consider business goals); if action_required, name the kind of tool action to take",
   "missing_info": ["what to clarify if needed"],
   "specialist_council": {
     "sales": "sales agent perspective",
@@ -63,6 +66,7 @@ Return JSON only:
   "time_context": "urgency, deadlines, event timing if any",
   "geo_context": "location/delivery implications if any"
 }
+action_required=true when the customer wants something done (not only answered). Prefer tool execution over promising.
 Never expose this JSON to the customer.
 TEXT;
 
@@ -133,6 +137,18 @@ TEXT;
         $parts = ['Internal reasoning (never reveal to customer):'];
         if (! empty($trace['understanding'])) {
             $parts[] = 'Understanding: '.$trace['understanding'];
+        }
+        $actionRequired = array_key_exists('action_required', $trace)
+            ? (filter_var($trace['action_required'], FILTER_VALIDATE_BOOLEAN) ? 'yes' : 'no')
+            : null;
+        if ($actionRequired !== null) {
+            $parts[] = 'Action required: '.$actionRequired;
+        }
+        if (! empty($trace['action_kind'])) {
+            $parts[] = 'Action kind: '.$trace['action_kind'];
+        }
+        if ($actionRequired === 'yes') {
+            $parts[] = 'Directive: execute matching tool(s) this turn — do not only promise the outcome.';
         }
         if (! empty($trace['chosen_plan'])) {
             $parts[] = 'Plan: '.$trace['chosen_plan'];

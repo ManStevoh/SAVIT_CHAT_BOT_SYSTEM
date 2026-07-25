@@ -16,7 +16,7 @@ final class SearchOrdersTool implements AgentTool
 
     public function description(): string
     {
-        return 'Look up orders for the current customer by order number or list recent orders.';
+        return 'Look up this customer\'s orders (by number or recent). Use for any intent about their order history, confirmation, or what they bought — not only exact phrases like "order status".';
     }
 
     public function parametersSchema(): array

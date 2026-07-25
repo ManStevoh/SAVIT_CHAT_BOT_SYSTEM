@@ -51,18 +51,28 @@ final class CustomerIntentChainService
     {
         $phone = $this->normalizePhone($phone);
         $understanding = mb_strtolower((string) ($trace['understanding'] ?? ''));
+        $actionKind = mb_strtolower(trim((string) ($trace['action_kind'] ?? '')));
+        $plan = mb_strtolower((string) ($trace['chosen_plan'] ?? ''));
+        $blob = trim($understanding.' '.$plan.' '.$actionKind);
 
         $intent = match (true) {
-            str_contains($understanding, 'order') || str_contains($understanding, 'buy') || str_contains($understanding, 'purchase') => 'purchase',
-            str_contains($understanding, 'support') || str_contains($understanding, 'broken') || str_contains($understanding, 'refund') => 'support',
-            str_contains($understanding, 'compare') || str_contains($understanding, 'price') => 'evaluate',
+            in_array($actionKind, ['create_order', 'pay'], true) => 'purchase',
+            in_array($actionKind, ['refund', 'handoff', 'track', 'send_document'], true) => 'support',
+            $actionKind === 'lookup' && (str_contains($blob, 'price') || str_contains($blob, 'compare')) => 'evaluate',
+            str_contains($blob, 'order') || str_contains($blob, 'buy') || str_contains($blob, 'purchase') || str_contains($blob, 'checkout') => 'purchase',
+            str_contains($blob, 'support') || str_contains($blob, 'broken') || str_contains($blob, 'refund') || str_contains($blob, 'invoice') || str_contains($blob, 'track') => 'support',
+            str_contains($blob, 'compare') || str_contains($blob, 'price') => 'evaluate',
             default => 'exploring',
         };
 
-        $stage = match ($intent) {
-            'purchase' => 'checkout',
-            'support' => 'resolve',
-            'evaluate' => 'compare',
+        $stage = match (true) {
+            $actionKind === 'pay' => 'payment',
+            $actionKind === 'create_order' => 'checkout',
+            $actionKind === 'track' || $actionKind === 'send_document' => 'post_purchase',
+            $actionKind === 'refund' || $actionKind === 'handoff' => 'resolve',
+            $intent === 'purchase' => 'checkout',
+            $intent === 'support' => 'resolve',
+            $intent === 'evaluate' => 'compare',
             default => 'discover',
         };
 
