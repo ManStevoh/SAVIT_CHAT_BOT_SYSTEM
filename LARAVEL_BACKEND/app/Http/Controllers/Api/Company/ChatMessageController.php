@@ -9,6 +9,7 @@ use App\Models\ConversationLearningSample;
 use App\Models\Message;
 use App\Services\Conversation\ConversationLearningRecorder;
 use App\Services\ConversationLearningService;
+use App\Services\WhatsApp\ChatAutoReplyService;
 use App\Services\WhatsAppMessageSenderService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,12 @@ class ChatMessageController extends Controller
 
         if ((int) $chat->unread_count > 0) {
             $chat->update(['unread_count' => 0]);
+        }
+
+        // AI auto-reply mode: catch unanswered customer messages without a manual "Ask AI" click.
+        if (! $chat->isAgentHandling(30)) {
+            $chat->load(['company.settings', 'company.whatsappAccount']);
+            app(ChatAutoReplyService::class)->ensureReplyIfNeeded($chat);
         }
 
         $messages = Message::where('chat_id', $chat->id)

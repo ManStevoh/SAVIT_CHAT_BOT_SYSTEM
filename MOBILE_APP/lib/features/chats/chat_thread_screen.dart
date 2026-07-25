@@ -286,11 +286,17 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
           ],
         ),
         actions: [
-          if (_isAgentHandling || _needsAiReply)
+          if (_isAgentHandling)
             IconButton(
-              tooltip: _isAgentHandling ? 'Hand back to AI' : 'Ask AI to reply',
+              tooltip: 'Hand back to AI',
               onPressed: _handBack,
               icon: const Icon(Icons.smart_toy_outlined),
+            )
+          else if (_needsAiReply)
+            IconButton(
+              tooltip: 'Retry AI reply',
+              onPressed: _handBack,
+              icon: const Icon(Icons.refresh),
             ),
         ],
       ),

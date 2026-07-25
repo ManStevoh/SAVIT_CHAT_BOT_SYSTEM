@@ -462,6 +462,47 @@ class AutoReplyDefaultFlowTest extends TestCase
         $this->assertStringNotContainsString('temporarily unavailable', (string) $bot->content);
     }
 
+    public function test_messages_poll_auto_replies_when_ai_mode_and_customer_unanswered(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.bot-poll']],
+            ], 200),
+        ]);
+
+        $user = $this->companyUser();
+        $chat = Chat::create([
+            'company_id' => $user->company_id,
+            'customer_name' => 'Poll Buyer',
+            'customer_phone' => '254788888888',
+            'status' => 'active',
+            'agent_handling_at' => null,
+        ]);
+        Message::create([
+            'chat_id' => $chat->id,
+            'content' => 'Hi',
+            'sender' => 'customer',
+            'status' => 'received',
+            'whatsapp_message_id' => 'wamid.poll-hi',
+        ]);
+        \App\Models\Faq::create([
+            'company_id' => $user->company_id,
+            'question' => 'Hi',
+            'answer' => 'Hello from auto-reply.',
+            'keywords' => ['hi'],
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($user);
+        $this->getJson("/api/company/chats/{$chat->id}/messages")
+            ->assertOk();
+
+        $this->assertDatabaseHas('messages', [
+            'chat_id' => $chat->id,
+            'sender' => 'bot',
+        ]);
+    }
+
     public function test_expired_subscription_sends_unavailable_message(): void
     {
         Http::fake([

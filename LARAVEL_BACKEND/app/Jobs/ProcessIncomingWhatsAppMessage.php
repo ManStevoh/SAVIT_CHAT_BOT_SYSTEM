@@ -41,12 +41,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
     public int $uniqueFor = 120;
 
     /**
-     * Dispatch auto-reply without requiring php artisan queue:work by default.
-     * Runs in the same PHP process after the HTTP response is sent to Meta/the dashboard.
-     * Set WHATSAPP_AUTO_REPLY_VIA_QUEUE=true to use a real queue worker instead (retries/backoff).
-     *
-     * Hand-back / "Ask AI to reply" uses dispatchSyncIncoming() so the reply is generated
-     * before the API returns (afterResponse is easy to lose on some hosts).
+     * Dispatch inbound auto-reply. Default is synchronous so AI auto-reply actually sends
+     * without a queue worker. Optional after-response / queue via config.
      */
     public static function dispatchIncoming(
         int $companyId,
@@ -58,7 +54,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         ?string $whatsappMessageId = null,
         ?int $incomingMessageId = null,
         bool $forceReply = false,
-    ): \Illuminate\Foundation\Bus\PendingDispatch {
+    ): mixed {
         if (config('whatsapp.auto_reply_via_queue', false)) {
             return static::dispatch(
                 $companyId,
@@ -73,7 +69,21 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             );
         }
 
-        return static::dispatchAfterResponse(
+        if (config('whatsapp.auto_reply_after_response', false)) {
+            return static::dispatchAfterResponse(
+                $companyId,
+                $chatId,
+                $customerPhone,
+                $phoneNumberId,
+                $messageText,
+                $customerName,
+                $whatsappMessageId,
+                $incomingMessageId,
+                $forceReply,
+            );
+        }
+
+        static::dispatchSyncIncoming(
             $companyId,
             $chatId,
             $customerPhone,
@@ -84,6 +94,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             $incomingMessageId,
             $forceReply,
         );
+
+        return null;
     }
 
     /**

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessIncomingWhatsAppMessage;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\SocialPost;
+use App\Services\WhatsApp\ChatAutoReplyService;
 use App\Support\PhoneSearch;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -181,7 +181,7 @@ class ChatController extends Controller
             ->where('sender', 'bot')
             ->count();
 
-        $reprocessed = $this->dispatchBotReplyForLatestCustomerMessage($chat);
+        $reprocessed = app(ChatAutoReplyService::class)->replyToLatestUnansweredCustomer($chat, force: true);
 
         $botCountAfter = Message::query()
             ->where('chat_id', $chat->id)
@@ -215,56 +215,5 @@ class ChatController extends Controller
                 ? 'AI reply sent to the customer.'
                 : 'Asked AI to reply, but no message was sent. Check subscription, message limits, and AI provider settings.',
         ], $replied ? 200 : 422);
-    }
-
-    /**
-     * If the latest customer message has no later bot/agent reply, run auto-reply now (sync).
-     */
-    protected function dispatchBotReplyForLatestCustomerMessage(Chat $chat): bool
-    {
-        $settings = $chat->company?->settings;
-        // Default ON when settings are missing.
-        if ($settings && $settings->auto_reply_enabled === false) {
-            return false;
-        }
-
-        $account = $chat->company?->whatsappAccount;
-        if (! $account || ! $account->isActive()) {
-            return false;
-        }
-
-        $lastCustomer = Message::query()
-            ->where('chat_id', $chat->id)
-            ->where('sender', 'customer')
-            ->orderByDesc('id')
-            ->first();
-
-        if (! $lastCustomer) {
-            return false;
-        }
-
-        $hasLaterHumanOrBotReply = Message::query()
-            ->where('chat_id', $chat->id)
-            ->whereIn('sender', ['bot', 'agent'])
-            ->where('id', '>', $lastCustomer->id)
-            ->exists();
-
-        if ($hasLaterHumanOrBotReply) {
-            return false;
-        }
-
-        ProcessIncomingWhatsAppMessage::dispatchSyncIncoming(
-            (int) $chat->company_id,
-            (int) $chat->id,
-            (string) $chat->customer_phone,
-            (string) $account->phone_number_id,
-            (string) ($lastCustomer->content ?? ''),
-            $chat->customer_name,
-            $lastCustomer->whatsapp_message_id,
-            (int) $lastCustomer->id,
-            true,
-        );
-
-        return true;
     }
 }

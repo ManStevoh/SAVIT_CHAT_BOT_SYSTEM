@@ -204,7 +204,8 @@ export default function ChatsPage() {
     const lastCustomerIndex = messages.findIndex((m) => m.id === lastCustomerId)
     return !messages.slice(lastCustomerIndex + 1).some((m) => m.sender === 'bot' || m.sender === 'agent')
   })()
-  const showAskAi = isAgentHandling || needsAiReply
+  const showAskAi = isAgentHandling
+  const showRetryAi = !isAgentHandling && needsAiReply
 
   const handleCreateOrder = useCallback(() => {
     if (!selectedChat) return
@@ -487,11 +488,19 @@ export default function ChatsPage() {
                     disabled={isHandingBack}
                   >
                     <Bot className="mr-1.5 h-3.5 w-3.5" />
-                    {isHandingBack
-                      ? 'Asking AI…'
-                      : isAgentHandling
-                        ? 'Hand back to AI'
-                        : 'Ask AI to reply'}
+                    {isHandingBack ? 'Handing back…' : 'Hand back to AI'}
+                  </Button>
+                )}
+                {showRetryAi && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleHandBackToBot}
+                    disabled={isHandingBack}
+                    title="AI should reply automatically; use this only if a reply is stuck"
+                  >
+                    <Bot className="mr-1.5 h-3.5 w-3.5" />
+                    {isHandingBack ? 'Retrying…' : 'Retry AI'}
                   </Button>
                 )}
                 <Button variant="ghost" size="icon" className="hidden md:inline-flex">
@@ -515,11 +524,12 @@ export default function ChatsPage() {
                     </DropdownMenuItem>
                     {showAskAi && (
                       <DropdownMenuItem onClick={handleHandBackToBot} disabled={isHandingBack}>
-                        {isHandingBack
-                          ? 'Asking AI…'
-                          : isAgentHandling
-                            ? 'Hand back to AI'
-                            : 'Ask AI to reply'}
+                        {isHandingBack ? 'Handing back…' : 'Hand back to AI'}
+                      </DropdownMenuItem>
+                    )}
+                    {showRetryAi && (
+                      <DropdownMenuItem onClick={handleHandBackToBot} disabled={isHandingBack}>
+                        {isHandingBack ? 'Retrying…' : 'Retry AI reply'}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
