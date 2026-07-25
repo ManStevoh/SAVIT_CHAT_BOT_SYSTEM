@@ -84,21 +84,11 @@ class WhatsAppWebhookController extends Controller
      */
     public function receive(Request $request): Response
     {
-        $secret = WhatsAppPlatformConfig::metaAppSecret();
+        $payload = $request->getContent();
+        $signature = $request->header('X-Hub-Signature-256');
 
-        if ($secret === null || $secret === '') {
-            if (app()->environment('production')) {
-                Log::critical('WhatsApp webhook rejected: meta_app_secret not configured in production');
-
-                return response('', 403);
-            }
-        } else {
-            $signature = $request->header('X-Hub-Signature-256');
-            if (! $signature || ! $this->verifySignature($request->getContent(), $signature, $secret)) {
-                Log::warning('WhatsApp webhook signature verification failed');
-
-                return response('', 403);
-            }
+        if (! $this->isValidWebhookSignature($payload, $signature)) {
+            return response('', 403);
         }
 
         try {
@@ -133,6 +123,121 @@ class WhatsAppWebhookController extends Controller
         }
 
         return response('', 200);
+    }
+
+    /**
+     * Accept platform App Secret (Embedded Signup / tech-provider app) OR the company
+     * Meta App Secret stored on the WhatsApp account for manual/BYO Meta apps.
+     */
+    protected function isValidWebhookSignature(string $payload, ?string $signature): bool
+    {
+        $candidates = $this->candidateWebhookAppSecrets($payload);
+        $hasAnySecret = $candidates !== [];
+
+        if (! $hasAnySecret) {
+            if (app()->environment('production')) {
+                Log::critical('WhatsApp webhook rejected: no meta_app_secret configured (platform or company)');
+
+                return false;
+            }
+
+            // Local/dev convenience when nothing is configured yet.
+            return true;
+        }
+
+        if (! $signature) {
+            Log::warning('WhatsApp webhook signature verification failed', ['reason' => 'missing_header']);
+
+            return false;
+        }
+
+        foreach ($candidates as $secret) {
+            if ($this->verifySignature($payload, $signature, $secret)) {
+                return true;
+            }
+        }
+
+        Log::warning('WhatsApp webhook signature verification failed', [
+            'reason' => 'no_matching_secret',
+            'candidate_count' => count($candidates),
+        ]);
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function candidateWebhookAppSecrets(string $payload): array
+    {
+        $secrets = [];
+        $platformSecret = trim((string) WhatsAppPlatformConfig::metaAppSecret());
+        if ($platformSecret !== '') {
+            $secrets[] = $platformSecret;
+        }
+
+        $decoded = json_decode($payload, true);
+        if (! is_array($decoded)) {
+            return $secrets;
+        }
+
+        $phoneNumberIds = [];
+        $wabaIds = [];
+        foreach ($decoded['entry'] ?? [] as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+            $entryId = trim((string) ($entry['id'] ?? ''));
+            if ($entryId !== '') {
+                $wabaIds[] = $entryId;
+            }
+            foreach ($entry['changes'] ?? [] as $change) {
+                if (! is_array($change)) {
+                    continue;
+                }
+                $value = $change['value'] ?? [];
+                if (! is_array($value)) {
+                    continue;
+                }
+                $phoneId = trim((string) (
+                    $value['metadata']['phone_number_id']
+                    ?? $value['phone_number_id']
+                    ?? $value['display_phone_number_id']
+                    ?? ''
+                ));
+                if ($phoneId !== '') {
+                    $phoneNumberIds[] = $phoneId;
+                }
+            }
+        }
+
+        $phoneNumberIds = array_values(array_unique($phoneNumberIds));
+        $wabaIds = array_values(array_unique($wabaIds));
+
+        if ($phoneNumberIds === [] && $wabaIds === []) {
+            return $secrets;
+        }
+
+        $accounts = WhatsAppAccount::query()
+            ->where(function ($query) use ($phoneNumberIds, $wabaIds) {
+                if ($phoneNumberIds !== []) {
+                    $query->orWhereIn('phone_number_id', $phoneNumberIds);
+                }
+                if ($wabaIds !== []) {
+                    $query->orWhereIn('whatsapp_business_account_id', $wabaIds);
+                }
+            })
+            ->whereNotNull('meta_app_secret')
+            ->get(['id', 'meta_app_secret']);
+
+        foreach ($accounts as $account) {
+            $companySecret = trim((string) ($account->meta_app_secret ?? ''));
+            if ($companySecret !== '') {
+                $secrets[] = $companySecret;
+            }
+        }
+
+        return array_values(array_unique($secrets));
     }
 
     protected function getPlatformSettings(): ?PlatformSetting

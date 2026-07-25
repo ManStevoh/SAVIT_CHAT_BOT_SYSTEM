@@ -132,11 +132,10 @@ class WhatsAppGraphClient
     public function subscribeWabaWebhooks(string $wabaId, string $accessToken, ?string $verifyToken = null): array
     {
         $verifyToken = trim((string) ($verifyToken ?? ''));
-        if ($verifyToken === '') {
-            $verifyToken = WhatsAppPlatformConfig::webhookVerifyToken();
-        }
         $callbackUrl = WhatsAppPlatformConfig::webhookCallbackUrl();
 
+        // Caller must supply the verify token for the Meta app that owns the access token.
+        // Do not fall back to the platform verify token here — that breaks BYO/manual apps.
         $body = [];
         if ($verifyToken !== '' && $callbackUrl !== '') {
             $body['override_callback_uri'] = $callbackUrl;

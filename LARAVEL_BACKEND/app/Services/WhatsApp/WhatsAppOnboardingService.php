@@ -90,14 +90,31 @@ class WhatsAppOnboardingService
         ?string $displayPhone,
         ?string $registrationPin = null,
         ?string $webhookVerifyToken = null,
+        ?string $metaAppSecret = null,
     ): array {
         $phoneNumberId = trim($phoneNumberId);
         $accessToken = trim($accessToken);
+        $metaAppSecret = trim((string) ($metaAppSecret ?? ''));
+        $webhookVerifyToken = trim((string) ($webhookVerifyToken ?? ''));
 
         if ($phoneNumberId === '' || $accessToken === '') {
             return [
                 'success' => false,
                 'message' => 'Phone Number ID and access token are required.',
+            ];
+        }
+
+        if ($metaAppSecret === '') {
+            return [
+                'success' => false,
+                'message' => 'Meta App Secret is required for manual connection. Use the App Secret from the same Meta Developer app that created this access token (Meta → App settings → Basic). Do not use the platform/super-admin App Secret unless this token is from that same app.',
+            ];
+        }
+
+        if ($webhookVerifyToken === '') {
+            return [
+                'success' => false,
+                'message' => 'Webhook verify token is required for manual connection. Set any string in Meta → Your App → WhatsApp → Configuration → Webhook verify token, and paste the same value here. Do not reuse the platform/super-admin verify token unless this token is from that same app.',
             ];
         }
 
@@ -136,6 +153,8 @@ class WhatsAppOnboardingService
             $qualityRating,
             $registrationPin,
             $webhookVerifyToken,
+            $metaAppSecret,
+            'manual',
         );
     }
 
@@ -174,6 +193,8 @@ class WhatsAppOnboardingService
             'phone_registered_at' => null,
             'credit_allocation_config_id' => null,
             'credit_line_shared_at' => null,
+            'meta_app_secret' => null,
+            'verify_token' => null,
         ]);
 
         return ['success' => true, 'message' => 'WhatsApp disconnected.'];
@@ -184,13 +205,48 @@ class WhatsAppOnboardingService
      *
      * @return array{success: bool, message?: string, account?: WhatsAppAccount}
      */
-    public function resubscribeWebhooks(WhatsAppAccount $account): array
-    {
+    public function resubscribeWebhooks(
+        WhatsAppAccount $account,
+        ?string $metaAppSecret = null,
+        ?string $webhookVerifyToken = null,
+    ): array {
         $token = (string) ($account->access_token ?? '');
         if ($token === '') {
             return [
                 'success' => false,
                 'message' => 'No access token stored for this WhatsApp connection. Disconnect and reconnect.',
+            ];
+        }
+
+        $secret = trim((string) ($metaAppSecret ?? ''));
+        if ($secret !== '') {
+            $account->meta_app_secret = $secret;
+            $account->connected_via = 'manual';
+        }
+
+        $verifyToken = trim((string) ($webhookVerifyToken ?? ''));
+        if ($verifyToken !== '') {
+            $account->verify_token = $verifyToken;
+        }
+
+        // Manual/BYO Meta apps must store their own App Secret + verify token.
+        if ($account->isManualConnection() && ! $account->hasMetaAppSecret()) {
+            $account->save();
+
+            return [
+                'success' => false,
+                'message' => 'Meta App Secret is missing. Paste the App Secret from the same Meta Developer app that created your access token, then retry Fix inbound messages.',
+                'account' => $account,
+            ];
+        }
+
+        if ($account->isManualConnection() && trim((string) ($account->verify_token ?? '')) === '') {
+            $account->save();
+
+            return [
+                'success' => false,
+                'message' => 'Webhook verify token is missing. Paste the verify token from your Meta app webhook configuration, then retry Fix inbound messages.',
+                'account' => $account,
             ];
         }
 
@@ -216,10 +272,15 @@ class WhatsAppOnboardingService
             ];
         }
 
+        $subscribeVerifyToken = trim((string) ($account->verify_token ?? ''));
+        if ($subscribeVerifyToken === '' && ! $account->isManualConnection()) {
+            $subscribeVerifyToken = WhatsAppPlatformConfig::webhookVerifyToken();
+        }
+
         $subscribe = $this->graph->subscribeWabaWebhooks(
             $wabaId,
             $token,
-            trim((string) ($account->verify_token ?? '')) ?: null,
+            $subscribeVerifyToken !== '' ? $subscribeVerifyToken : null,
         );
         if (! ($subscribe['ok'] || $this->graph->isAlreadySubscribedError($subscribe))) {
             $error = $subscribe['data']['error']['message'] ?? 'Webhook subscription failed';
@@ -265,6 +326,8 @@ class WhatsAppOnboardingService
         ?string $qualityRating,
         ?string $registrationPin = null,
         ?string $webhookVerifyToken = null,
+        ?string $metaAppSecret = null,
+        string $connectedVia = 'embedded',
     ): array {
         $company = Company::find($companyId);
         if (! $company) {
@@ -291,8 +354,26 @@ class WhatsAppOnboardingService
         }
 
         $companyVerifyToken = trim((string) ($webhookVerifyToken ?? ''));
+        $companyAppSecret = trim((string) ($metaAppSecret ?? ''));
         $pin = $this->normalizeRegistrationPin($registrationPin) ?? $this->generateRegistrationPin();
-        $billingModel = WhatsAppPlatformConfig::billingModel();
+        $connectedVia = in_array($connectedVia, ['manual', 'embedded'], true) ? $connectedVia : 'embedded';
+
+        // Manual/BYO Meta apps always bill themselves via Meta (tech provider).
+        // Platform Solution Partner credit sharing applies only to Embedded Signup.
+        $billingModel = $connectedVia === 'manual'
+            ? WhatsAppBillingModel::TECH_PROVIDER
+            : WhatsAppPlatformConfig::billingModel();
+
+        if ($connectedVia === 'manual' && $companyVerifyToken === '') {
+            return [
+                'success' => false,
+                'message' => 'Webhook verify token is required for manual connection. Set it in Meta → Your App → WhatsApp → Configuration and paste the same value here.',
+            ];
+        }
+
+        $subscribeVerifyToken = $companyVerifyToken !== ''
+            ? $companyVerifyToken
+            : WhatsAppPlatformConfig::webhookVerifyToken();
 
         $account = WhatsAppAccount::updateOrCreate(
             ['company_id' => $companyId],
@@ -307,6 +388,11 @@ class WhatsAppOnboardingService
                 'onboarding_error' => null,
                 'quality_rating' => $qualityRating,
                 'verify_token' => $companyVerifyToken !== '' ? $companyVerifyToken : null,
+                // Embedded Signup uses the platform App Secret; clear any leftover company secret.
+                'meta_app_secret' => $connectedVia === 'manual' && $companyAppSecret !== ''
+                    ? $companyAppSecret
+                    : null,
+                'connected_via' => $connectedVia,
                 'registration_pin' => Crypt::encryptString($pin),
                 'connected_at' => now(),
                 'disconnected_at' => null,
@@ -320,7 +406,7 @@ class WhatsAppOnboardingService
         $subscribe = $this->graph->subscribeWabaWebhooks(
             $wabaId,
             $accessToken,
-            $companyVerifyToken !== '' ? $companyVerifyToken : null,
+            $subscribeVerifyToken !== '' ? $subscribeVerifyToken : null,
         );
         if ($subscribe['ok'] || $this->graph->isAlreadySubscribedError($subscribe)) {
             $account->webhook_subscribed_at = now();
@@ -340,7 +426,8 @@ class WhatsAppOnboardingService
             ];
         }
 
-        if ($billingModel === WhatsAppBillingModel::SOLUTION_PARTNER) {
+        // Platform Solution Partner credit sharing is only for Embedded Signup accounts.
+        if ($connectedVia !== 'manual' && $billingModel === WhatsAppBillingModel::SOLUTION_PARTNER) {
             if ($wabaId === '') {
                 $account->onboarding_status = 'error';
                 $account->onboarding_error = 'WhatsApp Business Account ID is required for platform billing.';
@@ -411,9 +498,11 @@ class WhatsAppOnboardingService
 
         $account->save();
 
-        $successMessage = $billingModel === WhatsAppBillingModel::SOLUTION_PARTNER
-            ? 'WhatsApp connected successfully. WhatsApp usage is billed through the platform — no Meta payment method required.'
-            : 'WhatsApp connected successfully. You can now receive and send messages.';
+        $successMessage = $connectedVia === 'manual'
+            ? 'WhatsApp connected successfully with your Meta app credentials. Inbound messages use your App Secret and verify token — not the platform app.'
+            : ($billingModel === WhatsAppBillingModel::SOLUTION_PARTNER
+                ? 'WhatsApp connected successfully. WhatsApp usage is billed through the platform — no Meta payment method required.'
+                : 'WhatsApp connected successfully. You can now receive and send messages.');
 
         return [
             'success' => true,

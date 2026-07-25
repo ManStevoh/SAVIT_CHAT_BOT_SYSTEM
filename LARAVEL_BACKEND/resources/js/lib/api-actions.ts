@@ -1040,8 +1040,13 @@ export interface ConnectWhatsAppPayload {
   whatsappBusinessAccountId?: string
   /** Existing Meta two-step verification PIN (6 digits), if already set on the number */
   registrationPin?: string
-  /** Custom Meta webhook verify token for this company's app (manual BYO Meta app) */
-  webhookVerifyToken?: string
+  /** Custom Meta webhook verify token for this company's app (required for manual BYO Meta app) */
+  webhookVerifyToken: string
+  /**
+   * App Secret from the same Meta Developer app that issued accessToken.
+   * Required for manual connect so inbound webhooks can be signature-verified.
+   */
+  metaAppSecret: string
 }
 
 /**
@@ -1081,6 +1086,12 @@ export interface WhatsAppStatus {
   webhookSubscribed?: boolean
   phoneRegistered?: boolean
   creditLineShared?: boolean
+  /** True when this account stores its own Meta App Secret (manual/BYO app). */
+  hasMetaAppSecret?: boolean
+  /** True when this account stores a company webhook verify token. */
+  hasWebhookVerifyToken?: boolean
+  /** How the WhatsApp account was connected: manual | embedded */
+  connectedVia?: string | null
   onboardingError?: string | null
   embeddedSignupEnabled?: boolean
   manualConnectEnabled?: boolean
@@ -1144,17 +1155,24 @@ export async function disconnectWhatsApp(): Promise<{ success: boolean; message?
 }
 
 /** Repair inbound messaging by subscribing the Meta app to the company's WABA webhooks. */
-export async function resubscribeWhatsAppWebhooks(): Promise<{
+export async function resubscribeWhatsAppWebhooks(payload?: {
+  metaAppSecret?: string
+  webhookVerifyToken?: string
+}): Promise<{
   success: boolean
   message?: string
   webhookSubscribed?: boolean
+  hasMetaAppSecret?: boolean
 }> {
   if (useMockApi()) {
     await delay(500)
-    return { success: true, message: 'Webhook subscribed.', webhookSubscribed: true }
+    return { success: true, message: 'Webhook subscribed.', webhookSubscribed: true, hasMetaAppSecret: true }
   }
   try {
-    return await apiRequest('/api/company/whatsapp/webhooks/subscribe', { method: 'POST' })
+    return await apiRequest('/api/company/whatsapp/webhooks/subscribe', {
+      method: 'POST',
+      body: payload ?? {},
+    })
   } catch (e) {
     return handleApiError(e)
   }

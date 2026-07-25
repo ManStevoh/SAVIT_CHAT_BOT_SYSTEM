@@ -129,6 +129,9 @@ export default function SettingsPage() {
   const [waManualDisplayPhone, setWaManualDisplayPhone] = useState("")
   const [waManualRegistrationPin, setWaManualRegistrationPin] = useState("")
   const [waManualWebhookVerifyToken, setWaManualWebhookVerifyToken] = useState("")
+  const [waManualMetaAppSecret, setWaManualMetaAppSecret] = useState("")
+  const [waFixMetaAppSecret, setWaFixMetaAppSecret] = useState("")
+  const [waFixWebhookVerifyToken, setWaFixWebhookVerifyToken] = useState("")
   const [waTemplates, setWaTemplates] = useState<WhatsAppTemplate[]>([])
   const [tplName, setTplName] = useState("")
   const [tplBody, setTplBody] = useState("")
@@ -239,11 +242,30 @@ export default function SettingsPage() {
   const handleResubscribeWebhooks = async () => {
     setWaMessage(null)
     setWaMessageError(false)
+    const needsSecret = waStatus?.connectedVia === "manual" && !waStatus?.hasMetaAppSecret
+    const needsVerify = waStatus?.connectedVia === "manual" && !waStatus?.hasWebhookVerifyToken
+    if (needsSecret && !waFixMetaAppSecret.trim()) {
+      setWaMessage("Paste your Meta App Secret (from the same Meta app as your access token), then click Fix inbound messages.")
+      setWaMessageError(true)
+      return
+    }
+    if (needsVerify && !waFixWebhookVerifyToken.trim()) {
+      setWaMessage("Paste your webhook verify token (from your Meta app webhook configuration), then click Fix inbound messages.")
+      setWaMessageError(true)
+      return
+    }
     setWaLoading(true)
     try {
-      const result = await resubscribeWhatsAppWebhooks()
+      const result = await resubscribeWhatsAppWebhooks({
+        metaAppSecret: waFixMetaAppSecret.trim() || undefined,
+        webhookVerifyToken: waFixWebhookVerifyToken.trim() || undefined,
+      })
       setWaMessage(result.message ?? (result.success ? "Webhook subscribed." : "Failed to subscribe webhook."))
       setWaMessageError(!result.success)
+      if (result.success) {
+        setWaFixMetaAppSecret("")
+        setWaFixWebhookVerifyToken("")
+      }
       await loadWhatsAppStatus()
     } catch (err) {
       setWaMessage(err instanceof Error ? err.message : "Failed to subscribe webhook.")
@@ -257,14 +279,11 @@ export default function SettingsPage() {
     e.preventDefault()
     setWaMessage(null)
     setWaMessageError(false)
-    if (waStatus?.platformBillingReady === false) {
-      setWaMessage("Platform WhatsApp billing is enabled but not configured. Contact your administrator.")
-      setWaMessageError(true)
-      return
-    }
     const phoneNumberId = waManualPhoneNumberId.trim()
     const accessToken = waManualAccessToken.trim()
     const wabaId = waManualWabaId.trim()
+    const metaAppSecret = waManualMetaAppSecret.trim()
+    const webhookVerifyToken = waManualWebhookVerifyToken.trim()
     if (!phoneNumberId || !accessToken) {
       setWaMessage("Phone Number ID and permanent access token are required.")
       setWaMessageError(true)
@@ -272,6 +291,16 @@ export default function SettingsPage() {
     }
     if (!wabaId) {
       setWaMessage("WhatsApp Business Account ID is required so inbound messages can be received.")
+      setWaMessageError(true)
+      return
+    }
+    if (!metaAppSecret) {
+      setWaMessage("Meta App Secret is required. Use the App Secret from the same Meta Developer app that created this access token — not the platform/super-admin secret unless this token is from that same app.")
+      setWaMessageError(true)
+      return
+    }
+    if (!webhookVerifyToken) {
+      setWaMessage("Webhook verify token is required. Set any string in Meta → Your App → WhatsApp → Configuration, and paste the same value here. Do not reuse the platform verify token unless this token is from that same app.")
       setWaMessageError(true)
       return
     }
@@ -289,7 +318,8 @@ export default function SettingsPage() {
         whatsappBusinessAccountId: wabaId,
         displayPhoneNumber: waManualDisplayPhone.trim() || undefined,
         registrationPin: pin.length === 6 ? pin : undefined,
-        webhookVerifyToken: waManualWebhookVerifyToken.trim() || undefined,
+        webhookVerifyToken,
+        metaAppSecret,
       })
       setWaMessage(result.message ?? (result.success ? "WhatsApp connected." : "Connection failed."))
       setWaMessageError(!result.success)
@@ -297,6 +327,7 @@ export default function SettingsPage() {
         setWaManualAccessToken("")
         setWaManualRegistrationPin("")
         setWaManualWebhookVerifyToken("")
+        setWaManualMetaAppSecret("")
         await loadWhatsAppStatus()
         await loadWhatsAppTemplates()
       }
@@ -953,17 +984,51 @@ export default function SettingsPage() {
                   <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
                     <p>Webhook subscribed: {waStatus.webhookSubscribed ? "Yes" : "No"}</p>
                     <p>Phone registered: {waStatus.phoneRegistered ? "Yes" : "No"}</p>
-                    {waStatus.metaBillingModel === "solution_partner" && (
+                    {waStatus.connectedVia === "manual" && (
+                      <>
+                        <p>Company Meta App Secret: {waStatus.hasMetaAppSecret ? "Saved" : "Missing"}</p>
+                        <p>Company verify token: {waStatus.hasWebhookVerifyToken ? "Saved" : "Missing"}</p>
+                      </>
+                    )}
+                    {waStatus.metaBillingModel === "solution_partner" && waStatus.connectedVia !== "manual" && (
                       <p>Platform credit line: {waStatus.creditLineShared ? "Attached" : "Pending"}</p>
                     )}
                   </div>
-                  {!waStatus.webhookSubscribed && (
-                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+                  {((!waStatus.webhookSubscribed) || (waStatus.connectedVia === "manual" && (!waStatus.hasMetaAppSecret || !waStatus.hasWebhookVerifyToken))) && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-3">
                       <p className="text-sm text-foreground">
-                        Inbound messages will not arrive until the webhook is subscribed. This usually means the WhatsApp Business Account ID was missing during connect.
+                        {waStatus.connectedVia === "manual" && (!waStatus.hasMetaAppSecret || !waStatus.hasWebhookVerifyToken)
+                          ? "Inbound messages will not arrive until your Meta App Secret and webhook verify token are saved. Use credentials from your own Meta Developer app — not the platform/super-admin values."
+                          : "Inbound messages will not arrive until the webhook is subscribed. This usually means the WhatsApp Business Account ID was missing during connect."}
                       </p>
                       {waStatus.onboardingError && (
                         <p className="text-xs text-muted-foreground">{waStatus.onboardingError}</p>
+                      )}
+                      {waStatus.connectedVia === "manual" && !waStatus.hasMetaAppSecret && (
+                        <Field>
+                          <FieldLabel htmlFor="waFixMetaAppSecret">Meta App Secret</FieldLabel>
+                          <Input
+                            id="waFixMetaAppSecret"
+                            type="password"
+                            value={waFixMetaAppSecret}
+                            onChange={(e) => setWaFixMetaAppSecret(e.target.value)}
+                            placeholder="From Meta → Your App → Settings → Basic"
+                            required
+                          />
+                        </Field>
+                      )}
+                      {waStatus.connectedVia === "manual" && !waStatus.hasWebhookVerifyToken && (
+                        <Field>
+                          <FieldLabel htmlFor="waFixWebhookVerifyToken">Webhook verify token</FieldLabel>
+                          <Input
+                            id="waFixWebhookVerifyToken"
+                            type="password"
+                            value={waFixWebhookVerifyToken}
+                            onChange={(e) => setWaFixWebhookVerifyToken(e.target.value)}
+                            placeholder="Same token set in Meta → Webhooks"
+                            required
+                          />
+                        </Field>
                       )}
                       <Button type="button" onClick={handleResubscribeWebhooks} disabled={waLoading}>
                         {waLoading ? "Subscribing…" : "Fix inbound messages"}
@@ -1011,9 +1076,11 @@ export default function SettingsPage() {
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-foreground">Manual connection</p>
                         <p className="text-sm text-muted-foreground">
-                          Paste credentials from Meta Developer Console → WhatsApp → API Setup (Phone number ID and permanent access token).
+                          Paste credentials from <strong>your</strong> Meta Developer app → WhatsApp → API Setup.
+                          Manual connection uses only your Phone Number ID, token, WABA ID, App Secret, and verify token —
+                          not the platform/super-admin Meta app credentials.
                           {waStatus?.webhookUrl && (
-                            <> Platform webhook URL: <code className="text-xs">{waStatus.webhookUrl}</code></>
+                            <> Platform webhook callback URL (set this in your Meta app): <code className="text-xs">{waStatus.webhookUrl}</code></>
                           )}
                         </p>
                       </div>
@@ -1050,6 +1117,21 @@ export default function SettingsPage() {
                           />
                         </Field>
                         <Field>
+                          <FieldLabel htmlFor="waManualMetaAppSecret">Meta App Secret</FieldLabel>
+                          <Input
+                            id="waManualMetaAppSecret"
+                            type="password"
+                            value={waManualMetaAppSecret}
+                            onChange={(e) => setWaManualMetaAppSecret(e.target.value)}
+                            placeholder="From Meta → Your App → Settings → Basic"
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Required. Must be the App Secret for the <strong>same</strong> Meta Developer app that created this access token.
+                            Do not paste the platform/super-admin App Secret unless this token is from that same app.
+                          </p>
+                        </Field>
+                        <Field>
                           <FieldLabel htmlFor="waManualWebhookVerifyToken">Webhook verify token</FieldLabel>
                           <Input
                             id="waManualWebhookVerifyToken"
@@ -1057,9 +1139,10 @@ export default function SettingsPage() {
                             value={waManualWebhookVerifyToken}
                             onChange={(e) => setWaManualWebhookVerifyToken(e.target.value)}
                             placeholder="Same token you set in Meta → Webhooks"
+                            required
                           />
                           <p className="text-xs text-muted-foreground">
-                            Use this when connecting your own Meta app. Leave blank to use the platform default verify token.
+                            Required. Create any string in Meta → Your App → WhatsApp → Configuration → Verify token, then paste it here.
                             Callback URL: <code className="text-xs">{waStatus?.webhookUrl ?? "https://…/api/whatsapp/webhook"}</code>
                           </p>
                         </Field>
@@ -1088,7 +1171,7 @@ export default function SettingsPage() {
                             Required if this number already has two-step verification enabled in Meta. Leave blank only for a brand-new number.
                           </p>
                         </Field>
-                        <Button type="submit" disabled={waManualLoading || waStatus?.platformBillingReady === false}>
+                        <Button type="submit" disabled={waManualLoading}>
                           {waManualLoading ? "Connecting…" : "Connect manually"}
                         </Button>
                       </form>
