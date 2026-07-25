@@ -1040,6 +1040,8 @@ export interface ConnectWhatsAppPayload {
   whatsappBusinessAccountId?: string
   /** Existing Meta two-step verification PIN (6 digits), if already set on the number */
   registrationPin?: string
+  /** Custom Meta webhook verify token for this company's app (manual BYO Meta app) */
+  webhookVerifyToken?: string
 }
 
 /**

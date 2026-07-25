@@ -89,6 +89,7 @@ class WhatsAppOnboardingService
         ?string $wabaId,
         ?string $displayPhone,
         ?string $registrationPin = null,
+        ?string $webhookVerifyToken = null,
     ): array {
         $phoneNumberId = trim($phoneNumberId);
         $accessToken = trim($accessToken);
@@ -134,6 +135,7 @@ class WhatsAppOnboardingService
             $displayPhone,
             $qualityRating,
             $registrationPin,
+            $webhookVerifyToken,
         );
     }
 
@@ -214,7 +216,11 @@ class WhatsAppOnboardingService
             ];
         }
 
-        $subscribe = $this->graph->subscribeWabaWebhooks($wabaId, $token);
+        $subscribe = $this->graph->subscribeWabaWebhooks(
+            $wabaId,
+            $token,
+            trim((string) ($account->verify_token ?? '')) ?: null,
+        );
         if (! ($subscribe['ok'] || $this->graph->isAlreadySubscribedError($subscribe))) {
             $error = $subscribe['data']['error']['message'] ?? 'Webhook subscription failed';
             $account->onboarding_error = $error;
@@ -258,6 +264,7 @@ class WhatsAppOnboardingService
         ?string $displayPhone,
         ?string $qualityRating,
         ?string $registrationPin = null,
+        ?string $webhookVerifyToken = null,
     ): array {
         $company = Company::find($companyId);
         if (! $company) {
@@ -282,6 +289,8 @@ class WhatsAppOnboardingService
                 'message' => 'WhatsApp Business Account ID is required so RelayIQ can receive inbound messages. Provide the WABA ID from Meta → WhatsApp → API Setup, or reconnect with Facebook.',
             ];
         }
+
+        $companyVerifyToken = trim((string) ($webhookVerifyToken ?? ''));
         $pin = $this->normalizeRegistrationPin($registrationPin) ?? $this->generateRegistrationPin();
         $billingModel = WhatsAppPlatformConfig::billingModel();
 
@@ -297,6 +306,7 @@ class WhatsAppOnboardingService
                 'onboarding_status' => 'token_received',
                 'onboarding_error' => null,
                 'quality_rating' => $qualityRating,
+                'verify_token' => $companyVerifyToken !== '' ? $companyVerifyToken : null,
                 'registration_pin' => Crypt::encryptString($pin),
                 'connected_at' => now(),
                 'disconnected_at' => null,
@@ -307,7 +317,11 @@ class WhatsAppOnboardingService
             ]
         );
 
-        $subscribe = $this->graph->subscribeWabaWebhooks($wabaId, $accessToken);
+        $subscribe = $this->graph->subscribeWabaWebhooks(
+            $wabaId,
+            $accessToken,
+            $companyVerifyToken !== '' ? $companyVerifyToken : null,
+        );
         if ($subscribe['ok'] || $this->graph->isAlreadySubscribedError($subscribe)) {
             $account->webhook_subscribed_at = now();
             $account->onboarding_status = 'webhook_subscribed';

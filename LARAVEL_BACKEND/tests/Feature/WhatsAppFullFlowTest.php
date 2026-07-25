@@ -107,6 +107,25 @@ class WhatsAppFullFlowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_webhook_verify_accepts_company_custom_token(): void
+    {
+        $user = $this->companyUser();
+        WhatsAppAccount::create([
+            'company_id' => $user->company_id,
+            'phone_number_id' => 'phone-custom',
+            'access_token' => 'token-custom',
+            'whatsapp_business_account_id' => 'waba-custom',
+            'verify_token' => 'company-verify-abc',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'connected_at' => now(),
+        ]);
+
+        $this->get('/api/whatsapp/webhook?hub_mode=subscribe&hub_verify_token=company-verify-abc&hub_challenge=custom-challenge')
+            ->assertOk()
+            ->assertSee('custom-challenge');
+    }
+
     public function test_incoming_webhook_creates_chat_and_message(): void
     {
         Queue::fake();

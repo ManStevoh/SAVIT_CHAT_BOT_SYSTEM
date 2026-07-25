@@ -42,6 +42,7 @@ class WhatsAppAccount extends Model
 
     protected $hidden = [
         'access_token',
+        'verify_token',
         'registration_pin',
     ];
 

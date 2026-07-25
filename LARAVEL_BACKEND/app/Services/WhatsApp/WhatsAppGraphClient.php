@@ -129,9 +129,12 @@ class WhatsAppGraphClient
         ];
     }
 
-    public function subscribeWabaWebhooks(string $wabaId, string $accessToken): array
+    public function subscribeWabaWebhooks(string $wabaId, string $accessToken, ?string $verifyToken = null): array
     {
-        $verifyToken = WhatsAppPlatformConfig::webhookVerifyToken();
+        $verifyToken = trim((string) ($verifyToken ?? ''));
+        if ($verifyToken === '') {
+            $verifyToken = WhatsAppPlatformConfig::webhookVerifyToken();
+        }
         $callbackUrl = WhatsAppPlatformConfig::webhookCallbackUrl();
 
         $body = [];

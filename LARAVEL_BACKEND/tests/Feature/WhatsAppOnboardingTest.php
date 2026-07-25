@@ -575,4 +575,39 @@ class WhatsAppOnboardingTest extends TestCase
             ->assertJsonPath('connected', true)
             ->assertJsonPath('webhookSubscribed', true);
     }
+
+    public function test_manual_connect_stores_custom_webhook_verify_token(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/phone-manual*' => Http::response([
+                'id' => 'phone-manual',
+                'display_phone_number' => '+254700000001',
+                'quality_rating' => 'GREEN',
+            ], 200),
+            'graph.facebook.com/*/waba-manual/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/phone-manual/register' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+            'whatsappBusinessAccountId' => 'waba-manual',
+            'webhookVerifyToken' => 'my-meta-app-verify',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertSame('my-meta-app-verify', $account?->verify_token);
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), 'waba-manual/subscribed_apps')) {
+                return false;
+            }
+            $body = $request->data();
+
+            return ($body['verify_token'] ?? null) === 'my-meta-app-verify';
+        });
+    }
 }

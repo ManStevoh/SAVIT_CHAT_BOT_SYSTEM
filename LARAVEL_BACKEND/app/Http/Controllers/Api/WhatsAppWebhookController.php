@@ -23,10 +23,10 @@ class WhatsAppWebhookController extends Controller
 {
     /**
      * Webhook verification (GET). Meta sends hub.mode, hub.verify_token, hub.challenge.
+     * Accepts the platform verify token, known legacy tokens, or any company's custom verify token.
      */
     public function verify(Request $request): Response|string
     {
-        $verifyToken = WhatsAppPlatformConfig::webhookVerifyToken();
         $mode = $request->query('hub_mode')
              ?? $request->query('hub.mode')
              ?? $request->input('hub_mode')
@@ -45,18 +45,38 @@ class WhatsAppWebhookController extends Controller
                   ?? $request->input('hub_challenge')
                   ?? $request->input('hub.challenge');
 
-        if ($mode === 'subscribe' && $token !== '') {
-            if (
-                $token === $verifyToken
-                || $verifyToken === ''
-                || $token === 'relayiq_webhook_verify_token'
-                || $token === 'essemchat_whatsapp_verify_token'
-            ) {
-                return response($challenge ?? '', 200)->header('Content-Type', 'text/plain');
-            }
+        if ($mode === 'subscribe' && $token !== '' && $this->isValidWebhookVerifyToken($token)) {
+            return response($challenge ?? '', 200)->header('Content-Type', 'text/plain');
         }
 
         return response('Forbidden', 403);
+    }
+
+    protected function isValidWebhookVerifyToken(string $token): bool
+    {
+        $platformToken = WhatsAppPlatformConfig::webhookVerifyToken();
+        if ($platformToken !== '' && hash_equals($platformToken, $token)) {
+            return true;
+        }
+
+        // Temporary compatibility while Meta apps still use these known tokens.
+        if (in_array($token, [
+            'relayiq_webhook_verify_token',
+            'essemchat_whatsapp_verify_token',
+        ], true)) {
+            return true;
+        }
+
+        // When platform token is unset, keep previous permissive behavior for Meta handshake.
+        if ($platformToken === '') {
+            return true;
+        }
+
+        return WhatsAppAccount::query()
+            ->whereNotNull('verify_token')
+            ->where('verify_token', '!=', '')
+            ->where('verify_token', $token)
+            ->exists();
     }
 
     /**

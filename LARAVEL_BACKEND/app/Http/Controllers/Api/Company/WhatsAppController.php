@@ -71,6 +71,7 @@ class WhatsAppController extends Controller
             'displayPhoneNumber' => 'nullable|string|max:30',
             'whatsappBusinessAccountId' => 'nullable|string|max:100',
             'registrationPin' => 'nullable|digits:6',
+            'webhookVerifyToken' => 'nullable|string|max:255',
         ]);
 
         $user = $request->user();
@@ -86,6 +87,7 @@ class WhatsAppController extends Controller
             $validated['whatsappBusinessAccountId'] ?? null,
             $validated['displayPhoneNumber'] ?? null,
             $validated['registrationPin'] ?? null,
+            $validated['webhookVerifyToken'] ?? null,
         );
 
         $status = $result['success'] ? 200 : 422;

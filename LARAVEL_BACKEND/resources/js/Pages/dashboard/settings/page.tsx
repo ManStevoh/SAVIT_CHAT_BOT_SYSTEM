@@ -128,6 +128,7 @@ export default function SettingsPage() {
   const [waManualWabaId, setWaManualWabaId] = useState("")
   const [waManualDisplayPhone, setWaManualDisplayPhone] = useState("")
   const [waManualRegistrationPin, setWaManualRegistrationPin] = useState("")
+  const [waManualWebhookVerifyToken, setWaManualWebhookVerifyToken] = useState("")
   const [waTemplates, setWaTemplates] = useState<WhatsAppTemplate[]>([])
   const [tplName, setTplName] = useState("")
   const [tplBody, setTplBody] = useState("")
@@ -288,12 +289,14 @@ export default function SettingsPage() {
         whatsappBusinessAccountId: wabaId,
         displayPhoneNumber: waManualDisplayPhone.trim() || undefined,
         registrationPin: pin.length === 6 ? pin : undefined,
+        webhookVerifyToken: waManualWebhookVerifyToken.trim() || undefined,
       })
       setWaMessage(result.message ?? (result.success ? "WhatsApp connected." : "Connection failed."))
       setWaMessageError(!result.success)
       if (result.success) {
         setWaManualAccessToken("")
         setWaManualRegistrationPin("")
+        setWaManualWebhookVerifyToken("")
         await loadWhatsAppStatus()
         await loadWhatsAppTemplates()
       }
@@ -1045,6 +1048,20 @@ export default function SettingsPage() {
                             placeholder="Required for receiving inbound messages"
                             required
                           />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="waManualWebhookVerifyToken">Webhook verify token</FieldLabel>
+                          <Input
+                            id="waManualWebhookVerifyToken"
+                            type="password"
+                            value={waManualWebhookVerifyToken}
+                            onChange={(e) => setWaManualWebhookVerifyToken(e.target.value)}
+                            placeholder="Same token you set in Meta → Webhooks"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Use this when connecting your own Meta app. Leave blank to use the platform default verify token.
+                            Callback URL: <code className="text-xs">{waStatus?.webhookUrl ?? "https://…/api/whatsapp/webhook"}</code>
+                          </p>
                         </Field>
                         <Field>
                           <FieldLabel htmlFor="waManualDisplayPhone">Display phone number (optional)</FieldLabel>
