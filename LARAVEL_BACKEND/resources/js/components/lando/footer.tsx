@@ -95,7 +95,7 @@ export function LandoFooter({
       : "Coming soon on Google Play and the App Store.")
 
   return (
-    <footer className="lando-footer border-t border-gray-200 bg-[#f3f4f6]">
+    <footer className="lando-footer border-t border-gray-200 bg-muted">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 lg:grid-cols-4 sm:px-6 lg:px-8">
         <div>
           <AppLogoAndName variant="navbar" className="font-bold text-black" />
@@ -106,7 +106,7 @@ export function LandoFooter({
             href={BRAND.companyWebsite}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-block text-sm font-medium text-[#2563eb] hover:underline"
+            className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
           >
             essemdigital.com
           </a>
@@ -114,7 +114,7 @@ export function LandoFooter({
 
         <div className="flex flex-col gap-2">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium text-black hover:text-[#2563eb]">
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-black hover:text-primary">
               {link.label}
             </Link>
           ))}
@@ -127,7 +127,7 @@ export function LandoFooter({
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-black hover:text-[#2563eb]"
+              className="text-sm font-medium text-black hover:text-primary"
             >
               {link.label}
             </a>
@@ -136,7 +136,7 @@ export function LandoFooter({
 
         <div className="flex flex-col gap-2">
           {legalLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium text-black hover:text-[#2563eb]">
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-black hover:text-primary">
               {link.label}
             </Link>
           ))}

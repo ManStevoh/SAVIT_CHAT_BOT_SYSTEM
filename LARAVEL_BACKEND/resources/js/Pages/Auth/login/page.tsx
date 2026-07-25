@@ -258,7 +258,7 @@ function LoginPageContent() {
             />
             <label htmlFor="remember" className="cursor-pointer text-sm text-gray-600">Remember me</label>
           </div>
-          <Link href="/forgot-password" className="text-sm font-medium text-[#2563eb] hover:text-[#1d4ed8]">
+          <Link href="/forgot-password" className="text-sm font-medium text-primary hover:text-primary/80">
             Forgot password?
           </Link>
         </div>
@@ -270,7 +270,7 @@ function LoginPageContent() {
 
       <p className="mt-6 text-center text-sm text-gray-600">
         {"Don't have an account? "}
-        <Link href={registerHref} className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign up</Link>
+        <Link href={registerHref} className="font-medium text-primary hover:text-primary/80">Sign up</Link>
       </p>
     </div>
   )

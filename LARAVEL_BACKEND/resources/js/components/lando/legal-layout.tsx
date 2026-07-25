@@ -21,7 +21,7 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
   const footerContent = getSectionContent(globalSections, "footer")
 
   return (
-    <div className="lando-page min-h-screen bg-[#f3f4f6]">
+    <div className="lando-page min-h-screen bg-muted">
       <LandoNavbar
         links={(navbarContent.links as CmsLink[]) ?? []}
         loginLabel={String(navbarContent.loginLabel ?? "Log in")}
@@ -32,7 +32,7 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
       />
       <main className="mx-auto max-w-3xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32">
         <h1 className="text-3xl font-bold tracking-tight text-black sm:text-4xl">{title}</h1>
-        <div className="prose prose-sm mt-10 max-w-none text-gray-600 prose-headings:font-semibold prose-headings:text-black prose-a:text-[#2563eb]">
+        <div className="prose prose-sm mt-10 max-w-none text-gray-600 prose-headings:font-semibold prose-headings:text-black prose-a:text-primary">
           {children}
         </div>
       </main>

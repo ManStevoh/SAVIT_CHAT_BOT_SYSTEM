@@ -25,19 +25,19 @@ export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
     <>
       <SeoHead seo={seo} fallbackTitle="Blog — RelayIQ" />
       <LegalLayout title="Blog" activePath="/blog">
-        <p className="!mt-0 text-base text-gray-600">
+        <p className="!mt-0 text-base text-muted-foreground">
           Guides on WhatsApp commerce, AI sales, and growing with RelayIQ.
         </p>
 
-        {isLoading && <p className="mt-8 text-sm text-gray-500">Loading posts…</p>}
+        {isLoading && <p className="mt-8 text-sm text-muted-foreground">Loading posts…</p>}
 
         {!isLoading && posts.length === 0 && (
-          <p className="mt-8 text-sm text-gray-500">No posts published yet. Check back soon.</p>
+          <p className="mt-8 text-sm text-muted-foreground">No posts published yet. Check back soon.</p>
         )}
 
         <div className="mt-10 space-y-8 not-prose">
           {posts.map((post) => (
-            <article key={post.id} className="border-b border-gray-200 pb-8 last:border-0">
+            <article key={post.id} className="border-b border-border pb-8 last:border-0">
               <Link href={`/blog/${post.slug}`} className="group block">
                 {post.coverImage ? (
                   <img
@@ -48,7 +48,7 @@ export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
                     className="mb-4 aspect-[2/1] w-full rounded-xl object-cover"
                   />
                 ) : null}
-                <h2 className="text-xl font-bold text-black group-hover:text-[#2563eb] sm:text-2xl">
+                <h2 className="text-xl font-bold text-black group-hover:text-primary sm:text-2xl">
                   {post.title}
                 </h2>
                 {post.publishedAt ? (
@@ -61,7 +61,7 @@ export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
                   </time>
                 ) : null}
                 {post.excerpt ? <p className="mt-3 text-sm leading-relaxed text-gray-600">{post.excerpt}</p> : null}
-                <span className="mt-3 inline-block text-sm font-medium text-[#2563eb]">Read more →</span>
+                <span className="mt-3 inline-block text-sm font-medium text-primary">Read more →</span>
               </Link>
             </article>
           ))}

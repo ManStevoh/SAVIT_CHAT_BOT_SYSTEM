@@ -33,7 +33,7 @@ export default function BlogShowPage({
       <SeoHead seo={seo} fallbackTitle={post?.title || "Blog — RelayIQ"} />
       <LegalLayout title={post?.title || "Blog"} activePath="/blog">
         <p className="!mt-0">
-          <Link href="/blog" className="text-sm font-medium text-[#2563eb] hover:underline">
+          <Link href="/blog" className="text-sm font-medium text-primary hover:underline">
             ← All posts
           </Link>
         </p>

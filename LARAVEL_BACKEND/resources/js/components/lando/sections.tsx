@@ -40,7 +40,7 @@ export function LandoHeroSection({
   showFlowSimulation = false,
 }: LandoHeroProps) {
   return (
-    <section className="lando-hero bg-[#f3f4f6] pt-28 pb-16 lg:pt-32 lg:pb-24">
+    <section className="lando-hero bg-muted pt-28 pb-16 lg:pt-32 lg:pb-24">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
         <div>
           {kicker && (
@@ -61,7 +61,7 @@ export function LandoHeroSection({
               {primaryCtaText && primaryCtaHref && (
                 <Button
                   asChild
-                  className="h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]"
+                  className="h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90"
                 >
                   <Link href={primaryCtaHref}>{primaryCtaText}</Link>
                 </Button>
@@ -102,7 +102,7 @@ export function LandoHeroSection({
 
 export function LandoPageHero({ title, description }: { title: string; description?: string }) {
   return (
-    <section className="bg-[#f3f4f6] pt-28 pb-12 text-center lg:pt-32">
+    <section className="bg-muted pt-28 pb-12 text-center lg:pt-32">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold text-black sm:text-5xl">{title}</h1>
         {description && (
@@ -136,7 +136,7 @@ export function LandoCapabilities({
   if (items.length === 0) return null
 
   return (
-    <section className="bg-[#f3f4f6] py-12 lg:py-16">
+    <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
@@ -150,7 +150,7 @@ export function LandoCapabilities({
                 key={item.title}
                 className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb]/10 text-[#2563eb]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" aria-hidden />
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-black">{item.title}</h3>
@@ -182,7 +182,7 @@ export function LandoIntroCard({
   imageAlt?: string
 }) {
   return (
-    <section className="bg-[#f3f4f6] py-12 lg:py-16">
+    <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-3xl bg-white p-8 shadow-sm lg:p-12">
           <div className="grid items-center gap-10 lg:grid-cols-2">
@@ -190,7 +190,7 @@ export function LandoIntroCard({
               <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
               {description && <p className="mt-4 text-base text-gray-600 sm:text-lg">{description}</p>}
               {ctaText && ctaHref && (
-                <Button asChild className="mt-8 h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]">
+                <Button asChild className="mt-8 h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90">
                   <Link href={ctaHref}>{ctaText}</Link>
                 </Button>
               )}
@@ -229,7 +229,7 @@ export function LandoFeatureBlock({
   ) : null
 
   return (
-    <section className="bg-[#f3f4f6] py-12 lg:py-16">
+    <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           {imagePosition === "left" && image}
@@ -276,9 +276,9 @@ export function LandoGrowthEngine({
   imageAlt?: string
 }) {
   return (
-    <section className="bg-[#f3f4f6] py-12 lg:py-16">
+    <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-3xl bg-[#0f172a] px-8 py-10 text-white shadow-sm lg:px-12 lg:py-14">
+        <div className="overflow-hidden rounded-3xl bg-foreground px-8 py-10 text-white shadow-sm lg:px-12 lg:py-14">
           <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
             <div>
               {label && (
@@ -290,14 +290,14 @@ export function LandoGrowthEngine({
                 <ul className="mt-6 space-y-3">
                   {points.map((point) => (
                     <li key={point} className="flex gap-3 text-sm text-slate-200">
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2563eb]" aria-hidden />
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
                       <span>{point}</span>
                     </li>
                   ))}
                 </ul>
               )}
               {ctaText && ctaHref && (
-                <Button asChild className="mt-8 h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]">
+                <Button asChild className="mt-8 h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90">
                   <Link href={ctaHref}>{ctaText}</Link>
                 </Button>
               )}
@@ -336,7 +336,7 @@ export function LandoHowToJoin({
   steps?: Array<{ title: string; description?: string }>
 }) {
   return (
-    <section id="how-to-join" className="bg-[#f3f4f6] py-12 lg:py-16">
+    <section id="how-to-join" className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
@@ -345,7 +345,7 @@ export function LandoHowToJoin({
             <div className="mt-8 space-y-6">
               {steps.map((step, i) => (
                 <div key={step.title + i} className="flex gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-sm font-bold text-white">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
                     {i + 1}
                   </div>
                   <div>
@@ -358,7 +358,7 @@ export function LandoHowToJoin({
               ))}
             </div>
             {ctaText && ctaHref && (
-              <Button asChild className="mt-8 h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]">
+              <Button asChild className="mt-8 h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90">
                 <Link href={ctaHref}>{ctaText}</Link>
               </Button>
             )}
@@ -390,7 +390,7 @@ export function LandoCtaSection({
   showImage?: boolean
 }) {
   return (
-    <section className="bg-[#f3f4f6] py-12 lg:py-20">
+    <section className="bg-muted py-12 lg:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-3xl bg-white px-8 py-12 text-center shadow-sm lg:px-16">
           {showImage && imageUrl && (
@@ -405,7 +405,7 @@ export function LandoCtaSection({
           <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
           {description && <p className="mx-auto mt-4 max-w-xl text-base text-gray-600">{description}</p>}
           {ctaText && ctaHref && (
-            <Button asChild className="mt-8 h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]">
+            <Button asChild className="mt-8 h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90">
               <Link href={ctaHref}>{ctaText}</Link>
             </Button>
           )}

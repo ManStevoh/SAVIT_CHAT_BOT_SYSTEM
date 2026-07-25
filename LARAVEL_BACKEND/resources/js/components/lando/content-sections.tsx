@@ -29,7 +29,7 @@ export function LandoTrustedCompanies({
   )
 
   return (
-    <section className="bg-[#f3f4f6] py-12">
+    <section className="bg-muted py-12">
       <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
         {title && <p className="text-sm text-gray-600">{title}</p>}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-8 lg:gap-12">
@@ -60,7 +60,7 @@ export function LandoTestimonials({
   if (testimonials.length === 0) return null
 
   return (
-    <section className="bg-[#f3f4f6] py-16 lg:py-24">
+    <section className="bg-muted py-16 lg:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
@@ -72,7 +72,7 @@ export function LandoTestimonials({
               <p className="text-base leading-relaxed text-black">&ldquo;{t.content}&rdquo;</p>
               <div className="mt-4 flex justify-center gap-0.5">
                 {Array.from({ length: t.rating || 5 }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-[#2563eb] text-[#2563eb]" />
+                  <Star key={i} className="h-4 w-4 fill-primary text-primary" />
                 ))}
               </div>
               <p className="mt-4 font-bold text-black">{t.name}</p>
@@ -110,13 +110,13 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
   if (isLoading && list.length === 0) {
     return (
       <div className="flex justify-center py-16">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#2563eb] border-t-transparent" />
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
 
   return (
-    <section className="bg-[#f3f4f6] pb-16">
+    <section className="bg-muted pb-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-3">
           {list.map((plan) => (
@@ -124,11 +124,11 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
               key={plan.id}
               className={cn(
                 "relative rounded-2xl bg-white p-8 shadow-sm",
-                plan.popular && "ring-2 ring-[#2563eb]"
+                plan.popular && "ring-2 ring-primary"
               )}
             >
               {plan.popular && (
-                <span className="absolute -top-3 right-6 rounded-full bg-[#2563eb] px-3 py-1 text-xs font-medium text-white">
+                <span className="absolute -top-3 right-6 rounded-full bg-primary px-3 py-1 text-xs font-medium text-white">
                   {popularBadge}
                 </span>
               )}
@@ -138,7 +138,7 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
               <ul className="mt-6 space-y-3">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#2563eb]" />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     {f}
                   </li>
                 ))}
@@ -147,7 +147,7 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                 className={cn(
                   "mt-8 w-full rounded-lg",
                   plan.popular
-                    ? "bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
+                    ? "bg-primary text-white hover:bg-primary/90"
                     : "border-black bg-white text-black hover:bg-gray-50"
                 )}
                 variant={plan.popular ? "default" : "outline"}
@@ -182,7 +182,7 @@ export function LandoCompareFeatures({
   if (columns.length === 0) return null
 
   return (
-    <section className="bg-[#f3f4f6] py-16">
+    <section className="bg-muted py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl font-bold text-black">{title}</h2>
         <div className="mt-8 overflow-hidden rounded-2xl bg-white shadow-sm">
@@ -198,7 +198,7 @@ export function LandoCompareFeatures({
               <div key={col.name} className="space-y-4 border-gray-200 p-6 md:border-r last:md:border-r-0">
                 {col.features.map((f) => (
                   <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2563eb] text-white">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
                       <Check className="h-3 w-3" />
                     </span>
                     {f}
@@ -223,7 +223,7 @@ export function LandoFaqSection({
   if (faqs.length === 0) return null
 
   return (
-    <section className="bg-[#f3f4f6] py-16 lg:py-24">
+    <section className="bg-muted py-16 lg:py-24">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <h2 className="text-center text-3xl font-bold text-black sm:text-4xl">{title}</h2>
         <Accordion type="single" collapsible className="mt-10">
@@ -260,7 +260,7 @@ export function LandoAboutHero({
       />
       <div className="relative mx-auto grid max-w-6xl items-end gap-10 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-8">
         <div className="pb-12 lg:pb-20">
-          <p className="text-xs font-semibold tracking-[0.2em] text-[#2563eb] uppercase">RelayIQ</p>
+          <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">RelayIQ</p>
           <h1 className="mt-4 max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-black sm:text-5xl lg:text-[3.4rem]">
             {title}
           </h1>
@@ -289,7 +289,7 @@ export function LandoAboutHero({
 
 export function LandoMission({ title, description }: { title: string; description?: string }) {
   return (
-    <section className="border-t border-gray-200/80 bg-[#f3f4f6] py-16 text-center lg:py-20">
+    <section className="border-t border-gray-200/80 bg-muted py-16 text-center lg:py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl font-bold tracking-tight text-black sm:text-4xl">{title}</h2>
         {description && (
@@ -315,7 +315,7 @@ export function LandoEfficiency({
   const displayTitle = lines.length > 1 ? lines.join(" ") : title
 
   return (
-    <section className="relative overflow-hidden bg-[#0f172a] py-20 text-white lg:py-28">
+    <section className="relative overflow-hidden bg-foreground py-20 text-white lg:py-28">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(37,99,235,0.35),_transparent_45%),radial-gradient(circle_at_80%_80%,_rgba(56,189,248,0.18),_transparent_40%)]"
@@ -336,14 +336,14 @@ export function LandoEfficiency({
         {ctaText && ctaHref ? (
           <Button
             asChild
-            className="mt-10 h-11 rounded-lg bg-[#2563eb] px-7 text-white hover:bg-[#1d4ed8]"
+            className="mt-10 h-11 rounded-lg bg-primary px-7 text-white hover:bg-primary/90"
           >
             <Link href={ctaHref}>{ctaText}</Link>
           </Button>
         ) : (
           <Button
             asChild
-            className="mt-10 h-11 rounded-lg bg-[#2563eb] px-7 text-white hover:bg-[#1d4ed8]"
+            className="mt-10 h-11 rounded-lg bg-primary px-7 text-white hover:bg-primary/90"
           >
             <Link href="/register">Start free</Link>
           </Button>
@@ -365,7 +365,7 @@ export function LandoTeam({
   if (members.length === 0) return null
 
   return (
-    <section className="bg-[#f3f4f6] py-16 lg:py-24">
+    <section className="bg-muted py-16 lg:py-24">
       <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
         {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
         {description && <p className="mt-3 text-gray-600">{description}</p>}
@@ -462,7 +462,7 @@ export function LandoContactSection({
   }
 
   return (
-    <section className="bg-[#f3f4f6] pt-28 pb-16 lg:pt-32 lg:pb-24">
+    <section className="bg-muted pt-28 pb-16 lg:pt-32 lg:pb-24">
       <div className="mx-auto grid max-w-6xl items-start gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         {imageUrl && (
           <img src={imageUrl} alt={imageAlt} loading="eager" decoding="async" className="max-h-[400px] w-full object-contain" />
@@ -481,7 +481,7 @@ export function LandoContactSection({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={namePlaceholder}
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-[#2563eb]"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-primary"
                 />
               </div>
               <div>
@@ -492,7 +492,7 @@ export function LandoContactSection({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={emailPlaceholder}
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-[#2563eb]"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-primary"
                 />
               </div>
               <div>
@@ -503,14 +503,14 @@ export function LandoContactSection({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={messagePlaceholder}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-black outline-none focus:border-[#2563eb]"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-black outline-none focus:border-primary"
                 />
               </div>
               <RecaptchaWidget onChange={setRecaptchaToken} />
               <Button
                 type="submit"
                 disabled={busy}
-                className="h-11 rounded-lg bg-[#2563eb] px-6 text-white hover:bg-[#1d4ed8]"
+                className="h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90"
               >
                 {submitText}
               </Button>

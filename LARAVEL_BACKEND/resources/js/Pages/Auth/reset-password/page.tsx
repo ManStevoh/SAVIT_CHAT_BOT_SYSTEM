@@ -126,7 +126,7 @@ function ResetPasswordForm() {
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Remember your password?{" "}
-        <Link href="/login" className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign in</Link>
+        <Link href="/login" className="font-medium text-primary hover:text-primary/80">Sign in</Link>
       </p>
     </div>
   )

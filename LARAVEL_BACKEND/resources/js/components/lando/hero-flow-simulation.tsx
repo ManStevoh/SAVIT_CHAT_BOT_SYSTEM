@@ -297,9 +297,9 @@ export function LandoHeroFlowSimulation() {
                 className={cn(
                   "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-all duration-500 sm:px-3 sm:text-[11px]",
                   current
-                    ? "bg-[#2563eb] text-white shadow-md"
+                    ? "bg-primary text-white shadow-md"
                     : active
-                      ? "bg-[#2563eb]/15 text-[#2563eb]"
+                      ? "bg-primary/15 text-primary"
                       : "bg-gray-200 text-gray-500"
                 )}
               >
@@ -309,7 +309,7 @@ export function LandoHeroFlowSimulation() {
                 <div
                   className={cn(
                     "h-px w-4 transition-colors duration-500 sm:w-6",
-                    active ? "bg-[#2563eb]/40" : "bg-gray-200"
+                    active ? "bg-primary/40" : "bg-gray-200"
                   )}
                 />
               )}

@@ -163,11 +163,11 @@ function RegisterPageContent() {
             />
             <label htmlFor="acceptTerms" className="text-sm text-gray-700 leading-snug cursor-pointer">
               I agree to the{" "}
-              <Link href="/terms" target="_blank" className="font-medium text-[#2563eb] hover:underline">
+              <Link href="/terms" target="_blank" className="font-medium text-primary hover:underline">
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" target="_blank" className="font-medium text-[#2563eb] hover:underline">
+              <Link href="/privacy" target="_blank" className="font-medium text-primary hover:underline">
                 Privacy Policy
               </Link>
               <span className="text-red-600"> *</span>
@@ -195,7 +195,7 @@ function RegisterPageContent() {
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Already have an account?{" "}
-        <Link href={loginHref} className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign in</Link>
+        <Link href={loginHref} className="font-medium text-primary hover:text-primary/80">Sign in</Link>
       </p>
     </div>
   )

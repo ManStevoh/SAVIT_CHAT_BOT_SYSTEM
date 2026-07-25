@@ -10,6 +10,9 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --font-body: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display-family: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, monospace;
   --background: oklch(0.993 0.002 90);
   --foreground: oklch(0.20 0.025 260);
   --card: oklch(1 0 0);

@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
 const STORAGE_KEY = "essem_cookie_consent"
 
-function isPrivatePath(pathname: string | null): boolean {
-  if (!pathname) return false
+function isPrivatePath(pathname: string): boolean {
   return (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/dashboard") ||
@@ -22,8 +20,17 @@ function isPrivatePath(pathname: string | null): boolean {
 
 export function CookieConsentBanner() {
   const branding = useAppBranding()
-  const pathname = usePathname()
+  const [pathname, setPathname] = useState(() =>
+    typeof window !== "undefined" ? window.location.pathname : "/",
+  )
   const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const syncPath = () => setPathname(window.location.pathname)
+    syncPath()
+    window.addEventListener("popstate", syncPath)
+    return () => window.removeEventListener("popstate", syncPath)
+  }, [])
 
   useEffect(() => {
     if (isPrivatePath(pathname)) {

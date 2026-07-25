@@ -1,10 +1,10 @@
 ﻿import { cn } from "@/lib/utils"
 
 export const landoBtnClass =
-  "h-11 w-full rounded-lg bg-[#2563eb] text-white hover:bg-[#1d4ed8] font-medium"
+  "h-11 w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
 
 export const landoInputClass =
-  "h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]"
+  "h-11 w-full rounded-lg border border-border bg-background px-4 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
 
 export function LandoAuthHeader({
   title,
@@ -47,7 +47,7 @@ export function LandoAuthLink({
   children: React.ReactNode
 }) {
   return (
-    <a href={href} className="text-sm font-medium text-[#2563eb] hover:text-[#1d4ed8]">
+    <a href={href} className="text-sm font-medium text-primary hover:text-primary/80">
       {children}
     </a>
   )

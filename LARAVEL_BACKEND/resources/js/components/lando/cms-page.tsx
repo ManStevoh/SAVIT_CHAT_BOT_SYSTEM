@@ -39,7 +39,7 @@ export function LandoCmsPage({ slug, fallbackTitle, initialSeo }: LandoCmsPagePr
     <>
       <SeoHead seo={seo} fallbackTitle={fallbackTitle} />
 
-      <div className="lando-page min-h-screen bg-[#f3f4f6]">
+      <div className="lando-page min-h-screen bg-muted">
         <LandoNavbar
           links={navLinks}
           loginLabel={String(navbarContent.loginLabel ?? "Log in")}
@@ -51,7 +51,7 @@ export function LandoCmsPage({ slug, fallbackTitle, initialSeo }: LandoCmsPagePr
 
         {isLoading && (
           <div className="flex min-h-[50vh] items-center justify-center pt-28">
-            <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#2563eb] border-t-transparent" />
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         )}
 

@@ -27,7 +27,7 @@ export function AuthBranding({
   const imageAlt = String(authContent.imageAlt ?? "Platform illustration")
 
   return (
-    <div className="lando-page min-h-screen bg-[#f3f4f6]">
+    <div className="lando-page min-h-screen bg-muted">
       <LandoNavbar
         links={(navbarContent.links as CmsLink[]) ?? []}
         loginLabel={String(navbarContent.loginLabel ?? "Log in")}
