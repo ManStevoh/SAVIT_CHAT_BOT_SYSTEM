@@ -27,7 +27,7 @@ return new class extends Migration
             return;
         }
 
-        $sections = DB::table('cms_sections')->get(['id', 'key', 'content']);
+        $sections = DB::table('cms_sections')->get(['id', 'section_key', 'content']);
         foreach ($sections as $section) {
             $content = $section->content;
             $decoded = null;
@@ -49,7 +49,7 @@ return new class extends Migration
                 continue;
             }
 
-            if (($section->key ?? '') === 'footer' || array_key_exists('copyright', $decoded)) {
+            if (($section->section_key ?? '') === 'footer' || array_key_exists('copyright', $decoded)) {
                 $decoded['copyright'] = $copyright;
             }
 
