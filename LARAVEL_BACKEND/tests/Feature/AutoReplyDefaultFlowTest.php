@@ -251,4 +251,161 @@ class AutoReplyDefaultFlowTest extends TestCase
 
         Queue::assertPushed(ProcessIncomingWhatsAppMessage::class);
     }
+
+    public function test_trial_subscription_gets_ai_reply_not_unavailable_message(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.bot-trial']],
+            ], 200),
+        ]);
+
+        $company = Company::create([
+            'name' => 'Trial Co',
+            'email' => 'trial@test.local',
+            'status' => 'active',
+        ]);
+
+        CompanySetting::create([
+            'company_id' => $company->id,
+            'auto_reply_enabled' => true,
+            'ai_reply_mode' => 'balanced',
+        ]);
+
+        Subscription::create([
+            'company_id' => $company->id,
+            'plan' => 'professional',
+            'status' => 'trial',
+            'start_date' => now()->subDay(),
+            'end_date' => now()->addDays(13),
+            'amount' => 0,
+            'billing_cycle' => 'monthly',
+        ]);
+
+        WhatsAppAccount::create([
+            'company_id' => $company->id,
+            'phone_number_id' => 'phone-trial',
+            'access_token' => 'token-trial',
+            'whatsapp_business_account_id' => 'waba-trial',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'connected_at' => now(),
+        ]);
+
+        $chat = Chat::create([
+            'company_id' => $company->id,
+            'customer_name' => 'Trial Buyer',
+            'customer_phone' => '254744444444',
+            'status' => 'active',
+        ]);
+
+        $incoming = Message::create([
+            'chat_id' => $chat->id,
+            'content' => 'What are your hours?',
+            'sender' => 'customer',
+            'status' => 'received',
+            'whatsapp_message_id' => 'wamid.trial-q',
+        ]);
+
+        \App\Models\Faq::create([
+            'company_id' => $company->id,
+            'question' => 'What are your hours?',
+            'answer' => 'We are open 9am to 5pm.',
+            'keywords' => ['hours'],
+            'is_active' => true,
+        ]);
+
+        (new ProcessIncomingWhatsAppMessage(
+            (int) $company->id,
+            (int) $chat->id,
+            '254744444444',
+            'phone-trial',
+            'What are your hours?',
+            'Trial Buyer',
+            'wamid.trial-q',
+            (int) $incoming->id,
+        ))->handle(
+            app(\App\Services\AIReplyService::class),
+            app(\App\Services\WhatsAppMessageSenderService::class),
+            app(\App\Services\MailService::class),
+        );
+
+        $bot = Message::where('chat_id', $chat->id)->where('sender', 'bot')->latest('id')->first();
+        $this->assertNotNull($bot);
+        $this->assertStringNotContainsString('temporarily unavailable', (string) $bot->content);
+    }
+
+    public function test_expired_subscription_sends_unavailable_message(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.bot-expired']],
+            ], 200),
+        ]);
+
+        $company = Company::create([
+            'name' => 'Expired Co',
+            'email' => 'expired@test.local',
+            'status' => 'active',
+        ]);
+
+        CompanySetting::create([
+            'company_id' => $company->id,
+            'auto_reply_enabled' => true,
+        ]);
+
+        Subscription::create([
+            'company_id' => $company->id,
+            'plan' => 'professional',
+            'status' => 'active',
+            'start_date' => now()->subMonths(2),
+            'end_date' => now()->subDay(),
+            'amount' => 99,
+            'billing_cycle' => 'monthly',
+        ]);
+
+        WhatsAppAccount::create([
+            'company_id' => $company->id,
+            'phone_number_id' => 'phone-expired',
+            'access_token' => 'token-expired',
+            'whatsapp_business_account_id' => 'waba-expired',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'connected_at' => now(),
+        ]);
+
+        $chat = Chat::create([
+            'company_id' => $company->id,
+            'customer_name' => 'Expired Buyer',
+            'customer_phone' => '254755555555',
+            'status' => 'active',
+        ]);
+
+        $incoming = Message::create([
+            'chat_id' => $chat->id,
+            'content' => 'Hello',
+            'sender' => 'customer',
+            'status' => 'received',
+            'whatsapp_message_id' => 'wamid.expired-q',
+        ]);
+
+        (new ProcessIncomingWhatsAppMessage(
+            (int) $company->id,
+            (int) $chat->id,
+            '254755555555',
+            'phone-expired',
+            'Hello',
+            'Expired Buyer',
+            'wamid.expired-q',
+            (int) $incoming->id,
+        ))->handle(
+            app(\App\Services\AIReplyService::class),
+            app(\App\Services\WhatsAppMessageSenderService::class),
+            app(\App\Services\MailService::class),
+        );
+
+        $bot = Message::where('chat_id', $chat->id)->where('sender', 'bot')->latest('id')->first();
+        $this->assertNotNull($bot);
+        $this->assertStringContainsString('temporarily unavailable', (string) $bot->content);
+    }
 }

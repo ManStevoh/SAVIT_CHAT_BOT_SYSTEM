@@ -296,8 +296,9 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
     protected function companyHasActiveSubscription(Company $company): bool
     {
+        // Match EnsureSubscriptionActive / EntitlementService: trial companies must get AI replies.
         return Subscription::where('company_id', $company->id)
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'trial'])
             ->where('end_date', '>=', now()->toDateString())
             ->exists();
     }
