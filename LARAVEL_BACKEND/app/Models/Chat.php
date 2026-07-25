@@ -49,6 +49,26 @@ class Chat extends Model
         return $this->agent_handling_at->diffInMinutes(now(), false) < $withinMinutes;
     }
 
+    /**
+     * Latest customer message has no later bot/agent reply — AI should answer (or be asked to).
+     */
+    public function needsAiReply(): bool
+    {
+        $lastCustomer = $this->messages()
+            ->where('sender', 'customer')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $lastCustomer) {
+            return false;
+        }
+
+        return ! $this->messages()
+            ->whereIn('sender', ['bot', 'agent'])
+            ->where('id', '>', $lastCustomer->id)
+            ->exists();
+    }
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

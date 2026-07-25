@@ -126,10 +126,18 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        if ($chat->isAgentHandling(30)) {
-            $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
+        // Agent lock only blocks while fresh. Expired locks must resume AI (and clear the stamp).
+        if ($chat->agent_handling_at !== null) {
+            if ($chat->isAgentHandling(30) && ! $this->forceReply) {
+                $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
 
-            return;
+                return;
+            }
+
+            if (! $chat->isAgentHandling(30)) {
+                $chat->update(['agent_handling_at' => null]);
+                $chat->refresh();
+            }
         }
 
         if ($this->wantsHumanEscalation($chat)) {

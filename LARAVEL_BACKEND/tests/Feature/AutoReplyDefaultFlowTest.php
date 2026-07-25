@@ -335,6 +335,87 @@ class AutoReplyDefaultFlowTest extends TestCase
         $this->assertStringNotContainsString('temporarily unavailable', (string) $bot->content);
     }
 
+    public function test_ask_ai_replies_to_unanswered_customer_without_agent_lock(): void
+    {
+        Queue::fake();
+        $user = $this->companyUser();
+        $chat = Chat::create([
+            'company_id' => $user->company_id,
+            'customer_name' => 'Stuck',
+            'customer_phone' => '254766666666',
+            'status' => 'active',
+            'agent_handling_at' => null,
+        ]);
+        Message::create([
+            'chat_id' => $chat->id,
+            'content' => 'Hello',
+            'sender' => 'customer',
+            'status' => 'received',
+            'whatsapp_message_id' => 'wamid.stuck-hello',
+        ]);
+
+        Sanctum::actingAs($user);
+        $this->postJson("/api/company/chats/{$chat->id}/hand-back")
+            ->assertOk()
+            ->assertJsonPath('reprocessed', true);
+
+        Queue::assertPushed(ProcessIncomingWhatsAppMessage::class, fn ($job) => $job->forceReply === true);
+    }
+
+    public function test_expired_agent_lock_allows_auto_reply_on_new_message(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.bot-after-expiry']],
+            ], 200),
+        ]);
+
+        $user = $this->companyUser();
+        $chat = Chat::create([
+            'company_id' => $user->company_id,
+            'customer_name' => 'Expired Lock',
+            'customer_phone' => '254777777777',
+            'status' => 'active',
+            'agent_handling_at' => now()->subMinutes(45),
+        ]);
+
+        $incoming = Message::create([
+            'chat_id' => $chat->id,
+            'content' => 'Are you there?',
+            'sender' => 'customer',
+            'status' => 'received',
+            'whatsapp_message_id' => 'wamid.after-expiry',
+        ]);
+
+        \App\Models\Faq::create([
+            'company_id' => $user->company_id,
+            'question' => 'Are you there?',
+            'answer' => 'Yes, we are here.',
+            'keywords' => ['there'],
+            'is_active' => true,
+        ]);
+
+        (new ProcessIncomingWhatsAppMessage(
+            (int) $user->company_id,
+            (int) $chat->id,
+            '254777777777',
+            'phone-auto',
+            'Are you there?',
+            'Expired Lock',
+            'wamid.after-expiry',
+            (int) $incoming->id,
+        ))->handle(
+            app(\App\Services\AIReplyService::class),
+            app(\App\Services\WhatsAppMessageSenderService::class),
+            app(\App\Services\MailService::class),
+        );
+
+        $this->assertNull($chat->fresh()->agent_handling_at);
+        $bot = Message::where('chat_id', $chat->id)->where('sender', 'bot')->latest('id')->first();
+        $this->assertNotNull($bot);
+        $this->assertStringNotContainsString('temporarily unavailable', (string) $bot->content);
+    }
+
     public function test_expired_subscription_sends_unavailable_message(): void
     {
         Http::fake([

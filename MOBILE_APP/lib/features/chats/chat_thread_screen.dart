@@ -43,6 +43,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
   String? _customerName;
   String? _customerPhone;
   bool _isAgentHandling = false;
+  bool _needsAiReply = false;
   ChatMessage? _replyingTo;
 
   @override
@@ -120,12 +121,23 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
     });
   }
 
+  void _syncReplyState(List<ChatMessage> messages) {
+    final needs =
+        messages.isNotEmpty && messages.last.sender == 'customer';
+    if (_needsAiReply != needs) {
+      _needsAiReply = needs;
+    }
+  }
+
   Future<void> _reload() async {
     setState(() {
       _future = context.read<ChatRepository>().listMessages(widget.chatId);
     });
     final messages = await _future;
     _lastCount = messages.length;
+    if (mounted) {
+      setState(() => _syncReplyState(messages));
+    }
     _scrollToBottom();
   }
 
@@ -143,7 +155,10 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
       _lastCount = messages.length;
       _lastFingerprint = fingerprint;
       if (changed) {
-        setState(() => _future = Future.value(messages));
+        setState(() {
+          _future = Future.value(messages);
+          _syncReplyState(messages);
+        });
       }
       if (grew) _scrollToBottom();
     } catch (_) {}
@@ -195,10 +210,13 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
     try {
       await context.read<ChatRepository>().handBack(widget.chatId);
       if (!mounted) return;
-      setState(() => _isAgentHandling = false);
+      setState(() {
+        _isAgentHandling = false;
+        _needsAiReply = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Handed back to AI. Auto-reply will resume.'),
+          content: Text('Asking AI to reply…'),
         ),
       );
       await _reload();
@@ -268,9 +286,9 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
           ],
         ),
         actions: [
-          if (_isAgentHandling)
+          if (_isAgentHandling || _needsAiReply)
             IconButton(
-              tooltip: 'Hand back to AI',
+              tooltip: _isAgentHandling ? 'Hand back to AI' : 'Ask AI to reply',
               onPressed: _handBack,
               icon: const Icon(Icons.smart_toy_outlined),
             ),

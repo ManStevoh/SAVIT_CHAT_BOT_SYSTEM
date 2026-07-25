@@ -150,6 +150,7 @@ class ChatController extends Controller
                 'aiHandled' => (bool) $chat->ai_handled,
                 'agentHandlingAt' => $chat->agent_handling_at?->toIso8601String(),
                 'isAgentHandling' => $chat->isAgentHandling(30),
+                'needsAiReply' => $chat->needsAiReply(),
             ],
         ], $created ? 201 : 200);
     }
