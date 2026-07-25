@@ -169,6 +169,20 @@ class CommerceAgentPhase5Test extends TestCase
         $this->assertSame('executed', $request->fresh()->status);
     }
 
+    public function test_owner_voice_unmatched_falls_through_to_ai(): void
+    {
+        ['company' => $company, 'chat' => $chat] = $this->phase5Company();
+
+        $result = app(OwnerVoiceCommandService::class)->handle(
+            $company,
+            $chat,
+            'can you help me order 10 headphones?',
+        );
+
+        $this->assertFalse($result['handled']);
+        $this->assertNull($result['reply']);
+    }
+
     public function test_owner_voice_command_queues_refund(): void
     {
         ['company' => $company, 'chat' => $chat] = $this->phase5Company();

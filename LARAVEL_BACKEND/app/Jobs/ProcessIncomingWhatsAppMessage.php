@@ -219,10 +219,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             }
         }
 
-        // Keyword handoff only for legacy (non-agent) bots. With agent commerce, the AI
-        // layer owns intent — including "talk to a person" via transfer_to_human — so we
-        // do not short-circuit on phrases like "support" / "agent" before tools run.
-        // Exception: explicit quick-menu "3" still escalates immediately.
+        // Keyword handoff is legacy fallback only. Agent commerce always routes to AI
+        // (including menu "3") so transfer_to_human can decide from dialogue intent.
         if ($this->wantsHumanEscalation($chat, allowKeywordMatch: ! CommerceAgentReplyService::isEnabledForCompany($company))) {
             $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
             app(OrderFlowService::class)->resetOrderState($chat);
@@ -304,6 +302,36 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
                 return;
             }
+
+            // Agent OS unavailable — prefer legacy AI before keyword order-flow / FAQ shortcuts.
+            $inOrderStep = filled($chat->conversation_step);
+            if (! $inOrderStep) {
+                $replyText = $aiReply->getReplyForMessage(
+                    $company,
+                    $messageText,
+                    $this->customerName,
+                    $this->chatId,
+                    $this->orderFlowContextForAi($chat),
+                );
+                if (trim($replyText) !== '') {
+                    $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
+
+                    return;
+                }
+            }
+        }
+
+        // Active checkout step: keep state-machine continuity. Otherwise AI already tried above
+        // (agent companies) or runs after order-flow miss (legacy).
+        $orderFlow = app(OrderFlowService::class);
+        $stepBefore = $chat->conversation_step;
+        $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
+        if ($orderReply !== null && trim($orderReply) !== '') {
+            $chat->refresh();
+            $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
+            $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
+
+            return;
         }
 
         if ($this->isFirstCustomerMessageInChat($this->chatId)) {
@@ -315,17 +343,6 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
                 $greeting = $aiReply->getGreetingOpening($company, $this->customerName);
                 $this->sendReplyAndSave($waSender, $company, $chat, $greeting, $aiReply->getLastReplyRoute());
                 $chat->refresh();
-            }
-
-            $orderFlow = app(OrderFlowService::class);
-            $stepBefore = $chat->conversation_step;
-            $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
-            if ($orderReply !== null && trim($orderReply) !== '') {
-                $chat->refresh();
-                $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
-                $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
-
-                return;
             }
 
             if ($skipOpening) {
@@ -345,33 +362,22 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $orderFlow = app(OrderFlowService::class);
-        $stepBefore = $chat->conversation_step;
-        $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
-        if ($orderReply !== null) {
-            $chat->refresh();
-            $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
-            $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
-
-            return;
-        }
-
         $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
         $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
     }
 
     /**
-     * Quick menu "3. Talk to agent" (only when not in an order step where "3" means e.g. product or payment option).
-     * Keyword matching is optional — disabled when the commerce agent owns intent understanding.
+     * Legacy keyword / menu handoff. When agent commerce is on, callers pass
+     * allowKeywordMatch=false so everything (including "3") goes to the AI layer.
      */
     protected function wantsHumanEscalation(Chat $chat, bool $allowKeywordMatch = true): bool
     {
+        if (! $allowKeywordMatch) {
+            return false;
+        }
         $lower = mb_strtolower(trim($this->messageText));
         if ($lower === '3') {
             return ! filled($chat->conversation_step);
-        }
-        if (! $allowKeywordMatch) {
-            return false;
         }
         $keywords = ['agent', 'human', 'representative', 'talk to someone', 'real person', 'support', 'speak to'];
         foreach ($keywords as $kw) {

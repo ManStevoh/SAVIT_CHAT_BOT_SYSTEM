@@ -141,6 +141,7 @@ class AgentAutonomousDoActionTest extends TestCase
             phoneNumberId: 'pn',
             messageText: '3',
         );
-        $this->assertTrue($method->invoke($menuJob, $chat, false), 'quick-menu 3 still escalates');
+        $this->assertTrue($method->invoke($menuJob, $chat, true), 'legacy menu 3 still escalates');
+        $this->assertFalse($method->invoke($menuJob, $chat, false), 'agent commerce routes menu 3 to AI too');
     }
 }

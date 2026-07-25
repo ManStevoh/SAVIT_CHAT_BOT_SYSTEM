@@ -117,14 +117,8 @@ final class OwnerVoiceCommandService
             ];
         }
 
-        return [
-            'handled' => true,
-            'reply' => "Owner command received. Try:\n"
-                ."• \"Why are sales down?\"\n"
-                ."• \"Refund order ORD-123\"\n"
-                ."• \"Send campaign 5\"\n"
-                .'Or open Executive AI in your dashboard.',
-        ];
+        // No owner-command keyword match — fall through to the AI commerce agent.
+        return ['handled' => false, 'reply' => null];
     }
 
     private function matchesAnalytics(string $text): bool
