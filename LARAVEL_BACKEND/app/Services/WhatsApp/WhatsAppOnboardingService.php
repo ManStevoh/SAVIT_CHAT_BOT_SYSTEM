@@ -282,7 +282,6 @@ class WhatsAppOnboardingService
                 'message' => 'WhatsApp Business Account ID is required so RelayIQ can receive inbound messages. Provide the WABA ID from Meta → WhatsApp → API Setup, or reconnect with Facebook.',
             ];
         }
-
         $pin = $this->normalizeRegistrationPin($registrationPin) ?? $this->generateRegistrationPin();
         $billingModel = WhatsAppPlatformConfig::billingModel();
 

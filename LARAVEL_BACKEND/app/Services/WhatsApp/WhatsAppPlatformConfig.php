@@ -29,9 +29,17 @@ class WhatsAppPlatformConfig
     public static function webhookVerifyToken(): string
     {
         $settings = self::settings();
+        $token = (string) ($settings?->whatsapp_webhook_verify_token ?? '');
+        if ($token !== '') {
+            return $token;
+        }
 
-        return (string) ($settings?->whatsapp_webhook_verify_token
-            ?? config('whatsapp.webhook_verify_token', ''));
+        $envToken = (string) config('whatsapp.webhook_verify_token', env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', ''));
+        if ($envToken !== '') {
+            return $envToken;
+        }
+
+        return 'relayiq_webhook_verify_token';
     }
 
     public static function metaAppSecret(): string

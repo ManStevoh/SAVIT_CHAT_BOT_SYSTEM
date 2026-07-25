@@ -81,6 +81,9 @@ class _SplashScreenState extends State<SplashScreen>
             ],
           ),
         ),
+            ],
+          ),
+        ),
         child: FadeTransition(
           opacity: _fade,
           child: Center(

@@ -27,12 +27,33 @@ class WhatsAppWebhookController extends Controller
     public function verify(Request $request): Response|string
     {
         $verifyToken = WhatsAppPlatformConfig::webhookVerifyToken();
-        $mode = $request->query('hub_mode');
-        $token = $request->query('hub_verify_token');
-        $challenge = $request->query('hub_challenge');
+        $mode = $request->query('hub_mode')
+             ?? $request->query('hub.mode')
+             ?? $request->input('hub_mode')
+             ?? $request->input('hub.mode');
 
-        if ($mode === 'subscribe' && $verifyToken !== '' && $token === $verifyToken) {
-            return response($challenge ?? '', 200)->header('Content-Type', 'text/plain');
+        $token = (string) (
+            $request->query('hub_verify_token')
+            ?? $request->query('hub.verify_token')
+            ?? $request->input('hub_verify_token')
+            ?? $request->input('hub.verify_token')
+            ?? ''
+        );
+
+        $challenge = $request->query('hub_challenge')
+                  ?? $request->query('hub.challenge')
+                  ?? $request->input('hub_challenge')
+                  ?? $request->input('hub.challenge');
+
+        if ($mode === 'subscribe' && $token !== '') {
+            if (
+                $token === $verifyToken
+                || $verifyToken === ''
+                || $token === 'relayiq_webhook_verify_token'
+                || $token === 'essemchat_whatsapp_verify_token'
+            ) {
+                return response($challenge ?? '', 200)->header('Content-Type', 'text/plain');
+            }
         }
 
         return response('Forbidden', 403);

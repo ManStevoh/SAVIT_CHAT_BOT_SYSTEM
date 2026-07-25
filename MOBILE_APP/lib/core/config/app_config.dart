@@ -8,7 +8,7 @@ class AppConfig {
   factory AppConfig.fromEnvironment() {
     const raw = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://10.0.2.2:8080/api',
+      defaultValue: 'https://chat.essemdigital.com/api',
     );
     return AppConfig(apiBaseUrl: raw.replaceAll(RegExp(r'/$'), ''));
   }

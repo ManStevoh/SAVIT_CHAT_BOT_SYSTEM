@@ -116,7 +116,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ],
-            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),

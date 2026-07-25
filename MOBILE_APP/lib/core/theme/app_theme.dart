@@ -190,7 +190,7 @@ class AppTheme {
           borderSide: const BorderSide(color: Colors.redAccent),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         margin: EdgeInsets.zero,
