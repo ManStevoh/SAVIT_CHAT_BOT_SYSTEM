@@ -44,7 +44,8 @@ class CommerceAgentTest extends TestCase
         $this->assertContains('process_order_message', $names);
         $this->assertContains('get_product_relationships', $names);
         $this->assertContains('get_weather', $names);
-        $this->assertCount(20, $names);
+        $this->assertContains('send_order_invoice', $names);
+        $this->assertCount(21, $names);
     }
 
     public function test_agent_mode_off_when_setting_false(): void

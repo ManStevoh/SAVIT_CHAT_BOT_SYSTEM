@@ -105,9 +105,10 @@ class CommerceAgentPhase5Test extends TestCase
         $registry = app(AgentToolRegistry::class);
         $names = array_map(fn ($t) => $t->name(), $registry->all());
 
-        $this->assertCount(20, $names);
+        $this->assertCount(21, $names);
         $this->assertContains('send_whatsapp_campaign', $names);
         $this->assertContains('issue_order_refund', $names);
+        $this->assertContains('send_order_invoice', $names);
     }
 
     public function test_high_risk_refund_queues_approval(): void

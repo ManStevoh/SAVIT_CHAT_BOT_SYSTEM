@@ -364,7 +364,6 @@ return [
             'check_delivery_status',
             'check_mpesa_payment',
             'get_shipping_quote',
-            'issue_order_refund',
         ],
         'plan_rank' => [
             'starter' => 1,

@@ -73,7 +73,7 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertSame(5000, $starter->entitlements['messages']);
         $this->assertSame(3, $starter->entitlements['team']);
         $this->assertFalse($starter->entitlements['api_access']);
-        $this->assertFalse($starter->entitlements['analytics']);
+        $this->assertTrue($starter->entitlements['analytics']);
         $this->assertSame(20, $starter->entitlements['ai_posts_per_month']);
         $this->assertSame(1, $starter->entitlements['whatsapp_numbers']);
         $this->assertTrue($starter->entitlements['allow_physical']);
@@ -217,9 +217,7 @@ class PlanEntitlementEnforcementTest extends TestCase
     {
         ['owner' => $starterOwner] = $this->companyOnPlan('starter');
         Sanctum::actingAs($starterOwner);
-        $this->getJson('/api/company/analytics')
-            ->assertStatus(403)
-            ->assertJsonPath('code', 'analytics_required');
+        $this->getJson('/api/company/analytics')->assertOk();
 
         ['owner' => $growthOwner] = $this->companyOnPlan('professional');
         Sanctum::actingAs($growthOwner);

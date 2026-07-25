@@ -124,6 +124,7 @@ class CommerceAgentPhase10Test extends TestCase
         $names = array_map(fn ($d) => $d['function']['name'], $definitions);
 
         $this->assertContains('search_products', $names);
+        $this->assertContains('send_order_invoice', $names);
         $this->assertNotContains('issue_order_refund', $names);
     }
 
