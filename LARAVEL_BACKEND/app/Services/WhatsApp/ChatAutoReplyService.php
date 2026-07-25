@@ -16,7 +16,7 @@ class ChatAutoReplyService
 {
     /**
      * If this chat is in AI mode and the latest customer message is unanswered, reply now.
-     * Safe to call from message list polling (locked + idempotent).
+     * Only heals "stuck" messages (older than a few seconds) so we do not race the live webhook.
      */
     public function ensureReplyIfNeeded(Chat $chat): bool
     {
@@ -35,6 +35,21 @@ class ChatAutoReplyService
                 return false;
             }
 
+            $lastCustomer = Message::query()
+                ->where('chat_id', $chat->id)
+                ->where('sender', 'customer')
+                ->orderByDesc('id')
+                ->first();
+
+            if (! $lastCustomer) {
+                return false;
+            }
+
+            // Give the webhook ~12s to reply first; only then heal unanswered messages.
+            if ($lastCustomer->created_at && $lastCustomer->created_at->greaterThan(now()->subSeconds(12))) {
+                return false;
+            }
+
             $chat->loadMissing(['company.settings', 'company.whatsappAccount']);
 
             return $this->replyToLatestUnansweredCustomer($chat, force: true);
@@ -46,7 +61,7 @@ class ChatAutoReplyService
 
             return false;
         } finally {
-            optional($lock)->release();
+            $lock->release();
         }
     }
 

@@ -126,16 +126,17 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Unique key so only one job runs per incoming message (avoids duplicate replies when Meta retries the webhook).
+     * Unique key so only one job runs per incoming message (avoids duplicate replies when Meta retries
+     * or dashboard poll races the webhook). forceReply shares the same key.
      */
     public function uniqueId(): string
     {
-        if ($this->forceReply) {
-            return 'wa_handback:'.$this->chatId.':'.($this->whatsappMessageId ?: md5($this->messageText.':'.$this->customerPhone));
-        }
-
         if ($this->whatsappMessageId) {
             return "wa_incoming:{$this->chatId}:{$this->whatsappMessageId}";
+        }
+
+        if ($this->incomingMessageId) {
+            return "wa_incoming:{$this->chatId}:msg:{$this->incomingMessageId}";
         }
 
         return "wa_incoming:{$this->chatId}:".md5($this->messageText.':'.$this->customerPhone);
@@ -152,13 +153,30 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         public ?int $incomingMessageId = null,
         public bool $forceReply = false,
     ) {
-        // Allow quick retries of "Ask AI to reply" if a previous attempt failed.
-        if ($forceReply) {
-            $this->uniqueFor = 15;
-        }
+        $this->uniqueFor = 120;
     }
 
     public function handle(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
+    {
+        $lockKey = 'wa_reply_lock:'.$this->uniqueId();
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 120);
+        if (! $lock->get()) {
+            Log::info('ProcessIncomingWhatsAppMessage: skipped duplicate (lock held)', [
+                'chat_id' => $this->chatId,
+                'whatsapp_message_id' => $this->whatsappMessageId,
+            ]);
+
+            return;
+        }
+
+        try {
+            $this->handleLocked($aiReply, $waSender, $mailService);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    protected function handleLocked(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
     {
         $company = Company::find($this->companyId);
         if (! $company) {
@@ -238,7 +256,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        if ($this->alreadyRepliedToThisMessage() && ! $this->forceReply) {
+        // Always dedupe — including force/handback — so webhook + dashboard poll cannot double-send.
+        if ($this->alreadyRepliedToThisMessage()) {
             return;
         }
 
@@ -372,20 +391,26 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
     protected function alreadyRepliedToThisMessage(): bool
     {
-        if (! $this->whatsappMessageId) {
-            return false;
+        $incoming = null;
+        if ($this->whatsappMessageId) {
+            $incoming = Message::where('chat_id', $this->chatId)
+                ->where('whatsapp_message_id', $this->whatsappMessageId)
+                ->where('sender', 'customer')
+                ->first();
+        } elseif ($this->incomingMessageId) {
+            $incoming = Message::where('chat_id', $this->chatId)
+                ->where('id', $this->incomingMessageId)
+                ->where('sender', 'customer')
+                ->first();
         }
-        $incoming = Message::where('chat_id', $this->chatId)
-            ->where('whatsapp_message_id', $this->whatsappMessageId)
-            ->where('sender', 'customer')
-            ->first();
+
         if (! $incoming) {
             return false;
         }
 
         return Message::where('chat_id', $this->chatId)
-            ->where('sender', 'bot')
-            ->where('created_at', '>=', $incoming->created_at)
+            ->whereIn('sender', ['bot', 'agent'])
+            ->where('id', '>', $incoming->id)
             ->exists();
     }
 

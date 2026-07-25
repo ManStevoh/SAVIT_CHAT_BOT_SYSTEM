@@ -478,12 +478,16 @@ class AutoReplyDefaultFlowTest extends TestCase
             'status' => 'active',
             'agent_handling_at' => null,
         ]);
-        Message::create([
+        $incoming = Message::create([
             'chat_id' => $chat->id,
             'content' => 'Hi',
             'sender' => 'customer',
             'status' => 'received',
             'whatsapp_message_id' => 'wamid.poll-hi',
+        ]);
+        Message::where('id', $incoming->id)->update([
+            'created_at' => now()->subSeconds(20),
+            'updated_at' => now()->subSeconds(20),
         ]);
         \App\Models\Faq::create([
             'company_id' => $user->company_id,
@@ -501,6 +505,67 @@ class AutoReplyDefaultFlowTest extends TestCase
             'chat_id' => $chat->id,
             'sender' => 'bot',
         ]);
+    }
+
+    public function test_duplicate_dispatch_sends_only_one_bot_reply(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.bot-once']],
+            ], 200),
+        ]);
+
+        $user = $this->companyUser();
+        $chat = Chat::create([
+            'company_id' => $user->company_id,
+            'customer_name' => 'Dup',
+            'customer_phone' => '254799999999',
+            'status' => 'active',
+        ]);
+        $incoming = Message::create([
+            'chat_id' => $chat->id,
+            'content' => 'what products do you have',
+            'sender' => 'customer',
+            'status' => 'received',
+            'whatsapp_message_id' => 'wamid.dup-1',
+        ]);
+        \App\Models\Faq::create([
+            'company_id' => $user->company_id,
+            'question' => 'what products do you have',
+            'answer' => 'We sell headphones.',
+            'keywords' => ['products'],
+            'is_active' => true,
+        ]);
+
+        $run = function (bool $force) use ($user, $chat, $incoming) {
+            (new ProcessIncomingWhatsAppMessage(
+                (int) $user->company_id,
+                (int) $chat->id,
+                '254799999999',
+                'phone-auto',
+                'what products do you have',
+                'Dup',
+                'wamid.dup-1',
+                (int) $incoming->id,
+                $force,
+            ))->handle(
+                app(\App\Services\AIReplyService::class),
+                app(\App\Services\WhatsAppMessageSenderService::class),
+                app(\App\Services\MailService::class),
+            );
+        };
+
+        $run(false);
+        $botCountAfterFirst = Message::where('chat_id', $chat->id)->where('sender', 'bot')->count();
+        $this->assertGreaterThanOrEqual(1, $botCountAfterFirst);
+
+        $run(true); // simulates dashboard poll / handback racing the webhook
+
+        $this->assertSame(
+            $botCountAfterFirst,
+            Message::where('chat_id', $chat->id)->where('sender', 'bot')->count(),
+            'A second dispatch for the same inbound message must not send another bot reply.'
+        );
     }
 
     public function test_expired_subscription_sends_unavailable_message(): void
