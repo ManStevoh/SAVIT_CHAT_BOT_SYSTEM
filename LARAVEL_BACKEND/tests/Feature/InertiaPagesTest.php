@@ -38,6 +38,7 @@ class InertiaPagesTest extends TestCase
             'dashboard whatsapp campaigns' => ['/dashboard/whatsapp/campaigns'],
             'dashboard orders' => ['/dashboard/orders'],
             'dashboard products' => ['/dashboard/products'],
+            'dashboard taxes' => ['/dashboard/taxes'],
             'dashboard bookings' => ['/dashboard/bookings'],
             'dashboard settings' => ['/dashboard/settings'],
             'dashboard subscription' => ['/dashboard/subscription'],

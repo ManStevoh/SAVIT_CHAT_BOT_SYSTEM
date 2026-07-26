@@ -14,6 +14,7 @@ import '../../shared/widgets/app_skeleton.dart';
 import '../../shared/widgets/app_state_views.dart';
 import '../../shared/widgets/app_surface.dart';
 import '../orders/order_detail_screen.dart';
+import '../settings/company_settings_controller.dart';
 import '../shell/active_shell_branch.dart';
 import 'home_repository.dart';
 
@@ -49,6 +50,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _reload() async {
+    // Ensure currency display prefs are available for revenue formatting.
+    // ignore: unawaited_futures
+    context.read<CompanySettingsController>().load();
     setState(() {
       _future = context.read<HomeRepository>().load();
     });
@@ -74,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthController>().user;
+    final formatMoney = context.watch<CompanySettingsController>().formatMoney;
     final company = user?.companyName?.trim();
     final greeting = (company != null && company.isNotEmpty)
         ? company
@@ -180,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              data.totalRevenue.toStringAsFixed(0),
+                              formatMoney(data.totalRevenue),
                               style: GoogleFonts.manrope(
                                 fontSize: 40,
                                 fontWeight: FontWeight.w800,
@@ -276,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 _MetricCard(
                                   label: 'Revenue',
-                                  value: data.totalRevenue.toStringAsFixed(0),
+                                  value: formatMoney(data.totalRevenue),
                                   icon: Icons.payments_outlined,
                                   color: AppColors.accentBlue,
                                   onTap: () => context.go('/orders'),

@@ -48,6 +48,20 @@ class MoreScreen extends StatelessWidget {
               onTap: () => context.go('/more/products'),
             ),
             _MoreTile(
+              icon: Icons.percent_outlined,
+              title: 'Taxes',
+              subtitle: 'VAT, GST & sales tax rates',
+              color: AppColors.accentAmber,
+              onTap: () => context.go('/more/taxes'),
+            ),
+            _MoreTile(
+              icon: Icons.payments_outlined,
+              title: 'Currency',
+              subtitle: 'Symbol & number separators',
+              color: AppColors.accentTeal,
+              onTap: () => context.go('/more/currency'),
+            ),
+            _MoreTile(
               icon: Icons.event_available_outlined,
               title: 'Bookings',
               subtitle: 'Meetings & calendar feed',

@@ -56,6 +56,10 @@ class CompanyInAppNotificationService
         $currency = method_exists($settings, 'displayCurrencyCode')
             ? $settings->displayCurrencyCode()
             : 'KES';
+        $taxTotal = (float) ($order->tax_total ?? 0);
+        $taxNote = $taxTotal > 0
+            ? ' (incl. tax '.$currency.' '.number_format($taxTotal, 2).')'
+            : '';
 
         CompanyNotification::create([
             'company_id' => $company->id,
@@ -63,7 +67,7 @@ class CompanyInAppNotificationService
             'order_id' => $order->id,
             'type' => 'order',
             'title' => 'New order '.$order->order_number,
-            'body' => ($order->customer_name ?: 'Customer').' - '.$currency.' '.$total,
+            'body' => ($order->customer_name ?: 'Customer').' - '.$currency.' '.$total.$taxNote,
         ]);
     }
 

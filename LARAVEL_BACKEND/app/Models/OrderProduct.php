@@ -14,12 +14,23 @@ class OrderProduct extends Model
         'name',
         'quantity',
         'price',
+        'tax_rate_id',
+        'tax_name',
+        'tax_code',
+        'tax_rate',
+        'tax_inclusive',
+        'tax_amount',
+        'line_subtotal',
         'fulfillment_data',
         'download_count',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'tax_rate' => 'decimal:4',
+        'tax_inclusive' => 'boolean',
+        'tax_amount' => 'decimal:2',
+        'line_subtotal' => 'decimal:2',
         'fulfillment_data' => 'array',
         'download_count' => 'int',
     ];
@@ -37,5 +48,10 @@ class OrderProduct extends Model
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
+    }
+
+    public function taxRate(): BelongsTo
+    {
+        return $this->belongsTo(TaxRate::class);
     }
 }

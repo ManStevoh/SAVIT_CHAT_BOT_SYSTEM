@@ -6,6 +6,7 @@ class Product {
     required this.name,
     required this.description,
     required this.price,
+    this.taxRateId,
     required this.category,
     required this.productType,
     required this.fulfillmentType,
@@ -36,6 +37,7 @@ class Product {
   final String name;
   final String description;
   final double price;
+  final String? taxRateId;
   final String category;
   final String productType;
   final String fulfillmentType;
@@ -72,6 +74,7 @@ class Product {
       name: jsonString(json['name']),
       description: jsonString(json['description']),
       price: (json['price'] as num?)?.toDouble() ?? 0,
+      taxRateId: json['taxRateId'] != null ? '${json['taxRateId']}' : null,
       category: jsonString(json['category']),
       productType: jsonString(json['productType'], 'physical'),
       fulfillmentType: jsonString(json['fulfillmentType'], 'shipping'),
@@ -199,6 +202,7 @@ class ProductInput {
     required this.name,
     this.description,
     required this.price,
+    this.taxRateId,
     this.category,
     this.productType,
     this.fulfillmentType,
@@ -221,6 +225,7 @@ class ProductInput {
   final String name;
   final String? description;
   final double price;
+  final String? taxRateId;
   final String? category;
   final String? productType;
   final String? fulfillmentType;
@@ -244,6 +249,8 @@ class ProductInput {
       'name': name,
       if (description != null) 'description': description,
       'price': price,
+      // Always send on update so "none" clears product override.
+      if (isUpdate || taxRateId != null) 'taxRateId': taxRateId,
       if (category != null) 'category': category,
       if (productType != null) 'productType': productType,
       if (fulfillmentType != null) 'fulfillmentType': fulfillmentType,

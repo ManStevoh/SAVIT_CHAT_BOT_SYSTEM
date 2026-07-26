@@ -46,7 +46,7 @@ final class SearchProductsTool implements AgentTool
         }
 
         $companyId = (int) $context->company->id;
-        $currency = $context->company->settings?->displayCurrencyCode() ?? 'USD';
+        $settings = $context->company->settings;
 
         $semantic = $this->knowledgeChunks->search($companyId, $query, KnowledgeChunk::SOURCE_PRODUCT, $limit);
         $productIds = array_values(array_unique(array_map(fn ($r) => (int) $r['source_id'], $semantic)));
@@ -76,7 +76,7 @@ final class SearchProductsTool implements AgentTool
             'products' => $products->map(fn (Product $p) => [
                 'id' => $p->id,
                 'name' => $p->name,
-                'price' => MoneyFormatter::format((float) $p->price, $currency),
+                'price' => MoneyFormatter::formatFromSettings((float) $p->price, $settings),
                 'stock' => $p->stock,
                 'description' => mb_substr((string) ($p->description ?? ''), 0, 200),
             ])->values()->all(),

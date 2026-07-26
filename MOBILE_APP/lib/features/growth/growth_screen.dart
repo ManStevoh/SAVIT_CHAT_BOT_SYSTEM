@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
+import '../settings/company_settings_controller.dart';
 import 'growth_models.dart';
 import 'growth_post_form_screen.dart';
 import 'growth_repository.dart';
@@ -105,6 +106,7 @@ class _GrowthScreenState extends State<GrowthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final formatMoney = context.watch<CompanySettingsController>().formatMoney;
     return Scaffold(
       backgroundColor: AppColors.canvas,
       appBar: AppBar(title: const Text('Growth')),
@@ -224,8 +226,8 @@ class _GrowthScreenState extends State<GrowthScreen> {
                     _MetricCard(label: 'WhatsApp starts', value: '${summary.whatsappStarts}'),
                     _MetricCard(label: 'Clicks', value: '${summary.clicks}'),
                     _MetricCard(label: 'Orders', value: '${summary.orders}'),
-                    _MetricCard(label: 'Revenue', value: formatGrowthMoney(summary.revenue)),
-                    _MetricCard(label: 'Ad spend', value: formatGrowthMoney(summary.adSpend)),
+                    _MetricCard(label: 'Revenue', value: formatMoney(summary.revenue)),
+                    _MetricCard(label: 'Ad spend', value: formatMoney(summary.adSpend)),
                     _MetricCard(
                       label: 'Conversion',
                       value: '${summary.conversionRate.toStringAsFixed(1)}%',
@@ -282,13 +284,6 @@ class _GrowthScreenState extends State<GrowthScreen> {
     );
   }
 
-}
-
-String formatGrowthMoney(double value) {
-  if (value >= 1000) {
-    return value.toStringAsFixed(0);
-  }
-  return value.toStringAsFixed(value == value.roundToDouble() ? 0 : 2);
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -382,7 +377,7 @@ class _PlatformBreakdownTile extends StatelessWidget {
           ),
           subtitle: Text('${item.leads} leads · ${item.orders} orders'),
           trailing: Text(
-            formatGrowthMoney(item.revenue),
+            context.watch<CompanySettingsController>().formatMoney(item.revenue),
             style: const TextStyle(
               fontWeight: FontWeight.w800,
               color: AppColors.primaryDark,
@@ -422,7 +417,7 @@ class _TopPostTile extends StatelessWidget {
                 const Spacer(),
                 if (post.revenue > 0)
                   Text(
-                    formatGrowthMoney(post.revenue),
+                    context.watch<CompanySettingsController>().formatMoney(post.revenue),
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       color: AppColors.primary,

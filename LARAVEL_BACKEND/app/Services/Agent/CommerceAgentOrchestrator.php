@@ -275,8 +275,8 @@ final class CommerceAgentOrchestrator
     {
         return match ($actionKind) {
             'send_document' => 'SYSTEM: Intent is send_document. Call send_order_invoice now and continue the open thread. Do not transfer_to_human.',
-            'pay' => 'SYSTEM: Intent is pay. Call share_payment_details (or process_order_message if checkout is mid-flow) with real configured options. Do not invent payment setup or transfer_to_human.',
-            'create_order' => 'SYSTEM: Intent is create_order (customer affirmed or requested ordering). Call process_order_message with a concrete checkout message continuing the prior offer, then share_payment_details if unpaid. Do not transfer_to_human.',
+            'pay' => 'SYSTEM: Intent is pay. If no unpaid order exists yet, call process_order_message YOURSELF with synthesized checkout text from the thread (e.g. "{qty} x {product}", "done", "confirm") — never ask the customer to type a fixed phrase. Then call share_payment_details with real configured options. Do not invent payment setup or transfer_to_human.',
+            'create_order' => 'SYSTEM: Intent is create_order. Call process_order_message YOURSELF with a concrete checkout command synthesized from the prior offer/thread (qty x product, done, confirm). Never ask the customer to type "N x ProductName". Then share_payment_details if unpaid. Do not transfer_to_human.',
             'track', 'lookup' => 'SYSTEM: Intent is lookup/track. Call search_orders or check_delivery_status now. Do not transfer_to_human.',
             default => 'SYSTEM: action_required=true. Execute the matching capability tool for this dialogue turn. Continue smoothly from the bot\'s last offer. Do not transfer_to_human unless customer_stance is want_human.',
         };

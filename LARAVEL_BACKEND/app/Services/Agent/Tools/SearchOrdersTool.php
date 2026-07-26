@@ -34,7 +34,7 @@ final class SearchOrdersTool implements AgentTool
     {
         $companyId = (int) $context->company->id;
         $phone = $context->customerPhone;
-        $currency = $context->company->settings?->displayCurrencyCode() ?? 'USD';
+        $settings = $context->company->settings;
         $orderNumber = trim((string) ($arguments['order_number'] ?? ''));
         $limit = max(1, min(10, (int) ($arguments['limit'] ?? 5)));
 
@@ -56,7 +56,7 @@ final class SearchOrdersTool implements AgentTool
                 'order_number' => $o->order_number,
                 'status' => $o->status,
                 'payment_status' => $o->payment_status,
-                'total' => MoneyFormatter::format((float) $o->total, $currency),
+                'total' => MoneyFormatter::formatFromSettings((float) $o->total, $settings),
                 'date' => $o->created_at?->toDateString(),
                 'items' => $o->orderProducts->map(fn ($i) => "{$i->quantity}x {$i->name}")->all(),
             ])->all(),

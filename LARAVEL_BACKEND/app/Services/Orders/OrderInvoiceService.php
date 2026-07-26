@@ -56,22 +56,42 @@ class OrderInvoiceService
     {
         $order->loadMissing(['orderProducts', 'company.settings']);
         $currency = $order->company?->settings?->displayCurrencyCode() ?? 'USD';
+        $moneyOpts = MoneyFormatter::displayOptionsFromSettings($order->company?->settings);
         $companyName = e($order->company?->name ?? 'Invoice');
         $orderNumber = e((string) ($order->order_number ?: $order->id));
         $customer = e((string) ($order->customer_name ?: 'Customer'));
         $phone = e((string) $order->customer_phone);
         $status = e((string) $order->status);
         $payment = e((string) ($order->payment_status ?? 'pending'));
-        $total = e(MoneyFormatter::format((float) $order->total, $currency));
+        $total = e(MoneyFormatter::format((float) $order->total, $currency, $moneyOpts));
         $date = e(optional($order->created_at)->format('Y-m-d H:i') ?: '');
+
+        $taxLinesHtml = '';
+        $taxTotal = (float) ($order->tax_total ?? 0);
+        if ($taxTotal > 0) {
+            $subtotal = e(MoneyFormatter::format((float) ($order->subtotal ?? 0), $currency, $moneyOpts));
+            $taxLinesHtml .= '<div class="totals" style="font-weight:normal">Subtotal: '.$subtotal.'</div>';
+            $breakdown = is_array($order->tax_breakdown) ? $order->tax_breakdown : [];
+            if ($breakdown === []) {
+                $taxLinesHtml .= '<div class="totals" style="font-weight:normal">Tax: '
+                    .e(MoneyFormatter::format($taxTotal, $currency, $moneyOpts)).'</div>';
+            } else {
+                foreach ($breakdown as $row) {
+                    $label = e((string) (($row['code'] ?? null) ?: ($row['name'] ?? 'Tax')));
+                    $rate = rtrim(rtrim(number_format((float) ($row['rate'] ?? 0), 4, '.', ''), '0'), '.');
+                    $amount = e(MoneyFormatter::format((float) ($row['amount'] ?? 0), $currency, $moneyOpts));
+                    $taxLinesHtml .= '<div class="totals" style="font-weight:normal">'.$label.' ('.$rate.'%): '.$amount.'</div>';
+                }
+            }
+        }
 
         $rows = '';
         foreach ($order->orderProducts as $item) {
-            $line = MoneyFormatter::format((float) $item->price * (int) $item->quantity, $currency);
+            $line = MoneyFormatter::format((float) $item->price * (int) $item->quantity, $currency, $moneyOpts);
             $rows .= '<tr>'
                 .'<td>'.e((string) $item->name).'</td>'
                 .'<td style="text-align:right">'.(int) $item->quantity.'</td>'
-                .'<td style="text-align:right">'.e(MoneyFormatter::format((float) $item->price, $currency)).'</td>'
+                .'<td style="text-align:right">'.e(MoneyFormatter::format((float) $item->price, $currency, $moneyOpts)).'</td>'
                 .'<td style="text-align:right">'.e($line).'</td>'
                 .'</tr>';
         }
@@ -86,7 +106,7 @@ body{font-family:DejaVu Sans,sans-serif;font-size:12px;color:#111}
 table{width:100%;border-collapse:collapse;margin-top:16px}
 th,td{text-align:left;padding:8px 4px;border-bottom:1px solid #ddd}
 .num,.totals{text-align:right}
-.totals{margin-top:16px;font-size:14px;font-weight:bold}
+.totals{margin-top:8px;font-size:14px;font-weight:bold}
 </style></head><body>
 <h1>{$companyName}</h1>
 <p>Invoice / receipt for order #{$orderNumber}</p>
@@ -98,6 +118,7 @@ th,td{text-align:left;padding:8px 4px;border-bottom:1px solid #ddd}
 <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Line</th></tr></thead>
 <tbody>{$rows}</tbody>
 </table>
+{$taxLinesHtml}
 <div class="totals">Total due: {$total}</div>
 </body></html>
 HTML;
@@ -194,7 +215,7 @@ HTML;
         $defaultCaption = sprintf(
             "Invoice for order #%s — %s (%s). Payment status: %s.\n\nView online:\n%s",
             $order->order_number,
-            MoneyFormatter::format((float) $order->total, $currency),
+            MoneyFormatter::formatFromSettings((float) $order->total, $company->settings),
             $order->status,
             $order->payment_status ?? 'unknown',
             $pdf['receipt_url'],
@@ -229,15 +250,25 @@ HTML;
     {
         $currency = $order->company?->settings?->displayCurrencyCode() ?? 'USD';
 
-        return MoneyFormatter::format((float) $order->total, $currency);
+        return MoneyFormatter::formatFromSettings((float) $order->total, $order->company?->settings);
     }
 
     protected function invoiceTextMessage(Order $order, string $receiptUrl, bool $includePdfNote = true): string
     {
+        $money = app(TaxCalculationService::class)->formatSummaryLines([
+            'subtotal' => (float) ($order->subtotal ?? $order->total),
+            'tax_total' => (float) ($order->tax_total ?? 0),
+            'total' => (float) $order->total,
+            'tax_breakdown' => is_array($order->tax_breakdown) ? $order->tax_breakdown : [],
+        ], fn (float $amount) => MoneyFormatter::formatFromSettings(
+            $amount,
+            $order->company?->settings
+        ));
+
         $lines = [
             'Invoice for order #'.$order->order_number,
             'Status: '.$order->status.' | Payment: '.($order->payment_status ?? 'unknown'),
-            'Total: '.$this->formatTotal($order),
+            ...$money,
             '',
             'View / pay invoice:',
             $receiptUrl,

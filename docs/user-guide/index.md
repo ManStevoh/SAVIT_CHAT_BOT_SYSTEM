@@ -28,7 +28,7 @@ This section covers every user-facing feature of Essem Chat Bot from end to end.
 | [Customers](company-dashboard/customers.md) | Customer list and stats |
 | [FAQs](company-dashboard/faqs.md) | Knowledge base for bot replies |
 | [Analytics](company-dashboard/analytics.md) | Messages, orders, conversion metrics |
-| [Settings](company-dashboard/settings.md) | AI tone, branding, order payments, working hours |
+| [Settings](company-dashboard/settings.md) | AI tone, branding, catalog currency display, order payments, working hours |
 | [WhatsApp Connection](company-dashboard/whatsapp.md) | Connect your business number |
 | [Subscription & Billing](company-dashboard/subscription.md) | Plans, usage, payment |
 | [Growth Engine](company-dashboard/growth-engine.md) | Social posts, attribution, ROI |

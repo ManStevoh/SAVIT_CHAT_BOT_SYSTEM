@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
+import '../settings/company_settings_controller.dart';
 import 'product_models.dart';
 import 'product_repository.dart';
 
@@ -117,15 +118,9 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
     }
   }
 
-  String _formatPrice(double price) {
-    if (price == price.roundToDouble()) {
-      return price.toStringAsFixed(0);
-    }
-    return price.toStringAsFixed(2);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final formatMoney = context.watch<CompanySettingsController>().formatMoney;
     return Scaffold(
       backgroundColor: AppColors.canvas,
       appBar: AppBar(
@@ -141,12 +136,12 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _reload,
-        child: _buildBody(),
+        child: _buildBody(formatMoney),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(String Function(num) formatMoney) {
     if (_loading && _variants.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -293,7 +288,7 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          _formatPrice(variant.price),
+                          formatMoney(variant.price),
                           style: GoogleFonts.manrope(
                             fontWeight: FontWeight.w800,
                             color: AppColors.primary,

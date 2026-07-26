@@ -42,6 +42,24 @@ Configure how your business appears and how the bot behaves. Settings are organi
 | Primary color | Theme accent |
 | Receipt footer | Text on order receipts |
 
+## Catalog currency & display
+
+Prices in the dashboard, mobile app, WhatsApp catalog, invoices, and AI replies use your catalog currency settings:
+
+| Setting | Description |
+|---------|-------------|
+| **Catalog currency** | ISO 4217 code (e.g. USD, KES, EUR) |
+| **Currency symbol** | Optional label shown before amounts (e.g. `KSh`, `€`). Leave empty to use the currency code / locale default |
+| **Thousands separator** | Grouping mark: `,` · `.` · space · `'` (e.g. `1,000` vs `1.000`) |
+| **Decimal separator** | `.` or `,` (auto-paired when you change thousands) |
+
+**Web:** Dashboard → Settings (Business / catalog currency section)  
+**Mobile:** More → Currency
+
+Example: symbol `KSh`, thousands `.`, decimal `,` → `KSh 1.234,56`
+
+Tax rates (VAT/GST) are configured under **Dashboard → Taxes** (mobile: **More → Taxes**).
+
 ## Order payments
 
 Configure how customers pay after confirming an order:
@@ -52,7 +70,7 @@ Configure how customers pay after confirming an order:
 | **M-Pesa** | Enable STK push; PayBill or Till shortcode + passkey |
 | **Stripe (card)** | Enable payment links; optional own Stripe secret key |
 | **Manual instructions** | Bank details, PayBill account number for offline pay |
-| **Currency** | Order payment currency |
+| **Currency** | Gateway checkout currency (Stripe); catalog display is separate — see above |
 
 See [Payments customer journey](../customer-journeys/payments.md) for bot flow details.
 

@@ -4,14 +4,30 @@ class OrderProduct {
     required this.name,
     required this.quantity,
     required this.price,
+    this.taxAmount = 0,
+    this.lineSubtotal,
+    this.taxName,
+    this.taxRate,
+    this.taxInclusive = false,
   });
 
   final String id;
   final String name;
   final int quantity;
   final double price;
+  final double taxAmount;
+  final double? lineSubtotal;
+  final String? taxName;
+  final double? taxRate;
+  final bool taxInclusive;
 
-  double get lineTotal => price * quantity;
+  /// Amount the customer pays for this line (catalog + exclusive tax when applicable).
+  double get lineTotal {
+    if (taxInclusive || taxAmount <= 0) {
+      return price * quantity;
+    }
+    return (price * quantity) + taxAmount;
+  }
 
   factory OrderProduct.fromJson(Map<String, dynamic> json) {
     return OrderProduct(
@@ -19,6 +35,11 @@ class OrderProduct {
       name: json['name']?.toString() ?? '',
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       price: (json['price'] as num?)?.toDouble() ?? 0,
+      taxAmount: (json['taxAmount'] as num?)?.toDouble() ?? 0,
+      lineSubtotal: (json['lineSubtotal'] as num?)?.toDouble(),
+      taxName: json['taxName']?.toString(),
+      taxRate: (json['taxRate'] as num?)?.toDouble(),
+      taxInclusive: json['taxInclusive'] == true,
     );
   }
 }
@@ -31,6 +52,9 @@ class Order {
     required this.customerPhone,
     required this.products,
     required this.total,
+    this.subtotal,
+    this.taxTotal = 0,
+    this.taxBreakdown = const [],
     required this.status,
     required this.paymentStatus,
     required this.createdAt,
@@ -45,6 +69,9 @@ class Order {
   final String? chatId;
   final List<OrderProduct> products;
   final double total;
+  final double? subtotal;
+  final double taxTotal;
+  final List<Map<String, dynamic>> taxBreakdown;
   final String status;
   final String paymentStatus;
   final String createdAt;
@@ -59,6 +86,14 @@ class Order {
             .toList()
         : <OrderProduct>[];
 
+    final breakdownRaw = json['taxBreakdown'];
+    final breakdown = breakdownRaw is List
+        ? breakdownRaw
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList()
+        : <Map<String, dynamic>>[];
+
     return Order(
       id: '${json['id']}',
       orderNumber: json['orderNumber']?.toString() ?? '',
@@ -67,8 +102,11 @@ class Order {
       chatId: json['chatId'] != null ? '${json['chatId']}' : null,
       products: products,
       total: (json['total'] as num?)?.toDouble() ?? 0,
+      subtotal: (json['subtotal'] as num?)?.toDouble(),
+      taxTotal: (json['taxTotal'] as num?)?.toDouble() ?? 0,
+      taxBreakdown: breakdown,
       status: json['status']?.toString() ?? 'pending',
-      paymentStatus: json['paymentStatus']?.toString() ?? 'pending',
+      paymentStatus: _normalizePaymentStatus(json['paymentStatus']),
       createdAt: json['createdAt']?.toString() ?? '',
       updatedAt: json['updatedAt']?.toString() ?? '',
     );
@@ -106,6 +144,7 @@ class OrderListResult {
   }
 }
 
+/// Fulfillment lifecycle (not payment).
 const List<String> kOrderStatuses = [
   'pending',
   'confirmed',
@@ -114,11 +153,85 @@ const List<String> kOrderStatuses = [
   'cancelled',
 ];
 
-/// Values the mobile app may send via PATCH (never `paid`).
-const List<String> kPatchablePaymentStatuses = [
+/// Payment lifecycle — includes paid for manual/till confirmation.
+const List<String> kPaymentStatuses = [
   'pending',
+  'paid',
   'refunded',
 ];
+
+/// @Deprecated('Use kPaymentStatuses')
+const List<String> kPatchablePaymentStatuses = kPaymentStatuses;
+
+class CreateOrderLineItem {
+  const CreateOrderLineItem({
+    required this.productId,
+    required this.name,
+    required this.quantity,
+    required this.price,
+  });
+
+  final String productId;
+  final String name;
+  final int quantity;
+  final double price;
+
+  double get lineTotal => price * quantity;
+
+  Map<String, dynamic> toJson() => {
+        'productId': int.tryParse(productId) ?? productId,
+        'name': name,
+        'quantity': quantity,
+        'price': price,
+      };
+}
+
+class CreateOrderResult {
+  const CreateOrderResult({
+    required this.orderId,
+    required this.orderNumber,
+    required this.message,
+    required this.whatsappSent,
+    this.whatsappError,
+  });
+
+  final String orderId;
+  final String orderNumber;
+  final String message;
+  final bool whatsappSent;
+  final String? whatsappError;
+}
+
+class OrderTotalsPreview {
+  const OrderTotalsPreview({
+    required this.subtotal,
+    required this.taxTotal,
+    required this.total,
+    this.taxBreakdown = const [],
+  });
+
+  final double subtotal;
+  final double taxTotal;
+  final double total;
+  final List<Map<String, dynamic>> taxBreakdown;
+
+  factory OrderTotalsPreview.fromJson(Map<String, dynamic> json) {
+    final breakdownRaw = json['taxBreakdown'];
+    final breakdown = breakdownRaw is List
+        ? breakdownRaw
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList()
+        : <Map<String, dynamic>>[];
+
+    return OrderTotalsPreview(
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
+      taxTotal: (json['taxTotal'] as num?)?.toDouble() ?? 0,
+      total: (json['total'] as num?)?.toDouble() ?? 0,
+      taxBreakdown: breakdown,
+    );
+  }
+}
 
 String orderStatusLabel(String status) {
   return switch (status) {
@@ -138,6 +251,12 @@ String paymentStatusLabel(String status) {
     'refunded' => 'Refunded',
     _ => status.isEmpty ? 'Unknown' : status[0].toUpperCase() + status.substring(1),
   };
+}
+
+String _normalizePaymentStatus(dynamic raw) {
+  final value = raw?.toString().trim().toLowerCase() ?? '';
+  if (kPaymentStatuses.contains(value)) return value;
+  return 'pending';
 }
 
 String formatOrderDate(String iso) {

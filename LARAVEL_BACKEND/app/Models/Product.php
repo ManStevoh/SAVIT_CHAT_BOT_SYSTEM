@@ -13,6 +13,7 @@ class Product extends Model
         'name',
         'description',
         'price',
+        'tax_rate_id',
         'category',
         'product_type',
         'fulfillment_type',
@@ -99,6 +100,11 @@ class Product extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function taxRate(): BelongsTo
+    {
+        return $this->belongsTo(TaxRate::class);
     }
 
     public function licenseKeys(): HasMany

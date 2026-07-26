@@ -32,7 +32,7 @@ final class CheckDeliveryStatusTool implements AgentTool
     public function execute(AgentToolContext $context, array $arguments): array
     {
         $companyId = (int) $context->company->id;
-        $currency = $context->company->settings?->displayCurrencyCode() ?? 'USD';
+        $settings = $context->company->settings;
         $orderNumber = trim((string) ($arguments['order_number'] ?? ''));
 
         $query = Order::query()
@@ -59,7 +59,7 @@ final class CheckDeliveryStatusTool implements AgentTool
                 'order_number' => $o->order_number,
                 'status' => $o->status,
                 'payment_status' => $o->payment_status,
-                'total' => MoneyFormatter::format((float) $o->total, $currency),
+                'total' => MoneyFormatter::formatFromSettings((float) $o->total, $settings),
                 'placed_at' => $o->created_at?->toDateString(),
                 'possibly_delayed' => in_array($o->status, ['confirmed', 'shipped'], true)
                     && $o->created_at && $o->created_at->lte(now()->subDays($delayDays)),

@@ -16,6 +16,8 @@ import 'features/growth/growth_repository.dart';
 import 'features/home/home_repository.dart';
 import 'features/orders/order_repository.dart';
 import 'features/products/product_repository.dart';
+import 'features/settings/company_settings_controller.dart';
+import 'features/taxes/tax_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,12 +41,14 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ShellBadges()),
         Provider.value(value: api),
         ChangeNotifierProvider(create: (_) => BrandingRepository(api)),
+        ChangeNotifierProvider(create: (_) => CompanySettingsController(api)),
         Provider.value(value: AuthRepository(api.dio, auth)),
         Provider.value(value: ChatRepository(api)),
         Provider.value(value: CustomerRepository(api)),
         Provider.value(value: HomeRepository(api)),
         Provider.value(value: OrderRepository(api)),
         Provider.value(value: ProductRepository(api)),
+        Provider.value(value: TaxRepository(api)),
         Provider.value(value: FaqRepository(api)),
         Provider.value(value: GrowthRepository(api)),
         Provider.value(value: AdminRepository(api)),

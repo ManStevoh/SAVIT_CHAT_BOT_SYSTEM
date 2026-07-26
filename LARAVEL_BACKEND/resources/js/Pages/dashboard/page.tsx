@@ -10,7 +10,7 @@ import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { ChartCard } from '@/components/shared/chart-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { useAnalytics, useOrders, useChats, useCompanySettings, useSubscription } from '@/lib/api-hooks'
-import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import { CHART_ACCENT, CHART_PRIMARY } from '@/lib/chart-colors'
 import { MessageSquare, ShoppingCart, Users, Bot, ArrowRight } from 'lucide-react'
 
@@ -58,7 +58,8 @@ function DashboardPageContent() {
   const { data: companySettings } = useCompanySettings()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
 
-  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
+  const formatCurrency = (value: number) =>
+    formatCurrencyAmount(value, catalogCurrency, currencyDisplayFromSettings(companySettings))
 
   const periodLabel =
     chartPeriod === '7d' ? '7d' : chartPeriod === '30d' ? '30d' : '90d'

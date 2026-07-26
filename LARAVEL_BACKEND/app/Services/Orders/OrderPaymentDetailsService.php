@@ -38,7 +38,9 @@ class OrderPaymentDetailsService
                 'success' => false,
                 'error' => 'no_unpaid_order',
                 'message' => 'No unpaid order found for this customer yet. '
-                    .'Next: call process_order_message with a concrete order message (e.g. "10 x Headphones" or "order") to create/confirm the order, then call share_payment_details again. '
+                    .'Next: YOU call process_order_message with a synthesized checkout command from the thread '
+                    .'(e.g. "{qty} x {ExactProductName}", then "done", then "confirm") — do not ask the customer to type that. '
+                    .'Then call share_payment_details again. '
                     .'Do not transfer_to_human and do not invent payment setup messages.',
                 'customer_message' => null,
             ];
@@ -47,7 +49,9 @@ class OrderPaymentDetailsService
         $pay = $this->resolveAcceptance($company);
         $methods = $this->methodKeys($pay);
         $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
-        $total = MoneyFormatter::format((float) $order->total, $currency);
+        $moneyOpts = MoneyFormatter::displayOptionsFromSettings($company->settings);
+        $total = MoneyFormatter::format((float) $order->total, $currency, $moneyOpts);
+        $taxTotal = (float) ($order->tax_total ?? 0);
 
         if ($methods === []) {
             return [
@@ -64,10 +68,23 @@ class OrderPaymentDetailsService
 
         $lines = [
             "Order #{$order->order_number}",
-            "Total due: {$total}",
-            'Payment status: '.($order->payment_status ?? 'unpaid'),
-            '',
         ];
+        if ($taxTotal > 0) {
+            $lines[] = 'Subtotal: '.MoneyFormatter::format((float) ($order->subtotal ?? 0), $currency, $moneyOpts);
+            $breakdown = is_array($order->tax_breakdown) ? $order->tax_breakdown : [];
+            if ($breakdown === []) {
+                $lines[] = 'Tax: '.MoneyFormatter::format($taxTotal, $currency, $moneyOpts);
+            } else {
+                foreach ($breakdown as $row) {
+                    $label = (string) (($row['code'] ?? null) ?: ($row['name'] ?? 'Tax'));
+                    $rate = rtrim(rtrim(number_format((float) ($row['rate'] ?? 0), 4, '.', ''), '0'), '.');
+                    $lines[] = "{$label} ({$rate}%): ".MoneyFormatter::format((float) ($row['amount'] ?? 0), $currency, $moneyOpts);
+                }
+            }
+        }
+        $lines[] = "Total due: {$total}";
+        $lines[] = 'Payment status: '.($order->payment_status ?? 'unpaid');
+        $lines[] = '';
 
         if (count($methods) === 1 && $methods[0] === 'manual') {
             $instructions = trim((string) $company->settings?->order_payment_manual_instructions);

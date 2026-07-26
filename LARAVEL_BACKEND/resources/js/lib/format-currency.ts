@@ -33,21 +33,89 @@ export const CATALOG_CURRENCY_OPTIONS: { code: string; label: string }[] = [
   { code: 'PHP', label: 'Philippine Peso' },
 ]
 
+export type CurrencyDisplayOptions = {
+  symbol?: string | null
+  thousandsSeparator?: string | null
+  decimalSeparator?: string | null
+}
+
+export function currencyDisplayFromSettings(
+  settings?: {
+    currencySymbol?: string | null
+    thousandsSeparator?: string | null
+    decimalSeparator?: string | null
+  } | null
+): CurrencyDisplayOptions {
+  return {
+    symbol: settings?.currencySymbol,
+    thousandsSeparator: settings?.thousandsSeparator,
+    decimalSeparator: settings?.decimalSeparator,
+  }
+}
+
 export function normalizeCurrencyCode(code: string | undefined | null): string {
   const raw = (code ?? 'USD').replace(/[^A-Za-z]/g, '').toUpperCase()
   return raw.length >= 3 ? raw.slice(0, 3) : 'USD'
 }
 
-export function formatCurrencyAmount(value: number, currencyCode: string | undefined | null): string {
-  const code = normalizeCurrencyCode(currencyCode)
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(value)
-  } catch {
-    return `${code} ${value.toFixed(2)}`
+export function normalizeThousandsSeparator(value: string | undefined | null): string {
+  if (value === '.' || value === ',' || value === ' ' || value === "'") return value
+  return ','
+}
+
+export function normalizeDecimalSeparator(
+  value: string | undefined | null,
+  thousands: string
+): string {
+  let decimal = value === '.' || value === ',' ? value : thousands === '.' ? ',' : '.'
+  if (decimal === thousands) {
+    decimal = thousands === ',' ? '.' : ','
   }
+  return decimal
+}
+
+export function pairedDecimalForThousands(thousands: string): string {
+  return thousands === '.' ? ',' : '.'
+}
+
+export function formatCurrencyAmount(
+  value: number,
+  currencyCode: string | undefined | null,
+  options?: CurrencyDisplayOptions
+): string {
+  const code = normalizeCurrencyCode(currencyCode)
+  const symbolRaw = options?.symbol != null ? String(options.symbol).trim() : ''
+  const hasSymbol = symbolRaw !== ''
+  const thousandsProvided = options?.thousandsSeparator != null
+  const decimalProvided = options?.decimalSeparator != null
+  const thousands = normalizeThousandsSeparator(options?.thousandsSeparator)
+  const decimal = normalizeDecimalSeparator(options?.decimalSeparator, thousands)
+  const hasCustom =
+    hasSymbol ||
+    (thousandsProvided && thousands !== ',') ||
+    (decimalProvided && decimal !== '.')
+
+  if (!hasCustom) {
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: code,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(value)
+    } catch {
+      return `${code} ${value.toFixed(2)}`
+    }
+  }
+
+  const symbol = hasSymbol ? symbolRaw : code
+  const zeroDecimal = ['JPY', 'KRW', 'VND', 'CLP'].includes(code)
+  const abs = Math.abs(value)
+  const fixed = abs.toFixed(zeroDecimal ? 0 : 2)
+  const [intPartRaw, fracPart = ''] = fixed.split('.')
+  const withThousands = intPartRaw.replace(/\B(?=(\d{3})+(?!\d))/g, thousands)
+  const number = zeroDecimal
+    ? withThousands
+    : `${withThousands}${decimal}${fracPart}`
+  return `${symbol} ${value < 0 ? '-' : ''}${number}`
 }

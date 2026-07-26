@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductLicenseKey;
 use App\Models\ProductVariant;
+use App\Models\TaxRate;
 use App\Services\DigitalAccessService;
 use App\Services\Platform\EntitlementService;
 use Illuminate\Http\JsonResponse;
@@ -82,10 +83,18 @@ class ProductController extends Controller
             return response()->json(['success' => false, 'message' => 'No company.'], 403);
         }
 
+        $this->normalizeMultipartBooleans($request, [
+            'trackInventory',
+            'requiresDeliveryAddress',
+            'bookable',
+            'clearDigitalFile',
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
+            'taxRateId' => 'nullable|integer|exists:tax_rates,id',
             'category' => 'nullable|string|max:255',
             'productType' => 'nullable|in:physical,digital,service',
             'fulfillmentType' => 'nullable|in:shipping,download,link,booking,manual',
@@ -263,10 +272,18 @@ class ProductController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
+        $this->normalizeMultipartBooleans($request, [
+            'trackInventory',
+            'requiresDeliveryAddress',
+            'bookable',
+            'clearDigitalFile',
+        ]);
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'price' => 'sometimes|numeric|min:0',
+            'taxRateId' => 'nullable|integer|exists:tax_rates,id',
             'category' => 'nullable|string|max:255',
             'productType' => 'sometimes|in:physical,digital,service',
             'fulfillmentType' => 'sometimes|in:shipping,download,link,booking,manual',
@@ -524,6 +541,7 @@ class ProductController extends Controller
             'name' => $product->name,
             'description' => $product->description ?? '',
             'price' => (float) $product->price,
+            'taxRateId' => $product->tax_rate_id ? (string) $product->tax_rate_id : null,
             'category' => $product->category ?? '',
             'productType' => $product->product_type ?? 'physical',
             'fulfillmentType' => $product->fulfillment_type ?? 'shipping',
@@ -592,6 +610,7 @@ class ProductController extends Controller
             'name' => (string) ($product->name ?? 'Product'),
             'description' => (string) ($product->description ?? ''),
             'price' => (float) ($product->price ?? 0),
+            'taxRateId' => $product->tax_rate_id ? (string) $product->tax_rate_id : null,
             'category' => (string) ($product->category ?? ''),
             'productType' => (string) ($product->product_type ?? 'physical'),
             'fulfillmentType' => (string) ($product->fulfillment_type ?? 'shipping'),
@@ -785,6 +804,37 @@ class ProductController extends Controller
     }
 
     /**
+     * Multipart clients (Dio/FormData) often send "true"/"false" strings.
+     * Laravel's boolean rule only accepts true/false/0/1/"0"/"1".
+     *
+     * @param  list<string>  $keys
+     */
+    private function normalizeMultipartBooleans(Request $request, array $keys): void
+    {
+        $merged = [];
+        foreach ($keys as $key) {
+            if (! $request->exists($key)) {
+                continue;
+            }
+            $value = $request->input($key);
+            if (is_bool($value) || is_int($value)) {
+                continue;
+            }
+            if (! is_string($value)) {
+                continue;
+            }
+            $normalized = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($normalized === null) {
+                continue;
+            }
+            $merged[$key] = $normalized;
+        }
+        if ($merged !== []) {
+            $request->merge($merged);
+        }
+    }
+
+    /**
      * @param  array<string, mixed>  $validated
      * @return array<string, mixed>
      */
@@ -830,6 +880,7 @@ class ProductController extends Controller
             'name' => $validated['name'] ?? $current?->name,
             'description' => $validated['description'] ?? $current?->description,
             'price' => $validated['price'] ?? $current?->price ?? 0,
+            'tax_rate_id' => $this->resolveTaxRateId($validated, $request, $current),
             'category' => $validated['category'] ?? $current?->category,
             'product_type' => $productType,
             'fulfillment_type' => $fulfillmentType,
@@ -855,6 +906,27 @@ class ProductController extends Controller
             'stock' => $validated['stock'] ?? $current?->stock ?? 0,
             'status' => $validated['status'] ?? $current?->status ?? 'active',
         ];
+    }
+
+    private function resolveTaxRateId(array $validated, Request $request, ?Product $current = null): ?int
+    {
+        if (! array_key_exists('taxRateId', $validated)) {
+            return $current?->tax_rate_id ? (int) $current->tax_rate_id : null;
+        }
+
+        $raw = $validated['taxRateId'];
+        if ($raw === null || $raw === '' || $raw === 'none') {
+            return null;
+        }
+
+        $id = (int) $raw;
+        $companyId = (int) ($request->user()->company_id ?? $current?->company_id ?? 0);
+        $exists = TaxRate::query()
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->exists();
+
+        return $exists ? $id : null;
     }
 
     private function catalogTypeEntitlementResponse(int $companyId, string $productType): ?JsonResponse

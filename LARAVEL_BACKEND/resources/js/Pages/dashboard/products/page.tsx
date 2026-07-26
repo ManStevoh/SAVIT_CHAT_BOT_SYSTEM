@@ -10,8 +10,8 @@ import { DataTable, type Column, type Filter } from '@/components/shared/data-ta
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField } from '@/components/shared/form-field'
-import { useProducts, useCompanySettings } from '@/lib/api-hooks'
-import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
+import { useProducts, useCompanySettings, useTaxRates } from '@/lib/api-hooks'
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import {
   createProduct,
   updateProduct,
@@ -76,6 +76,7 @@ interface ProductFormData {
   name: string
   description: string
   price: string
+  taxRateId: string
   category: string
   productType: 'physical' | 'digital' | 'service'
   fulfillmentType: 'shipping' | 'download' | 'link' | 'booking' | 'manual'
@@ -98,6 +99,7 @@ const initialFormData: ProductFormData = {
   name: '',
   description: '',
   price: '',
+  taxRateId: 'none',
   category: '',
   productType: 'physical',
   fulfillmentType: 'shipping',
@@ -192,7 +194,10 @@ export default function ProductsPage() {
   const [productExtraImageUploading, setProductExtraImageUploading] = useState(false)
 
   const { data: companySettings } = useCompanySettings()
+  const { data: taxRates } = useTaxRates()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
+  const formatCurrency = (value: number) =>
+    formatCurrencyAmount(value, catalogCurrency, currencyDisplayFromSettings(companySettings))
 
   // API: GET /api/company/products (useProducts)
   const { data: products, isLoading, error } = useProducts({
@@ -220,8 +225,6 @@ export default function ProductsPage() {
     lowStock: products?.filter((p) => p.stock > 0 && p.stock <= 10).length || 0,
     outOfStock: products?.filter((p) => p.stock === 0).length || 0,
   }
-
-  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
 
   // Validate form
   const validateForm = (): boolean => {
@@ -272,6 +275,7 @@ export default function ProductsPage() {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
+        taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
         category: formData.category,
         productType: formData.productType,
         fulfillmentType: formData.fulfillmentType,
@@ -317,6 +321,7 @@ export default function ProductsPage() {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
+        taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
         category: formData.category,
         productType: formData.productType,
         fulfillmentType: formData.fulfillmentType,
@@ -381,6 +386,7 @@ export default function ProductsPage() {
       name: product.name,
       description: product.description,
       price: product.price.toString(),
+      taxRateId: product.taxRateId ?? 'none',
       category: product.category,
       productType: product.productType ?? 'physical',
       fulfillmentType: product.fulfillmentType ?? 'shipping',
@@ -738,6 +744,23 @@ export default function ProductsPage() {
           required
         />
       </div>
+
+      <SelectField
+        label="Tax rate"
+        name="taxRateId"
+        value={formData.taxRateId || 'none'}
+        onChange={(value) => handleFieldChange('taxRateId', value)}
+        options={[
+          { value: 'none', label: 'Company default / none' },
+          ...(taxRates ?? [])
+            .filter((r) => r.isActive)
+            .map((r) => ({
+              value: r.id,
+              label: `${r.name}${r.code ? ` (${r.code})` : ''} — ${r.rate}%`,
+            })),
+        ]}
+        description="Optional. Leave default to use the company default tax rate when tax is enabled."
+      />
 
       <div className="grid grid-cols-2 gap-4 rounded-md border border-border/70 p-3">
         <label className="flex items-center gap-2 text-sm">

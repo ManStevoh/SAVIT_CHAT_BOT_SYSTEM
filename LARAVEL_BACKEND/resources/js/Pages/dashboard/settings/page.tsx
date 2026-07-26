@@ -40,7 +40,7 @@ function mpesaSecretKey(field: "passkey" | "consumer_secret") {
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
 import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers, type BusinessDnaPreset, type BusinessDnaSettings } from "@/lib/api-hooks"
 import { apiRequest } from "@/lib/api-client"
-import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode } from "@/lib/format-currency"
+import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode, pairedDecimalForThousands, formatCurrencyAmount } from "@/lib/format-currency"
 import { useSWRConfig } from "swr"
 import {
   updateSettings,
@@ -92,6 +92,9 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState("+1 555-0100")
   const [address, setAddress] = useState("123 Main Street, New York, NY 10001")
   const [displayCurrency, setDisplayCurrency] = useState("USD")
+  const [currencySymbol, setCurrencySymbol] = useState("")
+  const [thousandsSeparator, setThousandsSeparator] = useState(",")
+  const [decimalSeparator, setDecimalSeparator] = useState(".")
   const [timezone, setTimezone] = useState("UTC")
 
   const timezoneGroupsForSelect = useMemo(() => {
@@ -499,6 +502,15 @@ export default function SettingsPage() {
       if (settings.displayCurrency != null && settings.displayCurrency !== "") {
         setDisplayCurrency(normalizeCurrencyCode(settings.displayCurrency))
       }
+      if (settings.currencySymbol != null) {
+        setCurrencySymbol(String(settings.currencySymbol))
+      }
+      if (settings.thousandsSeparator != null && settings.thousandsSeparator !== "") {
+        setThousandsSeparator(settings.thousandsSeparator)
+      }
+      if (settings.decimalSeparator != null && settings.decimalSeparator !== "") {
+        setDecimalSeparator(settings.decimalSeparator)
+      }
       if (settings.timezone != null && String(settings.timezone).trim() !== "") {
         setTimezone(String(settings.timezone).trim())
       }
@@ -716,6 +728,9 @@ export default function SettingsPage() {
       phone,
       address,
       displayCurrency: normalizeCurrencyCode(displayCurrency),
+      currencySymbol: currencySymbol.trim() || null,
+      thousandsSeparator,
+      decimalSeparator,
       timezone,
       industry,
       attributionRetentionDays: attributionRetentionDays.trim()
@@ -907,6 +922,11 @@ export default function SettingsPage() {
                     <FieldLabel htmlFor="displayCurrency">Catalog currency</FieldLabel>
                     <p className="text-sm text-muted-foreground mb-2">
                       Prices and totals use this currency in the dashboard, WhatsApp catalog, and AI replies (ISO 4217 code).
+                      Manage VAT/GST and sales tax rates under{" "}
+                      <a href="/dashboard/taxes" className="underline underline-offset-2">
+                        Taxes
+                      </a>
+                      .
                     </p>
                     <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
                       <SelectTrigger id="displayCurrency">
@@ -921,6 +941,72 @@ export default function SettingsPage() {
                       </SelectContent>
                     </Select>
                   </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="currencySymbol">Currency symbol</FieldLabel>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Optional label shown before amounts (e.g. KSh, €, $). Leave empty to use the currency code.
+                    </p>
+                    <Input
+                      id="currencySymbol"
+                      value={currencySymbol}
+                      onChange={(e) => setCurrencySymbol(e.target.value)}
+                      placeholder="e.g. KSh"
+                      maxLength={16}
+                    />
+                  </Field>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="thousandsSeparator">Thousands separator</FieldLabel>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Grouping mark for large amounts (1,000 vs 1.000).
+                      </p>
+                      <Select
+                        value={thousandsSeparator}
+                        onValueChange={(value) => {
+                          setThousandsSeparator(value)
+                          setDecimalSeparator(pairedDecimalForThousands(value))
+                        }}
+                      >
+                        <SelectTrigger id="thousandsSeparator">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value=",">Comma (1,000.00)</SelectItem>
+                          <SelectItem value=".">Dot (1.000,00)</SelectItem>
+                          <SelectItem value=" ">Space (1 000,00)</SelectItem>
+                          <SelectItem value="'">Apostrophe (1&apos;000.00)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="decimalSeparator">Decimal separator</FieldLabel>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Mark before cents/fraction. Auto-updates when thousands style changes.
+                      </p>
+                      <Select value={decimalSeparator} onValueChange={setDecimalSeparator}>
+                        <SelectTrigger id="decimalSeparator">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value=".">Dot (…00.50)</SelectItem>
+                          <SelectItem value=",">Comma (…00,50)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground">
+                    Preview:{" "}
+                    <span className="font-medium text-foreground">
+                      {formatCurrencyAmount(1234567.89, displayCurrency, {
+                        symbol: currencySymbol || null,
+                        thousandsSeparator,
+                        decimalSeparator,
+                      })}
+                    </span>
+                  </p>
 
                   <Field>
                     <FieldLabel htmlFor="timezone">Timezone</FieldLabel>

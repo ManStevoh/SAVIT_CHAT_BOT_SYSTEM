@@ -72,6 +72,15 @@ export interface Order {
   customerName: string
   customerPhone: string
   products: OrderProduct[]
+  subtotal?: number
+  taxTotal?: number
+  taxBreakdown?: Array<{
+    name: string
+    code?: string | null
+    rate: number
+    inclusive: boolean
+    amount: number
+  }>
   total: number
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   paymentStatus: 'pending' | 'paid' | 'refunded'
@@ -86,6 +95,11 @@ export interface OrderProduct {
   name: string
   quantity: number
   price: number
+  taxAmount?: number
+  lineSubtotal?: number
+  taxName?: string | null
+  taxRate?: number | null
+  taxInclusive?: boolean
 }
 
 export interface Customer {
@@ -128,6 +142,7 @@ export interface Product {
   name: string
   description: string
   price: number
+  taxRateId?: string | null
   category: string
   productType?: 'physical' | 'digital' | 'service'
   fulfillmentType?: 'shipping' | 'download' | 'link' | 'booking' | 'manual'

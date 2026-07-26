@@ -9,6 +9,7 @@ use App\Models\OrderProduct;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Services\Orders\TaxCalculationService;
 use App\Support\MoneyFormatter;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -42,14 +43,15 @@ class OrderFlowService
     public const STEP_EXISTING_ORDER_PROMPT = 'existing_order_prompt';
 
     public function __construct(
-        protected OrderPaymentService $orderPayment
+        protected OrderPaymentService $orderPayment,
+        protected TaxCalculationService $taxCalculator,
     ) {}
 
     protected function formatMoney(Company $company, float $amount): string
     {
         $company->loadMissing('settings');
 
-        return MoneyFormatter::format($amount, $company->settings?->display_currency);
+        return MoneyFormatter::formatFromSettings($amount, $company->settings);
     }
 
     protected function formatMoneyForOrder(Order $order, float $amount): string
@@ -61,6 +63,24 @@ class OrderFlowService
         }
 
         return $this->formatMoney($c, $amount);
+    }
+
+    /**
+     * Subtotal / tax / total block for WhatsApp (or just "Total: …" when no tax).
+     */
+    protected function formatOrderMoneySummary(Order $order): string
+    {
+        $calc = [
+            'subtotal' => (float) ($order->subtotal ?? $order->total),
+            'tax_total' => (float) ($order->tax_total ?? 0),
+            'total' => (float) $order->total,
+            'tax_breakdown' => is_array($order->tax_breakdown) ? $order->tax_breakdown : [],
+        ];
+
+        return implode("\n", $this->taxCalculator->formatSummaryLines(
+            $calc,
+            fn (float $amount) => $this->formatMoneyForOrder($order, $amount)
+        ));
     }
 
     /**
@@ -293,7 +313,7 @@ class OrderFlowService
                 if (! $collectEnabled) {
                     $this->clearState($chat);
 
-                    return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We'll prepare it and contact you for delivery.");
+                    return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\nWe'll prepare it and contact you for delivery.");
                 }
                 $pay = $this->resolvePaymentAcceptance($settings);
                 if ($pay['acceptMpesa'] || $pay['acceptStripe'] || $pay['acceptPaystack']) {
@@ -310,8 +330,11 @@ class OrderFlowService
                 }
                 $this->clearState($chat);
 
-                return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We'll prepare it and contact you for delivery.");
+                return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\nWe'll prepare it and contact you for delivery.");
             }
+
+            // Stay on confirm — do not fall through to null (agent/customer shorthand must get a re-prompt).
+            return "Please confirm to place your order:\n1 - Confirm & place order\n2 - Cancel";
         }
 
         if ($step === self::STEP_PAYMENT_METHOD) {
@@ -378,7 +401,7 @@ class OrderFlowService
                         return $this->withReceipt($order, "We've sent an M-Pesa payment request to your phone. Enter your M-Pesa PIN to complete payment. You'll get a confirmation here once payment is received.");
                     }
 
-                    return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We couldn't send M-Pesa right now (".($result['error'] ?? 'please try again later')."). We'll contact you for payment.");
+                    return $this->withReceipt($order, "Order #{$order->order_number} confirmed.\n".$this->formatOrderMoneySummary($order)."\nWe couldn't send M-Pesa right now (".($result['error'] ?? 'please try again later')."). We'll contact you for payment.");
                 }
 
                 if (in_array($lower, ['2', 'different', 'another', 'other'], true)) {
@@ -402,7 +425,7 @@ class OrderFlowService
                 return $this->withReceipt($order, "We've sent an M-Pesa payment request to your phone. Enter your M-Pesa PIN to complete payment. You'll get a confirmation here once payment is received.");
             }
 
-            return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We couldn't send M-Pesa right now (".($result['error'] ?? 'please try again later')."). We'll contact you for payment.");
+            return $this->withReceipt($order, "Order #{$order->order_number} confirmed.\n".$this->formatOrderMoneySummary($order)."\nWe couldn't send M-Pesa right now (".($result['error'] ?? 'please try again later')."). We'll contact you for payment.");
         }
 
         return null;
@@ -542,10 +565,11 @@ class OrderFlowService
             return null;
         }
 
-        if (! preg_match('/^\d+$/', $trimmed)) {
+        // Accept "10", "10x", "10 x" as quantity while a product is pending.
+        if (! preg_match('/^(\d+)\s*[x×]?\s*$/u', $trimmed, $qtyMatch)) {
             return 'Reply with how many you want (a whole number), or "back" for the list. You can also ask a question about our shop.';
         }
-        $qty = (int) $trimmed;
+        $qty = (int) $qtyMatch[1];
         if ($qty < 1 || $qty > 999) {
             return 'Enter a quantity between 1 and 999.';
         }
@@ -804,7 +828,7 @@ class OrderFlowService
 
     protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual = false, bool $invalid = false): string
     {
-        $line = 'Order #'.$order->order_number.' – Total: '.$this->formatMoneyForOrder($order, (float) $order->total).".\n\nHow would you like to pay?";
+        $line = 'Order #'.$order->order_number."\n".$this->formatOrderMoneySummary($order)."\n\nHow would you like to pay?";
         $opts = [];
         $n = 1;
         if ($acceptMpesa) {
@@ -842,10 +866,10 @@ class OrderFlowService
         }
         $suffix = ' ('.($result['error'] ?? 'Payment link unavailable.').')';
         if ($confirmedOrder) {
-            return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We'll prepare it and contact you for delivery.{$suffix}");
+            return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\nWe'll prepare it and contact you for delivery.{$suffix}");
         }
 
-        return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).".{$suffix}");
+        return $this->withReceipt($order, "Order #{$order->order_number} confirmed.\n".$this->formatOrderMoneySummary($order).$suffix);
     }
 
     protected function handlePaystackPayment(Order $order, Chat $chat, bool $confirmedOrder = false): string
@@ -857,10 +881,10 @@ class OrderFlowService
         }
         $suffix = ' ('.($result['error'] ?? 'Payment link unavailable.').')';
         if ($confirmedOrder) {
-            return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).". We'll prepare it and contact you for delivery.{$suffix}");
+            return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\nWe'll prepare it and contact you for delivery.{$suffix}");
         }
 
-        return $this->withReceipt($order, "Order #{$order->order_number} confirmed. Total: ".$this->formatMoneyForOrder($order, (float) $order->total).".{$suffix}");
+        return $this->withReceipt($order, "Order #{$order->order_number} confirmed.\n".$this->formatOrderMoneySummary($order).$suffix);
     }
 
     protected function formatOrderWithManualPaymentInstructions(Order $order): string
@@ -869,8 +893,7 @@ class OrderFlowService
         $instructions = $settings && $settings->hasOrderPaymentManualInstructions()
             ? trim($settings->order_payment_manual_instructions)
             : '';
-        $total = $this->formatMoneyForOrder($order, (float) $order->total);
-        $line = "Order #{$order->order_number} confirmed. Total: {$total}.\n\nTo complete payment, please use the following details:\n\n{$instructions}\n\nReply once you have made the payment. Thank you!";
+        $line = "Order #{$order->order_number} confirmed.\n".$this->formatOrderMoneySummary($order)."\n\nTo complete payment, please use the following details:\n\n{$instructions}\n\nReply once you have made the payment. Thank you!";
 
         return $this->withReceipt($order, $line);
     }
@@ -1125,7 +1148,23 @@ class OrderFlowService
 
     protected function wantsConfirm(string $lower): bool
     {
-        return in_array($lower, ['confirm', 'yes', 'place order', 'confirm order', '1'], true);
+        $lower = trim($lower);
+        if (in_array($lower, [
+            'confirm', 'yes', 'y', 'yeah', 'yep', 'yup', 'ok', 'okay', 'k', 'sure', 'sawa',
+            'place order', 'confirm order', 'place it', 'go ahead', 'proceed', 'do it',
+            'alright', 'all right', 'fine', '1',
+        ], true)) {
+            return true;
+        }
+        // "okay, pay via 12345" / "yes pay" while reviewing the cart.
+        if (preg_match('/^(ok|okay|yes|sure|sawa|alright|confirm)\b/u', $lower)) {
+            return true;
+        }
+        if (preg_match('/\b(pay|payment|mpesa|m-pesa|till|paybill|invoice|receipt)\b/u', $lower)) {
+            return true;
+        }
+
+        return false;
     }
 
     protected function wantsDiscardConfirmOrder(string $lower): bool
@@ -1284,13 +1323,16 @@ class OrderFlowService
             return 'Your cart is empty for now.';
         }
         $lines = ['Here’s your cart so far:'];
-        $total = 0.0;
         foreach ($items as $item) {
             $sub = ($item['price'] ?? 0) * ($item['quantity'] ?? 0);
-            $total += $sub;
             $lines[] = '• '.$item['name'].' x '.$item['quantity'].' — '.$this->formatMoney($company, (float) $sub);
         }
-        $lines[] = 'Total: '.$this->formatMoney($company, (float) $total);
+
+        $calc = $this->taxCalculator->calculateForCompany($company, $items);
+        foreach ($this->taxCalculator->formatSummaryLines($calc, fn (float $amount) => $this->formatMoney($company, $amount)) as $moneyLine) {
+            $lines[] = $moneyLine;
+        }
+
         if (! $this->draftRequiresDeliveryAddress($draft)) {
             $lines[] = 'Delivery: No physical shipping needed';
         }
@@ -1301,10 +1343,7 @@ class OrderFlowService
     protected function createOrderFromDraft(Company $company, Chat $chat, array $draft, string $customerName, string $customerPhone): Order
     {
         $items = $draft['items'] ?? [];
-        $total = 0.0;
-        foreach ($items as $item) {
-            $total += ($item['price'] ?? 0) * ($item['quantity'] ?? 0);
-        }
+        $calc = $this->taxCalculator->calculateForCompany($company, $items);
 
         $orderNumber = 'ORD-'.strtoupper(Str::random(8));
         while (Order::where('order_number', $orderNumber)->exists()) {
@@ -1317,12 +1356,25 @@ class OrderFlowService
             'order_number' => $orderNumber,
             'customer_name' => $customerName ?: 'Customer',
             'customer_phone' => $customerPhone,
-            'total' => round($total, 2),
+            'subtotal' => $calc['subtotal'],
+            'tax_total' => $calc['tax_total'],
+            'tax_breakdown' => $calc['tax_breakdown'] !== [] ? $calc['tax_breakdown'] : null,
+            'total' => $calc['total'],
             'status' => 'pending',
             'payment_status' => 'pending',
         ]);
 
-        foreach ($items as $item) {
+        foreach ($items as $index => $item) {
+            $lineTax = $calc['lines'][$index] ?? [
+                'tax_rate_id' => null,
+                'tax_name' => null,
+                'tax_code' => null,
+                'tax_rate' => null,
+                'tax_inclusive' => false,
+                'tax_amount' => 0.0,
+                'line_subtotal' => round(((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 1)), 2),
+            ];
+
             OrderProduct::create([
                 'order_id' => $order->id,
                 'product_id' => $item['product_id'] ?? null,
@@ -1330,6 +1382,13 @@ class OrderFlowService
                 'name' => $item['name'] ?? 'Item',
                 'quantity' => (int) ($item['quantity'] ?? 1),
                 'price' => (float) ($item['price'] ?? 0),
+                'tax_rate_id' => $lineTax['tax_rate_id'],
+                'tax_name' => $lineTax['tax_name'],
+                'tax_code' => $lineTax['tax_code'],
+                'tax_rate' => $lineTax['tax_rate'],
+                'tax_inclusive' => $lineTax['tax_inclusive'],
+                'tax_amount' => $lineTax['tax_amount'],
+                'line_subtotal' => $lineTax['line_subtotal'],
                 'fulfillment_data' => $item['fulfillment_data'] ?? null,
             ]);
         }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
+import '../settings/company_settings_controller.dart';
 import 'order_models.dart';
 import 'order_repository.dart';
 
@@ -65,7 +66,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment status updated')),
+        SnackBar(
+          content: Text(
+            paymentStatus == 'paid'
+                ? 'Marked as paid'
+                : 'Payment status updated',
+          ),
+        ),
       );
       await _reload();
     } on ApiException catch (e) {
@@ -125,6 +132,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             }
 
             final order = snapshot.data!;
+            final formatMoney =
+                context.watch<CompanySettingsController>().formatMoney;
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -202,7 +211,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        '${product.quantity} × ${product.price.toStringAsFixed(2)}',
+                                        '${product.quantity} × ${formatMoney(product.price)}',
                                         style: const TextStyle(
                                           color: AppColors.textMuted,
                                           fontSize: 13,
@@ -212,7 +221,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   ),
                                 ),
                                 Text(
-                                  product.lineTotal.toStringAsFixed(2),
+                                  formatMoney(product.lineTotal),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -222,6 +231,61 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           );
                         }),
                       const Divider(height: 24),
+                      if ((order.taxTotal) > 0) ...[
+                        Row(
+                          children: [
+                            const Text(
+                              'Subtotal',
+                              style: TextStyle(color: AppColors.textMuted),
+                            ),
+                            const Spacer(),
+                            Text(
+                              formatMoney(
+                                order.subtotal ??
+                                    (order.total - order.taxTotal),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (order.taxBreakdown.isNotEmpty)
+                          ...order.taxBreakdown.map((row) {
+                            final label = (row['code'] ?? row['name'] ?? 'Tax')
+                                .toString();
+                            final rate = row['rate'];
+                            final amount =
+                                (row['amount'] as num?)?.toDouble() ?? 0;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    rate != null
+                                        ? '$label ($rate%)'
+                                        : label,
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(formatMoney(amount)),
+                                ],
+                              ),
+                            );
+                          })
+                        else
+                          Row(
+                            children: [
+                              const Text(
+                                'Tax',
+                                style: TextStyle(color: AppColors.textMuted),
+                              ),
+                              const Spacer(),
+                              Text(formatMoney(order.taxTotal)),
+                            ],
+                          ),
+                        const SizedBox(height: 4),
+                      ],
                       Row(
                         children: [
                           const Text(
@@ -233,7 +297,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           ),
                           const Spacer(),
                           Text(
-                            order.total.toStringAsFixed(2),
+                            formatMoney(order.total),
                             style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 22,
@@ -252,8 +316,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Order status',
+                        'Fulfillment status',
                         style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Order progress (pending → confirmed → shipped → delivered).',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
@@ -261,7 +333,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ? order.status
                             : kOrderStatuses.first,
                         decoration: const InputDecoration(
-                          labelText: 'Status',
+                          labelText: 'Fulfillment',
                         ),
                         items: kOrderStatuses
                             .map(
@@ -290,50 +362,68 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'Payment',
-                            style: TextStyle(fontWeight: FontWeight.w800),
+                          const Expanded(
+                            child: Text(
+                              'Payment status',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
                           ),
-                          const Spacer(),
                           _PaymentChip(status: order.paymentStatus),
                         ],
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        order.paymentStatus == 'paid'
+                            ? 'Payment received. You can mark refunded if needed.'
+                            : 'Set to Paid when till, bank, M-Pesa, or cash is received.',
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                        ),
+                      ),
                       const SizedBox(height: 12),
-                      if (order.paymentStatus == 'paid')
-                        const Text(
-                          'Paid orders can only be changed to refunded. '
-                          'Marking paid must go through a payment gateway.',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 13,
-                          ),
-                        )
-                      else
-                        const Text(
-                          'Update payment status for manual corrections.',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 13,
+                      DropdownButtonFormField<String>(
+                        value: kPaymentStatuses.contains(order.paymentStatus)
+                            ? order.paymentStatus
+                            : 'pending',
+                        decoration: const InputDecoration(
+                          labelText: 'Payment',
+                        ),
+                        items: kPaymentStatuses
+                            .map(
+                              (status) => DropdownMenuItem(
+                                value: status,
+                                child: Text(paymentStatusLabel(status)),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: _updating
+                            ? null
+                            : (value) {
+                                if (value != null &&
+                                    value != order.paymentStatus) {
+                                  _updatePaymentStatus(order, value);
+                                }
+                              },
+                      ),
+                      if (order.paymentStatus != 'paid') ...[
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _updating
+                                ? null
+                                : () => _updatePaymentStatus(order, 'paid'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                            icon: const Icon(Icons.check_circle_outline),
+                            label: const Text('Mark as paid'),
                           ),
                         ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final status
-                              in _paymentActions(order.paymentStatus))
-                            OutlinedButton(
-                              onPressed: _updating
-                                  ? null
-                                  : () =>
-                                      _updatePaymentStatus(order, status),
-                              child: Text(
-                                'Mark ${paymentStatusLabel(status)}',
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -354,11 +444,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ),
     );
   }
-}
-
-List<String> _paymentActions(String current) {
-  if (current == 'paid') return const ['refunded'];
-  return kPatchablePaymentStatuses.where((status) => status != current).toList();
 }
 
 class OrderStatusChip extends StatelessWidget {

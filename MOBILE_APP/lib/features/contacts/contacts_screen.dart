@@ -14,6 +14,7 @@ import '../../shared/widgets/app_surface.dart';
 import '../../shared/widgets/customer_avatar.dart';
 import '../chats/chat_models.dart';
 import '../chats/chat_repository.dart';
+import '../settings/company_settings_controller.dart';
 import 'customer_repository.dart';
 
 class ContactsScreen extends StatefulWidget {
@@ -50,6 +51,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Future<List<ContactDirectoryItem>> _load({String? search}) async {
     final chatRepo = context.read<ChatRepository>();
     final customerRepo = context.read<CustomerRepository>();
+    final formatMoney = context.read<CompanySettingsController>().formatMoney;
 
     List<ChatSummary> chats = const [];
     List<CustomerContact> customers = const [];
@@ -97,7 +99,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
           totalOrders: customer.totalOrders,
           subtitle: existing.subtitle ??
               (customer.totalOrders > 0
-                  ? '${customer.totalOrders} orders · ${customer.totalSpent.toStringAsFixed(0)} spent'
+                  ? '${customer.totalOrders} orders · ${formatMoney(customer.totalSpent)} spent'
                   : null),
         );
       } else {
@@ -106,7 +108,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
           phone: phone,
           totalOrders: customer.totalOrders,
           subtitle: customer.totalOrders > 0
-              ? '${customer.totalOrders} orders · ${customer.totalSpent.toStringAsFixed(0)} spent'
+              ? '${customer.totalOrders} orders · ${formatMoney(customer.totalSpent)} spent'
               : 'No open chat yet',
         );
       }

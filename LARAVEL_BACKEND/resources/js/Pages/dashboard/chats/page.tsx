@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useChats, useMessages, useProducts } from '@/lib/api-hooks'
-import { sendMessage, handBackToBot, createOrderFromChat, submitMessageLearningFeedback } from '@/lib/api-actions'
+import { useChats, useMessages, useProducts, useCompanySettings } from '@/lib/api-hooks'
+import { sendMessage, handBackToBot, createOrderFromChat, previewOrderTotals, submitMessageLearningFeedback } from '@/lib/api-actions'
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
 import {
   Search,
@@ -70,8 +71,21 @@ export default function ChatsPage() {
   const [selectedProductId, setSelectedProductId] = useState('')
   const [orderQuantity, setOrderQuantity] = useState('1')
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
+  const [orderPreview, setOrderPreview] = useState<{
+    subtotal: number
+    taxTotal: number
+    total: number
+    taxBreakdown: Array<{ name: string; code?: string | null; rate: number; amount: number }>
+  } | null>(null)
   const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null)
   const [feedbackBusy, setFeedbackBusy] = useState<string | null>(null)
+  const { data: companySettings } = useCompanySettings()
+  const formatMoney = (value: number) =>
+    formatCurrencyAmount(
+      value,
+      normalizeCurrencyCode(companySettings?.displayCurrency),
+      currencyDisplayFromSettings(companySettings)
+    )
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' })
 
@@ -88,6 +102,41 @@ export default function ChatsPage() {
 
   const selectedChat =
     chats?.find((c) => c.id === selectedChatId) || (!isMobile ? (chats?.[0] ?? null) : null)
+
+  useEffect(() => {
+    if (!createOrderOpen) {
+      setOrderPreview(null)
+      return
+    }
+    const selected = products.find((p) => p.id === selectedProductId)
+    const qty = Number.parseInt(orderQuantity, 10)
+    if (!selected || !Number.isFinite(qty) || qty < 1) {
+      setOrderPreview(null)
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      const res = await previewOrderTotals({
+        items: [{
+          productId: selected.id,
+          price: Number(selected.price) || 0,
+          quantity: qty,
+          taxRateId: selected.taxRateId ?? null,
+        }],
+      })
+      if (cancelled || !res.success) return
+      setOrderPreview({
+        subtotal: Number(res.subtotal ?? 0),
+        taxTotal: Number(res.taxTotal ?? 0),
+        total: Number(res.total ?? 0),
+        taxBreakdown: Array.isArray(res.taxBreakdown) ? res.taxBreakdown : [],
+      })
+    }, 250)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [createOrderOpen, selectedProductId, orderQuantity, products])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -948,17 +997,49 @@ export default function ChatsPage() {
               readOnly
             />
           </div>
-          <div className="rounded-md bg-secondary/40 p-3 text-sm">
-            Total:{' '}
-            <span className="font-semibold text-foreground">
-              {(() => {
-                const qty = Number.parseInt(orderQuantity, 10)
-                const selected = products.find((p) => p.id === selectedProductId)
-                const price = Number(selected?.price ?? 0)
-                if (!Number.isFinite(qty) || !Number.isFinite(price) || qty < 1 || price < 0) return '0.00'
-                return (qty * price).toFixed(2)
-              })()}
-            </span>
+          <div className="rounded-md bg-secondary/40 p-3 text-sm space-y-1">
+            {orderPreview && orderPreview.taxTotal > 0 ? (
+              <>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatMoney(orderPreview.subtotal)}</span>
+                </div>
+                {orderPreview.taxBreakdown.length > 0
+                  ? orderPreview.taxBreakdown.map((row, idx) => (
+                      <div key={`${row.name}-${idx}`} className="flex justify-between text-muted-foreground">
+                        <span>{(row.code || row.name)} ({row.rate}%)</span>
+                        <span>{formatMoney(Number(row.amount))}</span>
+                      </div>
+                    ))
+                  : (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Tax</span>
+                        <span>{formatMoney(orderPreview.taxTotal)}</span>
+                      </div>
+                    )}
+                <div className="flex justify-between font-semibold text-foreground pt-1">
+                  <span>Total</span>
+                  <span>{formatMoney(orderPreview.total)}</span>
+                </div>
+              </>
+            ) : (
+              <div>
+                Total:{' '}
+                <span className="font-semibold text-foreground">
+                  {orderPreview
+                    ? formatMoney(orderPreview.total)
+                    : (() => {
+                        const qty = Number.parseInt(orderQuantity, 10)
+                        const selected = products.find((p) => p.id === selectedProductId)
+                        const price = Number(selected?.price ?? 0)
+                        if (!Number.isFinite(qty) || !Number.isFinite(price) || qty < 1 || price < 0) {
+                          return formatMoney(0)
+                        }
+                        return formatMoney(qty * price)
+                      })()}
+                </span>
+              </div>
+            )}
           </div>
           {!productsLoading && products.length === 0 && (
             <p className="text-xs text-destructive">

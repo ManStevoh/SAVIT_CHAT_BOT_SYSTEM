@@ -2,6 +2,7 @@
 
 namespace App\Services\Agent\Company;
 
+use App\Models\CompanySetting;
 use App\Models\Product;
 use App\Models\ProductRelationship;
 use App\Support\MoneyFormatter;
@@ -56,20 +57,22 @@ final class ProductGraphService
             return ['found' => false, 'message' => 'Product not found.'];
         }
 
+        $settings = CompanySetting::query()->where('company_id', $companyId)->first();
         $edges = $this->relationshipsForProduct($companyId, $productId);
+        $format = static fn (float $amount): string => MoneyFormatter::formatFromSettings($amount, $settings);
 
         return [
             'found' => true,
             'product' => [
                 'id' => $product->id,
                 'name' => $product->name,
-                'price' => MoneyFormatter::format((float) $product->price, $currency),
+                'price' => $format((float) $product->price),
                 'stock' => $product->stock,
                 'category' => $product->category,
             ],
-            'relationships' => array_map(function ($edge) use ($currency) {
+            'relationships' => array_map(function ($edge) use ($format) {
                 if (isset($edge['product']['price'])) {
-                    $edge['product']['price'] = MoneyFormatter::format((float) $edge['product']['price'], $currency);
+                    $edge['product']['price'] = $format((float) $edge['product']['price']);
                 }
 
                 return $edge;

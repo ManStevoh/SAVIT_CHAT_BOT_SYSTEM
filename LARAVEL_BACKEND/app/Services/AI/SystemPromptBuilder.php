@@ -166,7 +166,8 @@ class SystemPromptBuilder
             }
         }
         $company->loadMissing('settings');
-        $ccy = $company->settings?->displayCurrencyCode() ?? 'USD';
+        $settings = $company->settings;
+        $ccy = $settings?->displayCurrencyCode() ?? 'USD';
         $parts[] = "\nProducts (do not invent; refer to catalog if they ask). All prices are in {$ccy}. Customers can order by number in WhatsApp:";
 
         $added = 0;
@@ -176,16 +177,16 @@ class SystemPromptBuilder
                 $min = (float) $p->variants->where('status', 'active')->min('price');
                 $productImage = $this->resolvePrimaryImageUrl($p->images);
                 $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
-                $lines[] = '- '.$p->name.' (options; from '.MoneyFormatter::format($min, $ccy)."){$productImageSuffix}:";
+                $lines[] = '- '.$p->name.' (options; from '.MoneyFormatter::formatFromSettings($min, $settings)."){$productImageSuffix}:";
                 foreach ($p->variants->where('status', 'active')->take(8) as $v) {
                     $variantImage = $this->resolvePrimaryImageUrl($v->images) ?? $productImage;
                     $variantImageSuffix = $variantImage ? " [image: {$variantImage}]" : '';
-                    $lines[] = '  • '.$v->label.': '.MoneyFormatter::format((float) $v->price, $ccy).$variantImageSuffix;
+                    $lines[] = '  • '.$v->label.': '.MoneyFormatter::formatFromSettings((float) $v->price, $settings).$variantImageSuffix;
                 }
             } else {
                 $productImage = $this->resolvePrimaryImageUrl($p->images);
                 $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
-                $lines[] = '- '.$p->name.': '.MoneyFormatter::format((float) $p->price, $ccy).$productImageSuffix;
+                $lines[] = '- '.$p->name.': '.MoneyFormatter::formatFromSettings((float) $p->price, $settings).$productImageSuffix;
             }
 
             $block = implode("\n", $lines);

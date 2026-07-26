@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { SelectField } from '@/components/shared/form-field'
 import { useOrders, useOrder, useCompanySettings } from '@/lib/api-hooks'
-import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import { updateOrderStatus } from '@/lib/api-actions'
 import type { Order } from '@/lib/mock-data'
 import {
@@ -102,7 +102,8 @@ export default function OrdersPage() {
     completed: data?.orders?.filter((o) => o.status === 'delivered').length || 0,
   }
 
-  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
+  const formatCurrency = (value: number) =>
+    formatCurrencyAmount(value, catalogCurrency, currencyDisplayFromSettings(companySettings))
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -436,11 +437,36 @@ export default function OrdersPage() {
             </div>
 
             {/* Total */}
-            <div className="flex items-center justify-between border-t border-border/50 pt-4">
-              <span className="font-medium text-foreground">Total Amount</span>
-              <span className="text-xl font-bold text-primary">
-                {formatCurrency(selectedOrder.total)}
-              </span>
+            <div className="space-y-2 border-t border-border/50 pt-4">
+              {(selectedOrder.taxTotal ?? 0) > 0 ? (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatCurrency(selectedOrder.subtotal ?? 0)}</span>
+                  </div>
+                  {(selectedOrder.taxBreakdown ?? []).length > 0
+                    ? selectedOrder.taxBreakdown!.map((row, idx) => (
+                        <div key={`${row.name}-${idx}`} className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {(row.code || row.name)} ({row.rate}%)
+                          </span>
+                          <span>{formatCurrency(row.amount)}</span>
+                        </div>
+                      ))
+                    : (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Tax</span>
+                          <span>{formatCurrency(selectedOrder.taxTotal ?? 0)}</span>
+                        </div>
+                      )}
+                </>
+              ) : null}
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-foreground">Total Amount</span>
+                <span className="text-xl font-bold text-primary">
+                  {formatCurrency(selectedOrder.total)}
+                </span>
+              </div>
             </div>
 
             {/* Status Update */}

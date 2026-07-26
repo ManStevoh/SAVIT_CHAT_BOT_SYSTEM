@@ -11,6 +11,8 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
 import 'product_models.dart';
 import 'product_repository.dart';
+import '../taxes/tax_models.dart';
+import '../taxes/tax_repository.dart';
 
 class ProductFormScreen extends StatefulWidget {
   const ProductFormScreen({super.key, this.product});
@@ -25,6 +27,7 @@ class ProductFormScreen extends StatefulWidget {
 
 class _ProductFormScreenState extends State<ProductFormScreen> {
   late final ProductRepository _repo;
+  late final TaxRepository _taxRepo;
   late final TextEditingController _name;
   late final TextEditingController _description;
   late final TextEditingController _price;
@@ -47,6 +50,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late bool _bookable;
   String? _imagePath;
   String? _digitalFilePath;
+  String? _taxRateId;
+  List<TaxRate> _taxRates = const [];
 
   bool _saving = false;
   String? _error;
@@ -55,6 +60,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   void initState() {
     super.initState();
     _repo = context.read<ProductRepository>();
+    _taxRepo = context.read<TaxRepository>();
     final product = widget.product;
     _name = TextEditingController(text: product?.name ?? '');
     _description = TextEditingController(text: product?.description ?? '');
@@ -94,6 +100,18 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _trackInventory = product?.trackInventory ?? true;
     _requiresDeliveryAddress = product?.requiresDeliveryAddress ?? true;
     _bookable = product?.bookable ?? false;
+    _taxRateId = product?.taxRateId;
+    _loadTaxRates();
+  }
+
+  Future<void> _loadTaxRates() async {
+    try {
+      final rates = await _taxRepo.listTaxRates();
+      if (!mounted) return;
+      setState(() => _taxRates = rates.where((r) => r.isActive).toList());
+    } catch (_) {
+      // Product save still works without tax picker options.
+    }
   }
 
   @override
@@ -174,6 +192,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       name: name,
       description: description.isEmpty ? null : description,
       price: price,
+      taxRateId: _taxRateId,
       category: category.isEmpty ? null : category,
       productType: _productType,
       fulfillmentType: _fulfillmentType,
@@ -340,6 +359,38 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             decoration: const InputDecoration(
               labelText: 'Price *',
               prefixIcon: Icon(Icons.attach_money),
+            ),
+          ),
+          const SizedBox(height: 12),
+          InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Tax rate',
+              prefixIcon: Icon(Icons.percent_outlined),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String?>(
+                isExpanded: true,
+                value: (_taxRateId != null &&
+                        _taxRates.every((r) => r.id != _taxRateId))
+                    ? null
+                    : _taxRateId,
+                hint: const Text('Company default / none'),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Company default / none'),
+                  ),
+                  ..._taxRates.map(
+                    (rate) => DropdownMenuItem<String?>(
+                      value: rate.id,
+                      child: Text(
+                        '${rate.name}${rate.code != null ? ' (${rate.code})' : ''} — ${rate.rate}%',
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: (value) => setState(() => _taxRateId = value),
+              ),
             ),
           ),
           const SizedBox(height: 12),

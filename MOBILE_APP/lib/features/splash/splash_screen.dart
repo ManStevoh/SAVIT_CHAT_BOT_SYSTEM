@@ -8,6 +8,7 @@ import '../../core/branding/app_branding.dart';
 import '../../core/branding/branding_copy.dart';
 import '../../core/branding/branding_repository.dart';
 import '../../core/onboarding/onboarding_controller.dart';
+import '../settings/company_settings_controller.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -38,8 +39,16 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _bootstrap() async {
-    final branding = await context.read<BrandingRepository>().load();
-    if (mounted) setState(() => _branding = branding);
+    final brandingRepo = context.read<BrandingRepository>();
+    final settingsCtrl = context.read<CompanySettingsController>();
+    final auth = context.read<AuthController>();
+    final branding = await brandingRepo.load();
+    if (!mounted) return;
+    setState(() => _branding = branding);
+    if (auth.isAuthenticated) {
+      // ignore: unawaited_futures
+      settingsCtrl.load();
+    }
     await Future<void>.delayed(const Duration(milliseconds: 700));
     _continue();
   }
@@ -78,9 +87,6 @@ class _SplashScreenState extends State<SplashScreen>
               brand,
               dark,
               Color.lerp(dark, const Color(0xFF000000), 0.35)!,
-            ],
-          ),
-        ),
             ],
           ),
         ),

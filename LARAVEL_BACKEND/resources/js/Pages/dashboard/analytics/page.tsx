@@ -30,7 +30,7 @@ import {
   Legend,
 } from "recharts"
 import { useAnalytics, useCompanySettings } from "@/lib/api-hooks"
-import { formatCurrencyAmount, normalizeCurrencyCode } from "@/lib/format-currency"
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from "@/lib/format-currency"
 import { StatsCard, StatsGrid } from "@/components/shared/stats-card"
 import { PageHeader } from "@/components/shared/page-header"
 import { CHART_PALETTE, CHART_PRIMARY, CHART_ACCENT } from "@/lib/chart-colors"
@@ -62,6 +62,8 @@ export default function AnalyticsPage() {
   const { data: analytics, error, isLoading } = useAnalytics(chartPeriod)
   const { data: companySettings } = useCompanySettings()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
+  const moneyDisplay = currencyDisplayFromSettings(companySettings)
+  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency, moneyDisplay)
 
   const messagesChartData =
     analytics?.messagesPerDay?.map((d) => ({
@@ -171,7 +173,7 @@ export default function AnalyticsPage() {
           change={analytics?.revenueChange}
           changeLabel="vs previous period"
           icon={TrendingUp}
-          formatter={(v) => formatCurrencyAmount(v, catalogCurrency)}
+          formatter={(v) => formatCurrency(v)}
         />
       </StatsGrid>
 

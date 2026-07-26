@@ -87,6 +87,13 @@
     </style>
 </head>
 <body>
+    @php
+        use App\Support\MoneyFormatter;
+        $money = static fn (float $amount): string => MoneyFormatter::formatFromSettings(
+            $amount,
+            $order->company?->settings
+        );
+    @endphp
     <div class="sheet">
         <h1 class="brand">{{ $order->company?->name ?? 'RelayIQ' }}</h1>
         <p class="muted">Invoice / receipt &middot; {{ $order->created_at?->timezone(config('app.timezone'))->format('M j, Y g:i A') }}</p>
@@ -119,14 +126,27 @@
                     <tr>
                         <td>{{ $line->name }}</td>
                         <td class="num">{{ $line->quantity }}</td>
-                        <td class="num">{{ number_format((float) $line->price, 2) }}</td>
-                        <td class="num">{{ number_format((float) $line->price * (int) $line->quantity, 2) }}</td>
+                        <td class="num">{{ $money((float) $line->price) }}</td>
+                        <td class="num">{{ $money((float) $line->price * (int) $line->quantity) }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
 
-        <p class="totals">Total: {{ number_format((float) $order->total, 2) }}</p>
+        <p class="totals" style="font-weight:400;font-size:1rem;">
+            @if((float) ($order->tax_total ?? 0) > 0)
+                Subtotal: {{ $money((float) ($order->subtotal ?? 0)) }}<br>
+                @php($breakdown = is_array($order->tax_breakdown) ? $order->tax_breakdown : [])
+                @forelse($breakdown as $row)
+                    {{ ($row['code'] ?? null) ?: ($row['name'] ?? 'Tax') }}
+                    ({{ rtrim(rtrim(number_format((float) ($row['rate'] ?? 0), 4, '.', ''), '0'), '.') }}%):
+                    {{ $money((float) ($row['amount'] ?? 0)) }}<br>
+                @empty
+                    Tax: {{ $money((float) $order->tax_total) }}<br>
+                @endforelse
+            @endif
+        </p>
+        <p class="totals">Total: {{ $money((float) $order->total) }}</p>
 
         @php($fulfillmentItems = $order->receiptFulfillmentItems())
         @if($order->payment_status === 'paid' && count($fulfillmentItems) > 0)

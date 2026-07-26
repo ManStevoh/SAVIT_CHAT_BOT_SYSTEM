@@ -49,6 +49,7 @@ Route::get('/dashboard/marketplace', [PageController::class, 'dashboardMarketpla
 Route::get('/dashboard/whatsapp/campaigns', [PageController::class, 'dashboardWhatsAppCampaigns'])->name('dashboard.whatsapp.campaigns');
 Route::get('/dashboard/orders', [PageController::class, 'dashboardOrders'])->name('dashboard.orders');
 Route::get('/dashboard/products', [PageController::class, 'dashboardProducts'])->name('dashboard.products');
+Route::get('/dashboard/taxes', [PageController::class, 'dashboardTaxes'])->name('dashboard.taxes');
 Route::get('/dashboard/bookings', [PageController::class, 'dashboardBookings'])->name('dashboard.bookings');
 Route::get('/dashboard/settings', [PageController::class, 'dashboardSettings'])->name('dashboard.settings');
 Route::get('/dashboard/subscription', [PageController::class, 'dashboardSubscription'])->name('dashboard.subscription');

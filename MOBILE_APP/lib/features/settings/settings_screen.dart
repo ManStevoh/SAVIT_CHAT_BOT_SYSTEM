@@ -8,6 +8,7 @@ import '../../core/auth/auth_user.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
+import 'company_settings_controller.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -110,6 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _signOut() async {
+    context.read<CompanySettingsController>().reset();
     await context.read<AuthRepository>().logout();
   }
 

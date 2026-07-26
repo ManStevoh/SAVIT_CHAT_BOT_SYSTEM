@@ -180,6 +180,11 @@ class PageController extends Controller
         return Inertia::render('dashboard/products/page');
     }
 
+    public function dashboardTaxes(): Response
+    {
+        return Inertia::render('dashboard/taxes/page');
+    }
+
     public function dashboardBookings(): Response
     {
         return Inertia::render('dashboard/bookings/page');

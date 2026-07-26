@@ -11,6 +11,10 @@ class CompanySetting extends Model
     protected $fillable = [
         'company_id',
         'display_currency',
+        'currency_symbol',
+        'thousands_separator',
+        'decimal_separator',
+        'tax_enabled',
         'whatsapp_number',
         'ai_greeting',
         'ai_tone',
@@ -49,6 +53,7 @@ class CompanySetting extends Model
     ];
 
     protected $casts = [
+        'tax_enabled' => 'boolean',
         'auto_reply_enabled' => 'boolean',
         'notifications_enabled' => 'boolean',
         'orders_accept_mpesa' => 'boolean',
@@ -106,5 +111,13 @@ class CompanySetting extends Model
     public function displayCurrencyCode(): string
     {
         return MoneyFormatter::normalizeCurrencyCode($this->display_currency);
+    }
+
+    /**
+     * @return array{symbol: ?string, thousands: string, decimal: string}
+     */
+    public function moneyDisplayOptions(): array
+    {
+        return MoneyFormatter::displayOptionsFromSettings($this);
     }
 }

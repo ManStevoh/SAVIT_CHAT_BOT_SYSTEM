@@ -26,6 +26,7 @@ import {
   Megaphone,
   Calendar,
   Sparkles,
+  Percent,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
@@ -52,6 +53,7 @@ export const dashboardNavigation: DashboardNavItem[] = [
   { name: "Chats", href: "/dashboard/chats", icon: MessageSquare },
   { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
   { name: "Products", href: "/dashboard/products", icon: Package },
+  { name: "Taxes", href: "/dashboard/taxes", icon: Percent },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
@@ -77,6 +79,7 @@ export const dashboardNavGroups: DashboardNavGroup[] = [
       { name: "Chats", href: "/dashboard/chats", icon: MessageSquare },
       { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
       { name: "Products", href: "/dashboard/products", icon: Package },
+      { name: "Taxes", href: "/dashboard/taxes", icon: Percent },
       { name: "Customers", href: "/dashboard/customers", icon: Users },
       { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
     ],

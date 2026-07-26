@@ -5,6 +5,7 @@ import '../../core/config/app_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
+import '../settings/company_settings_controller.dart';
 import 'product_form_screen.dart';
 import 'product_models.dart';
 import 'product_repository.dart';
@@ -94,16 +95,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
   }
 
-  String _formatPrice(double price) {
-    if (price == price.roundToDouble()) {
-      return price.toStringAsFixed(0);
-    }
-    return price.toStringAsFixed(2);
-  }
-
   @override
   Widget build(BuildContext context) {
     final apiBaseUrl = context.read<AppConfig>().apiBaseUrl;
+    final formatMoney = context.watch<CompanySettingsController>().formatMoney;
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
@@ -244,7 +239,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              _formatPrice(product.price),
+                              formatMoney(product.price),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.primary,

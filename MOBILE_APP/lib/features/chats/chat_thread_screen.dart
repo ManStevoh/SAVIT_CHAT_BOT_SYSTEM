@@ -9,6 +9,7 @@ import '../../core/shell/shell_badges.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_state_views.dart';
 import '../../shared/widgets/customer_avatar.dart';
+import '../orders/create_order_screen.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 
@@ -228,6 +229,18 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
     }
   }
 
+  Future<void> _createOrder() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CreateOrderScreen(
+          initialChatId: widget.chatId,
+          initialCustomerName: _customerName,
+          initialCustomerPhone: _customerPhone,
+        ),
+      ),
+    );
+  }
+
   void _setReply(ChatMessage message) {
     setState(() => _replyingTo = message);
   }
@@ -286,6 +299,11 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Create order',
+            onPressed: _createOrder,
+            icon: const Icon(Icons.receipt_long_outlined),
+          ),
           if (_isAgentHandling)
             IconButton(
               tooltip: 'Hand back to AI',

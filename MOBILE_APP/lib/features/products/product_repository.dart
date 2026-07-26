@@ -40,12 +40,16 @@ class ProductRepository {
   Future<Product> createProduct(ProductInput input,
       {String? imagePath, String? digitalFilePath}) async {
     try {
+      final hasFiles = (imagePath != null && imagePath.isNotEmpty) ||
+          (digitalFilePath != null && digitalFilePath.isNotEmpty);
       final response = await _api.dio.post(
         '/company/products',
-        data: await _toFormData(input,
-            isUpdate: false,
-            imagePath: imagePath,
-            digitalFilePath: digitalFilePath),
+        data: hasFiles
+            ? await _toFormData(input,
+                isUpdate: false,
+                imagePath: imagePath,
+                digitalFilePath: digitalFilePath)
+            : input.toJson(isUpdate: false),
       );
       return _parseProductResponse(response.data);
     } on DioException catch (e) {
@@ -60,13 +64,22 @@ class ProductRepository {
     String? digitalFilePath,
   }) async {
     try {
-      final response = await _api.dio.post(
-        '/company/products/$id',
-        data: await _toFormData(input,
-            isUpdate: true,
-            imagePath: imagePath,
-            digitalFilePath: digitalFilePath),
-      );
+      final hasFiles = (imagePath != null && imagePath.isNotEmpty) ||
+          (digitalFilePath != null && digitalFilePath.isNotEmpty);
+      // No files: JSON PUT keeps real booleans (Laravel rejects multipart "true"/"false").
+      // With files: multipart POST + 0/1 encoding (PHP ignores files on PUT).
+      final response = hasFiles
+          ? await _api.dio.post(
+              '/company/products/$id',
+              data: await _toFormData(input,
+                  isUpdate: true,
+                  imagePath: imagePath,
+                  digitalFilePath: digitalFilePath),
+            )
+          : await _api.dio.put(
+              '/company/products/$id',
+              data: input.toJson(isUpdate: true),
+            );
       return _parseProductResponse(response.data);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
@@ -137,6 +150,7 @@ class ProductRepository {
       'serviceBookingUrl',
       'fulfillmentInstructions',
       'licenseKeyPrefix',
+      'taxRateId',
     ]) {
       if (map.containsKey(key) && map[key] == null) {
         map[key] = '';

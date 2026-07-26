@@ -40,7 +40,7 @@ final class AgentCustomerIntelligenceContext
                 })
                 ->orderByDesc('id')
                 ->limit(8)
-                ->get(['id', 'order_number', 'status', 'payment_status', 'total', 'created_at', 'customer_name']);
+                ->get(['id', 'order_number', 'status', 'payment_status', 'subtotal', 'tax_total', 'total', 'created_at', 'customer_name']);
         } catch (\Throwable $e) {
             // Don't let schema drift (e.g. missing optional columns) kill auto-replies.
             \Illuminate\Support\Facades\Log::warning('AgentCustomerIntelligenceContext: orders lookup failed', [
@@ -51,18 +51,25 @@ final class AgentCustomerIntelligenceContext
 
         if ($orders->isNotEmpty()) {
             $ccy = $company->settings?->displayCurrencyCode() ?? 'USD';
+            $moneyOpts = MoneyFormatter::displayOptionsFromSettings($company->settings);
             $lines = ['Recent orders for this customer (authoritative — use search_orders for full detail):'];
             foreach ($orders as $order) {
-                $total = MoneyFormatter::format((float) $order->total, $ccy);
+                $total = MoneyFormatter::format((float) $order->total, $ccy, $moneyOpts);
                 $when = $order->created_at instanceof Carbon
                     ? $order->created_at->toFormattedDateString()
                     : (string) $order->created_at;
+                $taxBit = '';
+                $taxTotal = (float) ($order->tax_total ?? 0);
+                if ($taxTotal > 0) {
+                    $taxBit = ' | tax='.MoneyFormatter::format($taxTotal, $ccy, $moneyOpts);
+                }
                 $lines[] = sprintf(
-                    '- #%s | %s | payment=%s | %s | %s',
+                    '- #%s | %s | payment=%s | %s%s | %s',
                     $order->order_number ?: $order->id,
                     $order->status,
                     $order->payment_status ?? 'unknown',
                     $total,
+                    $taxBit,
                     $when
                 );
             }
@@ -108,8 +115,9 @@ Operating rules (business OS — not a rigid script):
 3. Continuity: if you offered to confirm an order, take payment, or send a document, treat the next customer reply as answering that offer and finish it with tools.
 4. Use tools for facts and do-actions. Reason from tool results — never invent payment methods, prices, or stock.
 5. When action is required, call the matching capability immediately. Do not promise then skip the tool. Do not hand off mid-thread unless the customer wants a person.
-6. Remember the person via memory tools; sell with integrity from the real catalog.
-7. You ARE the front line. Keep the conversation smooth and coherent for every customer style.
+6. Checkout: call process_order_message with commands YOU synthesize (e.g. "10 x Headphones", "done", "confirm"). Never ask the customer to type a magic phrase like "10 x ProductName".
+7. Remember the person via memory tools; sell with integrity from the real catalog.
+8. You ARE the front line. Keep the conversation smooth and coherent for every customer style.
 OS;
 
         return implode("\n\n", $parts);

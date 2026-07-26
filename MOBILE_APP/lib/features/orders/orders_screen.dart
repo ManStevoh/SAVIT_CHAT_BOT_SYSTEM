@@ -6,7 +6,9 @@ import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
+import '../settings/company_settings_controller.dart';
 import 'order_detail_screen.dart' show OrderDetailScreen, OrderStatusChip;
+import 'create_order_screen.dart';
 import 'order_models.dart';
 import 'order_repository.dart';
 
@@ -107,6 +109,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
     if (mounted) await _reload();
   }
 
+  Future<void> _createOrder() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => const CreateOrderScreen(),
+      ),
+    );
+    if (created == true && mounted) await _reload();
+    // Detail pushReplacement also returns here without true — refresh anyway.
+    if (mounted) await _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,6 +129,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
           'Orders',
           style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _createOrder,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('New order'),
       ),
       body: RefreshIndicator(
         onRefresh: _reload,
@@ -174,9 +194,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Orders from WhatsApp checkout will appear here.',
+                  'Raise an order for a WhatsApp customer, or wait for checkout from chat.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.manrope(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _createOrder,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text('New order'),
                 ),
               ],
             ),
@@ -190,7 +219,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
       itemCount: itemCount,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
@@ -223,6 +252,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         style: GoogleFonts.manrope(
                           color: AppColors.textMuted,
                           fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        'Use New order to raise an invoice for a chat',
+                        style: GoogleFonts.manrope(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -288,6 +324,7 @@ class _OrderListCard extends StatelessWidget {
     final subtitle = productCount == 1
         ? order.products.first.name
         : '$productCount items';
+    final formatMoney = context.watch<CompanySettingsController>().formatMoney;
 
     return AppSurface(
       onTap: onTap,
@@ -311,6 +348,11 @@ class _OrderListCard extends StatelessWidget {
               OrderStatusChip(status: order.status),
             ],
           ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _ListPaymentChip(status: order.paymentStatus),
+          ),
           const SizedBox(height: 10),
           Text(
             order.customerName,
@@ -330,7 +372,7 @@ class _OrderListCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                order.total.toStringAsFixed(2),
+                formatMoney(order.total),
                 style: GoogleFonts.manrope(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -353,6 +395,45 @@ class _OrderListCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ListPaymentChip extends StatelessWidget {
+  const _ListPaymentChip({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (background, foreground, label) = switch (status) {
+      'paid' => (
+          const Color(0xFFE8F5E9),
+          const Color(0xFF2E7D32),
+          'Paid',
+        ),
+      'refunded' => (
+          const Color(0xFFFFF3E0),
+          const Color(0xFFE65100),
+          'Refunded',
+        ),
+      _ => (AppColors.primarySoft, AppColors.primaryDark, 'Unpaid'),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.manrope(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: foreground,
+        ),
       ),
     );
   }

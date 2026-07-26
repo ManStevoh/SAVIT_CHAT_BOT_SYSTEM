@@ -11,6 +11,7 @@ import '../../core/branding/branding_repository.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
+import '../settings/company_settings_controller.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -60,6 +61,10 @@ class _LoginScreenState extends State<LoginScreen> {
             email: _email.text.trim(),
             password: _password.text,
           );
+      if (mounted) {
+        // ignore: unawaited_futures
+        context.read<CompanySettingsController>().load(force: true);
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
@@ -116,6 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ],
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),

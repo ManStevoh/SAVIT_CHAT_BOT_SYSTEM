@@ -51,7 +51,6 @@ final class CheckMpesaPaymentTool implements AgentTool
         }
 
         $settings = $context->company->settings;
-        $currency = $settings?->displayCurrencyCode() ?? 'KES';
         $mpesaEnabled = (bool) ($settings?->orders_accept_mpesa ?? false);
 
         return [
@@ -59,7 +58,7 @@ final class CheckMpesaPaymentTool implements AgentTool
             'order_number' => $order->order_number,
             'payment_status' => $order->payment_status,
             'order_status' => $order->status,
-            'total' => MoneyFormatter::format((float) $order->total, $currency),
+            'total' => MoneyFormatter::formatFromSettings((float) $order->total, $settings),
             'mpesa_accepted' => $mpesaEnabled,
             'paid' => $order->payment_status === 'paid',
             'placed_at' => $order->created_at?->toDateTimeString(),

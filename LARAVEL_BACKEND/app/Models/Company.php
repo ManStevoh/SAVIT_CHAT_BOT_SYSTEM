@@ -46,6 +46,11 @@ class Company extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function taxRates(): HasMany
+    {
+        return $this->hasMany(TaxRate::class);
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);

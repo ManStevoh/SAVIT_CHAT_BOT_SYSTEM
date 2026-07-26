@@ -74,6 +74,7 @@ use App\Http\Controllers\Api\Company\BookingController;
 use App\Http\Controllers\Api\Company\SettingsController;
 use App\Http\Controllers\Api\Company\StripeCheckoutController;
 use App\Http\Controllers\Api\Company\SubscriptionController;
+use App\Http\Controllers\Api\Company\TaxRateController;
 use App\Http\Controllers\Api\Company\TeamController;
 use App\Http\Controllers\Api\Company\WhatsAppController;
 use App\Http\Controllers\Api\Company\WhatsAppTemplateController;
@@ -159,6 +160,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
     Route::post('chats/{chatId}/messages/{messageId}/learning-feedback', [ChatMessageController::class, 'learningFeedback']);
     Route::get('orders', [OrderController::class, 'index']);
+    Route::post('orders/preview-totals', [OrderController::class, 'previewTotals']);
     Route::get('orders/{order}', [OrderController::class, 'show']);
     Route::post('orders', [OrderController::class, 'store']);
     Route::patch('orders/{order}', [OrderController::class, 'updateStatus']);
@@ -181,6 +183,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::patch('bookings/{booking}', [BookingController::class, 'updateStatus']);
     Route::get('faqs', [FaqController::class, 'index']);
     Route::apiResource('faqs', FaqController::class)->only(['store', 'update', 'destroy']);
+    Route::get('tax-rates', [TaxRateController::class, 'index']);
+    Route::apiResource('tax-rates', TaxRateController::class)->only(['store', 'update', 'destroy']);
     Route::get('analytics', [\App\Http\Controllers\Api\Company\AnalyticsController::class, 'index']);
     Route::get('growth/analytics', [GrowthAnalyticsController::class, 'index']);
     Route::get('growth/posts', [GrowthPostController::class, 'index']);

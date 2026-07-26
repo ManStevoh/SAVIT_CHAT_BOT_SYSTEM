@@ -11,9 +11,11 @@ use App\Services\Agent\CommerceAgentReplyService;
 use App\Services\Agent\Company\CompanyDigitalTwinService;
 use App\Services\AI\AiLearningConfig;
 use App\Services\PlanLimitService;
+use App\Support\MoneyFormatter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class SettingsController extends Controller
 {
@@ -94,6 +96,13 @@ class SettingsController extends Controller
             'orderPaymentMpesaConfig' => $settings ? $this->maskOrderPaymentMpesaConfig($settings->order_payment_mpesa_config) : null,
             'orderPaymentStripeConfig' => $settings ? $this->maskOrderPaymentStripeConfig($settings->order_payment_stripe_config) : null,
             'displayCurrency' => $settings?->displayCurrencyCode() ?? 'USD',
+            'currencySymbol' => $settings?->currency_symbol,
+            'thousandsSeparator' => MoneyFormatter::normalizeThousands($settings?->thousands_separator),
+            'decimalSeparator' => MoneyFormatter::normalizeDecimal(
+                $settings?->decimal_separator,
+                MoneyFormatter::normalizeThousands($settings?->thousands_separator)
+            ),
+            'taxEnabled' => (bool) ($settings?->tax_enabled ?? false),
             'industry' => $company->industry ?? 'other',
             'attributionRetentionDays' => $company->attribution_retention_days,
         ]);
@@ -178,6 +187,10 @@ class SettingsController extends Controller
             'orderPaymentStripeConfig.secret' => 'nullable|string|max:255',
             'orderPaymentStripeConfig.currency' => 'nullable|string|max:10',
             'displayCurrency' => 'sometimes|nullable|string|size:3',
+            'currencySymbol' => 'sometimes|nullable|string|max:16',
+            'thousandsSeparator' => ['sometimes', 'nullable', 'string', Rule::in([',', '.', ' ', "'"])],
+            'decimalSeparator' => ['sometimes', 'nullable', 'string', Rule::in([',', '.'])],
+            'taxEnabled' => 'sometimes|boolean',
             'industry' => 'sometimes|nullable|string|in:retail,restaurant,services,other',
         ]);
 
@@ -419,6 +432,33 @@ class SettingsController extends Controller
             $raw = $companyValidated['displayCurrency'] ?? null;
             $code = is_string($raw) ? strtoupper(preg_replace('/[^A-Za-z]/', '', $raw) ?? '') : '';
             $settings->display_currency = strlen($code) === 3 ? $code : 'USD';
+        }
+        if (array_key_exists('currencySymbol', $companyValidated)) {
+            $symbol = $companyValidated['currencySymbol'];
+            $settings->currency_symbol = is_string($symbol) && trim($symbol) !== ''
+                ? mb_substr(trim($symbol), 0, 16)
+                : null;
+        }
+        if (array_key_exists('thousandsSeparator', $companyValidated)) {
+            $thousands = MoneyFormatter::normalizeThousands($companyValidated['thousandsSeparator'] ?? null);
+            $settings->thousands_separator = $thousands;
+            // Keep decimal paired unless the client also sent an explicit decimal separator.
+            if (! array_key_exists('decimalSeparator', $companyValidated)) {
+                $settings->decimal_separator = MoneyFormatter::pairedDecimalForThousands($thousands);
+            }
+        }
+        if (array_key_exists('decimalSeparator', $companyValidated)) {
+            $thousands = MoneyFormatter::normalizeThousands(
+                $settings->thousands_separator ?? ($companyValidated['thousandsSeparator'] ?? null)
+            );
+            $settings->decimal_separator = MoneyFormatter::normalizeDecimal(
+                $companyValidated['decimalSeparator'] ?? null,
+                $thousands
+            );
+            $settings->thousands_separator = $thousands;
+        }
+        if (array_key_exists('taxEnabled', $companyValidated)) {
+            $settings->tax_enabled = (bool) $companyValidated['taxEnabled'];
         }
         if (array_key_exists('orderPaymentStripeConfig', $companyValidated)) {
             $v = $companyValidated['orderPaymentStripeConfig'];

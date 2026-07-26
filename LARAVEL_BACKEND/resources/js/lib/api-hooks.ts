@@ -436,6 +436,33 @@ export function useFAQs(filters?: { category?: string; search?: string }) {
   )
 }
 
+export interface TaxRate {
+  id: string
+  name: string
+  code: string | null
+  rate: number
+  isInclusive: boolean
+  isDefault: boolean
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** API: GET /api/company/tax-rates */
+export function useTaxRates() {
+  return useSWR<TaxRate[]>(
+    ['tax-rates'],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<TaxRate[]>('/api/company/tax-rates')
+      }
+      await delay(300)
+      return []
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
 /**
  * Fetch analytics data for the current company
  * API Endpoint: GET /api/company/analytics
@@ -577,6 +604,14 @@ export interface CompanySettings {
   orderPaymentStripeConfig?: { secret?: string; currency?: string } | null
   /** ISO 4217 — catalog & chat price display (e.g. USD, KES) */
   displayCurrency?: string
+  /** Optional override shown before amounts (e.g. KSh, €). Empty uses the ISO code. */
+  currencySymbol?: string | null
+  /** Thousands grouping: "," | "." | " " | "'" */
+  thousandsSeparator?: string
+  /** Decimal mark: "." | "," (auto-paired when only thousands is set) */
+  decimalSeparator?: string
+  /** When true, order totals include company tax rates */
+  taxEnabled?: boolean
   /** Industry cluster for CRM templates and portfolio insights */
   industry?: 'retail' | 'restaurant' | 'services' | 'other'
   /** Days to retain attribution data (30–730); null uses platform default */

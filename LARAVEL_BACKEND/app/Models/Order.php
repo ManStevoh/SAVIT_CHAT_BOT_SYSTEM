@@ -21,6 +21,9 @@ class Order extends Model
         'customer_name',
         'customer_phone',
         'delivery_address',
+        'subtotal',
+        'tax_total',
+        'tax_breakdown',
         'total',
         'status',
         'payment_status',
@@ -28,6 +31,9 @@ class Order extends Model
     ];
 
     protected $casts = [
+        'subtotal' => 'decimal:2',
+        'tax_total' => 'decimal:2',
+        'tax_breakdown' => 'array',
         'total' => 'decimal:2',
         'agent_proactive_follow_up_at' => 'datetime',
     ];

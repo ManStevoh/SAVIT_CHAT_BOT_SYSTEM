@@ -533,6 +533,58 @@ export async function updateOrderPaymentStatus(
 }
 
 /**
+ * Preview order money (subtotal / tax / total) without creating an order.
+ * Laravel: POST /api/company/orders/preview-totals
+ */
+export async function previewOrderTotals(data: {
+  items: Array<{
+    productId?: number | string | null
+    price: number
+    quantity: number
+    taxRateId?: number | string | null
+  }>
+}): Promise<{
+  success: boolean
+  subtotal?: number
+  taxTotal?: number
+  total?: number
+  taxBreakdown?: Array<{
+    name: string
+    code?: string | null
+    rate: number
+    inclusive: boolean
+    amount: number
+  }>
+  message?: string
+}> {
+  if (useMockApi()) {
+    await delay(100)
+    const catalog = data.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+    return { success: true, subtotal: catalog, taxTotal: 0, total: catalog, taxBreakdown: [] }
+  }
+  try {
+    const res = await apiRequest<{
+      subtotal: number
+      taxTotal: number
+      total: number
+      taxBreakdown: Array<{
+        name: string
+        code?: string | null
+        rate: number
+        inclusive: boolean
+        amount: number
+      }>
+    }>('/api/company/orders/preview-totals', {
+      method: 'POST',
+      body: data,
+    })
+    return { success: true, ...res }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
  * Create an order for a chat customer and optionally send WhatsApp invoice.
  * Laravel: POST /api/company/orders
  */
@@ -575,6 +627,7 @@ export interface CreateProductData {
   name: string
   description: string
   price: number
+  taxRateId?: string | null
   category: string
   productType?: 'physical' | 'digital' | 'service'
   fulfillmentType?: 'shipping' | 'download' | 'link' | 'booking' | 'manual'
@@ -624,6 +677,7 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
       formData.append('name', data.name)
       formData.append('description', data.description)
       formData.append('price', String(data.price))
+      if (data.taxRateId) formData.append('taxRateId', data.taxRateId)
       formData.append('category', data.category)
       if (data.productType) formData.append('productType', data.productType)
       if (data.fulfillmentType) formData.append('fulfillmentType', data.fulfillmentType)
@@ -653,6 +707,7 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
         name: data.name,
         description: data.description,
         price: data.price,
+        taxRateId: data.taxRateId ?? null,
         category: data.category,
         productType: data.productType,
         fulfillmentType: data.fulfillmentType,
@@ -939,6 +994,68 @@ export async function createFAQ(data: CreateFAQData): Promise<{ success: boolean
   }
 }
 
+export interface CreateTaxRateData {
+  name: string
+  code?: string | null
+  rate: number
+  isInclusive?: boolean
+  isDefault?: boolean
+  isActive?: boolean
+}
+
+export async function createTaxRate(
+  data: CreateTaxRateData
+): Promise<{ success: boolean; taxRate?: import('./api-hooks').TaxRate; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return {
+      success: true,
+      taxRate: {
+        id: Math.random().toString(36).slice(2),
+        name: data.name,
+        code: data.code ?? null,
+        rate: data.rate,
+        isInclusive: Boolean(data.isInclusive),
+        isDefault: Boolean(data.isDefault),
+        isActive: data.isActive !== false,
+      },
+      message: 'Tax rate created',
+    }
+  }
+  try {
+    return await apiRequest('/api/company/tax-rates', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateTaxRate(
+  taxRateId: string,
+  data: Partial<CreateTaxRateData>
+): Promise<{ success: boolean; taxRate?: import('./api-hooks').TaxRate; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, message: 'Tax rate updated' }
+  }
+  try {
+    return await apiRequest(`/api/company/tax-rates/${taxRateId}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteTaxRate(taxRateId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, message: 'Tax rate deleted' }
+  }
+  try {
+    return await apiRequest(`/api/company/tax-rates/${taxRateId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 /**
  * Update FAQ
  * Laravel: PUT /api/company/faqs/:faqId
@@ -1030,6 +1147,10 @@ export interface UpdateSettingsData {
   } | null
   /** ISO 4217 (3 letters), e.g. USD, KES — shown in dashboard and WhatsApp */
   displayCurrency?: string
+  currencySymbol?: string | null
+  thousandsSeparator?: string
+  decimalSeparator?: string
+  taxEnabled?: boolean
   industry?: 'retail' | 'restaurant' | 'services' | 'other'
 }
 
