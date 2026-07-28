@@ -68,6 +68,8 @@ class CompanySetting extends Model
         'spam_max_orders_per_day',
         'dine_in_enabled',
         'abandoned_cart_recovery_enabled',
+        'storefront_whatsapp_order_notify',
+        'abandoned_cart_template_name',
         'storefront_alt_currencies',
         'storefront_default_locale',
     ];
@@ -110,6 +112,7 @@ class CompanySetting extends Model
         'business_dna' => 'array',
         'reply_in_customer_language' => 'boolean',
         'abandoned_cart_recovery_enabled' => 'boolean',
+        'storefront_whatsapp_order_notify' => 'boolean',
         'storefront_alt_currencies' => 'array',
     ];
 

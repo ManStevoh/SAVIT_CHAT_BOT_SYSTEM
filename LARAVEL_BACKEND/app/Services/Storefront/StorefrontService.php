@@ -27,7 +27,10 @@ use Illuminate\Support\Str;
  */
 class StorefrontService
 {
-    public function __construct(protected TaxCalculationService $taxCalculator) {}
+    public function __construct(
+        protected TaxCalculationService $taxCalculator,
+        protected StorefrontWhatsAppBridgeService $whatsappBridge,
+    ) {}
 
     public function resolveCompanyBySlug(string $slug): Company
     {
@@ -708,9 +711,15 @@ class StorefrontService
 
         $spamFlagged = $customerPhone !== '' && $this->isSpam($company, $customerPhone);
 
+        $chatId = null;
+        if ($customerPhone !== '') {
+            $chat = $this->whatsappBridge->resolveOrCreateChat($company, $customerPhone, $customerName);
+            $chatId = $chat?->id;
+        }
+
         $order = Order::create([
             'company_id' => $company->id,
-            'chat_id' => null,
+            'chat_id' => $chatId,
             'order_number' => $orderNumber,
             'customer_name' => $customerName,
             'customer_phone' => $customerPhone ?: null,
@@ -775,6 +784,7 @@ class StorefrontService
             if ($customer && $deliveryAddress) {
                 $this->saveDefaultAddress($customer, $deliveryAddress);
             }
+            $this->whatsappBridge->notifyOrderPlaced($order->fresh(['company.settings', 'orderProducts', 'chat']));
         }
 
         return $order;

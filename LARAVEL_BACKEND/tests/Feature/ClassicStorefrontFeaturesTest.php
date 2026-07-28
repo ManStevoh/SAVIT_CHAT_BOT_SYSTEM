@@ -335,4 +335,156 @@ class ClassicStorefrontFeaturesTest extends TestCase
         );
         $this->assertTrue(true);
     }
+
+    public function test_checkout_links_chat_and_sends_whatsapp_confirmation(): void
+    {
+        \Illuminate\Support\Facades\Http::fake([
+            'graph.facebook.com/*' => \Illuminate\Support\Facades\Http::response(['messages' => [['id' => 'wamid.store.1']]], 200),
+        ]);
+
+        [$company, $latte] = $this->seedStore();
+        $slug = $company->store_slug;
+
+        \App\Models\CompanySetting::where('company_id', $company->id)->update([
+            'storefront_whatsapp_order_notify' => true,
+        ]);
+
+        \App\Models\WhatsAppAccount::create([
+            'company_id' => $company->id,
+            'phone_number_id' => 'phone-store-bridge',
+            'whatsapp_business_account_id' => 'waba-store-bridge',
+            'access_token' => 'wa-token',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+        ]);
+
+        $this->post("/s/{$slug}/cart", [
+            'productId' => $latte->id,
+            'quantity' => 1,
+        ])->assertRedirect("/s/{$slug}/cart");
+
+        $response = $this->post("/s/{$slug}/checkout", [
+            'customerName' => 'Amina',
+            'customerPhone' => '+254700111222',
+            'customerEmail' => 'amina@test.local',
+            'fulfillmentType' => 'pickup',
+        ]);
+
+        $order = Order::where('company_id', $company->id)->latest('id')->first();
+        $this->assertNotNull($order);
+        $this->assertNotNull($order->chat_id);
+        $this->assertSame('254700111222', $order->chat->customer_phone);
+        $this->assertSame('storefront', $order->source);
+
+        $response->assertRedirect('/s/'.$slug.'/order/'.$order->pay_token);
+
+        $this->assertDatabaseHas('messages', [
+            'chat_id' => $order->chat_id,
+            'sender' => 'bot',
+        ]);
+
+        $message = \App\Models\Message::where('chat_id', $order->chat_id)->latest('id')->first();
+        $this->assertNotNull($message);
+        $this->assertStringContainsString($order->order_number, $message->content);
+        $this->assertStringContainsString('/pay/', $message->content);
+        $this->assertStringContainsString('/s/'.$slug.'/track', $message->content);
+    }
+
+    public function test_abandoned_cart_recovery_sends_enriched_whatsapp_and_creates_chat(): void
+    {
+        \Illuminate\Support\Facades\Http::fake([
+            'graph.facebook.com/*' => \Illuminate\Support\Facades\Http::response(['messages' => [['id' => 'wamid.cart.1']]], 200),
+        ]);
+
+        [$company, $latte] = $this->seedStore();
+
+        \App\Models\WhatsAppAccount::create([
+            'company_id' => $company->id,
+            'phone_number_id' => 'phone-abandoned',
+            'whatsapp_business_account_id' => 'waba-abandoned',
+            'access_token' => 'wa-token',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+        ]);
+
+        $session = \App\Models\StorefrontSession::create([
+            'company_id' => $company->id,
+            'session_token' => 'tok-abandoned-1',
+            'customer_name' => 'Brian',
+            'customer_phone' => '254711333444',
+            'cart' => [
+                $latte->id.':0' => [
+                    'product_id' => $latte->id,
+                    'product_variant_id' => null,
+                    'quantity' => 2,
+                ],
+            ],
+            'last_activity_at' => now()->subHours(2),
+            'abandoned_notified_at' => null,
+        ]);
+
+        $result = app(\App\Services\Storefront\AbandonedCartRecoveryService::class)->processDue(60);
+
+        $this->assertSame(1, $result['sent']);
+        $session->refresh();
+        $this->assertNotNull($session->abandoned_notified_at);
+
+        $chat = \App\Models\Chat::where('company_id', $company->id)
+            ->where('customer_phone', '254711333444')
+            ->first();
+        $this->assertNotNull($chat);
+        $this->assertDatabaseHas('messages', ['chat_id' => $chat->id, 'sender' => 'bot']);
+        $msg = \App\Models\Message::where('chat_id', $chat->id)->latest('id')->first();
+        $this->assertStringContainsString('2 item', $msg->content);
+        $this->assertStringContainsString('/s/'.$company->store_slug.'/cart', $msg->content);
+    }
+
+    public function test_settings_expose_abandoned_cart_and_order_notify_toggles(): void
+    {
+        [$company] = $this->seedStore();
+        \App\Models\Subscription::create([
+            'company_id' => $company->id,
+            'plan' => 'professional',
+            'status' => 'active',
+            'start_date' => now()->startOfMonth(),
+            'end_date' => now()->endOfMonth(),
+            'amount' => 0,
+            'billing_cycle' => 'monthly',
+        ]);
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 'company_owner',
+            'email_verified_at' => now(),
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->putJson('/api/company/settings', [
+            'abandonedCartRecoveryEnabled' => true,
+            'storefrontWhatsappOrderNotify' => false,
+            'abandonedCartTemplateName' => 'cart_recovery_v1',
+        ])->assertOk();
+
+        $show = $this->getJson('/api/company/settings');
+        $show->assertOk()
+            ->assertJsonPath('abandonedCartRecoveryEnabled', true)
+            ->assertJsonPath('storefrontWhatsappOrderNotify', false)
+            ->assertJsonPath('abandonedCartTemplateName', 'cart_recovery_v1');
+    }
+
+    public function test_product_page_whatsapp_prefill_includes_product_link(): void
+    {
+        [$company, $latte] = $this->seedStore();
+        $slug = $company->store_slug;
+
+        $response = $this->get("/s/{$slug}/p/{$latte->slug}");
+        $response->assertOk();
+        $page = $response->viewData('page');
+        $props = is_array($page) ? ($page['props'] ?? []) : [];
+        $wa = $props['company']['whatsappUrl'] ?? null;
+        $this->assertIsString($wa);
+        $this->assertStringContainsString('wa.me/', $wa);
+        $decoded = urldecode($wa);
+        $this->assertStringContainsString($latte->name, $decoded);
+        $this->assertStringContainsString('/s/'.$slug.'/p/', $decoded);
+    }
 }

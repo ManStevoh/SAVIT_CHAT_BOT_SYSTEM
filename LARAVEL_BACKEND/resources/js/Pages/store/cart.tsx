@@ -23,7 +23,7 @@ type CartSummary = {
 
 type Props = {
   slug: string
-  company: { name: string; currency: string }
+  company: { name: string; currency: string; whatsappUrl?: string | null }
   cart: CartSummary
 }
 
@@ -130,9 +130,21 @@ export default function StoreCartPage({ slug, company, cart }: Props) {
               <button type="button" onClick={clearCart} className="text-sm text-slate-500 hover:text-red-500">
                 Clear cart
               </button>
-              <Link href={`/s/${slug}/checkout`}>
-                <Button size="lg">Checkout</Button>
-              </Link>
+              <div className="flex items-center gap-3">
+                {company.whatsappUrl ? (
+                  <a
+                    href={company.whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-medium text-emerald-700 hover:underline"
+                  >
+                    Help on WhatsApp
+                  </a>
+                ) : null}
+                <Link href={`/s/${slug}/checkout`}>
+                  <Button size="lg">Checkout</Button>
+                </Link>
+              </div>
             </div>
           </div>
         )}

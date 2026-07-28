@@ -25,7 +25,7 @@ type Quote = {
 
 type Props = {
   slug: string
-  company: { name: string; currency: string }
+  company: { name: string; currency: string; whatsappUrl?: string | null }
   cart: CartSummary
   dineInEnabled: boolean
   deliveryFeesEnabled: boolean
@@ -160,8 +160,16 @@ export default function StoreCheckoutPage({
             <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
           </div>
           <div>
-            <Label>Phone number</Label>
-            <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} required />
+            <Label>WhatsApp number</Label>
+            <Input
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              required
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="2547…"
+            />
+            <p className="mt-1 text-xs text-slate-500">We’ll send order updates and payment links here.</p>
           </div>
           <div>
             <Label>Email (optional)</Label>
@@ -229,6 +237,16 @@ export default function StoreCheckoutPage({
           <Button type="submit" disabled={submitting} className="w-full">
             {submitting ? 'Placing order…' : 'Place order'}
           </Button>
+          {company.whatsappUrl ? (
+            <a
+              href={company.whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block text-center text-sm font-medium text-emerald-700 hover:underline"
+            >
+              Need help? Chat on WhatsApp
+            </a>
+          ) : null}
         </form>
 
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6">

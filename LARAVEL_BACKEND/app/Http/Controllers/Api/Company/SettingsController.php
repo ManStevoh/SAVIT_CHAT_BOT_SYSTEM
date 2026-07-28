@@ -129,6 +129,9 @@ class SettingsController extends Controller
             'dineInEnabled' => (bool) ($settings?->dine_in_enabled ?? false),
             'paymentRecoveryEnabled' => ($settings?->payment_recovery_enabled ?? true) !== false,
             'paymentRecoveryHours' => $settings?->paymentRecoveryHourOffsets() ?? [1, 24, 72],
+            'abandonedCartRecoveryEnabled' => (bool) ($settings?->abandoned_cart_recovery_enabled ?? false),
+            'storefrontWhatsappOrderNotify' => ($settings?->storefront_whatsapp_order_notify ?? true) !== false,
+            'abandonedCartTemplateName' => $settings?->abandoned_cart_template_name ?? '',
             'birthdayAutomationEnabled' => (bool) ($settings?->birthday_automation_enabled ?? false),
             'birthdayCouponPercent' => $settings?->birthday_coupon_percent !== null ? (int) $settings->birthday_coupon_percent : 10,
             'birthdayMessageTemplate' => $settings?->birthday_message_template ?? '',
@@ -249,6 +252,9 @@ class SettingsController extends Controller
             'paymentRecoveryEnabled' => 'sometimes|boolean',
             'paymentRecoveryHours' => 'sometimes|nullable|array',
             'paymentRecoveryHours.*' => 'integer|min:1|max:720',
+            'abandonedCartRecoveryEnabled' => 'sometimes|boolean',
+            'storefrontWhatsappOrderNotify' => 'sometimes|boolean',
+            'abandonedCartTemplateName' => 'sometimes|nullable|string|max:128',
             'birthdayAutomationEnabled' => 'sometimes|boolean',
             'birthdayCouponPercent' => 'sometimes|nullable|integer|min:0|max:100',
             'birthdayMessageTemplate' => 'sometimes|nullable|string|max:1000',
@@ -615,6 +621,16 @@ class SettingsController extends Controller
             $settings->payment_recovery_hours = is_array($hours) && $hours !== []
                 ? array_values(array_unique(array_map('intval', $hours)))
                 : null;
+        }
+        if (array_key_exists('abandonedCartRecoveryEnabled', $companyValidated)) {
+            $settings->abandoned_cart_recovery_enabled = (bool) $companyValidated['abandonedCartRecoveryEnabled'];
+        }
+        if (array_key_exists('storefrontWhatsappOrderNotify', $companyValidated)) {
+            $settings->storefront_whatsapp_order_notify = (bool) $companyValidated['storefrontWhatsappOrderNotify'];
+        }
+        if (array_key_exists('abandonedCartTemplateName', $companyValidated)) {
+            $v = $companyValidated['abandonedCartTemplateName'];
+            $settings->abandoned_cart_template_name = (is_string($v) && trim($v) !== '') ? trim($v) : null;
         }
         if (array_key_exists('birthdayAutomationEnabled', $companyValidated)) {
             $settings->birthday_automation_enabled = $companyValidated['birthdayAutomationEnabled'];

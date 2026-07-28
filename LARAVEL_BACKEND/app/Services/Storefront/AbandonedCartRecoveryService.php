@@ -3,6 +3,7 @@
 namespace App\Services\Storefront;
 
 use App\Models\Company;
+use App\Models\Message;
 use App\Models\StorefrontSession;
 use App\Models\WhatsAppAccount;
 use App\Services\WhatsAppMessageSenderService;
@@ -12,6 +13,7 @@ class AbandonedCartRecoveryService
 {
     public function __construct(
         protected WhatsAppMessageSenderService $whatsapp,
+        protected StorefrontWhatsAppBridgeService $bridge,
     ) {}
 
     /**
@@ -78,15 +80,56 @@ class AbandonedCartRecoveryService
             return false;
         }
 
-        $cartUrl = rtrim((string) config('app.url'), '/').'/s/'.$company->store_slug.'/cart';
-        $text = 'Hi'.($session->customer_name ? ' '.$session->customer_name : '').
-            '! You left items in your cart at '.$company->name.
-            '. Complete your order here: '.$cartUrl;
+        $composed = $this->bridge->composeAbandonedCartMessage($company, $session);
+        $text = $composed['text'];
+        $chat = $this->bridge->resolveOrCreateChat($company, $phone, $session->customer_name);
+
+        // Prefer an approved template when configured and there is no recent open chat window.
+        $templateName = trim((string) ($company->settings?->abandoned_cart_template_name ?? ''));
+        $hasOpenWindow = $chat && $chat->last_message_at && $chat->last_message_at->gt(now()->subHours(23));
 
         try {
-            $result = $this->whatsapp->sendText($account, $phone, $text);
+            $result = null;
+            if ($templateName !== '' && ! $hasOpenWindow) {
+                $result = $this->whatsapp->sendTemplate(
+                    $account,
+                    $phone,
+                    $templateName,
+                    'en',
+                    [
+                        (string) ($session->customer_name ?: 'there'),
+                        (string) $company->name,
+                        (string) $composed['item_count'],
+                    ]
+                );
+                // Fall back to plain text if template is missing/rejected.
+                if (! ($result['success'] ?? false)) {
+                    $result = $this->whatsapp->sendText($account, $phone, $text);
+                }
+            } else {
+                $result = $this->whatsapp->sendText($account, $phone, $text);
+            }
 
-            return (bool) ($result['success'] ?? false);
+            if (! ($result['success'] ?? false)) {
+                return false;
+            }
+
+            if ($chat) {
+                Message::create([
+                    'chat_id' => $chat->id,
+                    'content' => $text,
+                    'sender' => 'bot',
+                    'status' => 'sent',
+                    'whatsapp_message_id' => $result['message_id'] ?? null,
+                ]);
+                $chat->update([
+                    'last_message' => $text,
+                    'last_message_at' => now(),
+                    'ai_handled' => true,
+                ]);
+            }
+
+            return true;
         } catch (\Throwable $e) {
             Log::warning('Abandoned cart WhatsApp notify failed', [
                 'company_id' => $company->id,

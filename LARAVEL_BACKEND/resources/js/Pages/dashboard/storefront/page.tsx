@@ -25,6 +25,9 @@ type SettingsResponse = {
   ordersAcceptBankTransfer?: boolean
   bankTransferInstructions?: string
   paymentRecoveryEnabled?: boolean
+  abandonedCartRecoveryEnabled?: boolean
+  storefrontWhatsappOrderNotify?: boolean
+  abandonedCartTemplateName?: string
   birthdayAutomationEnabled?: boolean
   birthdayCouponPercent?: number
   winbackAutomationEnabled?: boolean
@@ -54,6 +57,9 @@ export default function DashboardStorefrontPage() {
   const [ordersAcceptBankTransfer, setOrdersAcceptBankTransfer] = useState(false)
   const [bankTransferInstructions, setBankTransferInstructions] = useState('')
   const [paymentRecoveryEnabled, setPaymentRecoveryEnabled] = useState(true)
+  const [abandonedCartRecoveryEnabled, setAbandonedCartRecoveryEnabled] = useState(false)
+  const [storefrontWhatsappOrderNotify, setStorefrontWhatsappOrderNotify] = useState(true)
+  const [abandonedCartTemplateName, setAbandonedCartTemplateName] = useState('')
   const [birthdayAutomationEnabled, setBirthdayAutomationEnabled] = useState(false)
   const [birthdayCouponPercent, setBirthdayCouponPercent] = useState('10')
   const [winbackAutomationEnabled, setWinbackAutomationEnabled] = useState(false)
@@ -80,6 +86,9 @@ export default function DashboardStorefrontPage() {
       setOrdersAcceptBankTransfer(!!data.ordersAcceptBankTransfer)
       setBankTransferInstructions(data.bankTransferInstructions || '')
       setPaymentRecoveryEnabled(data.paymentRecoveryEnabled !== false)
+      setAbandonedCartRecoveryEnabled(!!data.abandonedCartRecoveryEnabled)
+      setStorefrontWhatsappOrderNotify(data.storefrontWhatsappOrderNotify !== false)
+      setAbandonedCartTemplateName(data.abandonedCartTemplateName || '')
       setBirthdayAutomationEnabled(!!data.birthdayAutomationEnabled)
       setBirthdayCouponPercent(String(data.birthdayCouponPercent ?? 10))
       setWinbackAutomationEnabled(!!data.winbackAutomationEnabled)
@@ -117,6 +126,9 @@ export default function DashboardStorefrontPage() {
           ordersAcceptBankTransfer,
           bankTransferInstructions: bankTransferInstructions || null,
           paymentRecoveryEnabled,
+          abandonedCartRecoveryEnabled,
+          storefrontWhatsappOrderNotify,
+          abandonedCartTemplateName: abandonedCartTemplateName || null,
           birthdayAutomationEnabled,
           birthdayCouponPercent: parseInt(birthdayCouponPercent, 10) || 10,
           winbackAutomationEnabled,
@@ -338,9 +350,35 @@ export default function DashboardStorefrontPage() {
       <Card>
         <CardHeader>
           <CardTitle>Automations</CardTitle>
-          <CardDescription>Payment recovery, birthday wishes, win-backs, and spam protection.</CardDescription>
+          <CardDescription>
+            WhatsApp recovery for carts and unpaid orders, plus retention and spam protection.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={abandonedCartRecoveryEnabled}
+              onChange={(e) => setAbandonedCartRecoveryEnabled(e.target.checked)}
+            />
+            Abandoned cart recovery (WhatsApp cart link)
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={storefrontWhatsappOrderNotify}
+              onChange={(e) => setStorefrontWhatsappOrderNotify(e.target.checked)}
+            />
+            WhatsApp order confirmation after storefront checkout
+          </label>
+          <div>
+            <Label>Abandoned cart template name (optional)</Label>
+            <Input
+              value={abandonedCartTemplateName}
+              onChange={(e) => setAbandonedCartTemplateName(e.target.value)}
+              placeholder="Meta template name when outside 24h window"
+            />
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

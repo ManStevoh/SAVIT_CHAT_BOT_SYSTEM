@@ -78,9 +78,7 @@ export default function StoreProductPage({
       ? Math.max(1, (selectedVariant?.stock ?? product.stock) as number)
       : 99
   const wished = wishlistIds.includes(product.id)
-  const waUrl =
-    company.whatsappUrl?.replace(/\?text=.*/, '') +
-    `?text=${encodeURIComponent(`Hi, I'm interested in ${product.name}`)}`
+  const waUrl = company.whatsappUrl || null
 
   const addToCart = (e: FormEvent) => {
     e.preventDefault()

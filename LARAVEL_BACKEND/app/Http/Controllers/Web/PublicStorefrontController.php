@@ -80,15 +80,17 @@ class PublicStorefrontController extends Controller
         $this->storefront->recordEvent($company, 'view_product', $session->session_token, $productModel->id);
 
         $productPath = $productModel->slug ?: (string) $productModel->id;
+        $shareUrl = url("/s/{$slug}/p/{$productPath}");
+        $waPrefill = "Hi, I'm interested in {$productModel->name} from {$company->name}.\n{$shareUrl}";
 
         return Inertia::render('store/product', [
             'slug' => $slug,
-            'company' => $this->companyPayload($company, $request),
+            'company' => $this->companyPayload($company, $request, $waPrefill),
             'product' => $this->storefront->serializeProduct($productModel),
             'related' => $this->storefront->relatedProducts($company, $productModel),
             'cartCount' => $this->currentCartCount($company),
             'wishlist' => $this->currentWishlist($company),
-            'shareUrl' => url("/s/{$slug}/p/{$productPath}"),
+            'shareUrl' => $shareUrl,
             'locale' => $locale,
             'chrome' => self::CHROME_STRINGS[$locale] ?? self::CHROME_STRINGS['en'],
             'seo' => [
@@ -168,11 +170,16 @@ class PublicStorefrontController extends Controller
         $company = $this->storefront->resolveCompanyBySlug($slug);
         $session = $this->storefront->getSession($company, $this->cartToken($company));
         $this->persistCartToken($company, $session->session_token);
+        $cart = $this->storefront->cartSummary($company, $session);
+        $cartUrl = url("/s/{$slug}/cart");
+        $waPrefill = $cart['itemCount'] > 0
+            ? "Hi, I need help with my cart at {$company->name} ({$cart['itemCount']} items).\n{$cartUrl}"
+            : "Hi, I need help shopping at {$company->name}.";
 
         return Inertia::render('store/cart', [
             'slug' => $slug,
-            'company' => $this->companyPayload($company),
-            'cart' => $this->storefront->cartSummary($company, $session),
+            'company' => $this->companyPayload($company, null, $waPrefill),
+            'cart' => $cart,
         ]);
     }
 
@@ -257,7 +264,11 @@ class PublicStorefrontController extends Controller
 
         return Inertia::render('store/checkout', [
             'slug' => $slug,
-            'company' => $this->companyPayload($company, $request),
+            'company' => $this->companyPayload(
+                $company,
+                $request,
+                "Hi, I need help with checkout at {$company->name}."
+            ),
             'cart' => $cart,
             'dineInEnabled' => (bool) ($settings?->dine_in_enabled ?? false),
             'deliveryFeesEnabled' => (bool) ($settings?->delivery_fees_enabled ?? false),
@@ -491,7 +502,7 @@ class PublicStorefrontController extends Controller
     }
 
     /** @return array<string, mixed> */
-    protected function companyPayload(?Company $company, ?Request $request = null): array
+    protected function companyPayload(?Company $company, ?Request $request = null, ?string $whatsappPrefill = null): array
     {
         if (! $company) {
             return ['name' => 'Store'];
@@ -516,13 +527,15 @@ class PublicStorefrontController extends Controller
             }
         }
 
+        $prefill = $whatsappPrefill ?: ('Hi, I\'m interested in '.$company->name);
+
         return [
             'name' => $company->name,
             'logo' => $company->logo ? asset('storage/'.$company->logo) : null,
             'currency' => $baseCurrency,
             'moneyOptions' => $settings?->moneyDisplayOptions() ?? ['symbol' => null, 'thousands' => ',', 'decimal' => '.'],
             'whatsappNumber' => $settings?->whatsapp_number,
-            'whatsappUrl' => $this->whatsappUrl($settings?->whatsapp_number, 'Hi, I\'m interested in '.$company->name),
+            'whatsappUrl' => $this->whatsappUrl($settings?->whatsapp_number, $prefill),
             'altCurrencies' => $altCurrencies,
             'displayCurrency' => $displayCurrency,
             'displayRate' => $displayRate,
