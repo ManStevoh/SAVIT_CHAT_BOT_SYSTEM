@@ -284,8 +284,12 @@ class TakeAppParityCommerceTest extends TestCase
     {
         $this->assertTrue(class_exists(ProcessPaymentRecoveryJob::class));
         $this->assertTrue(class_exists(ProcessCustomerRetentionJob::class));
+        $this->assertTrue(class_exists(\App\Jobs\Storefront\ProcessAbandonedCartJob::class));
         (new ProcessPaymentRecoveryJob)->handle(app(PaymentRecoveryService::class));
         (new ProcessCustomerRetentionJob)->handle(app(CustomerRetentionService::class));
+        (new \App\Jobs\Storefront\ProcessAbandonedCartJob)->handle(
+            app(\App\Services\Storefront\AbandonedCartRecoveryService::class)
+        );
         $this->assertTrue(true);
     }
 }

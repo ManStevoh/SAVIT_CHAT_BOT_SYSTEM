@@ -292,4 +292,47 @@ class ClassicStorefrontFeaturesTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1);
     }
+
+    public function test_cart_quantity_update_cannot_exceed_stock(): void
+    {
+        [$company, $latte] = $this->seedStore();
+        $slug = $company->store_slug;
+
+        $this->post("/s/{$slug}/cart", [
+            'productId' => $latte->id,
+            'quantity' => 1,
+        ])->assertRedirect("/s/{$slug}/cart");
+
+        $this->from("/s/{$slug}/cart")
+            ->post("/s/{$slug}/cart/update", [
+                'key' => $latte->id.':0',
+                'quantity' => 99,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('quantity');
+    }
+
+    public function test_custom_domain_redirects_to_storefront(): void
+    {
+        [$company] = $this->seedStore();
+        $company->update([
+            'custom_domain' => 'shop.classic.test',
+            'custom_domain_verified_at' => now(),
+        ]);
+
+        $this->get('http://shop.classic.test/')
+            ->assertRedirect('/s/'.$company->store_slug);
+
+        $this->get('http://shop.classic.test/cart')
+            ->assertRedirect('/s/'.$company->store_slug.'/cart');
+    }
+
+    public function test_abandoned_cart_job_is_dispatchable(): void
+    {
+        $this->assertTrue(class_exists(\App\Jobs\Storefront\ProcessAbandonedCartJob::class));
+        (new \App\Jobs\Storefront\ProcessAbandonedCartJob)->handle(
+            app(\App\Services\Storefront\AbandonedCartRecoveryService::class)
+        );
+        $this->assertTrue(true);
+    }
 }

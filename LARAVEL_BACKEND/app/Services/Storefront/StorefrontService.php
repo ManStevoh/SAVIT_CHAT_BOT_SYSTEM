@@ -152,8 +152,13 @@ class StorefrontService
         $variants = $product->relationLoaded('activeVariants') ? $product->activeVariants : $product->activeVariants()->get();
 
         $imageUrls = $images->map(fn ($img) => Storage::url($img->path))->values()->all();
+        $imageGallery = $images->map(fn ($img) => [
+            'url' => Storage::url($img->path),
+            'alt' => $img->alt_text ?: $product->name,
+        ])->values()->all();
         if ($imageUrls === [] && is_string($product->image) && $product->image !== '') {
             $imageUrls = [Storage::url($product->image)];
+            $imageGallery = [['url' => Storage::url($product->image), 'alt' => $product->name]];
         }
 
         $price = (float) $product->price;
@@ -209,6 +214,7 @@ class StorefrontService
             'maxQty' => $maxQty,
             'bookable' => (bool) $product->bookable,
             'images' => $imageUrls,
+            'imageGallery' => $imageGallery,
             'image' => $imageUrls[0] ?? null,
             'variants' => $variants->map(fn (ProductVariant $v) => [
                 'id' => (string) $v->id,
@@ -314,9 +320,21 @@ class StorefrontService
         if ($quantity <= 0) {
             unset($cart[$key]);
         } else {
+            $line = $cart[$key];
+            $product = Product::where('company_id', $session->company_id)->find($line['product_id'] ?? null);
+            if ($product) {
+                $variant = ! empty($line['product_variant_id'])
+                    ? ProductVariant::where('product_id', $product->id)->find($line['product_variant_id'])
+                    : null;
+                $this->assertStockAvailable($product, $variant, $quantity);
+            }
             $cart[$key]['quantity'] = $quantity;
         }
-        $session->update(['cart' => $cart]);
+        $session->update([
+            'cart' => $cart,
+            'last_activity_at' => now(),
+            'abandoned_notified_at' => null,
+        ]);
 
         return $session;
     }
@@ -328,7 +346,10 @@ class StorefrontService
 
     public function clearCart(StorefrontSession $session): StorefrontSession
     {
-        $session->update(['cart' => []]);
+        $session->update([
+            'cart' => [],
+            'last_activity_at' => now(),
+        ]);
 
         return $session;
     }
@@ -837,14 +858,15 @@ class StorefrontService
         }
 
         $orderPhone = preg_replace('/\D+/', '', (string) $order->customer_phone) ?? '';
-        if ($orderPhone === '' || ! str_ends_with($orderPhone, $phone) && ! str_ends_with($phone, $orderPhone)) {
-            // Require substantial overlap so partial matches aren't loose leaks.
-            if ($orderPhone !== $phone) {
-                return null;
-            }
+        if ($orderPhone === '') {
+            return null;
         }
 
-        return $order;
+        $phoneMatches = $orderPhone === $phone
+            || str_ends_with($orderPhone, $phone)
+            || str_ends_with($phone, $orderPhone);
+
+        return $phoneMatches ? $order : null;
     }
 
     /** @return list<array<string, mixed>> */

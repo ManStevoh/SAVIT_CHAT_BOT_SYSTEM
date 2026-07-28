@@ -9,7 +9,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Feature 12: when the request Host matches a verified companies.custom_domain,
- * rewrite the path so `/` (and bare paths) serve that company's public storefront.
+ * redirect bare paths onto that company's public storefront (`/s/{slug}/...`).
+ *
+ * Uses redirects (not REQUEST_URI rewrites) so routing works correctly even when
+ * this middleware runs inside the web stack after the router has matched.
  */
 class ResolveStorefrontDomain
 {
@@ -32,16 +35,38 @@ class ResolveStorefrontDomain
             return $next($request);
         }
 
-        $path = trim($request->path(), '/');
-        if ($path === '' || $path === '/') {
-            $request->server->set('REQUEST_URI', '/s/'.$company->store_slug);
-        } elseif (! str_starts_with($path, 's/') && ! str_starts_with($path, 'pay/') && ! str_starts_with($path, 'invoice/') && ! str_starts_with($path, 'b/')) {
-            // Map bare storefront-relative paths onto /s/{slug}/...
-            $request->server->set('REQUEST_URI', '/s/'.$company->store_slug.'/'.$path);
-        }
-
         $request->attributes->set('storefront_company_id', $company->id);
 
-        return $next($request);
+        $path = trim($request->path(), '/');
+
+        // Leave platform / already-scoped storefront paths alone.
+        if ($path !== '' && $this->shouldPassThrough($path)) {
+            return $next($request);
+        }
+
+        $target = $path === ''
+            ? '/s/'.$company->store_slug
+            : '/s/'.$company->store_slug.'/'.$path;
+
+        $query = $request->getQueryString();
+        if ($query) {
+            $target .= '?'.$query;
+        }
+
+        return redirect()->to($target);
+    }
+
+    protected function shouldPassThrough(string $path): bool
+    {
+        foreach ([
+            's/', 'pay/', 'invoice/', 'b/', 'api/', 'build/', 'storage/', 'sanctum/',
+            'dashboard', 'admin', 'login', 'register', 'blog', 'pricing', 'about', 'contact',
+        ] as $prefix) {
+            if ($path === rtrim($prefix, '/') || str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+
+        return $path === 'up';
     }
 }

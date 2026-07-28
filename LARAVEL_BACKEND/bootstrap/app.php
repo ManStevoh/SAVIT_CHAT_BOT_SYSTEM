@@ -13,8 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Must run before routing so unverified bare paths like /cart on a custom
+        // domain can redirect onto /s/{slug}/cart instead of hard-404ing.
+        $middleware->prepend(\App\Http\Middleware\ResolveStorefrontDomain::class);
         $middleware->web(append: [
-            \App\Http\Middleware\ResolveStorefrontDomain::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\SecurityHeaders::class,
         ]);

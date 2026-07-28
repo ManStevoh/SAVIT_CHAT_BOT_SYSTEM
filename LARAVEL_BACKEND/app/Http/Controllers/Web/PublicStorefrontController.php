@@ -219,7 +219,11 @@ class PublicStorefrontController extends Controller
             'quantity' => 'required|integer|min:0|max:999',
         ]);
 
-        $this->storefront->setCartLineQuantity($session, $validated['key'], (int) $validated['quantity']);
+        try {
+            $this->storefront->setCartLineQuantity($session, $validated['key'], (int) $validated['quantity']);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['quantity' => $e->getMessage()]);
+        }
 
         return redirect()->to(url("/s/{$slug}/cart"));
     }
@@ -314,7 +318,25 @@ class PublicStorefrontController extends Controller
             'deliveryAddress' => 'nullable|string|max:1000',
             'couponCode' => 'nullable|string|max:64',
             'tipAmount' => 'nullable|numeric|min:0',
+            'customerPhone' => 'nullable|string|max:40',
+            'customerEmail' => 'nullable|email|max:255',
+            'customerName' => 'nullable|string|max:255',
         ]);
+
+        $sessionUpdates = ['last_activity_at' => now(), 'abandoned_notified_at' => null];
+        if (! empty($validated['customerPhone'])) {
+            $sessionUpdates['customer_phone'] = $validated['customerPhone'];
+        }
+        if (! empty($validated['customerEmail'])) {
+            $sessionUpdates['customer_email'] = $validated['customerEmail'];
+        }
+        if (! empty($validated['customerName'])) {
+            $sessionUpdates['customer_name'] = $validated['customerName'];
+        }
+        if (! empty($validated['couponCode'])) {
+            $sessionUpdates['coupon_code'] = strtoupper(trim($validated['couponCode']));
+        }
+        $session->update($sessionUpdates);
 
         return response()->json($this->storefront->quoteCheckout($company, $session, $validated));
     }
