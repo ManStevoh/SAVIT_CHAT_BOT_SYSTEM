@@ -67,6 +67,9 @@ class CompanySetting extends Model
         'spam_max_orders_per_hour',
         'spam_max_orders_per_day',
         'dine_in_enabled',
+        'abandoned_cart_recovery_enabled',
+        'storefront_alt_currencies',
+        'storefront_default_locale',
     ];
 
     protected $casts = [
@@ -106,6 +109,8 @@ class CompanySetting extends Model
         'agent_council_enabled' => 'boolean',
         'business_dna' => 'array',
         'reply_in_customer_language' => 'boolean',
+        'abandoned_cart_recovery_enabled' => 'boolean',
+        'storefront_alt_currencies' => 'array',
     ];
 
     /** Whether company has its own M-Pesa config for order payments (shortcode + passkey). */
@@ -144,6 +149,26 @@ class CompanySetting extends Model
         }
 
         return array_values(array_unique(array_map('intval', $hours)));
+    }
+
+    /**
+     * @return list<array{code: string, rate: float}>
+     */
+    public function altCurrencyOptions(): array
+    {
+        $raw = $this->storefront_alt_currencies;
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return collect($raw)
+            ->filter(fn ($row) => is_array($row) && ! empty($row['code']) && isset($row['rate']))
+            ->map(fn ($row) => [
+                'code' => MoneyFormatter::normalizeCurrencyCode((string) $row['code']),
+                'rate' => (float) $row['rate'],
+            ])
+            ->values()
+            ->all();
     }
 
     public function company(): BelongsTo

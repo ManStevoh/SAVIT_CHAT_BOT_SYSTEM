@@ -119,8 +119,14 @@ Route::post('/s/{slug}/cart', [PublicStorefrontController::class, 'cartAdd'])->n
 Route::post('/s/{slug}/cart/update', [PublicStorefrontController::class, 'cartUpdate'])->name('storefront.cart.update');
 Route::post('/s/{slug}/cart/clear', [PublicStorefrontController::class, 'cartClear'])->name('storefront.cart.clear');
 Route::get('/s/{slug}/checkout', [PublicStorefrontController::class, 'checkout'])->name('storefront.checkout');
+Route::get('/s/{slug}/checkout/suggest', [PublicStorefrontController::class, 'checkoutSuggest'])->name('storefront.checkout.suggest');
+Route::post('/s/{slug}/checkout/quote', [PublicStorefrontController::class, 'checkoutQuote'])->name('storefront.checkout.quote');
 Route::post('/s/{slug}/checkout', [PublicStorefrontController::class, 'checkoutStore'])->name('storefront.checkout.store');
 Route::get('/s/{slug}/order/{order}', [PublicStorefrontController::class, 'confirmation'])->name('storefront.confirmation');
+Route::get('/s/{slug}/track', [PublicStorefrontController::class, 'track'])->name('storefront.track');
+Route::post('/s/{slug}/track', [PublicStorefrontController::class, 'trackLookup'])->name('storefront.track.lookup');
+Route::post('/s/{slug}/wishlist/toggle', [PublicStorefrontController::class, 'wishlistToggle'])->name('storefront.wishlist.toggle');
+Route::post('/s/{slug}/p/{product}/reviews', [PublicStorefrontController::class, 'reviewStore'])->name('storefront.product.reviews.store');
 
 // Link-in-bio
 Route::get('/b/{slug}', [PublicStorefrontController::class, 'bio'])->name('storefront.bio');

@@ -5,14 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Product extends Model
 {
     protected $fillable = [
         'company_id',
         'name',
+        'slug',
         'description',
+        'meta_title',
+        'meta_description',
         'price',
+        'compare_at_price',
         'tax_rate_id',
         'category',
         'product_type',
@@ -35,13 +40,17 @@ class Product extends Model
         'booking_duration_minutes',
         'stock',
         'status',
+        'is_subscription',
+        'subscription_interval',
         'catalog_embedding',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'compare_at_price' => 'decimal:2',
         'track_inventory' => 'bool',
         'requires_delivery_address' => 'bool',
+        'is_subscription' => 'bool',
         'digital_file_size' => 'int',
         'access_expires_days' => 'int',
         'max_downloads' => 'int',
@@ -49,6 +58,43 @@ class Product extends Model
         'booking_duration_minutes' => 'int',
         'catalog_embedding' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Product $product): void {
+            if (empty($product->slug) && ! empty($product->name)) {
+                $product->slug = static::generateUniqueSlug($product->company_id, $product->name);
+            }
+        });
+
+        static::updating(function (Product $product): void {
+            if (empty($product->slug) && ! empty($product->name)) {
+                $product->slug = static::generateUniqueSlug($product->company_id, $product->name, $product->id);
+            }
+        });
+    }
+
+    public static function generateUniqueSlug(?int $companyId, string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name);
+        if ($base === '') {
+            $base = 'product';
+        }
+
+        $slug = $base;
+        $suffix = 2;
+        while (
+            static::where('company_id', $companyId)
+                ->where('slug', $slug)
+                ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $slug = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        return $slug;
+    }
 
     public function usesInventory(): bool
     {
@@ -68,6 +114,21 @@ class Product extends Model
     public function isService(): bool
     {
         return $this->product_type === 'service';
+    }
+
+    public function isBundle(): bool
+    {
+        return $this->product_type === 'bundle';
+    }
+
+    /** @return string|null Human label for the subscription interval (e.g. "Weekly"). */
+    public function subscriptionIntervalLabel(): ?string
+    {
+        return match ($this->subscription_interval) {
+            'week' => 'Weekly',
+            'month' => 'Monthly',
+            default => null,
+        };
     }
 
     public function fulfillmentSnapshot(?ProductVariant $variant = null): array
@@ -130,5 +191,21 @@ class Product extends Model
     public function primaryImage(): ?ProductImage
     {
         return $this->images()->where('is_primary', true)->first();
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    public function approvedReviews(): HasMany
+    {
+        return $this->reviews()->where('is_approved', true)->latest();
+    }
+
+    /** Bundle items when this product is itself a bundle (parent side). */
+    public function bundleItems(): HasMany
+    {
+        return $this->hasMany(ProductBundleItem::class, 'bundle_product_id');
     }
 }

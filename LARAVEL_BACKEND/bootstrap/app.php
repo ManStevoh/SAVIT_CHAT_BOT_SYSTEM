@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            \App\Http\Middleware\ResolveStorefrontDomain::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
@@ -53,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('products:sync-embeddings --missing-only')->weeklyOn(0, '04:00');
         $schedule->job(new \App\Jobs\Orders\ProcessPaymentRecoveryJob)->hourly();
         $schedule->job(new \App\Jobs\Orders\ProcessCustomerRetentionJob)->dailyAt('09:30');
+        $schedule->job(new \App\Jobs\Storefront\ProcessAbandonedCartJob)->hourly();
         $schedule->command('ai:health-check --notify')->dailyAt('07:30');
 
         // Shared hosting: set AUTO_MIGRATE=true to apply pending migrations via cron.

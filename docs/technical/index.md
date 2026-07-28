@@ -44,6 +44,7 @@ Essem Chat Bot/
 | **Digital Nervous System (vision + code map)** | [SAVIT — Digital Nervous System](SAVIT_DIGITAL_NERVOUS_SYSTEM.md) — **north star** |
 | **AI Model Orchestration** | [Reasoning, fast chat, vision, STT routing](AI_MODEL_ORCHESTRATION.md) |
 | **Honest gaps** | [Shipped vs roadmap](HONEST_REMAINING_GAPS.md) |
+| **Classic storefront (1–20)** | [Storefront classic features](STOREFRONT_CLASSIC_FEATURES.md) |
 | **AI Phase 4** | [Vision, Owner Analytics, Brain, External Tools](AI_PHASE4_OS.md) |
 | **AI Phase 5** | [Executive UI, Voice Commands, Approvals, A/B Experiments](AI_PHASE5_OS.md) |
 | **ABI Levels 1–20 summary** | [Honest status matrix](ABI_LEVELS_SUMMARY.md) |

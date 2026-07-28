@@ -155,6 +155,44 @@ class CmsSeoService
             }
         }
 
+        // Classic storefront (features 1–20): public shops + product PDP URLs
+        if (Schema::hasTable('companies') && Schema::hasTable('products')) {
+            try {
+                $stores = \App\Models\Company::query()
+                    ->where('storefront_enabled', true)
+                    ->whereNotNull('store_slug')
+                    ->orderBy('id')
+                    ->get(['id', 'store_slug', 'updated_at']);
+
+                foreach ($stores as $store) {
+                    $entries[] = [
+                        'loc' => $base.'/s/'.$store->store_slug,
+                        'lastmod' => optional($store->updated_at)?->toAtomString(),
+                        'changefreq' => 'daily',
+                        'priority' => '0.8',
+                    ];
+
+                    $products = \App\Models\Product::query()
+                        ->where('company_id', $store->id)
+                        ->where('status', 'active')
+                        ->orderBy('id')
+                        ->get(['id', 'slug', 'updated_at']);
+
+                    foreach ($products as $product) {
+                        $path = $product->slug ?: (string) $product->id;
+                        $entries[] = [
+                            'loc' => $base.'/s/'.$store->store_slug.'/p/'.$path,
+                            'lastmod' => optional($product->updated_at)?->toAtomString(),
+                            'changefreq' => 'weekly',
+                            'priority' => '0.6',
+                        ];
+                    }
+                }
+            } catch (\Throwable) {
+                // ignore storefront sitemap errors
+            }
+        }
+
         return $entries;
     }
 
