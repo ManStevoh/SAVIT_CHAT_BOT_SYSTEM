@@ -402,6 +402,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 22),
+                Text(
+                  'STORE',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.7,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                AppSurface(
+                  onTap: () => context.go('/more/storefront'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: ListTile(
+                    leading: const AppIconChip(
+                      icon: Icons.storefront_outlined,
+                      color: AppColors.primary,
+                      size: 44,
+                    ),
+                    title: Text(
+                      'Storefront',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      'Store link, COD, delivery fees & dine-in',
+                      style: GoogleFonts.manrope(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
                 AppSurface(
                   onTap: _signOut,
                   padding: const EdgeInsets.symmetric(

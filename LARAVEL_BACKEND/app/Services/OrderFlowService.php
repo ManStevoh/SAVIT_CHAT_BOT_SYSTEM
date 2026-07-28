@@ -9,8 +9,11 @@ use App\Models\OrderProduct;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Services\Orders\SpamOrderGuard;
 use App\Services\Orders\TaxCalculationService;
+use App\Services\Storefront\DeliveryFeeService;
 use App\Support\MoneyFormatter;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -45,6 +48,8 @@ class OrderFlowService
     public function __construct(
         protected OrderPaymentService $orderPayment,
         protected TaxCalculationService $taxCalculator,
+        protected DeliveryFeeService $deliveryFees,
+        protected SpamOrderGuard $spamGuard,
     ) {}
 
     protected function formatMoney(Company $company, float $amount): string
@@ -81,6 +86,75 @@ class OrderFlowService
             $calc,
             fn (float $amount) => $this->formatMoneyForOrder($order, $amount)
         ));
+    }
+
+    /**
+     * Public, standalone summary formatter — accepts either a persisted Order or a raw
+     * order_draft array so callers outside the chat flow (tests, APIs) get consistent output.
+     *
+     * @param  Order|array<string, mixed>  $draft
+     */
+    public function formatOrderSummary(Order|array $draft): string
+    {
+        if ($draft instanceof Order) {
+            $order = $draft;
+            $order->loadMissing('orderProducts');
+            $lines = ['Order #'.$order->order_number];
+            foreach ($order->orderProducts as $item) {
+                $qty = (int) $item->quantity;
+                $unit = (float) $item->price;
+                $lines[] = '• '.$item->name.' — '.$qty.' x '.$this->formatMoneyForOrder($order, $unit).' = '.$this->formatMoneyForOrder($order, round($unit * $qty, 2));
+            }
+            $lines[] = 'Subtotal: '.$this->formatMoneyForOrder($order, (float) ($order->subtotal ?? $order->total));
+            if ((float) ($order->delivery_fee ?? 0) > 0) {
+                $lines[] = 'Delivery fee: '.$this->formatMoneyForOrder($order, (float) $order->delivery_fee);
+            }
+            foreach (is_array($order->tax_breakdown) ? $order->tax_breakdown : [] as $row) {
+                $label = $row['code'] ?? $row['name'] ?? 'Tax';
+                $lines[] = "{$label}: ".$this->formatMoneyForOrder($order, (float) ($row['amount'] ?? 0));
+            }
+            $lines[] = 'Total: '.$this->formatMoneyForOrder($order, (float) $order->total);
+            $lines[] = 'Fulfillment: '.$this->fulfillmentLabel($order->fulfillment_type);
+            if ($order->scheduled_for) {
+                $lines[] = 'Scheduled for: '.$order->scheduled_for->toDayDateTimeString();
+            }
+
+            return implode("\n", $lines);
+        }
+
+        if (isset($draft['company_id']) && ($company = Company::find((int) $draft['company_id']))) {
+            return $this->formatDraftSummary($company, $draft);
+        }
+
+        $items = $draft['items'] ?? [];
+        $lines = ['Here’s your order summary:'];
+        $subtotal = 0.0;
+        foreach ($items as $item) {
+            $qty = (int) ($item['quantity'] ?? 0);
+            $unit = (float) ($item['price'] ?? 0);
+            $lineTotal = round($unit * $qty, 2);
+            $subtotal += $lineTotal;
+            $lines[] = '• '.($item['name'] ?? 'Item').' — '.$qty.' x '.MoneyFormatter::format($unit).' = '.MoneyFormatter::format($lineTotal);
+        }
+        $subtotal = round($subtotal, 2);
+        $lines[] = 'Subtotal: '.MoneyFormatter::format($subtotal);
+        $deliveryFee = (float) ($draft['delivery_fee'] ?? 0);
+        if ($deliveryFee > 0) {
+            $lines[] = 'Delivery fee: '.MoneyFormatter::format($deliveryFee);
+        }
+        $lines[] = 'Total: '.MoneyFormatter::format(round($subtotal + $deliveryFee, 2));
+        if (! empty($draft['fulfillment_type'])) {
+            $lines[] = 'Fulfillment: '.$this->fulfillmentLabel((string) $draft['fulfillment_type']);
+        }
+        if (! empty($draft['scheduled_for'])) {
+            try {
+                $lines[] = 'Scheduled for: '.Carbon::parse((string) $draft['scheduled_for'])->toDayDateTimeString();
+            } catch (\Throwable) {
+                // ignore unparsable scheduled_for values in summary display
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     /**
@@ -165,7 +239,7 @@ class OrderFlowService
             $pay = $this->resolvePaymentAcceptance($company->settings);
 
             // Only manual configured → share till/bank details immediately (no empty menu).
-            if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack']) {
+            if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack'] && ! $pay['acceptCod'] && ! $pay['acceptBankTransfer']) {
                 $this->clearState($chat);
 
                 return "Delivery address saved: {$address}\n\n".$this->formatOrderWithManualPaymentInstructions($order);
@@ -173,7 +247,7 @@ class OrderFlowService
 
             $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, $draft);
 
-            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
+            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], false, $pay['acceptCod'], $pay['acceptBankTransfer']);
         }
 
         if ($step === self::STEP_EXISTING_ORDER_PAYMENT_METHOD) {
@@ -184,12 +258,18 @@ class OrderFlowService
                 return 'Something went wrong. Please ask us to resend your invoice or start a new order.';
             }
             $pay = $this->resolvePaymentAcceptance($company->settings);
-            $method = $this->matchPaymentMethod($lower, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
+            $method = $this->matchPaymentMethod($lower, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], $pay['acceptCod'], $pay['acceptBankTransfer']);
 
             if ($method === 'manual') {
                 $this->clearState($chat);
 
                 return $this->formatOrderWithManualPaymentInstructions($order);
+            }
+            if ($method === 'cod') {
+                return $this->handleCodPayment($order, $chat);
+            }
+            if ($method === 'bank_transfer') {
+                return $this->handleBankTransferPayment($order, $chat);
             }
             if ($method === 'mpesa') {
                 $draft['payment_method'] = 'mpesa';
@@ -289,11 +369,38 @@ class OrderFlowService
                 || $this->looksLikeLocationOrShopInfoQuestion($lower)) {
                 return null;
             }
+
+            if ($this->wantsPickup($lower)) {
+                $draft['fulfillment_type'] = 'pickup';
+                unset($draft['delivery_address']);
+                $this->setStep($chat, self::STEP_CONFIRM, $draft);
+                $summary = $this->formatDraftSummary($company, $draft);
+
+                return "📦 Pickup selected.\n\n{$summary}\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+            }
+            if ($this->wantsDineIn($lower)) {
+                $draft['fulfillment_type'] = 'dine_in';
+                unset($draft['delivery_address']);
+                $this->setStep($chat, self::STEP_CONFIRM, $draft);
+                $summary = $this->formatDraftSummary($company, $draft);
+
+                return "🍽️ Dine-in selected.\n\n{$summary}\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+            }
+
+            $scheduled = $this->tryParseSchedule($trimmed);
+            if ($scheduled !== null) {
+                $draft['scheduled_for'] = $scheduled->toIso8601String();
+                $this->setStep($chat, self::STEP_ADDRESS, $draft);
+
+                return 'Scheduled for '.$scheduled->toDayDateTimeString().".\nNow reply with your delivery address (or say pickup / dine-in).";
+            }
+
             $address = trim($messageText);
             if (strlen($address) < 3) {
-                return 'Please provide a valid delivery address (at least a few characters).';
+                return 'Please provide a valid delivery address (at least a few characters), or reply "pickup" / "dine-in".';
             }
             $draft['delivery_address'] = $address;
+            $draft['fulfillment_type'] = $draft['fulfillment_type'] ?? 'delivery';
             $this->setStep($chat, self::STEP_CONFIRM, $draft);
             $summary = $this->formatDraftSummary($company, $draft);
 
@@ -307,30 +414,43 @@ class OrderFlowService
                 return 'Order not placed. Reply with "order" or "2" when you want to try again.';
             }
             if ($this->wantsConfirm($lower)) {
+                $guard = $this->spamGuard->assertCanPlaceOrder($company, $customerPhone, $chat);
+                if (! ($guard['allowed'] ?? true)) {
+                    return $guard['reason'] ?? 'Unable to place order right now.';
+                }
+
                 $order = $this->createOrderFromDraft($company, $chat, $draft, $customerName, $customerPhone);
                 $settings = $company->settings;
                 $collectEnabled = $settings && $settings->orders_collect_payment_enabled !== false;
                 if (! $collectEnabled) {
                     $this->clearState($chat);
 
-                    return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\nWe'll prepare it and contact you for delivery.");
+                    return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\n".$this->formatPublicPayLinks($order)."\nWe'll prepare it and contact you for delivery.");
                 }
                 $pay = $this->resolvePaymentAcceptance($settings);
-                if ($pay['acceptMpesa'] || $pay['acceptStripe'] || $pay['acceptPaystack']) {
+                if ($pay['acceptMpesa'] || $pay['acceptStripe'] || $pay['acceptPaystack'] || $pay['acceptCod'] || $pay['acceptBankTransfer'] || $pay['acceptManual']) {
+                    if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack'] && ! $pay['acceptCod'] && ! $pay['acceptBankTransfer']) {
+                        $this->clearState($chat);
+
+                        return $this->formatOrderWithManualPaymentInstructions($order);
+                    }
                     $draft['order_id'] = $order->id;
                     $this->setStep($chat, self::STEP_PAYMENT_METHOD, $draft);
 
-                    return $this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
-                }
-                $acceptManual = $pay['acceptManual'];
-                if ($acceptManual) {
-                    $this->clearState($chat);
-
-                    return $this->formatOrderWithManualPaymentInstructions($order);
+                    return $this->formatPaymentMethodPrompt(
+                        $order,
+                        $pay['acceptMpesa'],
+                        $pay['acceptStripe'],
+                        $pay['acceptPaystack'],
+                        $pay['acceptManual'],
+                        false,
+                        $pay['acceptCod'],
+                        $pay['acceptBankTransfer']
+                    );
                 }
                 $this->clearState($chat);
 
-                return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\nWe'll prepare it and contact you for delivery.");
+                return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\n".$this->formatPublicPayLinks($order)."\nWe'll prepare it and contact you for delivery.");
             }
 
             // Stay on confirm — do not fall through to null (agent/customer shorthand must get a re-prompt).
@@ -345,12 +465,26 @@ class OrderFlowService
                 return 'Something went wrong. Please start over with "order" or "2".';
             }
             $pay = $this->resolvePaymentAcceptance($company->settings);
-            $method = $this->matchPaymentMethod($lower, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual']);
+            $method = $this->matchPaymentMethod(
+                $lower,
+                $pay['acceptMpesa'],
+                $pay['acceptStripe'],
+                $pay['acceptPaystack'],
+                $pay['acceptManual'],
+                $pay['acceptCod'],
+                $pay['acceptBankTransfer']
+            );
 
             if ($method === 'manual') {
                 $this->clearState($chat);
 
                 return $this->formatOrderWithManualPaymentInstructions($order);
+            }
+            if ($method === 'cod') {
+                return $this->handleCodPayment($order, $chat, true);
+            }
+            if ($method === 'bank_transfer') {
+                return $this->handleBankTransferPayment($order, $chat, true);
             }
             if ($method === 'mpesa') {
                 $draft['payment_method'] = 'mpesa';
@@ -369,7 +503,16 @@ class OrderFlowService
                 return null;
             }
 
-            return $this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], true);
+            return $this->formatPaymentMethodPrompt(
+                $order,
+                $pay['acceptMpesa'],
+                $pay['acceptStripe'],
+                $pay['acceptPaystack'],
+                $pay['acceptManual'],
+                true,
+                $pay['acceptCod'],
+                $pay['acceptBankTransfer']
+            );
         }
 
         if ($step === self::STEP_MPESA_PHONE) {
@@ -768,7 +911,7 @@ class OrderFlowService
     }
 
     /**
-     * @return array{acceptMpesa: bool, acceptStripe: bool, acceptPaystack: bool, acceptManual: bool}
+     * @return array{acceptMpesa: bool, acceptStripe: bool, acceptPaystack: bool, acceptManual: bool, acceptCod: bool, acceptBankTransfer: bool}
      */
     protected function resolvePaymentAcceptance(?\App\Models\CompanySetting $settings): array
     {
@@ -777,13 +920,15 @@ class OrderFlowService
             'acceptStripe' => $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig()),
             'acceptPaystack' => $settings && $settings->orders_accept_paystack && PaystackService::isEnabled(),
             'acceptManual' => $settings && $settings->hasOrderPaymentManualInstructions(),
+            'acceptCod' => (bool) ($settings && $settings->orders_accept_cod),
+            'acceptBankTransfer' => (bool) ($settings && $settings->orders_accept_bank_transfer),
         ];
     }
 
     /**
      * @return list<string>
      */
-    protected function paymentMethodKeys(bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual): array
+    protected function paymentMethodKeys(bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual, bool $acceptCod = false, bool $acceptBankTransfer = false): array
     {
         $keys = [];
         if ($acceptMpesa) {
@@ -795,6 +940,12 @@ class OrderFlowService
         if ($acceptPaystack) {
             $keys[] = 'paystack';
         }
+        if ($acceptCod) {
+            $keys[] = 'cod';
+        }
+        if ($acceptBankTransfer) {
+            $keys[] = 'bank_transfer';
+        }
         if ($acceptManual) {
             $keys[] = 'manual';
         }
@@ -802,16 +953,13 @@ class OrderFlowService
         return $keys;
     }
 
-    protected function matchPaymentMethod(string $lower, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual): ?string
+    protected function matchPaymentMethod(string $lower, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual, bool $acceptCod = false, bool $acceptBankTransfer = false): ?string
     {
-        $keys = $this->paymentMethodKeys($acceptMpesa, $acceptStripe, $acceptPaystack, $acceptManual);
+        $keys = $this->paymentMethodKeys($acceptMpesa, $acceptStripe, $acceptPaystack, $acceptManual, $acceptCod, $acceptBankTransfer);
         if (preg_match('/^\d+$/', $lower)) {
             $idx = (int) $lower - 1;
 
             return $keys[$idx] ?? null;
-        }
-        if ($acceptManual && $this->wantsManual($lower)) {
-            return 'manual';
         }
         if ($acceptMpesa && $this->wantsMpesaText($lower)) {
             return 'mpesa';
@@ -822,11 +970,20 @@ class OrderFlowService
         if ($acceptPaystack && $this->wantsPaystackText($lower)) {
             return 'paystack';
         }
+        if ($acceptCod && $this->wantsCodText($lower)) {
+            return 'cod';
+        }
+        if ($acceptBankTransfer && $this->wantsBankTransferText($lower)) {
+            return 'bank_transfer';
+        }
+        if ($acceptManual && $this->wantsManual($lower)) {
+            return 'manual';
+        }
 
         return null;
     }
 
-    protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual = false, bool $invalid = false): string
+    protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual = false, bool $invalid = false, bool $acceptCod = false, bool $acceptBankTransfer = false): string
     {
         $line = 'Order #'.$order->order_number."\n".$this->formatOrderMoneySummary($order)."\n\nHow would you like to pay?";
         $opts = [];
@@ -841,6 +998,14 @@ class OrderFlowService
         }
         if ($acceptPaystack) {
             $opts[] = "{$n}. Paystack (pay online)";
+            $n++;
+        }
+        if ($acceptCod) {
+            $opts[] = "{$n}. Cash on delivery";
+            $n++;
+        }
+        if ($acceptBankTransfer) {
+            $opts[] = "{$n}. Bank transfer";
             $n++;
         }
         if ($acceptManual) {
@@ -903,6 +1068,57 @@ class OrderFlowService
         return rtrim($message)."\n\nView invoice / receipt:\n".$order->publicReceiptUrl();
     }
 
+    /**
+     * "Pay online" + "Invoice" links shared after order placement and payment prompts.
+     */
+    protected function formatPublicPayLinks(Order $order): string
+    {
+        $order->ensurePublicTokens();
+
+        return 'Pay online: '.$order->publicPayUrl()."\nInvoice: ".$order->publicInvoiceUrl();
+    }
+
+    protected function handleCodPayment(Order $order, Chat $chat, bool $confirmedOrder = false): string
+    {
+        $this->orderPayment->markOrderCodConfirmed($order);
+        $order->refresh();
+        $this->clearState($chat);
+
+        $header = $confirmedOrder
+            ? "Order confirmed! Your order number is: {$order->order_number}."
+            : "Order #{$order->order_number} confirmed.";
+
+        return $this->withReceipt(
+            $order,
+            "{$header}\n".$this->formatOrderMoneySummary($order)
+                ."\nYou'll pay in cash when your order arrives.\n\n"
+                .$this->formatPublicPayLinks($order)
+        );
+    }
+
+    protected function handleBankTransferPayment(Order $order, Chat $chat, bool $confirmedOrder = false): string
+    {
+        $this->orderPayment->markOrderBankTransferConfirmed($order);
+        $order->refresh();
+        $this->clearState($chat);
+
+        $settings = $order->company?->settings;
+        $instructions = $settings && $settings->hasBankTransferInstructions()
+            ? trim($settings->bank_transfer_instructions)
+            : 'We will send you the bank details shortly.';
+        $header = $confirmedOrder
+            ? "Order confirmed! Your order number is: {$order->order_number}."
+            : "Order #{$order->order_number} confirmed.";
+
+        return $this->withReceipt(
+            $order,
+            "{$header}\n".$this->formatOrderMoneySummary($order)
+                ."\n\nTo complete payment via bank transfer:\n\n{$instructions}\n\n"
+                .$this->formatPublicPayLinks($order)
+                ."\n\nReply once you have made the payment. Thank you!"
+        );
+    }
+
     protected function wantsManual(string $lower): bool
     {
         return in_array($lower, ['3', 'manual', 'bank', 'bank transfer', 'pay manually', 'other', 'till', 'paybill', 'pay bill'], true)
@@ -942,6 +1158,78 @@ class OrderFlowService
     protected function wantsPaystackText(string $lower): bool
     {
         return in_array($lower, ['paystack', 'link'], true) || str_contains($lower, 'paystack');
+    }
+
+    protected function wantsCodText(string $lower): bool
+    {
+        return in_array($lower, ['cod', 'cash', 'cash on delivery', 'pay on delivery', 'pay cash', 'cash payment'], true)
+            || str_contains($lower, 'cash on delivery')
+            || str_contains($lower, 'pay on delivery')
+            || str_contains($lower, 'cash');
+    }
+
+    protected function wantsBankTransferText(string $lower): bool
+    {
+        return in_array($lower, ['bank', 'bank transfer', 'transfer'], true)
+            || str_contains($lower, 'bank transfer')
+            || (str_contains($lower, 'bank') && ! str_contains($lower, 'paystack'));
+    }
+
+    protected function wantsPickup(string $lower): bool
+    {
+        return in_array($lower, ['pickup', 'pick up', 'pick-up', 'collect', 'collection'], true)
+            || str_contains($lower, 'pickup')
+            || str_contains($lower, 'pick up');
+    }
+
+    protected function wantsDineIn(string $lower): bool
+    {
+        return in_array($lower, ['dine in', 'dine-in', 'dinein', 'table', 'eat in'], true)
+            || str_contains($lower, 'dine in')
+            || str_contains($lower, 'dine-in');
+    }
+
+    protected function tryParseSchedule(string $text): ?Carbon
+    {
+        $lower = mb_strtolower(trim($text));
+        if (! preg_match('/\b(today|tomorrow|schedule|at\s+\d|am|pm|\d{1,2}:\d{2})\b/i', $lower)) {
+            return null;
+        }
+
+        try {
+            if (str_starts_with($lower, 'tomorrow')) {
+                $rest = trim(substr($lower, strlen('tomorrow')));
+                $base = now()->addDay()->startOfDay();
+                if ($rest === '' || $rest === 'morning') {
+                    return $base->setTime(9, 0);
+                }
+                if ($rest === 'afternoon') {
+                    return $base->setTime(14, 0);
+                }
+                if ($rest === 'evening') {
+                    return $base->setTime(18, 0);
+                }
+
+                return Carbon::parse('tomorrow '.$rest);
+            }
+            if (str_starts_with($lower, 'today')) {
+                $rest = trim(substr($lower, strlen('today')));
+                if ($rest === '') {
+                    return now()->addHour()->minute(0)->second(0);
+                }
+
+                return Carbon::parse('today '.$rest);
+            }
+            if (preg_match('/^(schedule|scheduled)\s+/i', $lower)) {
+                $rest = trim(preg_replace('/^(schedule|scheduled)\s+/i', '', $lower) ?? '');
+
+                return $rest !== '' ? Carbon::parse($rest) : null;
+            }
+
+            return Carbon::parse($text);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     protected function formatPhoneForDisplay(string $customerPhone): string
@@ -1322,32 +1610,94 @@ class OrderFlowService
         if (empty($items)) {
             return 'Your cart is empty for now.';
         }
-        $lines = ['Here’s your cart so far:'];
+        $lines = ['Here’s your order summary:'];
         foreach ($items as $item) {
-            $sub = ($item['price'] ?? 0) * ($item['quantity'] ?? 0);
-            $lines[] = '• '.$item['name'].' x '.$item['quantity'].' — '.$this->formatMoney($company, (float) $sub);
+            $qty = (int) ($item['quantity'] ?? 0);
+            $unit = (float) ($item['price'] ?? 0);
+            $lineSubtotal = round($unit * $qty, 2);
+            $lines[] = '• '.$item['name'].' — '.$qty.' x '.$this->formatMoney($company, $unit).' = '.$this->formatMoney($company, $lineSubtotal);
         }
 
         $calc = $this->taxCalculator->calculateForCompany($company, $items);
-        foreach ($this->taxCalculator->formatSummaryLines($calc, fn (float $amount) => $this->formatMoney($company, $amount)) as $moneyLine) {
-            $lines[] = $moneyLine;
+        $lines[] = 'Subtotal: '.$this->formatMoney($company, (float) $calc['subtotal']);
+
+        $needsDelivery = $this->draftRequiresDeliveryAddress($draft);
+        $fulfillmentType = (string) ($draft['fulfillment_type'] ?? ($needsDelivery ? 'delivery' : 'pickup'));
+
+        $deliveryFee = 0.0;
+        if ($fulfillmentType === 'delivery') {
+            $quote = $this->deliveryFees->quote($company, $draft['delivery_address'] ?? null, (float) $calc['subtotal'], $fulfillmentType);
+            $deliveryFee = (float) ($quote['fee'] ?? 0.0);
+            if ($deliveryFee > 0) {
+                $lines[] = 'Delivery fee: '.$this->formatMoney($company, $deliveryFee);
+            }
         }
 
-        if (! $this->draftRequiresDeliveryAddress($draft)) {
+        foreach ($calc['tax_breakdown'] ?? [] as $row) {
+            $label = $row['code'] ?: $row['name'];
+            $rate = rtrim(rtrim(number_format((float) $row['rate'], 4, '.', ''), '0'), '.');
+            $incl = ! empty($row['inclusive']) ? ' incl.' : '';
+            $lines[] = "{$label} ({$rate}%{$incl}): ".$this->formatMoney($company, (float) $row['amount']);
+        }
+
+        $total = round((float) $calc['total'] + $deliveryFee, 2);
+        $lines[] = 'Total: '.$this->formatMoney($company, $total);
+
+        $lines[] = 'Fulfillment: '.$this->fulfillmentLabel($fulfillmentType);
+        if (! $needsDelivery && $fulfillmentType === 'pickup' && empty($draft['fulfillment_type'])) {
             $lines[] = 'Delivery: No physical shipping needed';
         }
 
+        if (! empty($draft['scheduled_for'])) {
+            try {
+                $lines[] = 'Scheduled for: '.Carbon::parse((string) $draft['scheduled_for'])->toDayDateTimeString();
+            } catch (\Throwable) {
+                // ignore unparsable scheduled_for values in summary display
+            }
+        }
+
         return implode("\n", $lines);
+    }
+
+    protected function fulfillmentLabel(?string $type): string
+    {
+        return match ($type) {
+            'pickup' => 'Pickup',
+            'dine_in' => 'Dine-in',
+            default => 'Delivery',
+        };
     }
 
     protected function createOrderFromDraft(Company $company, Chat $chat, array $draft, string $customerName, string $customerPhone): Order
     {
         $items = $draft['items'] ?? [];
         $calc = $this->taxCalculator->calculateForCompany($company, $items);
+        $fulfillmentType = (string) ($draft['fulfillment_type'] ?? 'delivery');
+        if (! in_array($fulfillmentType, ['delivery', 'pickup', 'dine_in'], true)) {
+            $fulfillmentType = 'delivery';
+        }
+
+        $quote = $this->deliveryFees->quote(
+            $company,
+            $draft['delivery_address'] ?? null,
+            (float) $calc['subtotal'],
+            $fulfillmentType
+        );
+        $deliveryFee = (float) $quote['fee'];
+        $total = round((float) $calc['total'] + $deliveryFee, 2);
 
         $orderNumber = 'ORD-'.strtoupper(Str::random(8));
         while (Order::where('order_number', $orderNumber)->exists()) {
             $orderNumber = 'ORD-'.strtoupper(Str::random(8));
+        }
+
+        $scheduledFor = null;
+        if (! empty($draft['scheduled_for'])) {
+            try {
+                $scheduledFor = Carbon::parse((string) $draft['scheduled_for']);
+            } catch (\Throwable) {
+                $scheduledFor = null;
+            }
         }
 
         $order = Order::create([
@@ -1356,13 +1706,22 @@ class OrderFlowService
             'order_number' => $orderNumber,
             'customer_name' => $customerName ?: 'Customer',
             'customer_phone' => $customerPhone,
+            'delivery_address' => $draft['delivery_address'] ?? null,
+            'fulfillment_type' => $fulfillmentType,
+            'dine_in_table_id' => $draft['dine_in_table_id'] ?? null,
+            'dine_in_table_name' => $draft['dine_in_table_name'] ?? null,
             'subtotal' => $calc['subtotal'],
             'tax_total' => $calc['tax_total'],
+            'delivery_fee' => $deliveryFee,
             'tax_breakdown' => $calc['tax_breakdown'] !== [] ? $calc['tax_breakdown'] : null,
-            'total' => $calc['total'],
+            'total' => $total,
             'status' => 'pending',
             'payment_status' => 'pending',
+            'scheduled_for' => $scheduledFor,
+            'source' => $draft['source'] ?? 'whatsapp',
         ]);
+
+        $order->ensurePublicTokens();
 
         foreach ($items as $index => $item) {
             $lineTax = $calc['lines'][$index] ?? [
@@ -1393,7 +1752,7 @@ class OrderFlowService
             ]);
         }
 
-        return $order;
+        return $order->fresh(['orderProducts']);
     }
 
     protected function numberedOrderInstructions(): string

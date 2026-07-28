@@ -46,10 +46,27 @@ class CompanySetting extends Model
         'orders_accept_mpesa',
         'orders_accept_stripe',
         'orders_accept_paystack',
+        'orders_accept_cod',
+        'orders_accept_bank_transfer',
         'orders_collect_payment_enabled',
         'order_payment_mpesa_config',
         'order_payment_stripe_config',
         'order_payment_manual_instructions',
+        'bank_transfer_instructions',
+        'delivery_fees_enabled',
+        'default_delivery_fee',
+        'free_delivery_above',
+        'payment_recovery_enabled',
+        'payment_recovery_hours',
+        'birthday_automation_enabled',
+        'birthday_coupon_percent',
+        'birthday_message_template',
+        'winback_automation_enabled',
+        'winback_days_inactive',
+        'spam_order_protection_enabled',
+        'spam_max_orders_per_hour',
+        'spam_max_orders_per_day',
+        'dine_in_enabled',
     ];
 
     protected $casts = [
@@ -59,9 +76,24 @@ class CompanySetting extends Model
         'orders_accept_mpesa' => 'boolean',
         'orders_accept_stripe' => 'boolean',
         'orders_accept_paystack' => 'boolean',
+        'orders_accept_cod' => 'boolean',
+        'orders_accept_bank_transfer' => 'boolean',
         'orders_collect_payment_enabled' => 'boolean',
         'order_payment_mpesa_config' => 'array',
         'order_payment_stripe_config' => 'array',
+        'delivery_fees_enabled' => 'boolean',
+        'default_delivery_fee' => 'decimal:2',
+        'free_delivery_above' => 'decimal:2',
+        'payment_recovery_enabled' => 'boolean',
+        'payment_recovery_hours' => 'array',
+        'birthday_automation_enabled' => 'boolean',
+        'birthday_coupon_percent' => 'integer',
+        'winback_automation_enabled' => 'boolean',
+        'winback_days_inactive' => 'integer',
+        'spam_order_protection_enabled' => 'boolean',
+        'spam_max_orders_per_hour' => 'integer',
+        'spam_max_orders_per_day' => 'integer',
+        'dine_in_enabled' => 'boolean',
         'working_hours' => 'array',
         'learn_from_conversations' => 'boolean',
         'agent_commerce_enabled' => 'boolean',
@@ -95,6 +127,23 @@ class CompanySetting extends Model
     {
         $t = $this->order_payment_manual_instructions;
         return is_string($t) && trim($t) !== '';
+    }
+
+    public function hasBankTransferInstructions(): bool
+    {
+        $t = $this->bank_transfer_instructions;
+        return is_string($t) && trim($t) !== '';
+    }
+
+    /** @return list<int> */
+    public function paymentRecoveryHourOffsets(): array
+    {
+        $hours = $this->payment_recovery_hours;
+        if (! is_array($hours) || $hours === []) {
+            return [1, 24, 72];
+        }
+
+        return array_values(array_unique(array_map('intval', $hours)));
     }
 
     public function company(): BelongsTo

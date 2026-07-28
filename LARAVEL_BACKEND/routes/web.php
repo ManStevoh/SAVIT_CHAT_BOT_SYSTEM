@@ -5,6 +5,8 @@ use App\Http\Controllers\GrowthRedirectController;
 use App\Http\Controllers\Web\OrderDigitalAccessController;
 use App\Http\Controllers\Web\PageController;
 use App\Http\Controllers\Web\PublicBookingController;
+use App\Http\Controllers\Web\PublicDineInController;
+use App\Http\Controllers\Web\PublicStorefrontController;
 use App\Http\Controllers\Web\RobotsController;
 use App\Http\Controllers\Web\SitemapController;
 use App\Models\Booking;
@@ -53,6 +55,10 @@ Route::get('/dashboard/taxes', [PageController::class, 'dashboardTaxes'])->name(
 Route::get('/dashboard/bookings', [PageController::class, 'dashboardBookings'])->name('dashboard.bookings');
 Route::get('/dashboard/settings', [PageController::class, 'dashboardSettings'])->name('dashboard.settings');
 Route::get('/dashboard/subscription', [PageController::class, 'dashboardSubscription'])->name('dashboard.subscription');
+Route::get('/dashboard/storefront', [PageController::class, 'dashboardStorefront'])->name('dashboard.storefront');
+Route::get('/dashboard/delivery', [PageController::class, 'dashboardDelivery'])->name('dashboard.delivery');
+Route::get('/dashboard/dine-in', [PageController::class, 'dashboardDineIn'])->name('dashboard.dine-in');
+Route::get('/dashboard/delivery', [PageController::class, 'dashboardDelivery'])->name('dashboard.delivery');
 
 // Super admin
 Route::get('/admin/account', [PageController::class, 'adminAccount'])->name('admin.account');
@@ -104,3 +110,26 @@ Route::get('/book/{slug}/slots', [PublicBookingController::class, 'slots'])->nam
 Route::get('/book/{slug}/confirmation/{token}', [PublicBookingController::class, 'confirmation'])->name('book.confirmation');
 Route::get('/book/{slug}/calendar.ics', [PublicBookingController::class, 'calendarFeed'])->name('book.calendar');
 Route::get('/bookings/{booking}/ics', [PublicBookingController::class, 'bookingIcs'])->name('bookings.ics');
+
+// Public storefront (Take App-style catalog + cart + checkout)
+Route::get('/s/{slug}', [PublicStorefrontController::class, 'show'])->name('storefront.show');
+Route::get('/s/{slug}/p/{product}', [PublicStorefrontController::class, 'product'])->name('storefront.product');
+Route::get('/s/{slug}/cart', [PublicStorefrontController::class, 'cart'])->name('storefront.cart');
+Route::post('/s/{slug}/cart', [PublicStorefrontController::class, 'cartAdd'])->name('storefront.cart.add');
+Route::post('/s/{slug}/cart/update', [PublicStorefrontController::class, 'cartUpdate'])->name('storefront.cart.update');
+Route::post('/s/{slug}/cart/clear', [PublicStorefrontController::class, 'cartClear'])->name('storefront.cart.clear');
+Route::get('/s/{slug}/checkout', [PublicStorefrontController::class, 'checkout'])->name('storefront.checkout');
+Route::post('/s/{slug}/checkout', [PublicStorefrontController::class, 'checkoutStore'])->name('storefront.checkout.store');
+Route::get('/s/{slug}/order/{order}', [PublicStorefrontController::class, 'confirmation'])->name('storefront.confirmation');
+
+// Link-in-bio
+Route::get('/b/{slug}', [PublicStorefrontController::class, 'bio'])->name('storefront.bio');
+
+// Public pay + invoice pages (secret-token based, no auth)
+Route::get('/pay/{token}', [PublicStorefrontController::class, 'pay'])->name('storefront.pay');
+Route::post('/pay/{token}', [PublicStorefrontController::class, 'payAction'])->name('storefront.pay.action');
+Route::get('/invoice/{token}', [PublicStorefrontController::class, 'invoice'])->name('storefront.invoice');
+
+// Dine-in table QR
+Route::get('/t/{qrToken}', [PublicDineInController::class, 'byToken'])->name('dinein.token');
+Route::get('/s/{slug}/table/{qrToken}', [PublicDineInController::class, 'storeTable'])->name('storefront.table');

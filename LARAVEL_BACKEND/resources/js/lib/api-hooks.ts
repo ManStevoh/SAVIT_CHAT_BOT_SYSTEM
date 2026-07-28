@@ -463,6 +463,58 @@ export function useTaxRates() {
   )
 }
 
+export interface DineInTable {
+  id: string
+  name: string
+  code: string | null
+  seats: number | null
+  isActive: boolean
+  qrToken: string
+  orderUrl: string
+}
+
+/** API: GET /api/company/dine-in-tables */
+export function useDineInTables() {
+  return useSWR<{ tables: DineInTable[] }>(
+    ['dine-in-tables'],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<{ tables: DineInTable[] }>('/api/company/dine-in-tables')
+      }
+      await delay(300)
+      return { tables: [] }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
+export interface DeliveryZone {
+  id: string
+  name: string
+  fee: number
+  minOrderAmount: number | null
+  keywords: string[]
+  isActive: boolean
+  sortOrder: number
+  createdAt?: string | null
+  updatedAt?: string | null
+}
+
+/** API: GET /api/company/delivery-zones */
+export function useDeliveryZones() {
+  return useSWR<DeliveryZone[]>(
+    ['delivery-zones'],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<DeliveryZone[]>('/api/company/delivery-zones')
+      }
+      await delay(300)
+      return []
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
 /**
  * Fetch analytics data for the current company
  * API Endpoint: GET /api/company/analytics
@@ -587,6 +639,9 @@ export interface CompanySettings {
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
   ordersAcceptPaystack?: boolean
+  ordersAcceptCod?: boolean
+  ordersAcceptBankTransfer?: boolean
+  bankTransferInstructions?: string
   ordersCollectPaymentEnabled?: boolean
   orderPaymentManualInstructions?: string
   orderPaymentMpesaConfigured?: boolean
@@ -612,6 +667,28 @@ export interface CompanySettings {
   decimalSeparator?: string
   /** When true, order totals include company tax rates */
   taxEnabled?: boolean
+  storeSlug?: string | null
+  storefrontEnabled?: boolean
+  storefrontUrl?: string | null
+  linkInBioEnabled?: boolean
+  linkInBioHeadline?: string | null
+  linkInBioBio?: string | null
+  linkInBioLinks?: { label: string; url: string }[]
+  linkInBioUrl?: string | null
+  deliveryFeesEnabled?: boolean
+  defaultDeliveryFee?: number
+  freeDeliveryAbove?: number | null
+  dineInEnabled?: boolean
+  paymentRecoveryEnabled?: boolean
+  paymentRecoveryHours?: number[]
+  birthdayAutomationEnabled?: boolean
+  birthdayCouponPercent?: number
+  birthdayMessageTemplate?: string | null
+  winbackAutomationEnabled?: boolean
+  winbackDaysInactive?: number
+  spamOrderProtectionEnabled?: boolean
+  spamMaxOrdersPerHour?: number
+  spamMaxOrdersPerDay?: number
   /** Industry cluster for CRM templates and portfolio insights */
   industry?: 'retail' | 'restaurant' | 'services' | 'other'
   /** Days to retain attribution data (30–730); null uses platform default */

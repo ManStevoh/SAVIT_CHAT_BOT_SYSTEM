@@ -10,6 +10,12 @@ class Company extends Model
 {
     protected $fillable = [
         'name',
+        'store_slug',
+        'storefront_enabled',
+        'link_in_bio_enabled',
+        'link_in_bio_headline',
+        'link_in_bio_bio',
+        'link_in_bio_links',
         'email',
         'phone',
         'address',
@@ -25,6 +31,9 @@ class Company extends Model
     ];
 
     protected $casts = [
+        'storefront_enabled' => 'boolean',
+        'link_in_bio_enabled' => 'boolean',
+        'link_in_bio_links' => 'array',
         'growth_pilot_at' => 'datetime',
         'first_attributed_sale_at' => 'datetime',
         'growth_demo_mode' => 'boolean',
@@ -54,6 +63,16 @@ class Company extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function deliveryZones(): HasMany
+    {
+        return $this->hasMany(DeliveryZone::class);
+    }
+
+    public function dineInTables(): HasMany
+    {
+        return $this->hasMany(DineInTable::class);
     }
 
     public function faqs(): HasMany

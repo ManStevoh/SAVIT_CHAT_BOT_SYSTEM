@@ -29,6 +29,11 @@ class Chat extends Model
         'crm_follow_up_count',
         'conversation_step',
         'order_draft',
+        'birthday',
+        'marketing_opt_in',
+        'last_birthday_wish_at',
+        'last_winback_at',
+        'blocked_from_ordering',
     ];
 
     protected $casts = [
@@ -38,6 +43,11 @@ class Chat extends Model
         'crm_last_follow_up_at' => 'datetime',
         'crm_follow_up_count' => 'integer',
         'order_draft' => 'array',
+        'birthday' => 'date',
+        'marketing_opt_in' => 'boolean',
+        'last_birthday_wish_at' => 'datetime',
+        'last_winback_at' => 'datetime',
+        'blocked_from_ordering' => 'boolean',
     ];
 
     /** Whether an agent is currently handling this chat (bot should not auto-reply). */

@@ -200,6 +200,21 @@ class PageController extends Controller
         return Inertia::render('dashboard/subscription/page');
     }
 
+    public function dashboardStorefront(): Response
+    {
+        return Inertia::render('dashboard/storefront/page');
+    }
+
+    public function dashboardDelivery(): Response
+    {
+        return Inertia::render('dashboard/delivery/page');
+    }
+
+    public function dashboardDineIn(): Response
+    {
+        return Inertia::render('dashboard/dine-in/page');
+    }
+
     public function adminAccount(): Response
     {
         return Inertia::render('admin/account/page');

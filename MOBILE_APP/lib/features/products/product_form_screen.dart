@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -132,6 +133,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     super.dispose();
   }
 
+  bool _isValidUrl(String value) {
+    final uri = Uri.tryParse(value);
+    return uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty;
+  }
+
   ProductInput? _buildInput() {
     final name = _name.text.trim();
     if (name.isEmpty) {
@@ -155,6 +163,15 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     final category = _category.text.trim();
     final accessUrl = _accessUrl.text.trim();
     final serviceBookingUrl = _serviceBookingUrl.text.trim();
+    if (accessUrl.isNotEmpty && !_isValidUrl(accessUrl)) {
+      setState(() => _error = 'Enter a valid access link (starting with http).');
+      return null;
+    }
+    if (serviceBookingUrl.isNotEmpty && !_isValidUrl(serviceBookingUrl)) {
+      setState(
+          () => _error = 'Enter a valid booking link (starting with http).');
+      return null;
+    }
     final fulfillmentInstructions = _fulfillmentInstructions.text.trim();
     final licenseKeyPrefix = _licenseKeyPrefix.text.trim();
     final licenseKeys = _licenseKeys.text.trim();
@@ -215,32 +232,52 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      imageQuality: 85,
-    );
-    if (file == null) return;
-    setState(() => _imagePath = file.path);
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+      if (file == null) return;
+      setState(() {
+        _imagePath = file.path;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open the photo library: $e')),
+      );
+    }
   }
 
   Future<void> _pickDigitalFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const [
-        'pdf',
-        'epub',
-        'txt',
-        'csv',
-        'zip',
-        'doc',
-        'docx'
-      ],
-    );
-    final file = result?.files.single;
-    if (file?.path == null) return;
-    setState(() => _digitalFilePath = file!.path);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const [
+          'pdf',
+          'epub',
+          'txt',
+          'csv',
+          'zip',
+          'doc',
+          'docx'
+        ],
+      );
+      final file = result?.files.single;
+      if (file?.path == null) return;
+      setState(() {
+        _digitalFilePath = file!.path;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open the file picker: $e')),
+      );
+    }
   }
 
   Future<void> _submit() async {
@@ -289,6 +326,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
+          const _SectionLabel('Basics'),
+          const SizedBox(height: 4),
           AppSurface(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
             child: Column(
@@ -353,6 +392,17 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           ),
           const SizedBox(height: 12),
           TextField(
+            controller: _category,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              prefixIcon: Icon(Icons.category_outlined),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const _SectionLabel('Pricing'),
+          const SizedBox(height: 4),
+          TextField(
             controller: _price,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textInputAction: TextInputAction.next,
@@ -393,16 +443,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _category,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Category',
-              prefixIcon: Icon(Icons.category_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
+          const _SectionLabel('Fulfillment'),
+          const SizedBox(height: 4),
           InputDecorator(
             decoration: const InputDecoration(
               labelText: 'Item type',
@@ -458,7 +501,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
+          const _SectionLabel('Inventory'),
+          const SizedBox(height: 4),
           TextField(
             controller: _stock,
             keyboardType: TextInputType.number,
@@ -698,6 +743,28 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 2),
+      child: Text(
+        label.toUpperCase(),
+        style: GoogleFonts.manrope(
+          fontSize: 12,
+          letterSpacing: 0.7,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textMuted,
+        ),
       ),
     );
   }

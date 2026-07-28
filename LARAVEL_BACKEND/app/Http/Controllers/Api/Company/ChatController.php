@@ -156,6 +156,98 @@ class ChatController extends Controller
     }
 
     /**
+     * Update chat customer-retention fields (birthday, marketing opt-in).
+     * PATCH /api/company/chats/{chatId}
+     */
+    public function update(Request $request, string $chatId): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $chat = Chat::where('id', $chatId)->where('company_id', $companyId)->first();
+        if (! $chat) {
+            return response()->json(['message' => 'Chat not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'birthday' => 'sometimes|nullable|date',
+            'marketingOptIn' => 'sometimes|boolean',
+            'customerName' => 'sometimes|nullable|string|max:255',
+        ]);
+
+        if (array_key_exists('birthday', $validated)) {
+            $chat->birthday = $validated['birthday'];
+        }
+        if (array_key_exists('marketingOptIn', $validated)) {
+            $chat->marketing_opt_in = $validated['marketingOptIn'];
+        }
+        if (array_key_exists('customerName', $validated) && trim((string) $validated['customerName']) !== '') {
+            $chat->customer_name = trim($validated['customerName']);
+        }
+        $chat->save();
+
+        return response()->json([
+            'success' => true,
+            'chat' => [
+                'id' => (string) $chat->id,
+                'birthday' => $chat->birthday?->toDateString(),
+                'marketingOptIn' => (bool) $chat->marketing_opt_in,
+                'blockedFromOrdering' => (bool) $chat->blocked_from_ordering,
+            ],
+        ]);
+    }
+
+    /**
+     * Block this chat/number from placing further orders (manual spam control).
+     * POST /api/company/chats/{chatId}/block-ordering
+     */
+    public function blockOrdering(Request $request, string $chatId): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $chat = Chat::where('id', $chatId)->where('company_id', $companyId)->first();
+        if (! $chat) {
+            return response()->json(['message' => 'Chat not found.'], 404);
+        }
+
+        $chat->update(['blocked_from_ordering' => true]);
+
+        return response()->json([
+            'success' => true,
+            'blockedFromOrdering' => true,
+        ]);
+    }
+
+    /**
+     * Unblock this chat/number from placing orders.
+     * POST /api/company/chats/{chatId}/unblock-ordering
+     */
+    public function unblockOrdering(Request $request, string $chatId): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $chat = Chat::where('id', $chatId)->where('company_id', $companyId)->first();
+        if (! $chat) {
+            return response()->json(['message' => 'Chat not found.'], 404);
+        }
+
+        $chat->update(['blocked_from_ordering' => false]);
+
+        return response()->json([
+            'success' => true,
+            'blockedFromOrdering' => false,
+        ]);
+    }
+
+    /**
      * Clear agent_handling_at for this chat so the bot can auto-reply again (hand back to bot).
      * Also re-processes the latest unanswered customer message so the bot replies immediately
      * without waiting for another inbound WhatsApp message.

@@ -15,6 +15,7 @@ use App\Support\MoneyFormatter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class SettingsController extends Controller
@@ -105,6 +106,37 @@ class SettingsController extends Controller
             'taxEnabled' => (bool) ($settings?->tax_enabled ?? false),
             'industry' => $company->industry ?? 'other',
             'attributionRetentionDays' => $company->attribution_retention_days,
+            'storeSlug' => $company->store_slug,
+            'storefrontEnabled' => (bool) $company->storefront_enabled,
+            'storefrontUrl' => $company->store_slug
+                ? rtrim(config('app.url'), '/') . '/s/' . $company->store_slug
+                : null,
+            'linkInBioEnabled' => (bool) $company->link_in_bio_enabled,
+            'linkInBioHeadline' => $company->link_in_bio_headline,
+            'linkInBioBio' => $company->link_in_bio_bio,
+            'linkInBioLinks' => is_array($company->link_in_bio_links) ? $company->link_in_bio_links : [],
+            'linkInBioUrl' => $company->store_slug ? rtrim(config('app.url'), '/').'/b/'.$company->store_slug : null,
+            'ordersAcceptCod' => (bool) ($settings?->orders_accept_cod ?? false),
+            'ordersAcceptBankTransfer' => (bool) ($settings?->orders_accept_bank_transfer ?? false),
+            'bankTransferInstructions' => $settings?->bank_transfer_instructions ?? '',
+            'deliveryFeesEnabled' => (bool) ($settings?->delivery_fees_enabled ?? false),
+            'defaultDeliveryFee' => $settings?->default_delivery_fee !== null
+                ? (float) $settings->default_delivery_fee
+                : 0,
+            'freeDeliveryAbove' => $settings?->free_delivery_above !== null
+                ? (float) $settings->free_delivery_above
+                : null,
+            'dineInEnabled' => (bool) ($settings?->dine_in_enabled ?? false),
+            'paymentRecoveryEnabled' => ($settings?->payment_recovery_enabled ?? true) !== false,
+            'paymentRecoveryHours' => $settings?->paymentRecoveryHourOffsets() ?? [1, 24, 72],
+            'birthdayAutomationEnabled' => (bool) ($settings?->birthday_automation_enabled ?? false),
+            'birthdayCouponPercent' => $settings?->birthday_coupon_percent !== null ? (int) $settings->birthday_coupon_percent : 10,
+            'birthdayMessageTemplate' => $settings?->birthday_message_template ?? '',
+            'winbackAutomationEnabled' => (bool) ($settings?->winback_automation_enabled ?? false),
+            'winbackDaysInactive' => $settings?->winback_days_inactive !== null ? (int) $settings->winback_days_inactive : 30,
+            'spamOrderProtectionEnabled' => (bool) ($settings?->spam_order_protection_enabled ?? false),
+            'spamMaxOrdersPerHour' => $settings?->spam_max_orders_per_hour !== null ? (int) $settings->spam_max_orders_per_hour : 5,
+            'spamMaxOrdersPerDay' => $settings?->spam_max_orders_per_day !== null ? (int) $settings->spam_max_orders_per_day : 20,
         ]);
     }
 
@@ -192,6 +224,39 @@ class SettingsController extends Controller
             'decimalSeparator' => ['sometimes', 'nullable', 'string', Rule::in([',', '.'])],
             'taxEnabled' => 'sometimes|boolean',
             'industry' => 'sometimes|nullable|string|in:retail,restaurant,services,other',
+            'storeSlug' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:100',
+                'regex:/^[a-z0-9-]+$/',
+                Rule::unique('companies', 'store_slug')->ignore($company->id),
+            ],
+            'storefrontEnabled' => 'sometimes|boolean',
+            'linkInBioEnabled' => 'sometimes|boolean',
+            'linkInBioHeadline' => 'sometimes|nullable|string|max:255',
+            'linkInBioBio' => 'sometimes|nullable|string|max:2000',
+            'linkInBioLinks' => 'sometimes|nullable|array|max:20',
+            'linkInBioLinks.*.label' => 'required_with:linkInBioLinks|string|max:80',
+            'linkInBioLinks.*.url' => 'required_with:linkInBioLinks|string|max:500',
+            'ordersAcceptCod' => 'sometimes|boolean',
+            'ordersAcceptBankTransfer' => 'sometimes|boolean',
+            'bankTransferInstructions' => 'sometimes|nullable|string|max:2000',
+            'deliveryFeesEnabled' => 'sometimes|boolean',
+            'defaultDeliveryFee' => 'sometimes|nullable|numeric|min:0',
+            'freeDeliveryAbove' => 'sometimes|nullable|numeric|min:0',
+            'dineInEnabled' => 'sometimes|boolean',
+            'paymentRecoveryEnabled' => 'sometimes|boolean',
+            'paymentRecoveryHours' => 'sometimes|nullable|array',
+            'paymentRecoveryHours.*' => 'integer|min:1|max:720',
+            'birthdayAutomationEnabled' => 'sometimes|boolean',
+            'birthdayCouponPercent' => 'sometimes|nullable|integer|min:0|max:100',
+            'birthdayMessageTemplate' => 'sometimes|nullable|string|max:1000',
+            'winbackAutomationEnabled' => 'sometimes|boolean',
+            'winbackDaysInactive' => 'sometimes|nullable|integer|min:7|max:365',
+            'spamOrderProtectionEnabled' => 'sometimes|boolean',
+            'spamMaxOrdersPerHour' => 'sometimes|nullable|integer|min:1|max:100',
+            'spamMaxOrdersPerDay' => 'sometimes|nullable|integer|min:1|max:500',
         ]);
 
         if (isset($companyValidated['companyName'])) {
@@ -212,6 +277,38 @@ class SettingsController extends Controller
         if (array_key_exists('attributionRetentionDays', $companyValidated)) {
             $company->update(['attribution_retention_days' => $companyValidated['attributionRetentionDays']]);
         }
+        if (array_key_exists('storeSlug', $companyValidated)) {
+            $slug = $companyValidated['storeSlug'];
+            $company->store_slug = is_string($slug) && trim($slug) !== '' ? Str::slug(trim($slug)) : null;
+        }
+        if (array_key_exists('storefrontEnabled', $companyValidated)) {
+            $company->storefront_enabled = $companyValidated['storefrontEnabled'];
+        }
+        if (array_key_exists('linkInBioEnabled', $companyValidated)) {
+            $company->link_in_bio_enabled = $companyValidated['linkInBioEnabled'];
+        }
+        if (array_key_exists('linkInBioHeadline', $companyValidated)) {
+            $headline = $companyValidated['linkInBioHeadline'];
+            $company->link_in_bio_headline = is_string($headline) && trim($headline) !== '' ? trim($headline) : null;
+        }
+        if (array_key_exists('linkInBioBio', $companyValidated)) {
+            $bio = $companyValidated['linkInBioBio'];
+            $company->link_in_bio_bio = is_string($bio) && trim($bio) !== '' ? trim($bio) : null;
+        }
+        if (array_key_exists('linkInBioLinks', $companyValidated)) {
+            $links = $companyValidated['linkInBioLinks'];
+            $company->link_in_bio_links = is_array($links) && $links !== []
+                ? array_values(array_map(fn ($l) => [
+                    'label' => trim((string) ($l['label'] ?? '')),
+                    'url' => trim((string) ($l['url'] ?? '')),
+                ], $links))
+                : null;
+        }
+        // Auto-generate a unique store slug from the company name when enabling storefront/bio without one.
+        if (($company->storefront_enabled || $company->link_in_bio_enabled) && empty($company->store_slug)) {
+            $company->store_slug = $this->generateUniqueStoreSlug($company);
+        }
+        $company->save();
 
         $settings = $company->settings()->firstOrNew([]);
         $settings->company_id = $company->id;
@@ -488,6 +585,62 @@ class SettingsController extends Controller
                 }
             }
         }
+        if (array_key_exists('ordersAcceptCod', $companyValidated)) {
+            $settings->orders_accept_cod = $companyValidated['ordersAcceptCod'];
+        }
+        if (array_key_exists('ordersAcceptBankTransfer', $companyValidated)) {
+            $settings->orders_accept_bank_transfer = $companyValidated['ordersAcceptBankTransfer'];
+        }
+        if (array_key_exists('bankTransferInstructions', $companyValidated)) {
+            $v = $companyValidated['bankTransferInstructions'];
+            $settings->bank_transfer_instructions = (is_string($v) && trim($v) !== '') ? trim($v) : null;
+        }
+        if (array_key_exists('deliveryFeesEnabled', $companyValidated)) {
+            $settings->delivery_fees_enabled = $companyValidated['deliveryFeesEnabled'];
+        }
+        if (array_key_exists('defaultDeliveryFee', $companyValidated)) {
+            $settings->default_delivery_fee = $companyValidated['defaultDeliveryFee'] ?? 0;
+        }
+        if (array_key_exists('freeDeliveryAbove', $companyValidated)) {
+            $settings->free_delivery_above = $companyValidated['freeDeliveryAbove'];
+        }
+        if (array_key_exists('dineInEnabled', $companyValidated)) {
+            $settings->dine_in_enabled = $companyValidated['dineInEnabled'];
+        }
+        if (array_key_exists('paymentRecoveryEnabled', $companyValidated)) {
+            $settings->payment_recovery_enabled = $companyValidated['paymentRecoveryEnabled'];
+        }
+        if (array_key_exists('paymentRecoveryHours', $companyValidated)) {
+            $hours = $companyValidated['paymentRecoveryHours'];
+            $settings->payment_recovery_hours = is_array($hours) && $hours !== []
+                ? array_values(array_unique(array_map('intval', $hours)))
+                : null;
+        }
+        if (array_key_exists('birthdayAutomationEnabled', $companyValidated)) {
+            $settings->birthday_automation_enabled = $companyValidated['birthdayAutomationEnabled'];
+        }
+        if (array_key_exists('birthdayCouponPercent', $companyValidated)) {
+            $settings->birthday_coupon_percent = $companyValidated['birthdayCouponPercent'] ?? 10;
+        }
+        if (array_key_exists('birthdayMessageTemplate', $companyValidated)) {
+            $v = $companyValidated['birthdayMessageTemplate'];
+            $settings->birthday_message_template = (is_string($v) && trim($v) !== '') ? trim($v) : null;
+        }
+        if (array_key_exists('winbackAutomationEnabled', $companyValidated)) {
+            $settings->winback_automation_enabled = $companyValidated['winbackAutomationEnabled'];
+        }
+        if (array_key_exists('winbackDaysInactive', $companyValidated)) {
+            $settings->winback_days_inactive = $companyValidated['winbackDaysInactive'] ?? 30;
+        }
+        if (array_key_exists('spamOrderProtectionEnabled', $companyValidated)) {
+            $settings->spam_order_protection_enabled = $companyValidated['spamOrderProtectionEnabled'];
+        }
+        if (array_key_exists('spamMaxOrdersPerHour', $companyValidated)) {
+            $settings->spam_max_orders_per_hour = $companyValidated['spamMaxOrdersPerHour'] ?? 5;
+        }
+        if (array_key_exists('spamMaxOrdersPerDay', $companyValidated)) {
+            $settings->spam_max_orders_per_day = $companyValidated['spamMaxOrdersPerDay'] ?? 20;
+        }
         $settings->save();
 
         return response()->json([
@@ -544,5 +697,19 @@ class SettingsController extends Controller
     protected function isMaskedSecretInput(string $value): bool
     {
         return str_starts_with($value, '••••') || $value === '';
+    }
+
+    /** Generate a unique, URL-safe store slug from the company name. */
+    protected function generateUniqueStoreSlug(Company $company): string
+    {
+        $base = Str::slug($company->name) ?: 'store';
+        $slug = $base;
+        $suffix = 1;
+        while (Company::where('store_slug', $slug)->where('id', '!=', $company->id)->exists()) {
+            $suffix++;
+            $slug = $base.'-'.$suffix;
+        }
+
+        return $slug;
     }
 }

@@ -27,6 +27,9 @@ import {
   Calendar,
   Sparkles,
   Percent,
+  QrCode,
+  Store,
+  Truck,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
@@ -53,9 +56,12 @@ export const dashboardNavigation: DashboardNavItem[] = [
   { name: "Chats", href: "/dashboard/chats", icon: MessageSquare },
   { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
   { name: "Products", href: "/dashboard/products", icon: Package },
+  { name: "Storefront", href: "/dashboard/storefront", icon: Store },
+  { name: "Delivery", href: "/dashboard/delivery", icon: Truck },
   { name: "Taxes", href: "/dashboard/taxes", icon: Percent },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+  { name: "Dine-in", href: "/dashboard/dine-in", icon: QrCode },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Growth Engine", href: "/dashboard/growth", icon: Rocket },
   { name: "WhatsApp Campaigns", href: "/dashboard/whatsapp/campaigns", icon: Megaphone },
@@ -79,9 +85,12 @@ export const dashboardNavGroups: DashboardNavGroup[] = [
       { name: "Chats", href: "/dashboard/chats", icon: MessageSquare },
       { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
       { name: "Products", href: "/dashboard/products", icon: Package },
+      { name: "Storefront", href: "/dashboard/storefront", icon: Store },
+      { name: "Delivery", href: "/dashboard/delivery", icon: Truck },
       { name: "Taxes", href: "/dashboard/taxes", icon: Percent },
       { name: "Customers", href: "/dashboard/customers", icon: Users },
       { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+      { name: "Dine-in", href: "/dashboard/dine-in", icon: QrCode },
     ],
   },
   {

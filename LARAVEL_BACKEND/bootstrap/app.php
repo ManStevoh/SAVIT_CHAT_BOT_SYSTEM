@@ -51,6 +51,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('learning:prune-expired')->dailyAt('02:30');
         $schedule->command('learning:sync-embeddings --missing-only')->weeklyOn(0, '03:30');
         $schedule->command('products:sync-embeddings --missing-only')->weeklyOn(0, '04:00');
+        $schedule->job(new \App\Jobs\Orders\ProcessPaymentRecoveryJob)->hourly();
+        $schedule->job(new \App\Jobs\Orders\ProcessCustomerRetentionJob)->dailyAt('09:30');
         $schedule->command('ai:health-check --notify')->dailyAt('07:30');
 
         // Shared hosting: set AUTO_MIGRATE=true to apply pending migrations via cron.

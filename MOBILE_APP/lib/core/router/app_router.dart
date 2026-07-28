@@ -20,6 +20,7 @@ import '../../features/settings/currency_settings_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/splash/splash_screen.dart';
+import '../../features/storefront/storefront_settings_screen.dart';
 import '../../features/taxes/taxes_screen.dart';
 import '../auth/auth_controller.dart';
 import '../onboarding/onboarding_controller.dart';
@@ -173,6 +174,11 @@ GoRouter createAppRouter(
                   GoRoute(
                     path: 'currency',
                     builder: (context, state) => const CurrencySettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'storefront',
+                    builder: (context, state) =>
+                        const StorefrontSettingsScreen(),
                   ),
                   GoRoute(
                     path: 'bookings',

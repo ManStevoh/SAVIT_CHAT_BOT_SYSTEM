@@ -62,6 +62,13 @@ class MoreScreen extends StatelessWidget {
               onTap: () => context.go('/more/currency'),
             ),
             _MoreTile(
+              icon: Icons.storefront_outlined,
+              title: 'Storefront',
+              subtitle: 'Store link, COD, delivery & dine-in',
+              color: AppColors.primary,
+              onTap: () => context.go('/more/storefront'),
+            ),
+            _MoreTile(
               icon: Icons.event_available_outlined,
               title: 'Bookings',
               subtitle: 'Meetings & calendar feed',

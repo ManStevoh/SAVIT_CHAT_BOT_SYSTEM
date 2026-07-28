@@ -107,6 +107,20 @@ class OrderPaymentDetailsService
                 $lines[] = "{$n}. Paystack (pay online)";
                 $n++;
             }
+            if ($pay['cod']) {
+                $lines[] = "{$n}. Cash on delivery (pay when your order arrives)";
+                $n++;
+            }
+            if ($pay['bank_transfer']) {
+                $lines[] = "{$n}. Bank transfer";
+                $instructions = trim((string) $company->settings?->bank_transfer_instructions);
+                if ($instructions !== '') {
+                    $lines[] = '';
+                    $lines[] = 'Bank transfer details:';
+                    $lines[] = $instructions;
+                }
+                $n++;
+            }
             if ($pay['manual']) {
                 $lines[] = "{$n}. Pay manually (bank / till / other)";
                 $instructions = trim((string) $company->settings?->order_payment_manual_instructions);
@@ -120,6 +134,9 @@ class OrderPaymentDetailsService
             $lines[] = 'Reply with the option number (or name) to continue.';
         }
 
+        $lines[] = '';
+        $lines[] = 'Pay online: '.$order->publicPayUrl();
+        $lines[] = 'Invoice: '.$order->publicInvoiceUrl();
         $lines[] = '';
         $lines[] = 'View invoice / receipt:';
         $lines[] = $order->publicReceiptUrl();
@@ -165,7 +182,7 @@ class OrderPaymentDetailsService
     }
 
     /**
-     * @return array{mpesa: bool, stripe: bool, paystack: bool, manual: bool}
+     * @return array{mpesa: bool, stripe: bool, paystack: bool, manual: bool, cod: bool, bank_transfer: bool}
      */
     public function resolveAcceptance(Company $company): array
     {
@@ -176,17 +193,19 @@ class OrderPaymentDetailsService
             'stripe' => (bool) ($settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig())),
             'paystack' => (bool) ($settings && $settings->orders_accept_paystack && PaystackService::isEnabled()),
             'manual' => (bool) ($settings && $settings->hasOrderPaymentManualInstructions()),
+            'cod' => (bool) ($settings && $settings->orders_accept_cod),
+            'bank_transfer' => (bool) ($settings && $settings->orders_accept_bank_transfer),
         ];
     }
 
     /**
-     * @param  array{mpesa: bool, stripe: bool, paystack: bool, manual: bool}  $pay
+     * @param  array{mpesa: bool, stripe: bool, paystack: bool, manual: bool, cod: bool, bank_transfer: bool}  $pay
      * @return list<string>
      */
     public function methodKeys(array $pay): array
     {
         $keys = [];
-        foreach (['mpesa', 'stripe', 'paystack', 'manual'] as $key) {
+        foreach (['mpesa', 'stripe', 'paystack', 'cod', 'bank_transfer', 'manual'] as $key) {
             if (! empty($pay[$key])) {
                 $keys[] = $key;
             }
@@ -211,6 +230,10 @@ class OrderPaymentDetailsService
         if ($pay['manual']) {
             $lines[] = 'Manual instructions to share when relevant:';
             $lines[] = trim((string) $company->settings?->order_payment_manual_instructions);
+        }
+        if ($pay['bank_transfer'] && $company->settings?->hasBankTransferInstructions()) {
+            $lines[] = 'Bank transfer instructions to share when relevant:';
+            $lines[] = trim((string) $company->settings?->bank_transfer_instructions);
         }
         $lines[] = 'When the customer wants to pay or asks for payment details: call share_payment_details (or process_order_message during active checkout). Never claim payment methods are unavailable if listed above.';
 

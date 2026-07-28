@@ -105,4 +105,38 @@ class CompanySettingsController extends ChangeNotifier {
       throw ApiException.fromDio(e);
     }
   }
+
+  Future<void> updateStorefrontSettings({
+    String? storeSlug,
+    required bool storefrontEnabled,
+    required bool linkInBioEnabled,
+    required bool ordersAcceptCod,
+    required bool deliveryFeesEnabled,
+    required double defaultDeliveryFee,
+    double? freeDeliveryAbove,
+    required bool dineInEnabled,
+  }) async {
+    final api = _api;
+    if (api == null) return;
+
+    try {
+      await api.dio.put(
+        '/company/settings',
+        data: {
+          'storeSlug': storeSlug,
+          'storefrontEnabled': storefrontEnabled,
+          'linkInBioEnabled': linkInBioEnabled,
+          'ordersAcceptCod': ordersAcceptCod,
+          'deliveryFeesEnabled': deliveryFeesEnabled,
+          'defaultDeliveryFee': defaultDeliveryFee,
+          'freeDeliveryAbove': freeDeliveryAbove,
+          'dineInEnabled': dineInEnabled,
+        },
+      );
+      // Reload from the server so the derived storefront URL stays accurate.
+      await load(force: true);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

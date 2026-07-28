@@ -1056,6 +1056,130 @@ export async function deleteTaxRate(taxRateId: string): Promise<{ success: boole
   }
 }
 
+export interface CreateDineInTableData {
+  name: string
+  code?: string | null
+  seats?: number | null
+  isActive?: boolean
+}
+
+export async function createDineInTable(
+  data: CreateDineInTableData
+): Promise<{ success: boolean; table?: import('./api-hooks').DineInTable; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return {
+      success: true,
+      table: {
+        id: Math.random().toString(36).slice(2),
+        name: data.name,
+        code: data.code ?? null,
+        seats: data.seats ?? null,
+        isActive: data.isActive !== false,
+        qrToken: Math.random().toString(36).slice(2),
+        orderUrl: '#',
+      },
+      message: 'Table created',
+    }
+  }
+  try {
+    return await apiRequest('/api/company/dine-in-tables', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateDineInTable(
+  tableId: string,
+  data: Partial<CreateDineInTableData>
+): Promise<{ success: boolean; table?: import('./api-hooks').DineInTable; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, message: 'Table updated' }
+  }
+  try {
+    return await apiRequest(`/api/company/dine-in-tables/${tableId}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteDineInTable(tableId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, message: 'Table deleted' }
+  }
+  try {
+    return await apiRequest(`/api/company/dine-in-tables/${tableId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface DeliveryZoneFormData {
+  name: string
+  fee: number
+  minOrderAmount?: number | null
+  keywords?: string[]
+  isActive?: boolean
+  sortOrder?: number
+}
+
+export async function createDeliveryZone(
+  data: DeliveryZoneFormData
+): Promise<{ success: boolean; zone?: import('./api-hooks').DeliveryZone; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return {
+      success: true,
+      zone: {
+        id: Math.random().toString(36).slice(2),
+        name: data.name,
+        fee: data.fee,
+        minOrderAmount: data.minOrderAmount ?? null,
+        keywords: data.keywords ?? [],
+        isActive: data.isActive !== false,
+        sortOrder: data.sortOrder ?? 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      message: 'Delivery zone created',
+    }
+  }
+  try {
+    return await apiRequest('/api/company/delivery-zones', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateDeliveryZone(
+  zoneId: string,
+  data: Partial<DeliveryZoneFormData>
+): Promise<{ success: boolean; zone?: import('./api-hooks').DeliveryZone; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, message: 'Delivery zone updated' }
+  }
+  try {
+    return await apiRequest(`/api/company/delivery-zones/${zoneId}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteDeliveryZone(zoneId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, message: 'Delivery zone deleted' }
+  }
+  try {
+    return await apiRequest(`/api/company/delivery-zones/${zoneId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 /**
  * Update FAQ
  * Laravel: PUT /api/company/faqs/:faqId
@@ -1130,6 +1254,9 @@ export interface UpdateSettingsData {
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
   ordersAcceptPaystack?: boolean
+  ordersAcceptCod?: boolean
+  ordersAcceptBankTransfer?: boolean
+  bankTransferInstructions?: string | null
   attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
   orderPaymentManualInstructions?: string | null
@@ -1152,6 +1279,26 @@ export interface UpdateSettingsData {
   decimalSeparator?: string
   taxEnabled?: boolean
   industry?: 'retail' | 'restaurant' | 'services' | 'other'
+  storeSlug?: string | null
+  storefrontEnabled?: boolean
+  linkInBioEnabled?: boolean
+  linkInBioHeadline?: string | null
+  linkInBioBio?: string | null
+  linkInBioLinks?: { label: string; url: string }[]
+  deliveryFeesEnabled?: boolean
+  defaultDeliveryFee?: number
+  freeDeliveryAbove?: number | null
+  dineInEnabled?: boolean
+  paymentRecoveryEnabled?: boolean
+  paymentRecoveryHours?: number[]
+  birthdayAutomationEnabled?: boolean
+  birthdayCouponPercent?: number
+  birthdayMessageTemplate?: string | null
+  winbackAutomationEnabled?: boolean
+  winbackDaysInactive?: number
+  spamOrderProtectionEnabled?: boolean
+  spamMaxOrdersPerHour?: number
+  spamMaxOrdersPerDay?: number
 }
 
 /**

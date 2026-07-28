@@ -18,23 +18,38 @@ class Order extends Model
         'chat_id',
         'social_post_id',
         'order_number',
+        'invoice_token',
+        'pay_token',
         'customer_name',
         'customer_phone',
         'delivery_address',
+        'fulfillment_type',
+        'dine_in_table_id',
+        'dine_in_table_name',
         'subtotal',
         'tax_total',
+        'delivery_fee',
         'tax_breakdown',
         'total',
         'status',
         'payment_status',
+        'payment_method',
+        'scheduled_for',
+        'spam_flagged',
+        'source',
+        'payment_recovered_at',
         'agent_proactive_follow_up_at',
     ];
 
     protected $casts = [
         'subtotal' => 'decimal:2',
         'tax_total' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
         'tax_breakdown' => 'array',
         'total' => 'decimal:2',
+        'scheduled_for' => 'datetime',
+        'spam_flagged' => 'boolean',
+        'payment_recovered_at' => 'datetime',
         'agent_proactive_follow_up_at' => 'datetime',
     ];
 
@@ -56,6 +71,49 @@ class Order extends Model
     public function socialPost(): BelongsTo
     {
         return $this->belongsTo(SocialPost::class);
+    }
+
+    public function dineInTable(): BelongsTo
+    {
+        return $this->belongsTo(DineInTable::class, 'dine_in_table_id');
+    }
+
+    public function paymentRecoveryAttempts(): HasMany
+    {
+        return $this->hasMany(PaymentRecoveryAttempt::class);
+    }
+
+    /**
+     * Ensure public pay + invoice tokens exist.
+     */
+    public function ensurePublicTokens(): void
+    {
+        $dirty = false;
+        if (empty($this->invoice_token)) {
+            $this->invoice_token = bin2hex(random_bytes(24));
+            $dirty = true;
+        }
+        if (empty($this->pay_token)) {
+            $this->pay_token = bin2hex(random_bytes(24));
+            $dirty = true;
+        }
+        if ($dirty) {
+            $this->save();
+        }
+    }
+
+    public function publicPayUrl(): string
+    {
+        $this->ensurePublicTokens();
+
+        return url('/pay/'.$this->pay_token);
+    }
+
+    public function publicInvoiceUrl(): string
+    {
+        $this->ensurePublicTokens();
+
+        return url('/invoice/'.$this->invoice_token);
     }
 
     /**

@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\Company\ChatController;
 use App\Http\Controllers\Api\Company\ChatMessageController;
 use App\Http\Controllers\Api\Company\WhatsAppCampaignController;
 use App\Http\Controllers\Api\Company\CustomerController;
+use App\Http\Controllers\Api\Company\DeliveryZoneController;
 use App\Http\Controllers\Api\Admin\GrowthPortfolioController;
 use App\Http\Controllers\Api\Admin\SystemHealthController;
 use App\Http\Controllers\Api\Company\ExportController;
@@ -156,6 +157,9 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('chats', [ChatController::class, 'index']);
     Route::post('chats/start', [ChatController::class, 'start']);
     Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);
+    Route::patch('chats/{chatId}', [ChatController::class, 'update']);
+    Route::post('chats/{chatId}/block-ordering', [ChatController::class, 'blockOrdering']);
+    Route::post('chats/{chatId}/unblock-ordering', [ChatController::class, 'unblockOrdering']);
     Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
     Route::post('chats/{chatId}/messages/{messageId}/learning-feedback', [ChatMessageController::class, 'learningFeedback']);
@@ -185,6 +189,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::apiResource('faqs', FaqController::class)->only(['store', 'update', 'destroy']);
     Route::get('tax-rates', [TaxRateController::class, 'index']);
     Route::apiResource('tax-rates', TaxRateController::class)->only(['store', 'update', 'destroy']);
+    Route::apiResource('delivery-zones', DeliveryZoneController::class);
+    Route::apiResource('dine-in-tables', \App\Http\Controllers\Api\Company\DineInTableController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('analytics', [\App\Http\Controllers\Api\Company\AnalyticsController::class, 'index']);
     Route::get('growth/analytics', [GrowthAnalyticsController::class, 'index']);
     Route::get('growth/posts', [GrowthPostController::class, 'index']);

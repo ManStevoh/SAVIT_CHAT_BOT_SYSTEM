@@ -420,6 +420,13 @@ export default function SettingsPage() {
   const [ordersAcceptMpesa, setOrdersAcceptMpesa] = useState(false)
   const [ordersAcceptStripe, setOrdersAcceptStripe] = useState(false)
   const [ordersAcceptPaystack, setOrdersAcceptPaystack] = useState(false)
+  const [ordersAcceptCod, setOrdersAcceptCod] = useState(false)
+  const [ordersAcceptBankTransfer, setOrdersAcceptBankTransfer] = useState(false)
+  const [bankTransferInstructions, setBankTransferInstructions] = useState('')
+  const [deliveryFeesEnabled, setDeliveryFeesEnabled] = useState(false)
+  const [defaultDeliveryFee, setDefaultDeliveryFee] = useState<string>("")
+  const [freeDeliveryAbove, setFreeDeliveryAbove] = useState<string>("")
+  const [paymentRecoveryEnabled, setPaymentRecoveryEnabled] = useState(true)
   const [attributionRetentionDays, setAttributionRetentionDays] = useState<string>("")
   const [orderPaymentsSaving, setOrderPaymentsSaving] = useState(false)
   const [orderPaymentsMessage, setOrderPaymentsMessage] = useState<string | null>(null)
@@ -519,6 +526,13 @@ export default function SettingsPage() {
       if (settings.ordersAcceptMpesa != null) setOrdersAcceptMpesa(settings.ordersAcceptMpesa)
       if (settings.ordersAcceptStripe != null) setOrdersAcceptStripe(settings.ordersAcceptStripe)
       if (settings.ordersAcceptPaystack != null) setOrdersAcceptPaystack(settings.ordersAcceptPaystack)
+      if (settings.ordersAcceptCod != null) setOrdersAcceptCod(settings.ordersAcceptCod)
+      if (settings.ordersAcceptBankTransfer != null) setOrdersAcceptBankTransfer(settings.ordersAcceptBankTransfer)
+      if (settings.bankTransferInstructions != null) setBankTransferInstructions(settings.bankTransferInstructions)
+      if (settings.deliveryFeesEnabled != null) setDeliveryFeesEnabled(settings.deliveryFeesEnabled)
+      if (settings.defaultDeliveryFee != null) setDefaultDeliveryFee(String(settings.defaultDeliveryFee))
+      if (settings.freeDeliveryAbove != null) setFreeDeliveryAbove(String(settings.freeDeliveryAbove))
+      if (settings.paymentRecoveryEnabled != null) setPaymentRecoveryEnabled(settings.paymentRecoveryEnabled)
       if (settings.attributionRetentionDays != null) {
         setAttributionRetentionDays(String(settings.attributionRetentionDays))
       } else {
@@ -756,6 +770,13 @@ export default function SettingsPage() {
       ordersAcceptMpesa,
       ordersAcceptStripe,
       ordersAcceptPaystack,
+      ordersAcceptCod,
+      ordersAcceptBankTransfer,
+      bankTransferInstructions: bankTransferInstructions.trim() || null,
+      deliveryFeesEnabled,
+      defaultDeliveryFee: defaultDeliveryFee.trim() ? parseFloat(defaultDeliveryFee) : undefined,
+      freeDeliveryAbove: freeDeliveryAbove.trim() ? parseFloat(freeDeliveryAbove) : null,
+      paymentRecoveryEnabled,
     }
     if (mpesaShortcode.trim()) {
       payload.orderPaymentMpesaConfig = {
@@ -2196,6 +2217,35 @@ export default function SettingsPage() {
                   </div>
                   <Switch checked={ordersAcceptPaystack} onCheckedChange={setOrdersAcceptPaystack} disabled={!ordersCollectPaymentEnabled} />
                 </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">Cash on delivery</p>
+                    <p className="text-sm text-muted-foreground">Customer pays in cash when the order arrives; order is confirmed immediately</p>
+                  </div>
+                  <Switch checked={ordersAcceptCod} onCheckedChange={setOrdersAcceptCod} disabled={!ordersCollectPaymentEnabled} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">Bank transfer</p>
+                    <p className="text-sm text-muted-foreground">Customer transfers directly to your bank account using the details below</p>
+                  </div>
+                  <Switch checked={ordersAcceptBankTransfer} onCheckedChange={setOrdersAcceptBankTransfer} disabled={!ordersCollectPaymentEnabled} />
+                </div>
+                {ordersAcceptBankTransfer && (
+                  <FieldGroup>
+                    <div>
+                      <p className="font-medium text-foreground">Bank transfer details</p>
+                      <p className="text-sm text-muted-foreground">Shown to customers who choose bank transfer (account name, number, bank, branch, etc.)</p>
+                    </div>
+                    <Textarea
+                      placeholder="e.g. Bank: Equity, Account name: My Shop Ltd, Account no: 1234567890"
+                      value={bankTransferInstructions}
+                      onChange={(e) => setBankTransferInstructions(e.target.value)}
+                      rows={3}
+                      className="mt-2"
+                    />
+                  </FieldGroup>
+                )}
 
                 <FieldGroup>
                   <div>
@@ -2438,6 +2488,52 @@ export default function SettingsPage() {
                       </Field>
                     </div>
                   </FieldGroup>
+                </div>
+
+                <div className="border-t border-border pt-6 space-y-6">
+                  <h3 className="font-medium text-foreground">Delivery fees</h3>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">Charge delivery fees</p>
+                      <p className="text-sm text-muted-foreground">Add a delivery fee to orders. Use Delivery zones to set area-specific fees.</p>
+                    </div>
+                    <Switch checked={deliveryFeesEnabled} onCheckedChange={setDeliveryFeesEnabled} />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel>Default delivery fee</FieldLabel>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={defaultDeliveryFee}
+                        onChange={(e) => setDefaultDeliveryFee(e.target.value)}
+                        disabled={!deliveryFeesEnabled}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Used when the address doesn&apos;t match any delivery zone.</p>
+                    </Field>
+                    <Field>
+                      <FieldLabel>Free delivery above (optional)</FieldLabel>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 5000"
+                        value={freeDeliveryAbove}
+                        onChange={(e) => setFreeDeliveryAbove(e.target.value)}
+                        disabled={!deliveryFeesEnabled}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Delivery becomes free once the order subtotal reaches this amount.</p>
+                    </Field>
+                  </div>
+                </div>
+
+                <div className="border-t border-border pt-6 space-y-6">
+                  <h3 className="font-medium text-foreground">Payment reminders</h3>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">Automatic payment recovery</p>
+                      <p className="text-sm text-muted-foreground">Send WhatsApp reminders with a pay link to customers with unpaid orders (not cash on delivery)</p>
+                    </div>
+                    <Switch checked={paymentRecoveryEnabled} onCheckedChange={setPaymentRecoveryEnabled} />
+                  </div>
                 </div>
 
                 <Button type="submit" disabled={orderPaymentsSaving}>

@@ -94,6 +94,47 @@ class ProductRepository {
     }
   }
 
+  /// Lightweight partial update used for the quick active/inactive toggle.
+  Future<Product> updateProductStatus(String id, String status) async {
+    try {
+      final response = await _api.dio.put(
+        '/company/products/$id',
+        data: {'status': status},
+      );
+      return _parseProductResponse(response.data);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Creates a new product by copying the fields of an existing one.
+  /// Images and digital files are not copied — the merchant can attach
+  /// new ones on the duplicate.
+  Future<Product> duplicateProduct(Product product) async {
+    final input = ProductInput(
+      name: '${product.name} (Copy)',
+      description: product.description.isEmpty ? null : product.description,
+      price: product.price,
+      taxRateId: product.taxRateId,
+      category: product.category.isEmpty ? null : product.category,
+      productType: product.productType,
+      fulfillmentType: product.fulfillmentType,
+      trackInventory: product.trackInventory,
+      requiresDeliveryAddress: product.requiresDeliveryAddress,
+      accessUrl: product.accessUrl,
+      serviceBookingUrl: product.serviceBookingUrl,
+      fulfillmentInstructions: product.fulfillmentInstructions,
+      licenseKeyMode: product.licenseKeyMode,
+      licenseKeyPrefix: product.licenseKeyPrefix,
+      accessExpiresDays: product.accessExpiresDays,
+      maxDownloads: product.maxDownloads,
+      bookable: product.bookable,
+      bookingDurationMinutes: product.bookingDurationMinutes,
+      stock: product.trackInventory ? product.stock : 0,
+    );
+    return createProduct(input);
+  }
+
   Future<ProductVariant> createVariant(
     String productId,
     ProductVariantInput input,
