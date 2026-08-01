@@ -24,6 +24,8 @@ class PaymentGatewayController extends Controller
                 'slug' => $g->slug,
                 'name' => $g->name,
                 'isEnabled' => (bool) $g->is_enabled,
+                'isSystemwideMasterSwitch' => true,
+                'purpose' => 'Platform Subscriptions Billing (How tenant companies pay Super Admin)',
                 'config' => $masked,
             ];
         });
@@ -86,6 +88,7 @@ class PaymentGatewayController extends Controller
             'stripe' => ['secret', 'webhook_secret'],
             'mpesa' => ['consumer_secret', 'passkey'],
             'paystack' => ['secret_key'],
+            'pesapal' => ['consumer_secret'],
             default => [],
         }, true);
     }
@@ -104,6 +107,7 @@ class PaymentGatewayController extends Controller
             'stripe' => ['secret', 'webhook_secret'],
             'mpesa' => ['consumer_secret', 'passkey'],
             'paystack' => ['secret_key'],
+            'pesapal' => ['consumer_secret'],
             default => [],
         };
 

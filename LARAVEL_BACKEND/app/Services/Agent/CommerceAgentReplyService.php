@@ -66,6 +66,7 @@ final class CommerceAgentReplyService
             'reply' => $result['reply'],
             'route' => $result['route'],
             'handoff' => $result['handoff'],
+            'log_id' => $result['log_id'] ?? null,
         ];
     }
 }

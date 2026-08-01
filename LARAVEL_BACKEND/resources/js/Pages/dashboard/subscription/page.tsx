@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table"
 import { Check, CreditCard, Download, MessageSquare, Smartphone, Users, Zap } from "lucide-react"
 import { useSubscription, useSubscriptionInvoices, useSubscriptionUsage, usePlans, type BillingInvoice } from "@/lib/api-hooks"
-import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout, verifyPaystackCheckout, cancelSubscription, previewCoupon } from "@/lib/api-actions"
+import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout, verifyPaystackCheckout, cancelSubscription, previewCoupon, apiRequest } from "@/lib/api-actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -239,6 +239,32 @@ function SubscriptionPageContent() {
     setCheckoutPlanId(null)
     if (result.success && result.url) window.location.href = result.url
     else toast.error(result.message ?? "Could not start checkout.")
+  }
+
+  const handleGenericCheckout = async (planId: string, gatewayId: string) => {
+    setCheckoutPlanId(planId)
+    const result = await apiRequest<{ success: boolean; checkout_url?: string; instructions?: string; message?: string }>(
+      '/api/company/subscription/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          plan: planId,
+          gateway: gatewayId,
+        }),
+      }
+    )
+    setCheckoutPlanId(null)
+    if (result.success) {
+      if (result.checkout_url) {
+        window.location.href = result.checkout_url
+      } else if (result.instructions) {
+        toast.success(result.instructions, { duration: 10000 })
+      } else {
+        toast.success(result.message ?? "Checkout initiated.")
+      }
+    } else {
+      toast.error(result.message ?? "Could not start checkout.")
+    }
   }
 
   const handlePaystackSubscribe = async (planId: string) => {
@@ -569,20 +595,39 @@ function SubscriptionPageContent() {
                                 onChange={(e) => setMpesaPhone(e.target.value)}
                                 className="bg-background"
                               />
-                              {mpesaError && (
-                                <p className="text-sm text-destructive">{mpesaError}</p>
-                              )}
+                              {mpesaError && <p className="text-xs text-destructive">{mpesaError}</p>}
                               <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleMpesaSubmit(plan.id)}>
+                                <Button
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => handleMpesaSubmit(plan.id)}
+                                >
                                   Send M-Pesa prompt
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => { setMpesaPlanId(null); setMpesaError(null) }}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setMpesaPlanId(null)
+                                    setMpesaError(null)
+                                  }}
+                                >
                                   Cancel
                                 </Button>
                               </div>
                             </div>
                           )}
                         </>
+                      )}
+                      {plan.paymentMethods?.manual && (
+                        <Button
+                          className="w-full mt-2"
+                          variant="outline"
+                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
+                          onClick={() => handleGenericCheckout(plan.id, 'manual')}
+                        >
+                          Bank Transfer / Invoice
+                        </Button>
                       )}
                     </>
                   )}

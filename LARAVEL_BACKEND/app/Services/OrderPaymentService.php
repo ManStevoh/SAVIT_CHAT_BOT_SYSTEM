@@ -24,6 +24,7 @@ class OrderPaymentService
         protected MpesaService $mpesa,
         protected StripeService $stripe,
         protected PaystackService $paystack,
+        protected PesapalService $pesapal,
         protected WhatsAppMessageSenderService $waSender,
         protected OrderFulfillmentService $fulfillmentService,
     ) {}
@@ -100,11 +101,15 @@ class OrderPaymentService
         $companyStripe = $settings?->order_payment_stripe_config;
         $useCompanyConfig = is_array($companyStripe) && ! empty($companyStripe['secret']);
 
-        if (! $useCompanyConfig && ! StripeService::isEnabled()) {
-            return ['success' => false, 'error' => 'Online payment is not configured.'];
+        if (! StripeService::isEnabled()) {
+            return ['success' => false, 'error' => 'Stripe is disabled systemwide.'];
         }
 
-        $url = $this->stripe->createOneTimePaymentSessionForOrder($order, $useCompanyConfig ? $companyStripe : null);
+        if (! $useCompanyConfig) {
+            return ['success' => false, 'error' => 'Storefront Stripe payment credentials not configured for this business.'];
+        }
+
+        $url = $this->stripe->createOneTimePaymentSessionForOrder($order, $companyStripe);
         if (! $url) {
             return ['success' => false, 'error' => 'Could not create payment link. Please try again.'];
         }
@@ -119,12 +124,20 @@ class OrderPaymentService
      */
     public function createPaystackPaymentLinkForOrder(Order $order): array
     {
+        $settings = $order->company?->settings;
+        $companyPaystack = $settings?->order_payment_paystack_config;
+        $useCompanyConfig = is_array($companyPaystack) && ! empty($companyPaystack['secret_key']);
+
         if (! PaystackService::isEnabled()) {
-            return ['success' => false, 'error' => 'Paystack is not configured.'];
+            return ['success' => false, 'error' => 'Paystack is disabled systemwide.'];
+        }
+
+        if (! $useCompanyConfig) {
+            return ['success' => false, 'error' => 'Storefront Paystack payment credentials not configured for this business.'];
         }
 
         $callbackUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')).'/orders/payment-complete';
-        $result = $this->paystack->createPaymentLinkForOrder($order, $callbackUrl);
+        $result = $this->paystack->createPaymentLinkForOrder($order, $callbackUrl, $companyPaystack);
         if (! $result['success'] || empty($result['url'])) {
             return ['success' => false, 'error' => $result['error'] ?? 'Could not create payment link.'];
         }
@@ -143,6 +156,159 @@ class OrderPaymentService
             'url' => $result['url'],
             'reference' => $reference,
         ];
+    }
+
+    /**
+     * Handle browser return from Paystack after checkout (callback_url).
+     *
+     * @return array{success: bool, order?: Order, error?: string}
+     */
+    public function completePaystackReturn(string $reference): array
+    {
+        $reference = trim($reference);
+        if ($reference === '') {
+            return ['success' => false, 'error' => 'Missing payment reference.'];
+        }
+
+        $pending = Cache::get(PaystackService::CACHE_KEY_ORDER_PREFIX.$reference);
+        $orderId = $pending['order_id'] ?? null;
+        if (! $orderId) {
+            if (preg_match('/^essem_ord_(\d+)_/', $reference, $matches)) {
+                $orderId = (int) $matches[1];
+            }
+        }
+
+        if (! $orderId) {
+            return ['success' => false, 'error' => 'Could not find this payment.'];
+        }
+
+        $order = Order::with('company.settings')->find($orderId);
+        if (! $order) {
+            return ['success' => false, 'error' => 'Order not found.'];
+        }
+
+        if ($order->payment_status === 'paid') {
+            Cache::forget(PaystackService::CACHE_KEY_ORDER_PREFIX.$reference);
+
+            return ['success' => true, 'order' => $order];
+        }
+
+        $companyPaystack = $order->company?->settings?->order_payment_paystack_config;
+        if (! is_array($companyPaystack) || empty($companyPaystack['secret_key'])) {
+            return ['success' => false, 'error' => 'Paystack is not configured for this business.'];
+        }
+
+        $verified = $this->paystack->verifyTransaction($reference, $companyPaystack);
+        if (! ($verified['success'] ?? false)) {
+            return ['success' => false, 'error' => $verified['error'] ?? 'Payment could not be verified.', 'order' => $order];
+        }
+
+        $data = $verified['data'] ?? [];
+        $amountSubunit = (int) ($data['amount'] ?? 0);
+        $paidAmount = $amountSubunit > 0 ? $amountSubunit / 100 : 0;
+        $expected = (float) $order->total;
+        if ($paidAmount > 0 && abs($paidAmount - $expected) > 0.01) {
+            Log::warning('Paystack return: order amount mismatch', [
+                'reference' => $reference,
+                'paid' => $paidAmount,
+                'expected' => $expected,
+            ]);
+
+            return ['success' => false, 'error' => 'Payment amount did not match the order total.', 'order' => $order];
+        }
+
+        $order->update(['payment_method' => 'paystack']);
+        $this->markOrderPaid($order);
+        Cache::forget(PaystackService::CACHE_KEY_ORDER_PREFIX.$reference);
+
+        return ['success' => true, 'order' => $order->fresh()];
+    }
+
+    /**
+     * Create a Pesapal payment link for an order. Uses merchant config if set, otherwise systemwide config.
+     *
+     * @return array{success: bool, url?: string, reference?: string, order_tracking_id?: string, error?: string}
+     */
+    public function createPesapalPaymentLinkForOrder(Order $order): array
+    {
+        $settings = $order->company?->settings;
+        $companyPesapal = $settings?->order_payment_pesapal_config;
+        $useCompanyConfig = is_array($companyPesapal) && ! empty($companyPesapal['consumer_key']) && ! empty($companyPesapal['consumer_secret']);
+
+        if (! PesapalService::isEnabled() && ! $useCompanyConfig) {
+            return ['success' => false, 'error' => 'Pesapal is disabled systemwide and not configured for this business.'];
+        }
+
+        $callbackUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')).'/orders/payment-complete';
+        $result = $this->pesapal->createPaymentLinkForOrder($order, $callbackUrl, $useCompanyConfig ? $companyPesapal : null);
+        if (! $result['success'] || empty($result['url'])) {
+            return ['success' => false, 'error' => $result['error'] ?? 'Could not create Pesapal payment link.'];
+        }
+
+        $reference = $result['reference'] ?? null;
+        if ($reference) {
+            Cache::put(
+                PesapalService::CACHE_KEY_ORDER_PREFIX.$reference,
+                ['order_id' => $order->id],
+                now()->addMinutes(self::CACHE_TTL_MINUTES)
+            );
+        }
+
+        return [
+            'success' => true,
+            'url' => $result['url'],
+            'reference' => $reference,
+            'order_tracking_id' => $result['order_tracking_id'] ?? null,
+        ];
+    }
+
+    /**
+     * Complete Pesapal payment return verification.
+     *
+     * @return array{success: bool, order?: Order, error?: string}
+     */
+    public function completePesapalReturn(string $orderTrackingId, string $reference = ''): array
+    {
+        $orderTrackingId = trim($orderTrackingId);
+        if ($orderTrackingId === '') {
+            return ['success' => false, 'error' => 'Missing OrderTrackingId.'];
+        }
+
+        $pending = $reference ? Cache::get(PesapalService::CACHE_KEY_ORDER_PREFIX.$reference) : null;
+        $orderId = $pending['order_id'] ?? null;
+
+        if (! $orderId && $reference && preg_match('/^(?:essem_ord_|savit_ord_)(\d+)_/', $reference, $matches)) {
+            $orderId = (int) $matches[1];
+        }
+
+        if (! $orderId) {
+            return ['success' => false, 'error' => 'Could not find order for this payment.'];
+        }
+
+        $order = Order::with('company.settings')->find($orderId);
+        if (! $order) {
+            return ['success' => false, 'error' => 'Order not found.'];
+        }
+
+        if ($order->payment_status === 'paid') {
+            if ($reference) Cache::forget(PesapalService::CACHE_KEY_ORDER_PREFIX.$reference);
+
+            return ['success' => true, 'order' => $order];
+        }
+
+        $companyPesapal = $order->company?->settings?->order_payment_pesapal_config;
+        $configOverride = (is_array($companyPesapal) && ! empty($companyPesapal['consumer_key'])) ? $companyPesapal : null;
+
+        $verified = $this->pesapal->getTransactionStatus($orderTrackingId, $configOverride);
+        if (! ($verified['success'] ?? false) || ! ($verified['paid'] ?? false)) {
+            return ['success' => false, 'error' => $verified['error'] ?? 'Pesapal payment not completed.', 'order' => $order];
+        }
+
+        $order->update(['payment_method' => 'pesapal']);
+        $this->markOrderPaid($order);
+        if ($reference) Cache::forget(PesapalService::CACHE_KEY_ORDER_PREFIX.$reference);
+
+        return ['success' => true, 'order' => $order->fresh()];
     }
 
     /**

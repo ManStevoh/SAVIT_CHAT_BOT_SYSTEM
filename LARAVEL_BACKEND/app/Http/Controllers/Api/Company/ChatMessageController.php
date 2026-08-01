@@ -280,7 +280,17 @@ class ChatMessageController extends Controller
         }
 
         if (! $log) {
-            // Fall back to latest log for this chat around message creation time
+            // Level 2: Log created for this chat at or near message creation time
+            $log = \App\Models\AiRequestLog::where('chat_id', $chat->id)
+                ->where('company_id', $user->company_id)
+                ->whereNotNull('prompt_payload')
+                ->where('created_at', '<=', $message->created_at->addSeconds(30))
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if (! $log) {
+            // Level 3: Any log for this chat with prompt_payload
             $log = \App\Models\AiRequestLog::where('chat_id', $chat->id)
                 ->where('company_id', $user->company_id)
                 ->whereNotNull('prompt_payload')
@@ -288,8 +298,16 @@ class ChatMessageController extends Controller
                 ->first();
         }
 
+        if (! $log) {
+            // Level 4: Any log for this company with prompt_payload
+            $log = \App\Models\AiRequestLog::where('company_id', $user->company_id)
+                ->whereNotNull('prompt_payload')
+                ->orderByDesc('id')
+                ->first();
+        }
+
         if (! $log || empty($log->prompt_payload)) {
-            return response()->json(['message' => 'No prompt payload log found for this message.'], 404);
+            return response()->json(['message' => 'No AI prompt log recorded for this message yet.'], 404);
         }
 
         $format = strtolower((string) $request->query('format', 'txt'));
@@ -325,5 +343,61 @@ class ChatMessageController extends Controller
         return response()->streamDownload(function () use ($fullContent) {
             echo $fullContent;
         }, $filename, ['Content-Type' => 'text/plain; charset=UTF-8']);
+    }
+
+    /**
+     * Clear all message history, AI request logs, active steps, and model context for a chat.
+     * Accessible when company settings has dev_mode_enabled.
+     * DELETE /api/company/chats/{chatId}/clear-history
+     */
+    public function clearHistory(Request $request, string $chatId): JsonResponse
+    {
+        $user = $request->user();
+        $chat = Chat::where('id', $chatId)->where('company_id', $user->company_id)->firstOrFail();
+        $company = $user->company;
+
+        $settings = $company?->settings;
+        if (! $settings || ! $settings->dev_mode_enabled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Developer Mode must be enabled in settings to clear chat history and model memory.',
+            ], 403);
+        }
+
+        // 1. Delete all messages for this chat
+        Message::where('chat_id', $chat->id)->delete();
+
+        // 2. Delete all AI request logs associated with this chat
+        \App\Models\AiRequestLog::where('chat_id', $chat->id)->delete();
+
+        // 3. Delete any draft orders in pending state associated with this chat if unconfirmed
+        \App\Models\Order::where('chat_id', $chat->id)
+            ->where('status', 'draft')
+            ->delete();
+
+        // 4. Reset Chat active step, context, last_message, unread_count, human agent status
+        $chat->update([
+            'active_step' => null,
+            'context' => null,
+            'last_message' => null,
+            'last_message_at' => null,
+            'unread_count' => 0,
+            'human_agent_until' => null,
+        ]);
+
+        // 5. Clear all Cache entries for this chat (order flows, reasoning context, reflections)
+        \Illuminate\Support\Facades\Cache::forget("chat_active_step_{$chat->id}");
+        \Illuminate\Support\Facades\Cache::forget("chat_draft_{$chat->id}");
+        \Illuminate\Support\Facades\Cache::forget("chat_context_{$chat->id}");
+        \Illuminate\Support\Facades\Cache::forget("chat_memory_{$chat->id}");
+        \Illuminate\Support\Facades\Cache::forget("cart_{$chat->id}");
+        \Illuminate\Support\Facades\Cache::forget("order_draft_{$chat->id}");
+        \Illuminate\Support\Facades\Cache::forget("reasoning_ctx_{$chat->id}");
+        \Illuminate\Support\Facades\Cache::forget("reflection_ctx_{$chat->id}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Chat history, active step, and model memory cleared completely.',
+        ]);
     }
 }

@@ -6,18 +6,18 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Services\OrderPaymentService;
 use App\Services\PaymentGateways\Contracts\PaymentGatewayDriverInterface;
-use App\Services\StripeService;
+use App\Services\PesapalService;
 
-class StripeGatewayDriver implements PaymentGatewayDriverInterface
+class PesapalGatewayDriver implements PaymentGatewayDriverInterface
 {
     public function getId(): string
     {
-        return 'stripe';
+        return 'pesapal';
     }
 
     public function getDisplayName(): string
     {
-        return 'Card (Stripe)';
+        return 'Pesapal (Cards, Mobile Money & Bank)';
     }
 
     public function getCategory(): string
@@ -27,7 +27,7 @@ class StripeGatewayDriver implements PaymentGatewayDriverInterface
 
     public function getSortOrder(): int
     {
-        return 20;
+        return 25;
     }
 
     public function isReady(Company $company): bool
@@ -37,16 +37,16 @@ class StripeGatewayDriver implements PaymentGatewayDriverInterface
             return false;
         }
 
-        return (bool) ($settings && $settings->orders_accept_stripe && StripeService::isEnabled() && $settings->hasOrderPaymentStripeConfig());
+        return (bool) ($settings && $settings->orders_accept_pesapal && PesapalService::isEnabled() && $settings->hasOrderPaymentPesapalConfig());
     }
 
     public function getInstructions(Company $company, ?Order $order = null): ?string
     {
         if ($order) {
-            return 'Pay online securely by card: '.$order->publicPayUrl();
+            return 'Pay online via Pesapal: '.$order->publicPayUrl();
         }
 
-        return 'Pay online securely by Visa, Mastercard, or Apple Pay.';
+        return 'Pay online supporting M-Pesa, Airtel Money, Cards, and Bank Transfer via Pesapal.';
     }
 
     public function initiatePayment(Order $order, array $options = []): array
@@ -54,7 +54,7 @@ class StripeGatewayDriver implements PaymentGatewayDriverInterface
         /** @var OrderPaymentService $orderPaymentService */
         $orderPaymentService = app(OrderPaymentService::class);
 
-        return $orderPaymentService->createStripePaymentLinkForOrder($order);
+        return $orderPaymentService->createPesapalPaymentLinkForOrder($order);
     }
 
     public function matchesCustomerInput(string $input, int $optionIndex = -1): bool
@@ -64,6 +64,6 @@ class StripeGatewayDriver implements PaymentGatewayDriverInterface
             return true;
         }
 
-        return (bool) preg_match('/\b(card|stripe|credit|debit|visa|mastercard|apple pay)\b/i', $lower);
+        return (bool) preg_match('/\b(pesapal|pesa pal|card|cards|mobile money)\b/i', $lower);
     }
 }

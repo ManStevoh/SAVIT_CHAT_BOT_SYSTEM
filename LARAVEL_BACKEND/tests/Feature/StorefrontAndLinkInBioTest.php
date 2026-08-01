@@ -5,8 +5,11 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\Order;
+use App\Models\PaymentGateway;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class StorefrontAndLinkInBioTest extends TestCase
@@ -117,7 +120,168 @@ class StorefrontAndLinkInBioTest extends TestCase
 
         $this->get("/pay/{$order->pay_token}")
             ->assertStatus(200)
-            ->assertInertia(fn ($page) => $page->component('pay/page'));
+            ->assertInertia(fn ($page) => $page
+                ->component('pay/page')
+                ->where('paymentOptions.options.0.id', 'cod')
+            );
+    }
+
+    public function test_public_pay_page_keeps_every_method_returned_by_the_gateway_registry(): void
+    {
+        [$company, $product] = $this->seedStorefront();
+        $company->settings->update([
+            'order_payment_manual_instructions' => 'Till number 123456',
+        ]);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'order_number' => 'ORD-PUBLIC-PAY-1',
+            'customer_name' => 'Jane Buyer',
+            'customer_phone' => '254711222333',
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'total' => 20,
+            'pay_token' => 'public-payment-options-token',
+        ]);
+
+        $this->get("/pay/{$order->pay_token}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('pay/page')
+                ->where('paymentOptions.options.0.id', 'cod')
+                ->where('paymentOptions.options.1.id', 'manual')
+                ->where('paymentOptions.options.1.instructions', 'Till number 123456')
+            );
+    }
+
+    public function test_public_pay_action_rejects_gateway_not_returned_by_the_registry(): void
+    {
+        [$company] = $this->seedStorefront();
+        $order = Order::create([
+            'company_id' => $company->id,
+            'order_number' => 'ORD-PUBLIC-PAY-2',
+            'customer_name' => 'Jane Buyer',
+            'customer_phone' => '254711222333',
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'total' => 20,
+            'pay_token' => 'unavailable-gateway-token',
+        ]);
+
+        $this->from("/pay/{$order->pay_token}")
+            ->post("/pay/{$order->pay_token}", ['method' => 'paystack'])
+            ->assertRedirect("/pay/{$order->pay_token}")
+            ->assertSessionHasErrors('method');
+    }
+
+    public function test_public_pay_paystack_returns_inertia_location_for_external_redirect(): void
+    {
+        PaymentGateway::create([
+            'slug' => 'paystack',
+            'name' => 'Paystack',
+            'is_enabled' => true,
+            'config' => ['secret_key' => 'sk_test_platform', 'public_key' => 'pk_test_platform'],
+        ]);
+
+        [$company] = $this->seedStorefront();
+        $company->settings->update([
+            'orders_collect_payment_enabled' => true,
+            'orders_accept_paystack' => true,
+            'order_payment_paystack_config' => [
+                'secret_key' => 'sk_test_tenant',
+                'public_key' => 'pk_test_tenant',
+                'currency' => 'kes',
+                'env' => 'sandbox',
+            ],
+        ]);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'order_number' => 'ORD-PUBLIC-PAYSTACK',
+            'customer_name' => 'Jane Buyer',
+            'customer_phone' => '254711222333',
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'total' => 696,
+            'pay_token' => 'public-paystack-token',
+        ]);
+
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response([
+                'status' => true,
+                'data' => [
+                    'authorization_url' => 'https://checkout.paystack.com/test-auth',
+                    'reference' => 'essem_ord_test_ref',
+                ],
+            ], 200),
+        ]);
+
+        $this->from("/pay/{$order->pay_token}")
+            ->withHeaders([
+                'X-Inertia' => 'true',
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
+            ->post("/pay/{$order->pay_token}", ['method' => 'paystack'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', 'https://checkout.paystack.com/test-auth');
+    }
+
+    public function test_paystack_payment_complete_route_redirects_to_public_pay_page(): void
+    {
+        PaymentGateway::create([
+            'slug' => 'paystack',
+            'name' => 'Paystack',
+            'is_enabled' => true,
+            'config' => ['secret_key' => 'sk_test_platform', 'public_key' => 'pk_test_platform'],
+        ]);
+
+        [$company] = $this->seedStorefront();
+        $company->settings->update([
+            'orders_collect_payment_enabled' => true,
+            'orders_accept_paystack' => true,
+            'order_payment_paystack_config' => [
+                'secret_key' => 'sk_test_tenant',
+                'public_key' => 'pk_test_tenant',
+                'currency' => 'kes',
+                'env' => 'sandbox',
+            ],
+        ]);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'order_number' => 'ORD-PAYSTACK-DONE',
+            'customer_name' => 'Jane Buyer',
+            'customer_phone' => '254711222333',
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'total' => 696,
+            'pay_token' => 'paystack-complete-token',
+        ]);
+
+        $reference = 'essem_ord_'.$order->id.'_abc123';
+        Cache::put(
+            \App\Services\PaystackService::CACHE_KEY_ORDER_PREFIX.$reference,
+            ['order_id' => $order->id],
+            now()->addMinutes(30)
+        );
+
+        Http::fake([
+            'api.paystack.co/transaction/verify/'.$reference => Http::response([
+                'status' => true,
+                'data' => [
+                    'status' => 'success',
+                    'amount' => 69600,
+                    'reference' => $reference,
+                ],
+            ], 200),
+        ]);
+
+        $this->get('/orders/payment-complete?reference='.$reference.'&trxref='.$reference)
+            ->assertRedirect('/pay/paystack-complete-token')
+            ->assertSessionHas('status');
+
+        $order->refresh();
+        $this->assertSame('paid', $order->payment_status);
     }
 
     public function test_link_in_bio_page_returns_ok_when_enabled(): void

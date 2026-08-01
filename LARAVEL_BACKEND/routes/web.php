@@ -134,6 +134,8 @@ Route::get('/b/{slug}', [PublicStorefrontController::class, 'bio'])->name('store
 // Public pay + invoice pages (secret-token based, no auth)
 Route::get('/pay/{token}', [PublicStorefrontController::class, 'pay'])->name('storefront.pay');
 Route::post('/pay/{token}', [PublicStorefrontController::class, 'payAction'])->name('storefront.pay.action');
+Route::get('/orders/payment-complete', [PublicStorefrontController::class, 'paystackPaymentComplete'])
+    ->name('storefront.paystack.complete');
 Route::get('/invoice/{token}', [PublicStorefrontController::class, 'invoice'])->name('storefront.invoice');
 
 // Dine-in table QR

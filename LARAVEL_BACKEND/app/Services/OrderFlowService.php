@@ -192,6 +192,26 @@ class OrderFlowService
             $draft = $this->getDraft($chat);
         }
 
+        // If the customer mentions another product name in their message (e.g. "i want headphones"),
+        // intercept it and redirect the flow to that product instead of being stuck in the current step.
+        if ($step && ! $this->looksLikeGreetingOnly($lower) && ! preg_match('/^\d+$/', $trimmed)) {
+            $parsed = $this->parseProductLine($company, $messageText);
+            if ($parsed) {
+                if (! empty($parsed['has_variants'])) {
+                    // Start variant selection for the new product
+                    return $this->initVariantSelectionForProduct($chat, $company, $draft, $parsed['product_model'], $parsed['quantity']);
+                }
+                // Add the new product line to cart items
+                $draft['items'] = $draft['items'] ?? [];
+                $draft['items'][] = $parsed;
+                unset($draft['pending_product_id'], $draft['pending_variant_id'], $draft['variant_ids'], $draft['pending_qty']);
+                $draft = $this->withCatalogIds($company, $draft);
+                $this->setStep($chat, self::STEP_PRODUCT, $draft);
+
+                return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft);
+            }
+        }
+
         if ($step === self::STEP_EXISTING_ORDER_PROMPT) {
             $order = isset($draft['order_id']) ? Order::find((int) $draft['order_id']) : null;
             if (! $order) {
@@ -235,11 +255,11 @@ class OrderFlowService
                 return 'Please provide a valid delivery address (at least a few characters).';
             }
             $order->update(['delivery_address' => $address]);
-            $draft['order_id'] = $order->id;
-            $pay = $this->resolvePaymentAcceptance($company->settings);
+            $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
+            $availableDrivers = $registry->getAvailableDrivers($company);
 
             // Only manual configured → share till/bank details immediately (no empty menu).
-            if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack'] && ! $pay['acceptCod']) {
+            if (count($availableDrivers) === 1 && $availableDrivers[0]->getId() === 'manual') {
                 $this->clearState($chat);
 
                 return "Delivery address saved: {$address}\n\n".$this->formatOrderWithManualPaymentInstructions($order);
@@ -247,7 +267,7 @@ class OrderFlowService
 
             $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, $draft);
 
-            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], false, $pay['acceptCod']);
+            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order);
         }
 
         if ($step === self::STEP_EXISTING_ORDER_PAYMENT_METHOD) {
@@ -257,35 +277,50 @@ class OrderFlowService
 
                 return 'Something went wrong. Please ask us to resend your invoice or start a new order.';
             }
-            $pay = $this->resolvePaymentAcceptance($company->settings);
-            $method = $this->matchPaymentMethod($lower, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], $pay['acceptCod'], $pay['acceptBankTransfer']);
 
-            if ($method === 'manual') {
+            $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
+            $matchedDriver = $registry->matchCustomerSelection($company, $messageText);
+
+            if ($matchedDriver) {
+                $method = $matchedDriver->getId();
+                if ($method === 'manual') {
+                    $this->clearState($chat);
+
+                    return $this->formatOrderWithManualPaymentInstructions($order);
+                }
+                if ($method === 'cod') {
+                    return $this->handleCodPayment($order, $chat);
+                }
+                if ($method === 'mpesa') {
+                    $draft['payment_method'] = 'mpesa';
+                    $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
+                    $displayPhone = $this->formatPhoneForDisplay($customerPhone);
+
+                    return "We'll send an M-Pesa payment request to your phone.\n\nReply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
+                }
+                if ($method === 'stripe') {
+                    return $this->handleStripePayment($order, $chat);
+                }
+                if ($method === 'paystack') {
+                    return $this->handlePaystackPayment($order, $chat);
+                }
+
+                // Handle generic drivers dynamically
+                $payResult = $matchedDriver->initiatePayment($order);
                 $this->clearState($chat);
+                $inst = $matchedDriver->getInstructions($company, $order);
+                if (! empty($payResult['url'])) {
+                    return "Order #{$order->order_number} confirmed! Please complete payment here: ".$payResult['url']."\n\nInstructions: ".($inst ?? 'Complete the payment using the link.');
+                }
 
-                return $this->formatOrderWithManualPaymentInstructions($order);
+                return "Order #{$order->order_number} confirmed!\n\nInstructions: ".($inst ?? 'Please follow payment instructions.');
             }
-            if ($method === 'cod') {
-                return $this->handleCodPayment($order, $chat);
-            }
-            if ($method === 'mpesa') {
-                $draft['payment_method'] = 'mpesa';
-                $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
-                $displayPhone = $this->formatPhoneForDisplay($customerPhone);
 
-                return "We'll send an M-Pesa payment request to your phone.\n\nReply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
-            }
-            if ($method === 'stripe') {
-                return $this->handleStripePayment($order, $chat);
-            }
-            if ($method === 'paystack') {
-                return $this->handlePaystackPayment($order, $chat);
-            }
             if ($this->shouldDelegateOrderStepToAssistant($lower, $trimmed)) {
                 return null;
             }
 
-            return $this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], true);
+            return $this->formatPaymentMethodPrompt($order, true);
         }
 
         if ($this->wantsStartOrder($lower) && ! $step) {
@@ -300,6 +335,9 @@ class OrderFlowService
             if (! $this->looksLikeGreetingOnly($lower)) {
                 $parsed = $this->parseProductLine($company, $messageText);
                 if ($parsed) {
+                    if (! empty($parsed['has_variants'])) {
+                        return $this->initVariantSelectionForProduct($chat, $company, [], $parsed['product_model'], $parsed['quantity']);
+                    }
                     $draft = ['items' => [$parsed]];
                     $draft = $this->withCatalogIds($company, $draft);
                     $this->setStep($chat, self::STEP_PRODUCT, $draft);
@@ -351,8 +389,12 @@ class OrderFlowService
                 $parsed = $this->parseProductLine($company, $messageText);
             }
             if ($parsed) {
+                if (! empty($parsed['has_variants'])) {
+                    return $this->initVariantSelectionForProduct($chat, $company, $draft, $parsed['product_model'], $parsed['quantity']);
+                }
                 $draft['items'] = $draft['items'] ?? [];
                 $draft['items'][] = $parsed;
+                unset($draft['pending_product_id'], $draft['pending_variant_id'], $draft['variant_ids'], $draft['pending_qty']);
                 $draft = $this->withCatalogIds($company, $draft);
                 $this->setStep($chat, self::STEP_PRODUCT, $draft);
                 return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft);
@@ -424,9 +466,10 @@ class OrderFlowService
 
                     return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\n".$this->formatPublicPayLinks($order)."\nWe'll prepare it and contact you for delivery.");
                 }
-                $pay = $this->resolvePaymentAcceptance($settings);
-                if ($pay['acceptMpesa'] || $pay['acceptStripe'] || $pay['acceptPaystack'] || $pay['acceptCod'] || $pay['acceptManual']) {
-                    if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack'] && ! $pay['acceptCod']) {
+                $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
+                $availableDrivers = $registry->getAvailableDrivers($company);
+                if (count($availableDrivers) > 0) {
+                    if (count($availableDrivers) === 1 && $availableDrivers[0]->getId() === 'manual') {
                         $this->clearState($chat);
 
                         return $this->formatOrderWithManualPaymentInstructions($order);
@@ -434,15 +477,7 @@ class OrderFlowService
                     $draft['order_id'] = $order->id;
                     $this->setStep($chat, self::STEP_PAYMENT_METHOD, $draft);
 
-                    return $this->formatPaymentMethodPrompt(
-                        $order,
-                        $pay['acceptMpesa'],
-                        $pay['acceptStripe'],
-                        $pay['acceptPaystack'],
-                        $pay['acceptManual'],
-                        false,
-                        $pay['acceptCod']
-                    );
+                    return $this->formatPaymentMethodPrompt($order);
                 }
                 $this->clearState($chat);
 
@@ -460,50 +495,50 @@ class OrderFlowService
 
                 return 'Something went wrong. Please start over with "order" or "2".';
             }
-            $pay = $this->resolvePaymentAcceptance($company->settings);
-            $method = $this->matchPaymentMethod(
-                $lower,
-                $pay['acceptMpesa'],
-                $pay['acceptStripe'],
-                $pay['acceptPaystack'],
-                $pay['acceptManual'],
-                $pay['acceptCod']
-            );
 
-            if ($method === 'manual') {
+            $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
+            $matchedDriver = $registry->matchCustomerSelection($company, $messageText);
+
+            if ($matchedDriver) {
+                $method = $matchedDriver->getId();
+                if ($method === 'manual') {
+                    $this->clearState($chat);
+
+                    return $this->formatOrderWithManualPaymentInstructions($order);
+                }
+                if ($method === 'cod') {
+                    return $this->handleCodPayment($order, $chat, true);
+                }
+                if ($method === 'mpesa') {
+                    $draft['payment_method'] = 'mpesa';
+                    $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
+                    $displayPhone = $this->formatPhoneForDisplay($customerPhone);
+
+                    return "We'll send an M-Pesa payment request to your phone.\n\nReply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
+                }
+                if ($method === 'stripe') {
+                    return $this->handleStripePayment($order, $chat, true);
+                }
+                if ($method === 'paystack') {
+                    return $this->handlePaystackPayment($order, $chat, true);
+                }
+
+                // Handle generic drivers dynamically
+                $payResult = $matchedDriver->initiatePayment($order);
                 $this->clearState($chat);
+                $inst = $matchedDriver->getInstructions($company, $order);
+                if (! empty($payResult['url'])) {
+                    return "Order confirmed! Please complete payment here: ".$payResult['url']."\n\nInstructions: ".($inst ?? 'Complete the payment using the link.');
+                }
 
-                return $this->formatOrderWithManualPaymentInstructions($order);
+                return "Order confirmed!\n\nInstructions: ".($inst ?? 'Please follow payment instructions.');
             }
-            if ($method === 'cod') {
-                return $this->handleCodPayment($order, $chat, true);
-            }
-            if ($method === 'mpesa') {
-                $draft['payment_method'] = 'mpesa';
-                $this->setStep($chat, self::STEP_MPESA_PHONE, $draft);
-                $displayPhone = $this->formatPhoneForDisplay($customerPhone);
 
-                return "We'll send an M-Pesa payment request to your phone.\n\nReply with:\n1 - Send to this number ({$displayPhone})\n2 - Use a different number";
-            }
-            if ($method === 'stripe') {
-                return $this->handleStripePayment($order, $chat, true);
-            }
-            if ($method === 'paystack') {
-                return $this->handlePaystackPayment($order, $chat, true);
-            }
             if ($this->shouldDelegateOrderStepToAssistant($lower, $trimmed)) {
                 return null;
             }
 
-            return $this->formatPaymentMethodPrompt(
-                $order,
-                $pay['acceptMpesa'],
-                $pay['acceptStripe'],
-                $pay['acceptPaystack'],
-                $pay['acceptManual'],
-                true,
-                $pay['acceptCod']
-            );
+            return $this->formatPaymentMethodPrompt($order, true);
         }
 
         if ($step === self::STEP_MPESA_PHONE) {
@@ -663,6 +698,29 @@ class OrderFlowService
             return 'That option is unavailable. Pick another number.';
         }
         $draft['pending_variant_id'] = $variant->id;
+
+        $pendingQty = $draft['pending_qty'] ?? null;
+        if ($pendingQty && $pendingQty >= 1) {
+            $qty = (int) $pendingQty;
+            if (!$product->usesInventory() || $variant->stock >= $qty) {
+                $line = [
+                    'product_id' => $product->id,
+                    'product_variant_id' => $variant->id,
+                    'name' => $product->name.' — '.$variant->label,
+                    'price' => (float) $variant->price,
+                    'quantity' => $qty,
+                    'fulfillment_data' => $product->fulfillmentSnapshot($variant),
+                ];
+                $draft['items'] = $draft['items'] ?? [];
+                $draft['items'][] = $line;
+                unset($draft['pending_product_id'], $draft['pending_variant_id'], $draft['variant_ids'], $draft['pending_qty']);
+                $draft = $this->withCatalogIds($company, $draft);
+                $this->setStep($chat, self::STEP_PRODUCT, $draft);
+
+                return $this->formatAddedToCartMessage($company, (string) $line['name'], (int) $qty, $draft);
+            }
+        }
+
         $this->setStep($chat, self::STEP_PRODUCT_QTY, $draft);
 
         return "✅ Selected:\n{$product->name} — {$variant->label}\nPrice: ".$this->formatMoney($company, (float) $variant->price)."\n\nHow many would you like?\nReply with a number (e.g. 2)\n\nReply \"back\" to change the option.";
@@ -908,49 +966,7 @@ class OrderFlowService
         return "✅ Added to cart\n{$name} x {$quantity}\n\n{$summary}\n\n".$this->afterAddItemInstructions();
     }
 
-    /**
-     * @return array{acceptMpesa: bool, acceptStripe: bool, acceptPaystack: bool, acceptManual: bool, acceptCod: bool}
-     */
-    protected function resolvePaymentAcceptance(?\App\Models\CompanySetting $settings): array
-    {
-        if (! $settings) {
-            return [
-                'acceptMpesa' => false,
-                'acceptStripe' => false,
-                'acceptPaystack' => false,
-                'acceptManual' => false,
-                'acceptCod' => false,
-            ];
-        }
 
-        $company = $settings->company ?? \App\Models\Company::find($settings->company_id);
-        if (! $company) {
-            return [
-                'acceptMpesa' => false,
-                'acceptStripe' => false,
-                'acceptPaystack' => false,
-                'acceptManual' => false,
-                'acceptCod' => false,
-            ];
-        }
-
-        /** @var \App\Services\PaymentGateways\PaymentGatewayRegistry $registry */
-        $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
-        $drivers = $registry->getAvailableDrivers($company);
-
-        $active = [];
-        foreach ($drivers as $d) {
-            $active[$d->getId()] = true;
-        }
-
-        return [
-            'acceptMpesa' => ! empty($active['mpesa']),
-            'acceptStripe' => ! empty($active['stripe']),
-            'acceptPaystack' => ! empty($active['paystack']),
-            'acceptManual' => ! empty($active['manual']),
-            'acceptCod' => ! empty($active['cod']),
-        ];
-    }
 
     /**
      * @return list<string>
@@ -1004,34 +1020,44 @@ class OrderFlowService
         return null;
     }
 
-    protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual = false, bool $invalid = false, bool $acceptCod = false): string
+    protected function wantsMpesaText(string $lower): bool
+    {
+        return str_contains($lower, 'mpesa') || str_contains($lower, 'm-pesa') || str_contains($lower, 'm pesa');
+    }
+
+    protected function wantsStripeText(string $lower): bool
+    {
+        return str_contains($lower, 'stripe') || str_contains($lower, 'card') || str_contains($lower, 'credit') || str_contains($lower, 'debit');
+    }
+
+    protected function wantsPaystackText(string $lower): bool
+    {
+        return str_contains($lower, 'paystack');
+    }
+
+    protected function wantsCodText(string $lower): bool
+    {
+        return str_contains($lower, 'cod') || str_contains($lower, 'cash') || str_contains($lower, 'delivery');
+    }
+
+    protected function wantsManual(string $lower): bool
+    {
+        return str_contains($lower, 'manual') || str_contains($lower, 'till') || str_contains($lower, 'paybill') || str_contains($lower, 'custom');
+    }
+
+    protected function formatPaymentMethodPrompt(Order $order, bool $invalid = false): string
     {
         $line = 'Order #'.$order->order_number."\n".$this->formatOrderMoneySummary($order)."\n\nHow would you like to pay?";
+
+        $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
+        $drivers = $registry->getAvailableDrivers($order->company);
+
         $opts = [];
-        $n = 1;
-        if ($acceptMpesa) {
-            $opts[] = "{$n}. M-Pesa (pay on your phone)";
-            $n++;
+        foreach ($drivers as $index => $driver) {
+            $n = $index + 1;
+            $opts[] = "{$n}. ".$driver->getDisplayName();
         }
-        if ($acceptStripe) {
-            $opts[] = "{$n}. Card (pay online)";
-            $n++;
-        }
-        if ($acceptPaystack) {
-            $opts[] = "{$n}. Paystack (pay online)";
-            $n++;
-        }
-        if ($acceptCod) {
-            $opts[] = "{$n}. Cash on delivery";
-            $n++;
-        }
-        if ($acceptBankTransfer) {
-            $opts[] = "{$n}. Bank transfer";
-            $n++;
-        }
-        if ($acceptManual) {
-            $opts[] = "{$n}. Pay manually (custom instructions)";
-        }
+
         $line .= "\n".implode("\n", $opts);
         if ($invalid) {
             $count = count($opts);
@@ -1443,73 +1469,108 @@ class OrderFlowService
         $text = trim(str_replace('*', ' x ', $text));
         $text = preg_replace('/\s+/', ' ', $text) ?? $text;
 
-        if (preg_match('/^(\d+)\s*[x×]\s*(.+)$/iu', $text, $m)) {
+        $cleanText = preg_replace('/[^\w\s×*]/u', '', $text) ?? $text;
+
+        if (preg_match('/^(\d+)\s*[x×]?\s*(.+)$/iu', $cleanText, $m)) {
             $qty = (int) $m[1];
             $namePart = trim($m[2]);
-            if ($qty < 1) {
-                return null;
-            }
-            $product = $this->matchProduct($products, $namePart);
-            if ($product && $this->productHasActiveVariants($product)) {
-                return null;
-            }
-            if ($product) {
-                return [
-                    'product_id' => $product->id,
-                    'name' => $product->name,
-                    'price' => (float) $product->price,
-                    'quantity' => $qty,
-                    'fulfillment_data' => $product->fulfillmentSnapshot(),
-                ];
+            if ($qty >= 1 && $namePart !== '') {
+                $product = $this->matchProduct($products, $namePart);
+                if ($product) {
+                    $variantLine = $this->resolveVariantMatch($product, $text, $qty);
+                    if ($variantLine) {
+                        return $variantLine;
+                    }
+                    if ($this->productHasActiveVariants($product)) {
+                        return [
+                            'product_id' => $product->id,
+                            'product_model' => $product,
+                            'quantity' => $qty,
+                            'has_variants' => true,
+                        ];
+                    }
+                    return [
+                        'product_id' => $product->id,
+                        'name' => $product->name,
+                        'price' => (float) $product->price,
+                        'quantity' => $qty,
+                        'fulfillment_data' => $product->fulfillmentSnapshot(),
+                    ];
+                }
             }
         }
 
         if (preg_match('/^(.+?)\s*[x×]\s*(\d+)$/iu', $text, $m)) {
             $namePart = trim($m[1]);
             $qty = (int) $m[2];
-            if ($qty < 1) {
-                return null;
-            }
-            $product = $this->matchProduct($products, $namePart);
-            if ($product && $this->productHasActiveVariants($product)) {
-                return null;
-            }
-            if ($product) {
-                return [
-                    'product_id' => $product->id,
-                    'name' => $product->name,
-                    'price' => (float) $product->price,
-                    'quantity' => $qty,
-                    'fulfillment_data' => $product->fulfillmentSnapshot(),
-                ];
+            if ($qty >= 1) {
+                $product = $this->matchProduct($products, $namePart);
+                if ($product) {
+                    $variantLine = $this->resolveVariantMatch($product, $text, $qty);
+                    if ($variantLine) {
+                        return $variantLine;
+                    }
+                    if ($this->productHasActiveVariants($product)) {
+                        return [
+                            'product_id' => $product->id,
+                            'product_model' => $product,
+                            'quantity' => $qty,
+                            'has_variants' => true,
+                        ];
+                    }
+                    return [
+                        'product_id' => $product->id,
+                        'name' => $product->name,
+                        'price' => (float) $product->price,
+                        'quantity' => $qty,
+                        'fulfillment_data' => $product->fulfillmentSnapshot(),
+                    ];
+                }
             }
         }
 
         if (preg_match('/^(.+?)\s+(?:quantity|qty|quatity)\s*(\d+)\s*$/iu', $text, $m)) {
             $namePart = trim($m[1]);
             $qty = (int) $m[2];
-            if ($qty < 1) {
-                return null;
-            }
-            $product = $this->matchProduct($products, $namePart);
-            if ($product && $this->productHasActiveVariants($product)) {
-                return null;
-            }
-            if ($product) {
-                return [
-                    'product_id' => $product->id,
-                    'name' => $product->name,
-                    'price' => (float) $product->price,
-                    'quantity' => $qty,
-                    'fulfillment_data' => $product->fulfillmentSnapshot(),
-                ];
+            if ($qty >= 1) {
+                $product = $this->matchProduct($products, $namePart);
+                if ($product) {
+                    $variantLine = $this->resolveVariantMatch($product, $text, $qty);
+                    if ($variantLine) {
+                        return $variantLine;
+                    }
+                    if ($this->productHasActiveVariants($product)) {
+                        return [
+                            'product_id' => $product->id,
+                            'product_model' => $product,
+                            'quantity' => $qty,
+                            'has_variants' => true,
+                        ];
+                    }
+                    return [
+                        'product_id' => $product->id,
+                        'name' => $product->name,
+                        'price' => (float) $product->price,
+                        'quantity' => $qty,
+                        'fulfillment_data' => $product->fulfillmentSnapshot(),
+                    ];
+                }
             }
         }
 
         $product = $this->matchProduct($products, $text);
         if ($product) {
+            $variantLine = $this->resolveVariantMatch($product, $text, 1);
+            if ($variantLine) {
+                return $variantLine;
+            }
             if ($this->productHasActiveVariants($product)) {
-                return null;
+                return [
+                    'product_id' => $product->id,
+                    'product_model' => $product,
+                    'quantity' => 1,
+                    'has_variants' => true,
+                ];
             }
 
             return [
@@ -1796,5 +1857,51 @@ class OrderFlowService
         $image = $images->firstWhere('is_primary', true) ?? $images->first();
 
         return $image?->path;
+    }
+
+    public function initializeProductStep(Chat $chat, Company $company): void
+    {
+        $draft = $this->getDraft($chat);
+        $draft['items'] = $draft['items'] ?? [];
+        $draft = $this->withCatalogIds($company, $draft);
+        $this->setStep($chat, self::STEP_PRODUCT, $draft);
+    }
+
+    protected function initVariantSelectionForProduct(Chat $chat, Company $company, array $draft, Product $product, int $qty): string
+    {
+        $variantIds = $product->variants->where('status', 'active')->pluck('id')->values()->all();
+        $draft['pending_product_id'] = $product->id;
+        $draft['variant_ids'] = $variantIds;
+        $draft['pending_qty'] = $qty;
+        unset($draft['pending_variant_id']);
+        $this->setStep($chat, self::STEP_VARIANT, $draft);
+
+        return $this->formatVariantListMessage($company, $product);
+    }
+
+    protected function resolveVariantMatch(Product $product, string $text, int $qty): ?array
+    {
+        if ($this->productHasActiveVariants($product)) {
+            $matchedVariant = null;
+            $lowerText = mb_strtolower($text);
+            foreach ($product->variants as $variant) {
+                if ($variant->status === 'active' && str_contains($lowerText, mb_strtolower($variant->label))) {
+                    $matchedVariant = $variant;
+                    break;
+                }
+            }
+            if ($matchedVariant) {
+                return [
+                    'product_id' => $product->id,
+                    'product_variant_id' => $matchedVariant->id,
+                    'name' => $product->name.' — '.$matchedVariant->label,
+                    'price' => (float) $matchedVariant->price,
+                    'quantity' => $qty,
+                    'fulfillment_data' => $product->fulfillmentSnapshot($matchedVariant),
+                ];
+            }
+        }
+
+        return null;
     }
 }

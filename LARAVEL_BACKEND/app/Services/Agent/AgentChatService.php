@@ -244,10 +244,7 @@ class AgentChatService
 
         $promptPayload = null;
         if ($messages !== null) {
-            $devMode = (bool) \App\Models\CompanySetting::where('company_id', $companyId)->value('dev_mode_enabled');
-            if ($devMode) {
-                $promptPayload = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-            }
+            $promptPayload = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }
 
         try {

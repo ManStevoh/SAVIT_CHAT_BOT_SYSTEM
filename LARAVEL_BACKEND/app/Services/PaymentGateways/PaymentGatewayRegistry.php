@@ -8,6 +8,7 @@ use App\Services\PaymentGateways\Drivers\CodGatewayDriver;
 use App\Services\PaymentGateways\Drivers\ManualGatewayDriver;
 use App\Services\PaymentGateways\Drivers\MpesaGatewayDriver;
 use App\Services\PaymentGateways\Drivers\PaystackGatewayDriver;
+use App\Services\PaymentGateways\Drivers\PesapalGatewayDriver;
 use App\Services\PaymentGateways\Drivers\StripeGatewayDriver;
 
 class PaymentGatewayRegistry
@@ -20,6 +21,7 @@ class PaymentGatewayRegistry
         $this->registerDriver(new MpesaGatewayDriver());
         $this->registerDriver(new StripeGatewayDriver());
         $this->registerDriver(new PaystackGatewayDriver());
+        $this->registerDriver(new PesapalGatewayDriver());
         $this->registerDriver(new CodGatewayDriver());
         $this->registerDriver(new ManualGatewayDriver());
     }

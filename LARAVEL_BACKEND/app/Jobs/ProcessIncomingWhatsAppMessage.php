@@ -296,7 +296,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
                 if ($agentResult['handoff']) {
                     $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
                 }
-                $this->sendReplyAndSave($waSender, $company, $chat, $agentResult['reply'], $agentResult['route']);
+                $this->sendReplyAndSave($waSender, $company, $chat, $agentResult['reply'], $agentResult['route'], $agentResult['log_id'] ?? null);
                 $this->maybeSendVisionProductImage($waSender, $company, $chat);
                 $this->schedulePostConversationJobs($company, $chat);
 
@@ -443,6 +443,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         Chat $chat,
         string $replyText,
         ?string $replySource = null,
+        ?int $aiRequestLogId = null,
     ): void {
         $account = $company->whatsappAccount;
         if (! $account || ! $account->isActive()) {
@@ -470,6 +471,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
                     'message_type' => 'audio',
                     'reply_source' => ($replySource ?? 'agent').'_voice',
                     'whatsapp_message_id' => $voiceResult['message_id'] ?? null,
+                    'ai_request_log_id' => $aiRequestLogId,
                 ]);
                 $chat->update([
                     'last_message' => mb_substr($replyText, 0, 500),
@@ -490,6 +492,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             'reply_source' => $replySource,
             'status' => $result['success'] ? 'sent' : 'failed',
             'whatsapp_message_id' => $result['message_id'] ?? null,
+            'ai_request_log_id' => $aiRequestLogId,
         ]);
 
         if ($result['success'] && $this->shouldLinkLearningSample($replySource)) {

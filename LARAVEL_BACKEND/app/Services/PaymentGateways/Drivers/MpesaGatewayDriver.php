@@ -37,7 +37,7 @@ class MpesaGatewayDriver implements PaymentGatewayDriverInterface
             return false;
         }
 
-        return (bool) ($settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig()));
+        return (bool) ($settings && $settings->orders_accept_mpesa && MpesaService::isEnabled() && $settings->hasOrderPaymentMpesaConfig());
     }
 
     public function getInstructions(Company $company, ?Order $order = null): ?string

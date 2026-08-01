@@ -88,6 +88,7 @@ use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\LandingController;
 use App\Http\Controllers\Api\MpesaCallbackController;
 use App\Http\Controllers\Api\PaystackWebhookController;
+use App\Http\Controllers\Api\PesapalCallbackController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\StripeWebhookController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
@@ -111,6 +112,10 @@ Route::post('mpesa/callback', MpesaCallbackController::class);
 
 // Paystack webhook (no auth; verified by HMAC signature)
 Route::post('paystack/webhook', PaystackWebhookController::class);
+
+// Pesapal callback & IPN (no auth; called by Pesapal API v3)
+Route::match(['get', 'post'], 'pesapal/callback', PesapalCallbackController::class);
+Route::match(['get', 'post'], 'pesapal/ipn', PesapalCallbackController::class);
 
 // WhatsApp webhook (no auth; Meta calls for verification and incoming messages)
 Route::get('whatsapp/webhook', [WhatsAppWebhookController::class, 'verify']);
@@ -165,6 +170,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
     Route::post('chats/{chatId}/messages/{messageId}/learning-feedback', [ChatMessageController::class, 'learningFeedback']);
     Route::get('chats/{chatId}/messages/{messageId}/download-prompt', [ChatMessageController::class, 'downloadPrompt']);
+    Route::delete('chats/{chatId}/clear-history', [ChatMessageController::class, 'clearHistory']);
     Route::get('orders', [OrderController::class, 'index']);
     Route::post('orders/preview-totals', [OrderController::class, 'previewTotals']);
     Route::get('orders/{order}', [OrderController::class, 'show']);
@@ -259,6 +265,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('subscription', [SubscriptionController::class, 'show']);
     Route::get('subscription/invoices', [SubscriptionController::class, 'invoices']);
     Route::get('subscription/usage', [SubscriptionController::class, 'usage']);
+    Route::get('subscription/payment-methods', [SubscriptionController::class, 'paymentMethods']);
+    Route::post('subscription/checkout', [SubscriptionController::class, 'checkout']);
     Route::post('subscription/cancel', [SubscriptionController::class, 'cancel']);
     Route::get('team', [TeamController::class, 'index']);
     Route::post('team', [TeamController::class, 'store']);

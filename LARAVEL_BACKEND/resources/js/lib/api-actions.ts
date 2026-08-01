@@ -1255,6 +1255,7 @@ export interface UpdateSettingsData {
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
   ordersAcceptPaystack?: boolean
+  ordersAcceptPesapal?: boolean
   ordersAcceptCod?: boolean
   attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
@@ -1270,6 +1271,19 @@ export interface UpdateSettingsData {
   orderPaymentStripeConfig?: {
     secret?: string
     currency?: string
+    env?: 'sandbox' | 'production'
+  } | null
+  orderPaymentPaystackConfig?: {
+    secret_key?: string
+    public_key?: string
+    currency?: string
+    env?: 'sandbox' | 'production'
+  } | null
+  orderPaymentPesapalConfig?: {
+    consumer_key?: string
+    consumer_secret?: string
+    currency?: string
+    env?: 'sandbox' | 'production'
   } | null
   /** ISO 4217 (3 letters), e.g. USD, KES — shown in dashboard and WhatsApp */
   displayCurrency?: string
@@ -3941,4 +3955,16 @@ export async function downloadPromptLog(
     console.error('Failed to download prompt log', e)
     return false
   }
+}
+
+/**
+ * Clear all chat history, active steps, and AI model context for a chat (Developer Mode).
+ */
+export async function clearChatHistory(chatId: string): Promise<{ success: boolean; message?: string }> {
+  return apiRequest<{ success: boolean; message?: string }>(
+    `/api/company/chats/${chatId}/clear-history`,
+    {
+      method: 'DELETE',
+    }
+  )
 }

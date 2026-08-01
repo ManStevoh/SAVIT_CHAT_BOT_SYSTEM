@@ -12,6 +12,7 @@ use App\Services\PaystackService;
 use App\Services\PaystackSubscriptionService;
 use App\Services\PlanLimitService;
 use App\Services\StripeService;
+use App\Services\PlatformPayments\PlatformPaymentRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -218,5 +219,64 @@ class SubscriptionController extends Controller
             ->first();
 
         return $payment?->currency ? strtoupper((string) $payment->currency) : null;
+    }
+
+    /**
+     * Get available platform payment gateways for paying the admin.
+     * GET /api/company/subscription/payment-methods
+     */
+    public function paymentMethods(PlatformPaymentRegistry $registry): JsonResponse
+    {
+        $drivers = $registry->getAvailableDrivers();
+        $methods = array_map(function ($d) {
+            return [
+                'id' => $d->getId(),
+                'name' => $d->getDisplayName(),
+                'metadata' => $d->getMetadata(),
+            ];
+        }, $drivers);
+
+        return response()->json([
+            'success' => true,
+            'gateways' => $methods,
+        ]);
+    }
+
+    /**
+     * Initiate platform plan payment.
+     * POST /api/company/subscription/checkout
+     */
+    public function checkout(Request $request, PlatformPaymentRegistry $registry): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $validated = $request->validate([
+            'plan' => 'required|string',
+            'gateway' => 'required|string',
+            'phone' => 'nullable|string',
+        ]);
+
+        $plan = Plan::where('slug', $validated['plan'])->orWhere('id', $validated['plan'])->first();
+        if (! $plan) {
+            return response()->json(['success' => false, 'message' => 'Plan not found.'], 404);
+        }
+
+        $driver = $registry->getDriver($validated['gateway']);
+        if (! $driver || ! $driver->isAvailable()) {
+            return response()->json(['success' => false, 'message' => 'Payment gateway is not available.'], 422);
+        }
+
+        $result = $driver->initiatePlanPayment($company, $plan, [
+            'phone' => $validated['phone'] ?? null,
+        ]);
+
+        if (! ($result['success'] ?? false)) {
+            return response()->json(['success' => false, 'message' => $result['error'] ?? 'Checkout failed.'], 422);
+        }
+
+        return response()->json($result);
     }
 }

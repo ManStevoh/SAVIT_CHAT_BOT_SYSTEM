@@ -31,8 +31,13 @@ final class AiBillingService
      */
     public function isWithinPlatformAiBudget(Company $company): bool
     {
-        $limit = PlanLimitService::getAiCostLimitForPlan(PlanLimitService::getCurrentPlanSlug($company));
-        if ($limit === null || $limit <= 0) {
+        $limits = app(\App\Services\Platform\EntitlementService::class)->limitsForCompany($company);
+        $limit = $limits['ai_cost_usd'] ?? null;
+        if ($limit === null) {
+            return true;
+        }
+        $limit = (float) $limit;
+        if ($limit <= 0) {
             return true;
         }
 

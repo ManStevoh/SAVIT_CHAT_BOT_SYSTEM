@@ -439,6 +439,7 @@ export default function SettingsPage() {
   const [ordersAcceptMpesa, setOrdersAcceptMpesa] = useState(false)
   const [ordersAcceptStripe, setOrdersAcceptStripe] = useState(false)
   const [ordersAcceptPaystack, setOrdersAcceptPaystack] = useState(false)
+  const [ordersAcceptPesapal, setOrdersAcceptPesapal] = useState(false)
   const [ordersAcceptCod, setOrdersAcceptCod] = useState(false)
   const [deliveryFeesEnabled, setDeliveryFeesEnabled] = useState(false)
   const [defaultDeliveryFee, setDefaultDeliveryFee] = useState<string>("")
@@ -454,13 +455,20 @@ export default function SettingsPage() {
   const [mpesaConsumerSecret, setMpesaConsumerSecret] = useState('')
   const [mpesaEnv, setMpesaEnv] = useState<'sandbox' | 'production'>('sandbox')
   const [stripeSecret, setStripeSecret] = useState('')
-  const [stripeCurrency, setStripeCurrency] = useState('usd')
+  const [stripeCurrency, setStripeCurrency] = useState('kes')
+  const [stripeEnv, setStripeEnv] = useState<'sandbox' | 'production'>('sandbox')
   const [paystackSecretKey, setPaystackSecretKey] = useState('')
   const [paystackPublicKey, setPaystackPublicKey] = useState('')
-  const [paystackCurrency, setPaystackCurrency] = useState('ngn')
+  const [paystackCurrency, setPaystackCurrency] = useState('kes')
+  const [paystackEnv, setPaystackEnv] = useState<'sandbox' | 'production'>('sandbox')
+  const [pesapalConsumerKey, setPesapalConsumerKey] = useState('')
+  const [pesapalConsumerSecret, setPesapalConsumerSecret] = useState('')
+  const [pesapalCurrency, setPesapalCurrency] = useState('kes')
+  const [pesapalEnv, setPesapalEnv] = useState<'sandbox' | 'production'>('sandbox')
   const [replacingMpesaSecret, setReplacingMpesaSecret] = useState<Record<string, boolean>>({})
   const [replacingStripeSecret, setReplacingStripeSecret] = useState(false)
   const [replacingPaystackSecret, setReplacingPaystackSecret] = useState(false)
+  const [replacingPesapalSecret, setReplacingPesapalSecret] = useState(false)
 
   // Per-option saving and saved states for Order Payments tab
   const [optionSaving, setOptionSaving] = useState<Record<string, boolean>>({})
@@ -560,6 +568,7 @@ export default function SettingsPage() {
       if (settings.ordersAcceptMpesa != null) setOrdersAcceptMpesa(settings.ordersAcceptMpesa)
       if (settings.ordersAcceptStripe != null) setOrdersAcceptStripe(settings.ordersAcceptStripe)
       if (settings.ordersAcceptPaystack != null) setOrdersAcceptPaystack(settings.ordersAcceptPaystack)
+      if (settings.ordersAcceptPesapal != null) setOrdersAcceptPesapal(settings.ordersAcceptPesapal)
       if (settings.ordersAcceptCod != null) setOrdersAcceptCod(settings.ordersAcceptCod)
       if (settings.deliveryFeesEnabled != null) setDeliveryFeesEnabled(settings.deliveryFeesEnabled)
       if (settings.defaultDeliveryFee != null) setDefaultDeliveryFee(String(settings.defaultDeliveryFee))
@@ -626,6 +635,7 @@ export default function SettingsPage() {
         setLearnFromConversationsEditable(settings.learnFromConversationsEditable)
       }
       if (settings.notificationsEnabled != null) setNotificationsEnabled(settings.notificationsEnabled)
+
       const mpc = settings.orderPaymentMpesaConfig
       if (mpc) {
         if (mpc.type === "till" || mpc.type === "paybill") setMpesaType(mpc.type)
@@ -648,9 +658,35 @@ export default function SettingsPage() {
       if (st) {
         if (st.secret != null && st.secret !== "") setStripeSecret(st.secret)
         if (st.currency != null && st.currency !== "") setStripeCurrency(st.currency)
+        if (st.env === "production" || st.env === "sandbox") setStripeEnv(st.env)
       } else if (settings.orderPaymentStripeConfigured === false) {
         setStripeSecret("")
-        setStripeCurrency("usd")
+        setStripeCurrency("kes")
+        setStripeEnv("sandbox")
+      }
+      const ps = settings.orderPaymentPaystackConfig
+      if (ps) {
+        if (ps.secret_key != null && ps.secret_key !== "") setPaystackSecretKey(ps.secret_key)
+        if (ps.public_key != null && ps.public_key !== "") setPaystackPublicKey(ps.public_key)
+        if (ps.currency != null && ps.currency !== "") setPaystackCurrency(ps.currency)
+        if (ps.env === "production" || ps.env === "sandbox") setPaystackEnv(ps.env)
+      } else if (settings.orderPaymentPaystackConfigured === false) {
+        setPaystackSecretKey("")
+        setPaystackPublicKey("")
+        setPaystackCurrency("kes")
+        setPaystackEnv("sandbox")
+      }
+      const pes = settings.orderPaymentPesapalConfig
+      if (pes) {
+        if (pes.consumer_key != null && pes.consumer_key !== "") setPesapalConsumerKey(pes.consumer_key)
+        if (pes.consumer_secret != null && pes.consumer_secret !== "") setPesapalConsumerSecret(pes.consumer_secret)
+        if (pes.currency != null && pes.currency !== "") setPesapalCurrency(pes.currency)
+        if (pes.env === "production" || pes.env === "sandbox") setPesapalEnv(pes.env)
+      } else if (settings.orderPaymentPesapalConfigured === false) {
+        setPesapalConsumerKey("")
+        setPesapalConsumerSecret("")
+        setPesapalCurrency("kes")
+        setPesapalEnv("sandbox")
       }
     }
   }, [settings])
@@ -835,7 +871,8 @@ export default function SettingsPage() {
     const res = await updateSettings({
       orderPaymentStripeConfig: {
         secret: stripeSecret.trim(),
-        currency: stripeCurrency.trim() || "usd",
+        currency: stripeCurrency.trim() || "kes",
+        env: stripeEnv,
       }
     })
     setOptionSavingState('stripeConfig', false)
@@ -850,10 +887,17 @@ export default function SettingsPage() {
     setOptionSavingState('paystackConfig', true)
     const res = await updateSettings({
       ordersAcceptPaystack: true,
+      orderPaymentPaystackConfig: {
+        secret_key: paystackSecretKey,
+        public_key: paystackPublicKey,
+        currency: paystackCurrency.trim() || "kes",
+        env: paystackEnv,
+      },
     })
     setOptionSavingState('paystackConfig', false)
     if (res.success) {
       setOptionSavedState('paystackConfig')
+      setReplacingPaystackSecret(false)
       mutate("company-settings")
     }
   }
@@ -861,11 +905,48 @@ export default function SettingsPage() {
   const handleClearPaystackConfig = async () => {
     setOptionSavingState('paystackConfig', true)
     const res = await updateSettings({
-      ordersAcceptPaystack: false,
+      orderPaymentPaystackConfig: null,
     })
     setOptionSavingState('paystackConfig', false)
     if (res.success) {
       setOptionSavedState('paystackConfig')
+      setPaystackSecretKey("")
+      setPaystackPublicKey("")
+      setReplacingPaystackSecret(false)
+      mutate("company-settings")
+    }
+  }
+
+  const handleSavePesapalConfig = async () => {
+    setOptionSavingState('pesapalConfig', true)
+    const res = await updateSettings({
+      ordersAcceptPesapal: true,
+      orderPaymentPesapalConfig: {
+        consumer_key: pesapalConsumerKey.trim(),
+        consumer_secret: pesapalConsumerSecret.trim(),
+        currency: pesapalCurrency.trim() || "kes",
+        env: pesapalEnv,
+      },
+    })
+    setOptionSavingState('pesapalConfig', false)
+    if (res.success) {
+      setOptionSavedState('pesapalConfig')
+      setReplacingPesapalSecret(false)
+      mutate("company-settings")
+    }
+  }
+
+  const handleClearPesapalConfig = async () => {
+    setOptionSavingState('pesapalConfig', true)
+    const res = await updateSettings({
+      orderPaymentPesapalConfig: null,
+    })
+    setOptionSavingState('pesapalConfig', false)
+    if (res.success) {
+      setOptionSavedState('pesapalConfig')
+      setPesapalConsumerKey("")
+      setPesapalConsumerSecret("")
+      setReplacingPesapalSecret(false)
       mutate("company-settings")
     }
   }
@@ -2612,7 +2693,7 @@ export default function SettingsPage() {
                               <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearStripeConfig}>Clear</Button>
                             </div>
                           ) : (
-                            <Badge variant="secondary" className="text-xs text-muted-foreground font-normal">Using Platform Default</Badge>
+                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/30 bg-amber-500/10 font-normal">Merchant Credentials Required</Badge>
                           )}
                         </div>
 
@@ -2667,9 +2748,20 @@ export default function SettingsPage() {
 
                           <Field>
                             <FieldLabel>Settlement Currency</FieldLabel>
-                            <Input placeholder="usd, kes, eur, etc." value={stripeCurrency} onChange={(e) => setStripeCurrency(e.target.value)} />
+                            <Input placeholder="kes, usd, eur, etc." value={stripeCurrency} onChange={(e) => setStripeCurrency(e.target.value)} />
                           </Field>
                         </div>
+
+                        <Field>
+                          <FieldLabel>Environment Mode</FieldLabel>
+                          <Select value={stripeEnv} onValueChange={(v) => setStripeEnv(v as 'sandbox' | 'production')}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sandbox">Sandbox (Testing Environment)</SelectItem>
+                              <SelectItem value="production">Production (Live Environment)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </Field>
 
                         <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
                           <Button
@@ -2748,7 +2840,7 @@ export default function SettingsPage() {
                               <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearPaystackConfig}>Clear</Button>
                             </div>
                           ) : (
-                            <Badge variant="secondary" className="text-xs text-muted-foreground font-normal">Using Platform Default</Badge>
+                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/30 bg-amber-500/10 font-normal">Merchant Credentials Required</Badge>
                           )}
                         </div>
 
@@ -2811,14 +2903,26 @@ export default function SettingsPage() {
                           </Field>
                         </div>
 
-                        <Field>
-                          <FieldLabel>Settlement Currency</FieldLabel>
-                          <Input 
-                            placeholder="ngn, kes, usd, ghs, zar, etc." 
-                            value={paystackCurrency} 
-                            onChange={(e) => setPaystackCurrency(e.target.value)} 
-                          />
-                        </Field>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Settlement Currency</FieldLabel>
+                            <Input 
+                              placeholder="kes, ngn, usd, ghs, zar, etc." 
+                              value={paystackCurrency} 
+                              onChange={(e) => setPaystackCurrency(e.target.value)} 
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel>Environment Mode</FieldLabel>
+                            <Select value={paystackEnv} onValueChange={(v) => setPaystackEnv(v as 'sandbox' | 'production')}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sandbox">Sandbox (Testing Environment)</SelectItem>
+                                <SelectItem value="production">Production (Live Environment)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        </div>
 
                         <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
                           <Button
@@ -2839,6 +2943,167 @@ export default function SettingsPage() {
                             ) : (
                               <>
                                 <Check className="h-3.5 w-3.5" /> Save Paystack Credentials
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Pesapal Payment Card */}
+                <Card className={`transition-all duration-200 ${ordersAcceptPesapal ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
+                          <CreditCard className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">Pesapal</h4>
+                            <Badge variant="outline" className="text-xs bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 font-medium">
+                              Cards, Mobile Money & Bank
+                            </Badge>
+                            {optionSaving['pesapalToggle'] && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            {optionSaved['pesapalToggle'] && (
+                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                                <Check className="h-3 w-3" /> Saved
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Customers pay online supporting M-Pesa, Airtel Money, Cards, and Bank Transfers via Pesapal API v3.
+                          </p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={ordersAcceptPesapal} 
+                        onCheckedChange={(v) => handleToggleOption('pesapalToggle', setOrdersAcceptPesapal, v, 'ordersAcceptPesapal')} 
+                        disabled={!ordersCollectPaymentEnabled || optionSaving['pesapalToggle']} 
+                      />
+                    </div>
+
+                    {/* Integrated Pesapal Custom Configuration Box */}
+                    {ordersAcceptPesapal && (
+                      <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-semibold text-foreground">Pesapal API v3 Credentials</span>
+                          </div>
+                          {settings?.orderPaymentPesapalConfigured ? (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="gap-1 bg-blue-600 text-white font-normal text-xs"><Check className="h-3 w-3" /> Custom Pesapal Configured</Badge>
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearPesapalConfig}>Clear</Button>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/30 bg-amber-500/10 font-normal">Merchant Credentials Required</Badge>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          Enter your Pesapal API v3 Consumer Key and Consumer Secret from your Pesapal developer account.
+                        </p>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Pesapal Consumer Key</FieldLabel>
+                            <Input 
+                              placeholder="Consumer Key from Pesapal dashboard" 
+                              value={pesapalConsumerKey} 
+                              onChange={(e) => setPesapalConsumerKey(e.target.value)} 
+                            />
+                          </Field>
+
+                          <Field>
+                            <FieldLabel>Pesapal Consumer Secret</FieldLabel>
+                            {isMasked(pesapalConsumerSecret) && !replacingPesapalSecret ? (
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input type="text" readOnly className="font-mono text-sm" value={pesapalConsumerSecret} />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => {
+                                    setReplacingPesapalSecret(true)
+                                    setPesapalConsumerSecret("")
+                                  }}
+                                >
+                                  Replace Secret
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Input
+                                  type="password"
+                                  placeholder="Consumer secret from Pesapal dashboard"
+                                  value={pesapalConsumerSecret}
+                                  onChange={(e) => setPesapalConsumerSecret(e.target.value)}
+                                />
+                                {replacingPesapalSecret && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs text-muted-foreground"
+                                    onClick={() => {
+                                      setReplacingPesapalSecret(false)
+                                      mutate("company-settings")
+                                    }}
+                                  >
+                                    Cancel Replace
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </Field>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Default Currency</FieldLabel>
+                            <Input 
+                              placeholder="kes, usd, ugx, tzs, rwf" 
+                              value={pesapalCurrency} 
+                              onChange={(e) => setPesapalCurrency(e.target.value)} 
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel>Environment Mode</FieldLabel>
+                            <Select value={pesapalEnv} onValueChange={(v) => setPesapalEnv(v as 'sandbox' | 'production')}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sandbox">Sandbox (cybqa.pesapal.com)</SelectItem>
+                                <SelectItem value="production">Production (pay.pesapal.com)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        </div>
+
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={optionSaving['pesapalConfig']}
+                            onClick={handleSavePesapalConfig}
+                            className="gap-1.5"
+                          >
+                            {optionSaving['pesapalConfig'] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                              </>
+                            ) : optionSaved['pesapalConfig'] ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" /> Save Pesapal Credentials
                               </>
                             )}
                           </Button>

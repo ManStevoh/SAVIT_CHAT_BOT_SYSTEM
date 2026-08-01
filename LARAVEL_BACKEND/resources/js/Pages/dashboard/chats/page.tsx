@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { useChats, useMessages, useProducts, useCompanySettings } from '@/lib/api-hooks'
-import { sendMessage, handBackToBot, createOrderFromChat, previewOrderTotals, submitMessageLearningFeedback, downloadPromptLog } from '@/lib/api-actions'
+import { sendMessage, handBackToBot, createOrderFromChat, previewOrderTotals, submitMessageLearningFeedback, downloadPromptLog, clearChatHistory } from '@/lib/api-actions'
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
 import {
@@ -35,6 +35,10 @@ import {
   Reply,
   Download,
   Code,
+  Sparkles,
+  Trash2,
+  FileText,
+  Circle,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
@@ -68,6 +72,7 @@ export default function ChatsPage() {
   const [messageInput, setMessageInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [isHandingBack, setIsHandingBack] = useState(false)
+  const [isClearingHistory, setIsClearingHistory] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [createOrderOpen, setCreateOrderOpen] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState('')
@@ -222,6 +227,37 @@ export default function ChatsPage() {
       })
     } finally {
       setIsHandingBack(false)
+    }
+  }, [selectedChatId, statusFilter, searchQuery, attributedOnly, mutate, toast])
+
+  const handleClearHistory = useCallback(async () => {
+    if (!selectedChatId) return
+    if (!window.confirm("Are you sure you want to clear all conversation history and AI model context for this chat? This cannot be undone.")) {
+      return
+    }
+    setIsClearingHistory(true)
+    try {
+      const res = await clearChatHistory(selectedChatId)
+      if (res.success) {
+        mutate(['messages', selectedChatId])
+        mutate(['chats', { status: statusFilter, search: searchQuery, attributedOnly }])
+        toast({
+          title: res.message || 'Conversation history and model memory cleared.',
+        })
+      } else {
+        toast({
+          title: res.message || 'Failed to clear chat history.',
+          variant: 'destructive',
+        })
+      }
+    } catch (e) {
+      console.error('Clear history failed:', e)
+      toast({
+        title: 'Could not clear chat history.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsClearingHistory(false)
     }
   }, [selectedChatId, statusFilter, searchQuery, attributedOnly, mutate, toast])
 
@@ -554,6 +590,19 @@ export default function ChatsPage() {
                     {isHandingBack ? 'Retrying…' : 'Retry AI'}
                   </Button>
                 )}
+                {companySettings?.devModeEnabled && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearHistory}
+                    disabled={isClearingHistory}
+                    title="Developer Mode: Clear UI history & AI model memory"
+                    className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {isClearingHistory ? 'Clearing…' : 'Clear History'}
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" className="hidden md:inline-flex">
                   <Phone className="h-4 w-4" />
                 </Button>
@@ -581,6 +630,12 @@ export default function ChatsPage() {
                     {showRetryAi && (
                       <DropdownMenuItem onClick={handleHandBackToBot} disabled={isHandingBack}>
                         {isHandingBack ? 'Retrying…' : 'Retry AI reply'}
+                      </DropdownMenuItem>
+                    )}
+                    {companySettings?.devModeEnabled && (
+                      <DropdownMenuItem onClick={handleClearHistory} disabled={isClearingHistory} className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Clear History & Model Memory
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>

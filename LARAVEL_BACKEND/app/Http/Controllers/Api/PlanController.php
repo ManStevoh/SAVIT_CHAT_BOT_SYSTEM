@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Services\Platform\EntitlementService;
+use App\Services\PlatformPayments\PlatformPaymentRegistry;
 use Illuminate\Http\JsonResponse;
 
 class PlanController extends Controller
@@ -13,20 +14,36 @@ class PlanController extends Controller
     /**
      * List plans for public pricing page (no auth).
      */
-    public function index(): JsonResponse
+    public function index(PlatformPaymentRegistry $platformRegistry): JsonResponse
     {
-        $stripeEnabled = PaymentGateway::isEnabled('stripe');
-        $mpesaEnabled = PaymentGateway::isEnabled('mpesa');
-        $paystackEnabled = PaymentGateway::isEnabled('paystack');
+        $availableDrivers = $platformRegistry->getAvailableDrivers();
+        $methodsMap = [];
+        foreach ($availableDrivers as $driver) {
+            $methodsMap[$driver->getId()] = [
+                'id' => $driver->getId(),
+                'name' => $driver->getDisplayName(),
+                'metadata' => $driver->getMetadata(),
+            ];
+        }
+
+        $paystackEnabled = isset($methodsMap['paystack']);
         $paystackCurrency = $paystackEnabled
             ? strtoupper((string) (PaymentGateway::getConfig('paystack')['currency'] ?? 'NGN'))
             : null;
 
         $plans = Plan::orderBy('sort_order')->orderBy('id')->get();
-        $data = $plans->map(function (Plan $p) use ($stripeEnabled, $mpesaEnabled, $paystackEnabled, $paystackCurrency) {
-            $canStripe = $stripeEnabled && ! empty($p->stripe_price_id);
-            $canMpesa = $mpesaEnabled && (float) $p->price_amount > 0 && ! $p->is_free;
-            $canPaystack = $paystackEnabled && (float) $p->price_amount > 0 && ! $p->is_free;
+        $data = $plans->map(function (Plan $p) use ($availableDrivers, $paystackCurrency) {
+            $planMethods = [];
+            foreach ($availableDrivers as $driver) {
+                if ($driver->getId() === 'stripe' && empty($p->stripe_price_id)) {
+                    continue;
+                }
+                if (($driver->getId() === 'mpesa' || $driver->getId() === 'paystack' || $driver->getId() === 'manual') && ((float) $p->price_amount <= 0 || $p->is_free)) {
+                    continue;
+                }
+                $planMethods[$driver->getId()] = true;
+            }
+
             $limits = app(EntitlementService::class)->limitsForPlanSlug($p->slug);
 
             return [
@@ -35,7 +52,7 @@ class PlanController extends Controller
                 'slug' => $p->slug,
                 'price' => $p->price_display,
                 'priceAmount' => $p->price_amount !== null ? (float) $p->price_amount : null,
-                'paystackCurrency' => $canPaystack ? $paystackCurrency : null,
+                'paystackCurrency' => ! empty($planMethods['paystack']) ? $paystackCurrency : null,
                 'description' => $p->description ?? '',
                 'features' => $p->features ?? [],
                 'entitlements' => [
@@ -59,12 +76,8 @@ class PlanController extends Controller
                 'hasTrial' => (bool) $p->has_trial,
                 'trialDays' => $p->trial_days !== null ? (int) $p->trial_days : null,
                 'isFree' => (bool) $p->is_free,
-                'checkoutAvailable' => $canStripe || $canMpesa || $canPaystack,
-                'paymentMethods' => array_filter([
-                    'stripe' => $canStripe,
-                    'mpesa' => $canMpesa,
-                    'paystack' => $canPaystack,
-                ]),
+                'checkoutAvailable' => ! empty($planMethods),
+                'paymentMethods' => $planMethods,
             ];
         });
 

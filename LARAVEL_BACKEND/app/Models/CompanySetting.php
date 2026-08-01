@@ -47,10 +47,13 @@ class CompanySetting extends Model
         'orders_accept_mpesa',
         'orders_accept_stripe',
         'orders_accept_paystack',
+        'orders_accept_pesapal',
         'orders_accept_cod',
         'orders_collect_payment_enabled',
         'order_payment_mpesa_config',
         'order_payment_stripe_config',
+        'order_payment_paystack_config',
+        'order_payment_pesapal_config',
         'order_payment_manual_instructions',
         'delivery_fees_enabled',
         'default_delivery_fee',
@@ -80,10 +83,13 @@ class CompanySetting extends Model
         'orders_accept_mpesa' => 'boolean',
         'orders_accept_stripe' => 'boolean',
         'orders_accept_paystack' => 'boolean',
+        'orders_accept_pesapal' => 'boolean',
         'orders_accept_cod' => 'boolean',
         'orders_collect_payment_enabled' => 'boolean',
         'order_payment_mpesa_config' => 'array',
         'order_payment_stripe_config' => 'array',
+        'order_payment_paystack_config' => 'array',
+        'order_payment_pesapal_config' => 'array',
         'delivery_fees_enabled' => 'boolean',
         'default_delivery_fee' => 'decimal:2',
         'free_delivery_above' => 'decimal:2',
@@ -127,6 +133,20 @@ class CompanySetting extends Model
     {
         $c = $this->order_payment_stripe_config;
         return is_array($c) && ! empty($c['secret']);
+    }
+
+    /** Whether company has its own Paystack config for order payments (secret_key or public_key). */
+    public function hasOrderPaymentPaystackConfig(): bool
+    {
+        $c = $this->order_payment_paystack_config;
+        return is_array($c) && (! empty($c['secret_key']) || ! empty($c['public_key']));
+    }
+
+    /** Whether company has its own Pesapal config for order payments (consumer_key and consumer_secret). */
+    public function hasOrderPaymentPesapalConfig(): bool
+    {
+        $c = $this->order_payment_pesapal_config;
+        return is_array($c) && ! empty($c['consumer_key']) && ! empty($c['consumer_secret']);
     }
 
     protected static function booted(): void

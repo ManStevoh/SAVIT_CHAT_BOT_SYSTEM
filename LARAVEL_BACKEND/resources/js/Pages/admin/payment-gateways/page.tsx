@@ -18,13 +18,14 @@ import { useAdminPaymentGateways } from "@/lib/api-hooks"
 import { updatePaymentGateway } from "@/lib/api-actions"
 import type { PaymentGateway } from "@/lib/mock-data"
 
-const STRIPE_FIELDS = [
+const STRIPE_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
   { key: "key", label: "Publishable Key", type: "text", placeholder: "pk_test_..." },
   { key: "secret", label: "Secret Key", type: "password", placeholder: "sk_test_... (leave blank to keep)" },
   { key: "webhook_secret", label: "Webhook Secret", type: "password", placeholder: "whsec_... (leave blank to keep)" },
   { key: "trial_days", label: "Trial Days", type: "number", placeholder: "14" },
-  { key: "currency", label: "Currency", type: "text", placeholder: "usd" },
-] as const
+  { key: "currency", label: "Currency", type: "text", placeholder: "kes" },
+  { key: "env", label: "Environment Mode", type: "select", options: ["sandbox", "production"] },
+]
 
 const MPESA_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
   { key: "consumer_key", label: "Consumer Key", type: "text", placeholder: "" },
@@ -38,8 +39,27 @@ const MPESA_FIELDS: { key: string; label: string; type: string; placeholder?: st
 const PAYSTACK_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
   { key: "public_key", label: "Public Key", type: "text", placeholder: "pk_test_..." },
   { key: "secret_key", label: "Secret Key", type: "password", placeholder: "sk_test_... (leave blank to keep)" },
-  { key: "currency", label: "Currency", type: "text", placeholder: "ngn" },
+  { key: "currency", label: "Currency", type: "text", placeholder: "kes" },
+  { key: "env", label: "Environment Mode", type: "select", options: ["sandbox", "production"] },
   { key: "callback_url", label: "Callback URL (optional)", type: "text", placeholder: "https://yourapp.com/dashboard/subscription?checkout=success" },
+]
+
+const PESAPAL_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
+  { key: "consumer_key", label: "Consumer Key", type: "text", placeholder: "Your Pesapal Consumer Key" },
+  { key: "consumer_secret", label: "Consumer Secret", type: "password", placeholder: "Leave blank to keep" },
+  { key: "currency", label: "Currency", type: "text", placeholder: "kes" },
+  { key: "env", label: "Environment Mode", type: "select", options: ["sandbox", "production"] },
+  { key: "ipn_id", label: "IPN ID (optional)", type: "text", placeholder: "Auto-registered if empty" },
+  { key: "callback_url", label: "Callback URL (optional)", type: "text", placeholder: "https://..." },
+]
+
+const MANUAL_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
+  { key: "bank_name", label: "Bank Name", type: "text", placeholder: "e.g. Chase Bank / KCB Bank" },
+  { key: "account_name", label: "Account Name", type: "text", placeholder: "e.g. EssemChat Platform Inc." },
+  { key: "account_number", label: "Account Number", type: "text", placeholder: "e.g. 1234567890" },
+  { key: "instructions", label: "Payment Instructions", type: "text", placeholder: "e.g. Please transfer to the above account and quote your company name." },
+  { key: "currency", label: "Default Currency", type: "text", placeholder: "kes" },
+  { key: "env", label: "Environment Mode", type: "select", options: ["sandbox", "production"] },
 ]
 
 function isMasked(val: unknown): boolean {
@@ -137,9 +157,9 @@ export default function AdminPaymentGatewaysPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Payment Gateways</h1>
+        <h1 className="text-2xl font-bold text-foreground">Platform Payment Gateways</h1>
         <p className="text-muted-foreground">
-          Configure and enable payment providers. Keys are stored in the database. Toggle each gateway on to activate it.
+          Systemwide master switches & platform subscription credentials. Toggle each gateway ON to make it available systemwide. Credentials entered here are used for <strong>Platform Subscriptions</strong> (how tenant companies pay the Super Admin).
         </p>
       </div>
 
@@ -155,7 +175,11 @@ export default function AdminPaymentGatewaysPage() {
                 ? MPESA_FIELDS
                 : gateway.slug === "paystack"
                   ? PAYSTACK_FIELDS
-                  : []
+                  : gateway.slug === "pesapal"
+                    ? PESAPAL_FIELDS
+                    : gateway.slug === "manual"
+                      ? MANUAL_FIELDS
+                      : []
 
           return (
             <Card key={gateway.id}>

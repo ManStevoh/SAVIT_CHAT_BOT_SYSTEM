@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\ProductReview;
 use App\Models\StorefrontSession;
 use App\Services\OrderPaymentService;
+use App\Services\PaymentGateways\PaymentGatewayRegistry;
 use App\Services\Storefront\StorefrontService;
 use App\Support\MoneyFormatter;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class PublicStorefrontController extends Controller
 {
@@ -438,14 +440,41 @@ class PublicStorefrontController extends Controller
         ]);
     }
 
-    public function payAction(string $token, Request $request): RedirectResponse
+    public function payAction(string $token, Request $request): SymfonyResponse
     {
         $order = Order::where('pay_token', $token)->with(['company.settings'])->firstOrFail();
 
         $validated = $request->validate([
             'method' => 'required|string|in:cod,stripe,paystack,mpesa,manual',
             'phone' => 'nullable|string|max:40',
+            'email' => 'nullable|email|max:255',
         ]);
+
+        if ($order->payment_status === 'paid') {
+            return redirect()->to(url("/pay/{$token}"));
+        }
+
+        /**
+         * The public payment page and its POST action must use the same source of
+         * truth. Never accept a gateway merely because it is a known method name;
+         * it must be live and configured for this order's company right now.
+         */
+        $registry = app(PaymentGatewayRegistry::class);
+        $driver = $registry->getDriver($validated['method']);
+        $available = collect($registry->getAvailableDrivers($order->company))
+            ->contains(fn ($candidate) => $candidate->getId() === $validated['method']);
+
+        if (! $driver || ! $available) {
+            return back()->withErrors([
+                'method' => 'That payment method is not currently available for this order. Please choose one of the listed options.',
+            ]);
+        }
+
+        $emailInput = trim((string) ($validated['email'] ?? ''));
+        if ($emailInput !== '') {
+            $order->update(['customer_email' => $emailInput]);
+            $order->refresh();
+        }
 
         switch ($validated['method']) {
             case 'cod':
@@ -456,7 +485,7 @@ class PublicStorefrontController extends Controller
             case 'stripe':
                 $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
                 if ($result['success'] && ! empty($result['url'])) {
-                    return redirect()->away($result['url']);
+                    return Inertia::location($result['url']);
                 }
 
                 return back()->withErrors(['method' => $result['error'] ?? 'Could not start card payment.']);
@@ -464,7 +493,7 @@ class PublicStorefrontController extends Controller
             case 'paystack':
                 $result = $this->orderPayment->createPaystackPaymentLinkForOrder($order);
                 if ($result['success'] && ! empty($result['url'])) {
-                    return redirect()->away($result['url']);
+                    return Inertia::location($result['url']);
                 }
 
                 return back()->withErrors(['method' => $result['error'] ?? 'Could not start payment.']);
@@ -488,6 +517,30 @@ class PublicStorefrontController extends Controller
         }
 
         return back();
+    }
+
+    public function paystackPaymentComplete(Request $request): SymfonyResponse
+    {
+        $reference = (string) ($request->query('reference') ?: $request->query('trxref') ?: '');
+        $result = $this->orderPayment->completePaystackReturn($reference);
+
+        $order = $result['order'] ?? null;
+        if ($order && $order->pay_token) {
+            if ($result['success'] ?? false) {
+                return redirect()->to(url("/pay/{$order->pay_token}"))
+                    ->with('status', 'Payment received. Thank you!');
+            }
+
+            return redirect()->to(url("/pay/{$order->pay_token}"))
+                ->withErrors(['method' => $result['error'] ?? 'Payment could not be confirmed.']);
+        }
+
+        if ($result['success'] ?? false) {
+            return redirect()->to(url('/order-paid'));
+        }
+
+        return redirect()->to(url('/order-paid'))
+            ->withErrors(['payment' => $result['error'] ?? 'Payment could not be confirmed.']);
     }
 
     public function invoice(string $token): Response
@@ -667,12 +720,18 @@ class PublicStorefrontController extends Controller
         ];
     }
 
-    /** @return array{cod: bool, stripe: bool, paystack: bool, mpesa: bool, manual: bool} */
+    /**
+     * Public payment options are resolved from the live gateway registry, not from
+     * a chat/agent response or a duplicated set of company-setting checks.
+     *
+     * @return array{options: list<array{id: string, label: string, category: string, instructions: ?string, requiresPhone: bool}>, cod: bool, stripe: bool, paystack: bool, mpesa: bool, manual: bool}
+     */
     protected function paymentOptions(Order $order): array
     {
         $company = $order->company;
         if (! $company) {
             return [
+                'options' => [],
                 'cod' => false,
                 'stripe' => false,
                 'paystack' => false,
@@ -681,8 +740,8 @@ class PublicStorefrontController extends Controller
             ];
         }
 
-        /** @var \App\Services\PaymentGateways\PaymentGatewayRegistry $registry */
-        $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
+        /** @var PaymentGatewayRegistry $registry */
+        $registry = app(PaymentGatewayRegistry::class);
         $drivers = $registry->getAvailableDrivers($company);
         $activeMap = [];
         foreach ($drivers as $d) {
@@ -690,6 +749,14 @@ class PublicStorefrontController extends Controller
         }
 
         return [
+            'options' => array_map(fn ($driver) => [
+                'id' => $driver->getId(),
+                'label' => $driver->getDisplayName(),
+                'category' => $driver->getCategory(),
+                'instructions' => $driver->getInstructions($company, $order),
+                'requiresPhone' => $driver->getId() === 'mpesa',
+                'requiresEmail' => in_array($driver->getId(), ['paystack', 'stripe'], true),
+            ], $drivers),
             'cod' => ! empty($activeMap['cod']),
             'stripe' => ! empty($activeMap['stripe']),
             'paystack' => ! empty($activeMap['paystack']),

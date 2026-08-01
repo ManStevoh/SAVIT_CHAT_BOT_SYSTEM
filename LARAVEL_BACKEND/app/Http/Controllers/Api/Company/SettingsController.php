@@ -91,12 +91,17 @@ class SettingsController extends Controller
             'ordersAcceptMpesa' => (bool) ($settings?->orders_accept_mpesa ?? false),
             'ordersAcceptStripe' => (bool) ($settings?->orders_accept_stripe ?? false),
             'ordersAcceptPaystack' => (bool) ($settings?->orders_accept_paystack ?? false),
+            'ordersAcceptPesapal' => (bool) ($settings?->orders_accept_pesapal ?? false),
             'ordersCollectPaymentEnabled' => ($settings?->orders_collect_payment_enabled ?? true) !== false,
             'orderPaymentManualInstructions' => $settings?->order_payment_manual_instructions ?? '',
             'orderPaymentMpesaConfigured' => $settings?->hasOrderPaymentMpesaConfig() ?? false,
             'orderPaymentStripeConfigured' => $settings?->hasOrderPaymentStripeConfig() ?? false,
+            'orderPaymentPaystackConfigured' => $settings?->hasOrderPaymentPaystackConfig() ?? false,
+            'orderPaymentPesapalConfigured' => $settings?->hasOrderPaymentPesapalConfig() ?? false,
             'orderPaymentMpesaConfig' => $settings ? $this->maskOrderPaymentMpesaConfig($settings->order_payment_mpesa_config) : null,
             'orderPaymentStripeConfig' => $settings ? $this->maskOrderPaymentStripeConfig($settings->order_payment_stripe_config) : null,
+            'orderPaymentPaystackConfig' => $settings ? $this->maskOrderPaymentPaystackConfig($settings->order_payment_paystack_config) : null,
+            'orderPaymentPesapalConfig' => $settings ? $this->maskOrderPaymentPesapalConfig($settings->order_payment_pesapal_config) : null,
             'displayCurrency' => $settings?->displayCurrencyCode() ?? 'USD',
             'currencySymbol' => $settings?->currency_symbol,
             'thousandsSeparator' => MoneyFormatter::normalizeThousands($settings?->thousands_separator),
@@ -208,6 +213,7 @@ class SettingsController extends Controller
             'ordersAcceptMpesa' => 'sometimes|boolean',
             'ordersAcceptStripe' => 'sometimes|boolean',
             'ordersAcceptPaystack' => 'sometimes|boolean',
+            'ordersAcceptPesapal' => 'sometimes|boolean',
             'attributionRetentionDays' => 'sometimes|nullable|integer|min:30|max:730',
             'ordersCollectPaymentEnabled' => 'sometimes|boolean',
             'orderPaymentManualInstructions' => 'sometimes|nullable|string|max:2000',
@@ -221,6 +227,17 @@ class SettingsController extends Controller
             'orderPaymentStripeConfig' => 'sometimes|nullable|array',
             'orderPaymentStripeConfig.secret' => 'nullable|string|max:255',
             'orderPaymentStripeConfig.currency' => 'nullable|string|max:10',
+            'orderPaymentStripeConfig.env' => 'nullable|string|in:sandbox,production',
+            'orderPaymentPaystackConfig' => 'sometimes|nullable|array',
+            'orderPaymentPaystackConfig.secret_key' => 'nullable|string|max:255',
+            'orderPaymentPaystackConfig.public_key' => 'nullable|string|max:255',
+            'orderPaymentPaystackConfig.currency' => 'nullable|string|max:10',
+            'orderPaymentPaystackConfig.env' => 'nullable|string|in:sandbox,production',
+            'orderPaymentPesapalConfig' => 'sometimes|nullable|array',
+            'orderPaymentPesapalConfig.consumer_key' => 'nullable|string|max:255',
+            'orderPaymentPesapalConfig.consumer_secret' => 'nullable|string|max:255',
+            'orderPaymentPesapalConfig.currency' => 'nullable|string|max:10',
+            'orderPaymentPesapalConfig.env' => 'nullable|string|in:sandbox,production',
             'displayCurrency' => 'sometimes|nullable|string|size:3',
             'currencySymbol' => 'sometimes|nullable|string|max:16',
             'thousandsSeparator' => ['sometimes', 'nullable', 'string', Rule::in([',', '.', ' ', "'"])],
@@ -468,6 +485,9 @@ class SettingsController extends Controller
         if (array_key_exists('ordersAcceptPaystack', $companyValidated)) {
             $settings->orders_accept_paystack = $companyValidated['ordersAcceptPaystack'];
         }
+        if (array_key_exists('ordersAcceptPesapal', $companyValidated)) {
+            $settings->orders_accept_pesapal = $companyValidated['ordersAcceptPesapal'];
+        }
         if (array_key_exists('ordersCollectPaymentEnabled', $companyValidated)) {
             $settings->orders_collect_payment_enabled = $companyValidated['ordersCollectPaymentEnabled'];
         }
@@ -537,7 +557,7 @@ class SettingsController extends Controller
         if (array_key_exists('displayCurrency', $companyValidated)) {
             $raw = $companyValidated['displayCurrency'] ?? null;
             $code = is_string($raw) ? strtoupper(preg_replace('/[^A-Za-z]/', '', $raw) ?? '') : '';
-            $settings->display_currency = strlen($code) === 3 ? $code : 'USD';
+            $settings->display_currency = strlen($code) === 3 ? $code : 'KES';
         }
         if (array_key_exists('currencySymbol', $companyValidated)) {
             $symbol = $companyValidated['currencySymbol'];
@@ -583,14 +603,84 @@ class SettingsController extends Controller
                 if ($secret !== '') {
                     $currency = isset($v['currency']) ? trim((string) $v['currency']) : '';
                     if ($currency === '') {
-                        $currency = (string) ($existing['currency'] ?? 'usd');
+                        $currency = (string) ($existing['currency'] ?? 'kes');
                     }
+                    $env = in_array($v['env'] ?? null, ['sandbox', 'production'], true)
+                        ? $v['env']
+                        : ($existing['env'] ?? 'sandbox');
                     $settings->order_payment_stripe_config = [
                         'secret' => $secret,
-                        'currency' => $currency !== '' ? $currency : 'usd',
+                        'currency' => $currency !== '' ? $currency : 'kes',
+                        'env' => $env,
                     ];
                 } else {
                     $settings->order_payment_stripe_config = null;
+                }
+            }
+        }
+        if (array_key_exists('orderPaymentPaystackConfig', $companyValidated)) {
+            $v = $companyValidated['orderPaymentPaystackConfig'];
+            if ($v === null) {
+                $settings->order_payment_paystack_config = null;
+            } elseif (is_array($v)) {
+                $existing = $settings->order_payment_paystack_config ?? [];
+                $secretKey = isset($v['secret_key']) ? trim((string) $v['secret_key']) : '';
+                if ($secretKey === '' || $this->isMaskedSecretInput($secretKey)) {
+                    $secretKey = (string) ($existing['secret_key'] ?? '');
+                }
+                $publicKey = isset($v['public_key']) ? trim((string) $v['public_key']) : '';
+                if ($publicKey === '') {
+                    $publicKey = (string) ($existing['public_key'] ?? '');
+                }
+                $currency = isset($v['currency']) ? trim((string) $v['currency']) : '';
+                if ($currency === '') {
+                    $currency = (string) ($existing['currency'] ?? 'kes');
+                }
+                $env = in_array($v['env'] ?? null, ['sandbox', 'production'], true)
+                    ? $v['env']
+                    : ($existing['env'] ?? 'sandbox');
+                if ($secretKey !== '' || $publicKey !== '') {
+                    $settings->order_payment_paystack_config = [
+                        'secret_key' => $secretKey,
+                        'public_key' => $publicKey,
+                        'currency' => $currency !== '' ? $currency : 'kes',
+                        'env' => $env,
+                    ];
+                } else {
+                    $settings->order_payment_paystack_config = null;
+                }
+            }
+        }
+        if (array_key_exists('orderPaymentPesapalConfig', $companyValidated)) {
+            $v = $companyValidated['orderPaymentPesapalConfig'];
+            if ($v === null) {
+                $settings->order_payment_pesapal_config = null;
+            } elseif (is_array($v)) {
+                $existing = $settings->order_payment_pesapal_config ?? [];
+                $consumerKey = isset($v['consumer_key']) ? trim((string) $v['consumer_key']) : '';
+                if ($consumerKey === '' || $this->isMaskedSecretInput($consumerKey)) {
+                    $consumerKey = (string) ($existing['consumer_key'] ?? '');
+                }
+                $consumerSecret = isset($v['consumer_secret']) ? trim((string) $v['consumer_secret']) : '';
+                if ($consumerSecret === '' || $this->isMaskedSecretInput($consumerSecret)) {
+                    $consumerSecret = (string) ($existing['consumer_secret'] ?? '');
+                }
+                $currency = isset($v['currency']) ? trim((string) $v['currency']) : '';
+                if ($currency === '') {
+                    $currency = (string) ($existing['currency'] ?? 'kes');
+                }
+                $env = in_array($v['env'] ?? null, ['sandbox', 'production'], true)
+                    ? $v['env']
+                    : ($existing['env'] ?? 'sandbox');
+                if ($consumerKey !== '' && $consumerSecret !== '') {
+                    $settings->order_payment_pesapal_config = [
+                        'consumer_key' => $consumerKey,
+                        'consumer_secret' => $consumerSecret,
+                        'currency' => $currency !== '' ? $currency : 'kes',
+                        'env' => $env,
+                    ];
+                } else {
+                    $settings->order_payment_pesapal_config = null;
                 }
             }
         }
@@ -692,6 +782,40 @@ class SettingsController extends Controller
         $out = $config;
         if (! empty($out['secret']) && is_string($out['secret'])) {
             $out['secret'] = $this->maskSecretString($out['secret']);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $config
+     * @return array<string, mixed>|null
+     */
+    protected function maskOrderPaymentPaystackConfig(?array $config): ?array
+    {
+        if ($config === null || $config === []) {
+            return null;
+        }
+        $out = $config;
+        if (! empty($out['secret_key']) && is_string($out['secret_key'])) {
+            $out['secret_key'] = $this->maskSecretString($out['secret_key']);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $config
+     * @return array<string, mixed>|null
+     */
+    protected function maskOrderPaymentPesapalConfig(?array $config): ?array
+    {
+        if ($config === null || $config === []) {
+            return null;
+        }
+        $out = $config;
+        if (! empty($out['consumer_secret']) && is_string($out['consumer_secret'])) {
+            $out['consumer_secret'] = $this->maskSecretString($out['consumer_secret']);
         }
 
         return $out;

@@ -640,6 +640,7 @@ export interface CompanySettings {
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
   ordersAcceptPaystack?: boolean
+  ordersAcceptPesapal?: boolean
   ordersAcceptCod?: boolean
   ordersAcceptBankTransfer?: boolean
   bankTransferInstructions?: string
@@ -648,6 +649,7 @@ export interface CompanySettings {
   orderPaymentMpesaConfigured?: boolean
   orderPaymentStripeConfigured?: boolean
   orderPaymentPaystackConfigured?: boolean
+  orderPaymentPesapalConfigured?: boolean
   /** Masked passkey/consumer_secret from GET /api/company/settings */
   orderPaymentMpesaConfig?: {
     type?: 'paybill' | 'till'
@@ -658,7 +660,11 @@ export interface CompanySettings {
     env?: 'sandbox' | 'production'
   } | null
   /** Masked secret from GET /api/company/settings */
-  orderPaymentStripeConfig?: { secret?: string; currency?: string } | null
+  orderPaymentStripeConfig?: { secret?: string; currency?: string; env?: 'sandbox' | 'production' } | null
+  /** Masked secret from GET /api/company/settings */
+  orderPaymentPaystackConfig?: { secret_key?: string; public_key?: string; currency?: string; env?: 'sandbox' | 'production' } | null
+  /** Masked secret from GET /api/company/settings */
+  orderPaymentPesapalConfig?: { consumer_key?: string; consumer_secret?: string; currency?: string; env?: 'sandbox' | 'production' } | null
   /** ISO 4217 — catalog & chat price display (e.g. USD, KES) */
   displayCurrency?: string
   /** Optional override shown before amounts (e.g. KSh, €). Empty uses the ISO code. */

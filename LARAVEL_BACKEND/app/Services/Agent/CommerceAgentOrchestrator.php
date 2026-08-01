@@ -70,10 +70,26 @@ final class CommerceAgentOrchestrator
     ): array {
         $company->loadMissing('settings');
 
+        $logger = \Illuminate\Support\Facades\Log::build([
+            'driver' => 'single',
+            'path' => storage_path('logs/agent-debug.log'),
+        ]);
+
+        $logger->info("========================================================================\n"
+            ."[NEW TURN] Chat ID: {$chat->id} | Company ID: {$company->id} | Phone: {$customerPhone} | Name: {$customerName}\n"
+            ."Incoming Message: \"{$incomingMessage}\"\n"
+            ."Active Conversation Step: \"{$chat->conversation_step}\"");
+
         $cognitiveContext = $this->cognitive->processTurn(
             $company, $chat, $customerPhone, $customerName, $incomingMessage,
         );
         $reasoning = $cognitiveContext['reasoning'];
+
+        $logger->info("Inferred Reasoning:", [
+            'action_required' => $reasoning['trace']['action_required'] ?? null,
+            'action_kind' => $reasoning['trace']['action_kind'] ?? null,
+            'customer_stance' => $reasoning['trace']['customer_stance'] ?? null,
+        ]);
 
         // Reasoning fallback — when trace is unavailable, inject minimal guidance
         if (($reasoning['trace'] ?? null) === null) {
@@ -105,6 +121,8 @@ final class CommerceAgentOrchestrator
         // Low confidence is guidance for the model (clarify / try tools), not an automatic
         // human lock — handoff only happens when transfer_to_human runs and AI stance allows it.
 
+        $lastLogId = null;
+
         for ($i = 0; $i < $maxIterations; $i++) {
             $result = $this->agentChat->completeWithTools(
                 messages: $messages,
@@ -112,6 +130,18 @@ final class CommerceAgentOrchestrator
                 company: $company,
                 chatId: (int) $chat->id,
             );
+
+            if ($result->logId !== null) {
+                $lastLogId = $result->logId;
+            }
+
+            $logger->info("AI Completion Iteration {$i}:", [
+                'success' => $result->success,
+                'log_id' => $result->logId,
+                'error' => $result->error,
+                'content' => $result->content,
+                'tool_calls_count' => count($result->toolCalls),
+            ]);
 
             if (! $result->success) {
                 break;
@@ -122,7 +152,7 @@ final class CommerceAgentOrchestrator
                     // Detect circular stalling replies ("let me know", "just let me know")
                     $isCircularReply = preg_match('/\b(?:let me know|just let me know|feel free to|whenever you\'re ready)\b/iu', trim($result->content));
 
-                    if (($forcedToolNudgeCount < $maxForcedNudges) && ($isCircularReply || $this->shouldForceDoActionTool($actionRequired, $actionKind, $toolsUsed, $wantsHuman))) {
+                    if (($forcedToolNudgeCount < $maxForcedNudges) && ($isCircularReply || $this->shouldForceDoActionTool($actionRequired, $actionKind, $toolsUsed, $wantsHuman, $chat, $incomingMessage))) {
                         $forcedToolNudgeCount++;
                         $messages[] = ['role' => 'assistant', 'content' => trim($result->content)];
                         $nudgeText = $isCircularReply
@@ -146,6 +176,7 @@ final class CommerceAgentOrchestrator
                         'route' => 'agent_os',
                         'handoff' => $handoff,
                         'order_flow_reply' => $orderFlowReply,
+                        'log_id' => $lastLogId,
                     ];
                 }
                 break;
@@ -184,6 +215,11 @@ final class CommerceAgentOrchestrator
                     $toolResult = $this->toolRunner->run($tc['name'], $context, $args);
                 }
 
+                $logger->info("Tool Execution '{$tc['name']}':", [
+                    'args' => $args,
+                    'result' => $toolResult,
+                ]);
+
                 if ($tc['name'] === 'transfer_to_human' && ($toolResult['handoff'] ?? false)) {
                     $handoff = true;
                 }
@@ -207,33 +243,39 @@ final class CommerceAgentOrchestrator
         }
 
         if ($paymentDetailsReply !== null && trim($paymentDetailsReply) !== '') {
-            $reply = $this->finalizeReply($company, trim($paymentDetailsReply), $cognitiveContext);
+            $reply = $this->finalizeReply($company, trim($paymentDetailsReply), $cognitiveContext, true);
             $this->learningRecorder->recordOpenAiExchange($company, $incomingMessage, $reply, (int) $chat->id);
             $this->learningRecorder->recordAgentExchange($company, $incomingMessage, $reply, (int) $chat->id);
             $this->cognitive->finalizeEpisode((int) $cognitiveContext['episode_id'], [], 'payment_assisted');
             $this->logTrust($company, $chat, $cognitiveContext, $reasoning, $toolsUsed, $reply, 'payment_assisted');
+
+            $logger->info("Ending turn: payment_assisted. Reply: \"{$reply}\"");
 
             return [
                 'reply' => $reply,
                 'route' => 'agent_os_payment',
                 'handoff' => false,
                 'order_flow_reply' => $orderFlowReply,
+                'log_id' => $lastLogId,
             ];
         }
 
         // Prefer composing a conversational wrap of order-flow facts when tools produced checkout text.
         if ($orderFlowReply !== null && trim($orderFlowReply) !== '') {
-            $reply = $this->finalizeReply($company, trim($orderFlowReply), $cognitiveContext);
+            $reply = $this->finalizeReply($company, trim($orderFlowReply), $cognitiveContext, true);
             $this->learningRecorder->recordOpenAiExchange($company, $incomingMessage, $reply, (int) $chat->id);
             $this->learningRecorder->recordAgentExchange($company, $incomingMessage, $reply, (int) $chat->id);
             $this->cognitive->finalizeEpisode((int) $cognitiveContext['episode_id'], [], 'order_assisted');
             $this->logTrust($company, $chat, $cognitiveContext, $reasoning, $toolsUsed, $reply, 'order_assisted');
+
+            $logger->info("Ending turn: order_assisted. Reply: \"{$reply}\"");
 
             return [
                 'reply' => $reply,
                 'route' => 'agent_os_order',
                 'handoff' => $handoff,
                 'order_flow_reply' => $orderFlowReply,
+                'log_id' => $lastLogId,
             ];
         }
 
@@ -241,21 +283,26 @@ final class CommerceAgentOrchestrator
             $this->cognitive->finalizeEpisode((int) $cognitiveContext['episode_id'], [], 'handoff');
             $this->logTrust($company, $chat, $cognitiveContext, $reasoning, $toolsUsed, 'handoff', 'handoff');
 
+            $logger->info("Ending turn: handoff.");
+
             return [
                 'reply' => "I've connected you with our team — someone will assist you shortly. Thanks for your patience.",
                 'route' => 'agent_os_handoff',
                 'handoff' => true,
                 'order_flow_reply' => null,
+                'log_id' => $lastLogId,
             ];
         }
 
         $this->cognitive->finalizeEpisode((int) $cognitiveContext['episode_id'], [], 'failed');
+        $logger->info("Ending turn: failed.");
 
         return [
             'reply' => null,
             'route' => 'agent_os_failed',
             'handoff' => false,
             'order_flow_reply' => null,
+            'log_id' => $lastLogId,
         ];
     }
 
@@ -264,9 +311,26 @@ final class CommerceAgentOrchestrator
      *
      * @param  list<string>  $toolsUsed
      */
-    private function shouldForceDoActionTool(bool $actionRequired, string $actionKind, array $toolsUsed, bool $wantsHuman): bool
-    {
-        if ($wantsHuman || ! $actionRequired) {
+    private function shouldForceDoActionTool(
+        bool $actionRequired,
+        string $actionKind,
+        array $toolsUsed,
+        bool $wantsHuman,
+        ?Chat $chat = null,
+        ?string $incomingMessage = null,
+    ): bool {
+        if ($wantsHuman) {
+            return false;
+        }
+
+        // If conversation step is active or incoming message is a digit/order selection, force process_order_message if not run
+        if (($chat && filled($chat->conversation_step)) || ($incomingMessage && preg_match('/^\d+$|^\d+\s*[a-z0-9]/i', trim($incomingMessage)))) {
+            if (! in_array('process_order_message', $toolsUsed, true)) {
+                return true;
+            }
+        }
+
+        if (! $actionRequired) {
             return false;
         }
 
@@ -426,8 +490,18 @@ TEXT;
     /**
      * @param  array<string, mixed>  $cognitiveContext
      */
-    private function finalizeReply(Company $company, string $draft, array $cognitiveContext): string
+    private function finalizeReply(Company $company, string $draft, array $cognitiveContext, bool $skipGuard = false): string
     {
+        if ($skipGuard) {
+            $this->cognitive->finalizeEpisode(
+                (int) $cognitiveContext['episode_id'],
+                [],
+                'success'
+            );
+
+            return $draft;
+        }
+
         $critiqueResult = $this->critique->review($company, $draft, $cognitiveContext);
         $reply = $critiqueResult['rewritten'] ?? $draft;
         $reply = $this->replyGuard->guard($company, $reply);

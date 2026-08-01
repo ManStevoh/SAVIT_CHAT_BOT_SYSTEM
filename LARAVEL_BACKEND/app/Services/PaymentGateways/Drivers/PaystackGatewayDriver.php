@@ -37,7 +37,7 @@ class PaystackGatewayDriver implements PaymentGatewayDriverInterface
             return false;
         }
 
-        return (bool) ($settings && $settings->orders_accept_paystack && PaystackService::isEnabled());
+        return (bool) ($settings && $settings->orders_accept_paystack && PaystackService::isEnabled() && $settings->hasOrderPaymentPaystackConfig());
     }
 
     public function getInstructions(Company $company, ?Order $order = null): ?string
