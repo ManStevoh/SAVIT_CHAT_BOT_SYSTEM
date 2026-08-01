@@ -635,6 +635,7 @@ export interface CompanySettings {
   digitalTwinCustom?: boolean
   digitalTwinFields?: Record<string, string>
   agentCouncilEnabled?: boolean
+  devModeEnabled?: boolean
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
@@ -646,6 +647,7 @@ export interface CompanySettings {
   orderPaymentManualInstructions?: string
   orderPaymentMpesaConfigured?: boolean
   orderPaymentStripeConfigured?: boolean
+  orderPaymentPaystackConfigured?: boolean
   /** Masked passkey/consumer_secret from GET /api/company/settings */
   orderPaymentMpesaConfig?: {
     type?: 'paybill' | 'till'

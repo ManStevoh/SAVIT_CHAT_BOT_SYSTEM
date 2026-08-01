@@ -63,7 +63,7 @@ final class ConversationGreetingService
     {
         $settings = $company->settings;
         $greeting = $settings?->ai_greeting;
-        if ($greeting) {
+        if ($greeting && ! $this->looksLikeSystemPrompt($greeting)) {
             return $this->appendQuickMenu($greeting);
         }
 
@@ -92,5 +92,25 @@ final class ConversationGreetingService
         $clean = preg_replace('/[\x00-\x1F\x7F]/u', '', trim($name)) ?? '';
 
         return mb_substr($clean, 0, 80);
+    }
+
+    /**
+     * Detect system-prompt-like text that should never be sent as a customer greeting.
+     */
+    private function looksLikeSystemPrompt(string $text): bool
+    {
+        $lower = mb_strtolower(trim($text));
+
+        // "You are a ... assistant/agent/bot/AI"
+        if (preg_match('/\byou are (?:a |an |the )?\w*\s*(?:assistant|agent|bot|ai|model|helper)\b/iu', $lower)) {
+            return true;
+        }
+
+        // "Be polite, professional" — instruction-style phrasing
+        if (preg_match('/\b(?:be polite|be professional|be helpful|respond as|act as|behave as)\b/iu', $lower)) {
+            return true;
+        }
+
+        return false;
     }
 }

@@ -111,7 +111,27 @@ class AgentChatService
             finishReason: $result->finishReason,
         );
 
-        $this->persistLog($result, $company->id, $chatId, $resolved->credentialSource, $useCase);
+        $logId = $this->persistLog($result, $company->id, $chatId, $resolved->credentialSource, $useCase, $messages);
+
+        if ($logId !== null) {
+            $result = new OpenAiChatResult(
+                content: $result->content,
+                success: $result->success,
+                model: $result->model,
+                promptTokens: $result->promptTokens,
+                completionTokens: $result->completionTokens,
+                totalTokens: $result->totalTokens,
+                latencyMs: $result->latencyMs,
+                httpStatus: $result->httpStatus,
+                error: $result->error,
+                providerId: $result->providerId,
+                modelId: $result->modelId,
+                estimatedCostUsd: $cost,
+                toolCalls: $result->toolCalls,
+                finishReason: $result->finishReason,
+                logId: $logId,
+            );
+        }
 
         return $result;
     }
@@ -216,13 +236,22 @@ class AgentChatService
         ?int $chatId,
         ?string $credentialSource,
         string $useCase = AiUseCase::AGENT_COMMERCE,
-    ): void {
+        ?array $messages = null,
+    ): ?int {
         $billed = $credentialSource !== null
             ? $this->billing->billedCostUsd($result->estimatedCostUsd, $credentialSource)
             : null;
 
+        $promptPayload = null;
+        if ($messages !== null) {
+            $devMode = (bool) \App\Models\CompanySetting::where('company_id', $companyId)->value('dev_mode_enabled');
+            if ($devMode) {
+                $promptPayload = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            }
+        }
+
         try {
-            AiRequestLog::create([
+            $log = AiRequestLog::create([
                 'company_id' => $companyId,
                 'ai_provider_id' => $result->providerId,
                 'ai_model_id' => $result->modelId,
@@ -239,10 +268,13 @@ class AgentChatService
                 'success' => $result->success,
                 'http_status' => $result->httpStatus,
                 'error_message' => $result->error ? mb_substr($result->error, 0, 500) : null,
+                'prompt_payload' => $promptPayload,
                 'created_at' => now(),
             ]);
+
+            return (int) $log->id;
         } catch (\Throwable) {
-            // non-fatal
+            return null;
         }
     }
 

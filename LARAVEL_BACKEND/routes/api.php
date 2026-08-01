@@ -164,6 +164,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
     Route::post('chats/{chatId}/messages/{messageId}/learning-feedback', [ChatMessageController::class, 'learningFeedback']);
+    Route::get('chats/{chatId}/messages/{messageId}/download-prompt', [ChatMessageController::class, 'downloadPrompt']);
     Route::get('orders', [OrderController::class, 'index']);
     Route::post('orders/preview-totals', [OrderController::class, 'previewTotals']);
     Route::get('orders/{order}', [OrderController::class, 'show']);

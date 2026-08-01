@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Services\MpesaService;
 use App\Services\PaystackService;
 use App\Services\StripeService;
+use App\Services\PaymentGateways\PaymentGatewayRegistry;
 use App\Support\MoneyFormatter;
 
 /**
@@ -14,6 +15,12 @@ use App\Support\MoneyFormatter;
  */
 class OrderPaymentDetailsService
 {
+    public function __construct(
+        protected ?PaymentGatewayRegistry $registry = null,
+    ) {
+        $this->registry = $registry ?? app(PaymentGatewayRegistry::class);
+    }
+
     /**
      * @return array{
      *   success: bool,
@@ -46,8 +53,8 @@ class OrderPaymentDetailsService
             ];
         }
 
-        $pay = $this->resolveAcceptance($company);
-        $methods = $this->methodKeys($pay);
+        $drivers = $this->registry->getAvailableDrivers($company);
+        $methods = array_map(fn ($d) => $d->getId(), $drivers);
         $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
         $moneyOpts = MoneyFormatter::displayOptionsFromSettings($company->settings);
         $total = MoneyFormatter::format((float) $order->total, $currency, $moneyOpts);
@@ -86,48 +93,22 @@ class OrderPaymentDetailsService
         $lines[] = 'Payment status: '.($order->payment_status ?? 'unpaid');
         $lines[] = '';
 
-        if (count($methods) === 1 && $methods[0] === 'manual') {
-            $instructions = trim((string) $company->settings?->order_payment_manual_instructions);
+        if (count($drivers) === 1 && $drivers[0]->getId() === 'manual') {
+            $instructions = $drivers[0]->getInstructions($company, $order);
             $lines[] = 'Pay using these details:';
             $lines[] = $instructions;
             $lines[] = '';
             $lines[] = 'Reply here once you have paid.';
         } else {
             $lines[] = 'Available payment options:';
-            $n = 1;
-            if ($pay['mpesa']) {
-                $lines[] = "{$n}. M-Pesa (pay on your phone)";
-                $n++;
-            }
-            if ($pay['stripe']) {
-                $lines[] = "{$n}. Card (pay online)";
-                $n++;
-            }
-            if ($pay['paystack']) {
-                $lines[] = "{$n}. Paystack (pay online)";
-                $n++;
-            }
-            if ($pay['cod']) {
-                $lines[] = "{$n}. Cash on delivery (pay when your order arrives)";
-                $n++;
-            }
-            if ($pay['bank_transfer']) {
-                $lines[] = "{$n}. Bank transfer";
-                $instructions = trim((string) $company->settings?->bank_transfer_instructions);
-                if ($instructions !== '') {
-                    $lines[] = '';
-                    $lines[] = 'Bank transfer details:';
-                    $lines[] = $instructions;
-                }
-                $n++;
-            }
-            if ($pay['manual']) {
-                $lines[] = "{$n}. Pay manually (bank / till / other)";
-                $instructions = trim((string) $company->settings?->order_payment_manual_instructions);
-                if ($instructions !== '') {
+            foreach ($drivers as $index => $driver) {
+                $n = $index + 1;
+                $lines[] = "{$n}. {$driver->getDisplayName()}";
+                $inst = $driver->getInstructions($company, $order);
+                if ($inst && $driver->getCategory() === 'manual') {
                     $lines[] = '';
                     $lines[] = 'Manual payment details:';
-                    $lines[] = $instructions;
+                    $lines[] = $inst;
                 }
             }
             $lines[] = '';
@@ -141,14 +122,16 @@ class OrderPaymentDetailsService
         $lines[] = 'View invoice / receipt:';
         $lines[] = $order->publicReceiptUrl();
 
+        $manualDriver = $this->registry->getDriver('manual');
+
         return [
             'success' => true,
             'order_number' => $order->order_number,
             'total' => $total,
             'payment_status' => $order->payment_status,
             'methods' => $methods,
-            'manual_instructions' => $pay['manual']
-                ? trim((string) $company->settings?->order_payment_manual_instructions)
+            'manual_instructions' => ($manualDriver && $manualDriver->isReady($company))
+                ? $manualDriver->getInstructions($company, $order)
                 : null,
             'customer_message' => implode("\n", $lines),
             'message' => 'Share the customer_message with the customer. Do not invent payment options. Do not transfer_to_human for payment details.',
@@ -182,31 +165,34 @@ class OrderPaymentDetailsService
     }
 
     /**
-     * @return array{mpesa: bool, stripe: bool, paystack: bool, manual: bool, cod: bool, bank_transfer: bool}
+     * @return array{mpesa: bool, stripe: bool, paystack: bool, manual: bool, cod: bool}
      */
     public function resolveAcceptance(Company $company): array
     {
-        $settings = $company->settings;
+        $drivers = $this->registry->getAvailableDrivers($company);
+        $activeMap = [];
+        foreach ($drivers as $d) {
+            $activeMap[$d->getId()] = true;
+        }
 
         return [
-            'mpesa' => (bool) ($settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig())),
-            'stripe' => (bool) ($settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig())),
-            'paystack' => (bool) ($settings && $settings->orders_accept_paystack && PaystackService::isEnabled()),
-            'manual' => (bool) ($settings && $settings->hasOrderPaymentManualInstructions()),
-            'cod' => (bool) ($settings && $settings->orders_accept_cod),
-            'bank_transfer' => (bool) ($settings && $settings->orders_accept_bank_transfer),
+            'mpesa' => ! empty($activeMap['mpesa']),
+            'stripe' => ! empty($activeMap['stripe']),
+            'paystack' => ! empty($activeMap['paystack']),
+            'manual' => ! empty($activeMap['manual']),
+            'cod' => ! empty($activeMap['cod']),
         ];
     }
 
     /**
-     * @param  array{mpesa: bool, stripe: bool, paystack: bool, manual: bool, cod: bool, bank_transfer: bool}  $pay
+     * @param  array<string, bool>  $pay
      * @return list<string>
      */
     public function methodKeys(array $pay): array
     {
         $keys = [];
-        foreach (['mpesa', 'stripe', 'paystack', 'cod', 'bank_transfer', 'manual'] as $key) {
-            if (! empty($pay[$key])) {
+        foreach ($pay as $key => $isAvailable) {
+            if ($isAvailable) {
                 $keys[] = $key;
             }
         }
@@ -217,24 +203,25 @@ class OrderPaymentDetailsService
     public function promptBlockForCompany(Company $company): string
     {
         $company->loadMissing('settings');
-        $pay = $this->resolveAcceptance($company);
-        $methods = $this->methodKeys($pay);
-        if ($methods === []) {
+        $drivers = $this->registry->getAvailableDrivers($company);
+        if ($drivers === []) {
             return "Payment options configured: none. Do not invent till numbers or say methods are 'being set up' — tell the customer payment is not configured yet, or use transfer_to_human only if they insist on a person.";
         }
 
         $lines = ['Payment options configured for this business (authoritative — never invent others):'];
-        foreach ($methods as $m) {
-            $lines[] = '- '.$m;
+        foreach ($drivers as $driver) {
+            $lines[] = '- '.$driver->getId().' ('.$driver->getDisplayName().')';
         }
-        if ($pay['manual']) {
-            $lines[] = 'Manual instructions to share when relevant:';
-            $lines[] = trim((string) $company->settings?->order_payment_manual_instructions);
+
+        $manualDriver = $this->registry->getDriver('manual');
+        if ($manualDriver && $manualDriver->isReady($company)) {
+            $inst = $manualDriver->getInstructions($company);
+            if ($inst) {
+                $lines[] = 'Manual instructions to share when relevant:';
+                $lines[] = $inst;
+            }
         }
-        if ($pay['bank_transfer'] && $company->settings?->hasBankTransferInstructions()) {
-            $lines[] = 'Bank transfer instructions to share when relevant:';
-            $lines[] = trim((string) $company->settings?->bank_transfer_instructions);
-        }
+
         $lines[] = 'When the customer wants to pay or asks for payment details: call share_payment_details (or process_order_message during active checkout). Never claim payment methods are unavailable if listed above.';
 
         return implode("\n", $lines);

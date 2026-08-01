@@ -17,9 +17,9 @@ import type {
 import type { BusinessDnaSettings } from './api-hooks'
 import type { IntelligenceReasoningResult } from './api-hooks'
 import { mockSubscriptions } from './mock-data'
-import { useMockApi, apiRequest, apiUrl } from './api-client'
+import { useMockApi, apiRequest, apiUrl, getAuthToken } from './api-client'
 
-export { apiRequest, apiUrl, resolveBackendMediaUrl } from './api-client'
+export { apiRequest, apiUrl, getAuthToken, resolveBackendMediaUrl } from './api-client'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -403,18 +403,18 @@ export async function sendMessage(data: SendMessageData): Promise<{
 
     const body: { content: string; replyToMessageId?: string } | FormData = hasAttachment
       ? (() => {
-          const formData = new FormData()
-          formData.append('content', trimmedContent)
-          formData.append('attachment', data.attachment as File)
-          if (data.replyToMessageId) {
-            formData.append('replyToMessageId', data.replyToMessageId)
-          }
-          return formData
-        })()
-      : {
-          content: trimmedContent,
-          ...(data.replyToMessageId ? { replyToMessageId: data.replyToMessageId } : {}),
+        const formData = new FormData()
+        formData.append('content', trimmedContent)
+        formData.append('attachment', data.attachment as File)
+        if (data.replyToMessageId) {
+          formData.append('replyToMessageId', data.replyToMessageId)
         }
+        return formData
+      })()
+      : {
+        content: trimmedContent,
+        ...(data.replyToMessageId ? { replyToMessageId: data.replyToMessageId } : {}),
+      }
 
     return await apiRequest<{
       success: boolean
@@ -1249,14 +1249,13 @@ export interface UpdateSettingsData {
   businessDna?: BusinessDnaSettings | null
   digitalTwin?: Record<string, string> | null
   agentCouncilEnabled?: boolean
+  devModeEnabled?: boolean
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
   ordersAcceptPaystack?: boolean
   ordersAcceptCod?: boolean
-  ordersAcceptBankTransfer?: boolean
-  bankTransferInstructions?: string | null
   attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
   orderPaymentManualInstructions?: string | null
@@ -2698,6 +2697,7 @@ export interface PlatformSettings {
   openaiApiKey?: string | null
   openaiModel?: string | null
   openaiMaxTokens?: number | null
+  devModeEnabled?: boolean
   sessionTimeoutMinutes?: number | null
   maxLoginAttempts?: number | null
   passwordMinLength?: number | null
@@ -2758,6 +2758,7 @@ export interface UpdatePlatformSettingsData {
   openaiApiKey?: string
   openaiModel?: string
   openaiMaxTokens?: number
+  devModeEnabled?: boolean
   sessionTimeoutMinutes?: number
   maxLoginAttempts?: number
   passwordMinLength?: number
@@ -3895,5 +3896,49 @@ export async function uninstallMarketplaceModule(
     return { success: true }
   } catch (e) {
     return handleApiError(e)
+  }
+}
+
+/**
+ * Download prompt payload for AI prompt debugging with Sanctum authentication header.
+ */
+export async function downloadPromptLog(
+  chatId: string,
+  messageId: string,
+  format: 'txt' | 'json' = 'txt'
+): Promise<boolean> {
+  const token = getAuthToken()
+  const headers: Record<string, string> = {
+    Accept: format === 'json' ? 'application/json' : 'text/plain',
+    'X-Requested-With': 'XMLHttpRequest',
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  try {
+    const res = await fetch(apiUrl(`/api/company/chats/${chatId}/messages/${messageId}/download-prompt?format=${format}`), {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+    })
+
+    if (!res.ok) {
+      return false
+    }
+
+    const blob = await res.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ai-prompt-debug-msg-${messageId}.${format}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    return true
+  } catch (e) {
+    console.error('Failed to download prompt log', e)
+    return false
   }
 }

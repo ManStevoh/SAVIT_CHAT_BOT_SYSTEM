@@ -3,6 +3,7 @@
 namespace App\Services\Agent\Cognitive;
 
 use App\Models\Company;
+use App\Models\Product;
 
 /**
  * Self-critique — lightweight review before sending to customer.
@@ -72,10 +73,42 @@ final class SelfCritiqueService
             }
         }
 
+        // Catch system-prompt text leaked verbatim into the reply
+        if (preg_match('/\byou are (?:a |an |the )?\w*\s*(?:assistant|agent|bot|ai|model|helper)\b/iu', $draft)) {
+            $issues[] = 'leaked_system_prompt';
+            $rewritten = 'Happy to help — could you share a bit more about what you need?';
+        }
+
         return [
             'passed' => $issues === [],
             'issues' => $issues,
             'rewritten' => $rewritten !== $draft ? $rewritten : null,
         ];
+    }
+
+    /**
+     * Lightweight product existence check — verifies catalog products mentioned in the draft.
+     *
+     * @return array{known: list<string>, unknown: list<string>}
+     */
+    private function extractProductMentions(string $draft, Company $company): array
+    {
+        $products = Product::where('company_id', $company->id)
+            ->where('status', 'active')
+            ->pluck('name')
+            ->map(fn ($n) => mb_strtolower(trim($n)))
+            ->filter(fn ($n) => mb_strlen($n) >= 4)
+            ->all();
+
+        $lower = mb_strtolower($draft);
+        $known = [];
+
+        foreach ($products as $name) {
+            if (str_contains($lower, $name)) {
+                $known[] = $name;
+            }
+        }
+
+        return ['known' => $known, 'unknown' => []];
     }
 }

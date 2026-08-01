@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe, Cookie } from "lucide-react"
+import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe, Cookie, Code } from "lucide-react"
 import {
   getPlatformSettings,
   updatePlatformSettings,
@@ -289,6 +289,7 @@ export default function AdminSettingsPage() {
         openaiApiKey: settings.openaiApiKey && settings.openaiApiKey !== "********" ? settings.openaiApiKey : undefined,
         openaiModel: settings.openaiModel ?? undefined,
         openaiMaxTokens: settings.openaiMaxTokens ?? undefined,
+        devModeEnabled: settings.devModeEnabled ?? false,
         aiLearningConfig: settings.aiLearningConfig ?? undefined,
       })
       if (res.success) {
@@ -1363,6 +1364,21 @@ export default function AdminSettingsPage() {
                     value={aiLearning.fallbackLanguage ?? "en"}
                     onChange={(e) => updateAiLearning("fallbackLanguage", e.target.value || "en")}
                     placeholder="en"
+                  />
+                </Field>
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4 bg-amber-500/5 border-amber-500/30">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <FieldLabel className="flex items-center gap-2 font-semibold text-foreground">
+                      <Code className="h-4 w-4 text-amber-500" />
+                      Developer Mode & AI Prompt Debugger
+                    </FieldLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Enable platform-wide raw LLM prompt logging and prompt downloads under chat messages.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.devModeEnabled ?? false}
+                    onCheckedChange={(v) => setSettings((prev) => ({ ...prev, devModeEnabled: v }))}
                   />
                 </Field>
               </FieldGroup>

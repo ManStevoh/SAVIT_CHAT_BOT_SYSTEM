@@ -130,31 +130,29 @@ class DeliveryCodPaymentRecoveryTest extends TestCase
 
     // --- OrderPaymentDetailsService --------------------------------------------
 
-    public function test_cod_and_bank_transfer_are_included_in_payment_methods(): void
+    public function test_cod_and_manual_are_included_in_payment_methods(): void
     {
         $company = $this->makeCompany([
             'orders_accept_cod' => true,
-            'orders_accept_bank_transfer' => true,
-            'bank_transfer_instructions' => 'Bank: Test Bank, Acc: 12345',
+            'order_payment_manual_instructions' => 'Bank: Test Bank, Acc: 12345',
         ]);
 
         $service = app(OrderPaymentDetailsService::class);
         $pay = $service->resolveAcceptance($company);
 
         $this->assertTrue($pay['cod']);
-        $this->assertTrue($pay['bank_transfer']);
+        $this->assertTrue($pay['manual']);
 
         $methods = $service->methodKeys($pay);
         $this->assertContains('cod', $methods);
-        $this->assertContains('bank_transfer', $methods);
+        $this->assertContains('manual', $methods);
     }
 
-    public function test_share_for_customer_message_mentions_cod_bank_and_pay_links(): void
+    public function test_share_for_customer_message_mentions_cod_manual_and_pay_links(): void
     {
         $company = $this->makeCompany([
             'orders_accept_cod' => true,
-            'orders_accept_bank_transfer' => true,
-            'bank_transfer_instructions' => 'Bank: Test Bank, Acc: 12345',
+            'order_payment_manual_instructions' => 'Bank: Test Bank, Acc: 12345',
         ]);
 
         $chat = Chat::create([
@@ -179,8 +177,8 @@ class DeliveryCodPaymentRecoveryTest extends TestCase
         $result = app(OrderPaymentDetailsService::class)->shareForCustomer($company, '254700000111');
 
         $this->assertTrue($result['success']);
-        $this->assertStringContainsString('Cash on delivery', $result['customer_message']);
-        $this->assertStringContainsString('Bank transfer', $result['customer_message']);
+        $this->assertStringContainsString('Cash on Delivery', $result['customer_message']);
+        $this->assertStringContainsString('Bank: Test Bank, Acc: 12345', $result['customer_message']);
         $this->assertStringContainsString('Pay online: '.$order->fresh()->publicPayUrl(), $result['customer_message']);
     }
 

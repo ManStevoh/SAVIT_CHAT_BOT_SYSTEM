@@ -59,6 +59,7 @@ class SettingsController extends Controller
             'timezone' => $settings?->timezone ?? 'UTC',
             'workingHours' => $settings?->working_hours,
             'learnFromConversations' => $learningConfig->companyLearnFromChatsEnabled($company),
+            'devModeEnabled' => (bool) ($settings?->dev_mode_enabled ?? false),
             'learnFromConversationsEditable' => $learningConfig->isLearningEnabled()
                 && (bool) ($learningConfig->all()['allowCompanyOverride'] ?? true),
             'aiLearningEnabled' => $learningConfig->isLearningEnabled(),
@@ -117,8 +118,6 @@ class SettingsController extends Controller
             'linkInBioLinks' => is_array($company->link_in_bio_links) ? $company->link_in_bio_links : [],
             'linkInBioUrl' => $company->store_slug ? rtrim(config('app.url'), '/').'/b/'.$company->store_slug : null,
             'ordersAcceptCod' => (bool) ($settings?->orders_accept_cod ?? false),
-            'ordersAcceptBankTransfer' => (bool) ($settings?->orders_accept_bank_transfer ?? false),
-            'bankTransferInstructions' => $settings?->bank_transfer_instructions ?? '',
             'deliveryFeesEnabled' => (bool) ($settings?->delivery_fees_enabled ?? false),
             'defaultDeliveryFee' => $settings?->default_delivery_fee !== null
                 ? (float) $settings->default_delivery_fee
@@ -203,6 +202,7 @@ class SettingsController extends Controller
             'digitalTwin.competitors' => 'nullable|string|max:500',
             'digitalTwin.target_customers' => 'nullable|string|max:500',
             'agentCouncilEnabled' => 'sometimes|boolean',
+            'devModeEnabled' => 'sometimes|boolean',
             'autoReplyEnabled' => 'sometimes|boolean',
             'notificationsEnabled' => 'sometimes|boolean',
             'ordersAcceptMpesa' => 'sometimes|boolean',
@@ -438,6 +438,9 @@ class SettingsController extends Controller
         if (array_key_exists('agentCouncilEnabled', $companyValidated)) {
             $settings->agent_council_enabled = $companyValidated['agentCouncilEnabled'];
         }
+        if (array_key_exists('devModeEnabled', $companyValidated)) {
+            $settings->dev_mode_enabled = (bool) $companyValidated['devModeEnabled'];
+        }
         if (array_key_exists('digitalTwin', $companyValidated)) {
             $twin = $companyValidated['digitalTwin'];
             if ($twin === null || $twin === []) {
@@ -593,13 +596,6 @@ class SettingsController extends Controller
         }
         if (array_key_exists('ordersAcceptCod', $companyValidated)) {
             $settings->orders_accept_cod = $companyValidated['ordersAcceptCod'];
-        }
-        if (array_key_exists('ordersAcceptBankTransfer', $companyValidated)) {
-            $settings->orders_accept_bank_transfer = $companyValidated['ordersAcceptBankTransfer'];
-        }
-        if (array_key_exists('bankTransferInstructions', $companyValidated)) {
-            $v = $companyValidated['bankTransferInstructions'];
-            $settings->bank_transfer_instructions = (is_string($v) && trim($v) !== '') ? trim($v) : null;
         }
         if (array_key_exists('deliveryFeesEnabled', $companyValidated)) {
             $settings->delivery_fees_enabled = $companyValidated['deliveryFeesEnabled'];

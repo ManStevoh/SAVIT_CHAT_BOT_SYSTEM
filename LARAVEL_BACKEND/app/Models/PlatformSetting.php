@@ -65,10 +65,12 @@ class PlatformSetting extends Model
         'recaptcha_enabled',
         'recaptcha_site_key',
         'recaptcha_secret_key',
+        'dev_mode_enabled',
     ];
 
     protected $casts = [
         'maintenance_mode' => 'boolean',
+        'dev_mode_enabled' => 'boolean',
         'allow_new_registrations' => 'boolean',
         'require_email_verification' => 'boolean',
         'whatsapp_enable_coexist' => 'boolean',

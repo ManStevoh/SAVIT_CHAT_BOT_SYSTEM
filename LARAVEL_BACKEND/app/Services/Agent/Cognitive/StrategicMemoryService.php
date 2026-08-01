@@ -34,8 +34,11 @@ final class StrategicMemoryService
 
     public function getForPrompt(int $companyId, int $limit = 6): string
     {
+        $maxAgeDays = (int) config('agent.strategic_memory.max_age_days', 90);
+
         $items = StrategicMemory::query()
             ->where('company_id', $companyId)
+            ->where('updated_at', '>=', now()->subDays($maxAgeDays))
             ->orderByDesc('success_score')
             ->orderByDesc('updated_at')
             ->limit($limit)

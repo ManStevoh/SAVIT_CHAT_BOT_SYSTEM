@@ -443,7 +443,7 @@ class PublicStorefrontController extends Controller
         $order = Order::where('pay_token', $token)->with(['company.settings'])->firstOrFail();
 
         $validated = $request->validate([
-            'method' => 'required|string|in:cod,stripe,paystack,mpesa,bank_transfer',
+            'method' => 'required|string|in:cod,stripe,paystack,mpesa,manual',
             'phone' => 'nullable|string|max:40',
         ]);
 
@@ -481,10 +481,10 @@ class PublicStorefrontController extends Controller
 
                 return back()->withErrors(['method' => $result['error'] ?? 'Could not send M-Pesa prompt.']);
 
-            case 'bank_transfer':
-                $order->update(['payment_method' => 'bank_transfer']);
+            case 'manual':
+                $order->update(['payment_method' => 'manual']);
 
-                return redirect()->to(url("/pay/{$token}"))->with('status', 'Bank transfer instructions shown below.');
+                return redirect()->to(url("/pay/{$token}"))->with('status', 'Manual payment instructions shown below.');
         }
 
         return back();
@@ -667,18 +667,34 @@ class PublicStorefrontController extends Controller
         ];
     }
 
-    /** @return array{cod: bool, stripe: bool, paystack: bool, mpesa: bool, bankTransfer: bool, bankTransferInstructions: ?string} */
+    /** @return array{cod: bool, stripe: bool, paystack: bool, mpesa: bool, manual: bool} */
     protected function paymentOptions(Order $order): array
     {
-        $settings = $order->company?->settings;
+        $company = $order->company;
+        if (! $company) {
+            return [
+                'cod' => false,
+                'stripe' => false,
+                'paystack' => false,
+                'mpesa' => false,
+                'manual' => false,
+            ];
+        }
+
+        /** @var \App\Services\PaymentGateways\PaymentGatewayRegistry $registry */
+        $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
+        $drivers = $registry->getAvailableDrivers($company);
+        $activeMap = [];
+        foreach ($drivers as $d) {
+            $activeMap[$d->getId()] = true;
+        }
 
         return [
-            'cod' => (bool) ($settings?->orders_accept_cod ?? false),
-            'stripe' => (bool) ($settings?->orders_accept_stripe ?? false),
-            'paystack' => (bool) ($settings?->orders_accept_paystack ?? false),
-            'mpesa' => (bool) ($settings?->orders_accept_mpesa ?? false),
-            'bankTransfer' => (bool) ($settings?->orders_accept_bank_transfer ?? false),
-            'bankTransferInstructions' => $settings?->hasBankTransferInstructions() ? $settings->bank_transfer_instructions : null,
+            'cod' => ! empty($activeMap['cod']),
+            'stripe' => ! empty($activeMap['stripe']),
+            'paystack' => ! empty($activeMap['paystack']),
+            'mpesa' => ! empty($activeMap['mpesa']),
+            'manual' => ! empty($activeMap['manual']),
         ];
     }
 

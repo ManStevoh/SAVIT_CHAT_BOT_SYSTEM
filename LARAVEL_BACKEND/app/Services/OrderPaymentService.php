@@ -158,17 +158,6 @@ class OrderPaymentService
     }
 
     /**
-     * Confirm a bank-transfer order (awaiting manual reconciliation once the transfer is received).
-     */
-    public function markOrderBankTransferConfirmed(Order $order): void
-    {
-        $order->update([
-            'payment_method' => 'bank_transfer',
-            'status' => 'confirmed',
-        ]);
-    }
-
-    /**
      * Mark order as paid and send WhatsApp confirmation to the customer.
      */
     public function markOrderPaid(Order $order): void

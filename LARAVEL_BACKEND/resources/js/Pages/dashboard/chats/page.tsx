@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { useChats, useMessages, useProducts, useCompanySettings } from '@/lib/api-hooks'
-import { sendMessage, handBackToBot, createOrderFromChat, previewOrderTotals, submitMessageLearningFeedback } from '@/lib/api-actions'
+import { sendMessage, handBackToBot, createOrderFromChat, previewOrderTotals, submitMessageLearningFeedback, downloadPromptLog } from '@/lib/api-actions'
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
 import {
@@ -33,6 +33,8 @@ import {
   Check,
   CheckCheck,
   Reply,
+  Download,
+  Code,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
@@ -748,6 +750,37 @@ export default function ChatsPage() {
                             >
                               <ThumbsDown className="h-3.5 w-3.5" />
                             </Button>
+                          </div>
+                        )}
+                        {msg.sender === 'bot' && (
+                          <div className="mt-2 flex items-center gap-1.5 border-t border-border/30 pt-1.5">
+                            {msg.promptAvailable || companySettings?.devModeEnabled ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => downloadPromptLog(selectedChatId, msg.id, 'txt')}
+                                  className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 cursor-pointer"
+                                >
+                                  <Download className="h-3 w-3" />
+                                  Download Prompt (.txt)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => downloadPromptLog(selectedChatId, msg.id, 'json')}
+                                  className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent cursor-pointer"
+                                >
+                                  .json
+                                </button>
+                              </>
+                            ) : (
+                              <a
+                                href="/dashboard/settings"
+                                className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-amber-500 underline underline-offset-2"
+                              >
+                                <Code className="h-3 w-3 text-amber-500/70" />
+                                Enable Developer Mode in Settings to download AI prompts
+                              </a>
+                            )}
                           </div>
                         )}
                       </div>

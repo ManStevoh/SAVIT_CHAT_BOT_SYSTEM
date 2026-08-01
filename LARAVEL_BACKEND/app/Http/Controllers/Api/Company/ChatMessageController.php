@@ -34,33 +34,56 @@ class ChatMessageController extends Controller
         }
 
         $messages = Message::where('chat_id', $chat->id)
-            ->with('replyTo:id,content,sender,message_type')
+            ->with(['replyTo:id,content,sender,message_type', 'aiRequestLog:id,prompt_payload'])
             ->orderBy('created_at')
             ->get();
 
-        $data = $messages->map(fn (Message $m) => [
-            'id' => (string) $m->id,
-            'chatId' => (string) $chat->id,
-            'content' => $m->content,
-            'messageType' => $m->message_type ?? 'text',
-            'attachmentUrl' => $m->attachment_url,
-            'attachmentName' => $m->attachment_name,
-            'attachmentMime' => $m->attachment_mime,
-            'attachmentSize' => $m->attachment_size,
-            'sender' => $m->sender,
-            'timestamp' => Carbon::parse($m->created_at)->format('g:i A'),
-            'status' => $m->status,
-            'replySource' => $m->reply_source,
-            'learningFeedback' => $m->learning_feedback,
-            'learningSampleId' => $m->learning_sample_id ? (string) $m->learning_sample_id : null,
-            'replyToMessageId' => $m->reply_to_message_id ? (string) $m->reply_to_message_id : null,
-            'replyTo' => $m->replyTo ? [
-                'id' => (string) $m->replyTo->id,
-                'content' => $m->replyTo->content,
-                'sender' => $m->replyTo->sender,
-                'messageType' => $m->replyTo->message_type ?? 'text',
-            ] : null,
-        ]);
+        $chatLogMap = \App\Models\AiRequestLog::where('chat_id', $chat->id)
+            ->whereNotNull('prompt_payload')
+            ->orderBy('created_at')
+            ->get();
+
+        $data = $messages->map(function (Message $m) use ($chat, $chatLogMap) {
+            $logId = $m->ai_request_log_id;
+            $hasPrompt = (bool) ($m->aiRequestLog?->prompt_payload);
+
+            if (! $hasPrompt && $m->sender === 'bot' && $chatLogMap->isNotEmpty()) {
+                $matchedLog = $chatLogMap->first(function ($l) use ($m) {
+                    return abs($l->created_at->timestamp - $m->created_at->timestamp) <= 180;
+                }) ?? $chatLogMap->last();
+
+                if ($matchedLog && $matchedLog->prompt_payload) {
+                    $logId = $matchedLog->id;
+                    $hasPrompt = true;
+                }
+            }
+
+            return [
+                'id' => (string) $m->id,
+                'chatId' => (string) $chat->id,
+                'content' => $m->content,
+                'messageType' => $m->message_type ?? 'text',
+                'attachmentUrl' => $m->attachment_url,
+                'attachmentName' => $m->attachment_name,
+                'attachmentMime' => $m->attachment_mime,
+                'attachmentSize' => $m->attachment_size,
+                'sender' => $m->sender,
+                'timestamp' => Carbon::parse($m->created_at)->format('g:i A'),
+                'status' => $m->status,
+                'replySource' => $m->reply_source,
+                'learningFeedback' => $m->learning_feedback,
+                'learningSampleId' => $m->learning_sample_id ? (string) $m->learning_sample_id : null,
+                'replyToMessageId' => $m->reply_to_message_id ? (string) $m->reply_to_message_id : null,
+                'replyTo' => $m->replyTo ? [
+                    'id' => (string) $m->replyTo->id,
+                    'content' => $m->replyTo->content,
+                    'sender' => $m->replyTo->sender,
+                    'messageType' => $m->replyTo->message_type ?? 'text',
+                ] : null,
+                'aiRequestLogId' => $logId ? (string) $logId : null,
+                'promptAvailable' => $hasPrompt,
+            ];
+        });
 
         return response()->json($data);
     }
@@ -241,5 +264,66 @@ class ChatMessageController extends Controller
             'message' => 'Feedback recorded.',
             'learningFeedback' => (int) $validated['feedback'],
         ]);
+    }
+
+    public function downloadPrompt(Request $request, string $chatId, string $messageId): mixed
+    {
+        $user = $request->user();
+        $chat = Chat::where('id', $chatId)->where('company_id', $user->company_id)->firstOrFail();
+        $message = Message::where('id', $messageId)->where('chat_id', $chat->id)->firstOrFail();
+
+        $log = null;
+        if ($message->ai_request_log_id) {
+            $log = \App\Models\AiRequestLog::where('id', $message->ai_request_log_id)
+                ->where('company_id', $user->company_id)
+                ->first();
+        }
+
+        if (! $log) {
+            // Fall back to latest log for this chat around message creation time
+            $log = \App\Models\AiRequestLog::where('chat_id', $chat->id)
+                ->where('company_id', $user->company_id)
+                ->whereNotNull('prompt_payload')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if (! $log || empty($log->prompt_payload)) {
+            return response()->json(['message' => 'No prompt payload log found for this message.'], 404);
+        }
+
+        $format = strtolower((string) $request->query('format', 'txt'));
+        $filename = "ai-prompt-debug-msg-{$message->id}." . ($format === 'json' ? 'json' : 'txt');
+
+        if ($format === 'json') {
+            return response()->streamDownload(function () use ($log) {
+                echo $log->prompt_payload;
+            }, $filename, ['Content-Type' => 'application/json']);
+        }
+
+        $payloadText = $log->prompt_payload;
+        $decoded = json_decode($payloadText, true);
+        $formattedBody = '';
+        if (is_array($decoded)) {
+            foreach ($decoded as $msg) {
+                $role = strtoupper((string) ($msg['role'] ?? 'UNKNOWN'));
+                $content = $msg['content'] ?? (isset($msg['tool_calls']) ? json_encode($msg['tool_calls'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : '');
+                $formattedBody .= "[{$role}]\n{$content}\n\n" . str_repeat('-', 60) . "\n\n";
+            }
+        } else {
+            $formattedBody = $payloadText;
+        }
+
+        $header = "================================================================================\n";
+        $header .= "RELAYIQ AI PROMPT DEBUGGER REPORT\n";
+        $header .= "Message ID: {$message->id} | Chat ID: {$chat->id} | Created: {$log->created_at}\n";
+        $header .= "Model: {$log->model} | Use Case: {$log->use_case} | Tokens: {$log->total_tokens}\n";
+        $header .= "================================================================================\n\n";
+
+        $fullContent = $header . $formattedBody;
+
+        return response()->streamDownload(function () use ($fullContent) {
+            echo $fullContent;
+        }, $filename, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
 }

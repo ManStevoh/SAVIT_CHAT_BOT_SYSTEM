@@ -173,11 +173,14 @@ class SystemPromptBuilder
         $added = 0;
         foreach ($ranked as $p) {
             $lines = [];
+            $desc = trim((string) ($p->description ?? ''));
+            $descSuffix = $desc !== '' ? ' — '.mb_substr($desc, 0, 120) : '';
+
             if ($p->variants->where('status', 'active')->isNotEmpty()) {
                 $min = (float) $p->variants->where('status', 'active')->min('price');
                 $productImage = $this->resolvePrimaryImageUrl($p->images);
                 $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
-                $lines[] = '- '.$p->name.' (options; from '.MoneyFormatter::formatFromSettings($min, $settings)."){$productImageSuffix}:";
+                $lines[] = '- '.$p->name.' (options; from '.MoneyFormatter::formatFromSettings($min, $settings).")$descSuffix{$productImageSuffix}:";
                 foreach ($p->variants->where('status', 'active')->take(8) as $v) {
                     $variantImage = $this->resolvePrimaryImageUrl($v->images) ?? $productImage;
                     $variantImageSuffix = $variantImage ? " [image: {$variantImage}]" : '';
@@ -186,7 +189,7 @@ class SystemPromptBuilder
             } else {
                 $productImage = $this->resolvePrimaryImageUrl($p->images);
                 $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
-                $lines[] = '- '.$p->name.': '.MoneyFormatter::formatFromSettings((float) $p->price, $settings).$productImageSuffix;
+                $lines[] = '- '.$p->name.': '.MoneyFormatter::formatFromSettings((float) $p->price, $settings).$descSuffix.$productImageSuffix;
             }
 
             $block = implode("\n", $lines);

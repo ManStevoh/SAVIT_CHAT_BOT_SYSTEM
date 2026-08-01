@@ -15,6 +15,7 @@ class Message extends Model
         'reply_source',
         'learning_feedback',
         'learning_sample_id',
+        'ai_request_log_id',
         'status',
         'whatsapp_message_id',
         'reply_to_message_id',
@@ -37,6 +38,11 @@ class Message extends Model
     public function learningSample(): BelongsTo
     {
         return $this->belongsTo(ConversationLearningSample::class, 'learning_sample_id');
+    }
+
+    public function aiRequestLog(): BelongsTo
+    {
+        return $this->belongsTo(AiRequestLog::class, 'ai_request_log_id');
     }
 
     /**

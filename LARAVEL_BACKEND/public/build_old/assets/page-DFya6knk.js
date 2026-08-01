@@ -1,0 +1,1 @@
+import{j as t}from"./app-CvCgl7sq.js";import{L as i}from"./cms-page-jP5o_p2P.js";import"./smartphone-CeL1gF3x.js";import"./shopping-bag-DZdct2f8.js";import"./index-BvTHHxx6.js";import"./RecaptchaWidget-u_KSOWqv.js";import"./star-DxwhFc37.js";import"./SeoHead-CNCJV1wP.js";function f({seo:o}){return t.jsx(i,{slug:"home",fallbackTitle:"RelayIQ",initialSeo:o})}export{f as default};

@@ -27,6 +27,7 @@ class AiRequestLog extends Model
         'error_message',
         'credential_source',
         'selection_source',
+        'prompt_payload',
         'created_at',
     ];
 

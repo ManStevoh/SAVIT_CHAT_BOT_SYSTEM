@@ -97,6 +97,7 @@ class PlatformSettingsController extends Controller
             'openaiApiKey' => $this->maskSecret($settings, 'openai_api_key'),
             'openaiModel' => $data['openai_model'] ?? null,
             'openaiMaxTokens' => isset($data['openai_max_tokens']) ? (int) $data['openai_max_tokens'] : null,
+            'devModeEnabled' => (bool) ($data['dev_mode_enabled'] ?? false),
             'sessionTimeoutMinutes' => isset($data['session_timeout_minutes']) ? (int) $data['session_timeout_minutes'] : null,
             'maxLoginAttempts' => isset($data['max_login_attempts']) ? (int) $data['max_login_attempts'] : null,
             'passwordMinLength' => isset($data['password_min_length']) ? (int) $data['password_min_length'] : null,
@@ -296,6 +297,7 @@ class PlatformSettingsController extends Controller
             'recaptchaEnabled' => 'recaptcha_enabled',
             'recaptchaSiteKey' => 'recaptcha_site_key',
             'recaptchaSecretKey' => 'recaptcha_secret_key',
+            'devModeEnabled' => 'dev_mode_enabled',
         ];
         $before = $settings->exists ? $settings->only(array_values($map)) : [];
         // Never persist UI mask placeholders — those fields are returned as ******** on GET.

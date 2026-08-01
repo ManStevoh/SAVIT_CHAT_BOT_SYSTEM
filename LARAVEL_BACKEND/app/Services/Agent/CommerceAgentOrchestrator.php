@@ -17,10 +17,14 @@ use App\Services\Agent\Platform\AgentTrustService;
 use App\Services\Agent\Platform\BusinessWorldModelService;
 use App\Services\Agent\Platform\OrganizationalMemoryService;
 use App\Services\Agent\Platform\SkillModuleRegistry;
+use App\Services\AI\AiLearningConfig;
 use App\Services\AI\ReplyGuardService;
 use App\Services\AI\SystemPromptBuilder;
+use App\Services\AI\TokenEstimator;
 use App\Services\Conversation\ConversationLearningRecorder;
 use App\Services\ConversationLearningService;
+use App\Support\MessageSanitizer;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Primary conversational OS for commerce — tool-using agent that owns the customer journey.
@@ -51,6 +55,7 @@ final class CommerceAgentOrchestrator
         protected UnifiedCompanyBrainService $companyBrain,
         protected AgentCustomerIntelligenceContext $customerIntelligence,
         protected ConversationLearningService $learningService,
+        protected AiLearningConfig $learningConfig,
     ) {}
 
     /**
@@ -70,6 +75,12 @@ final class CommerceAgentOrchestrator
         );
         $reasoning = $cognitiveContext['reasoning'];
 
+        // Reasoning fallback — when trace is unavailable, inject minimal guidance
+        if (($reasoning['trace'] ?? null) === null) {
+            $cognitiveContext['prompt_block'] = ($cognitiveContext['prompt_block'] ?? '')
+                ."\nReasoning unavailable — rely on customer message, tool results, and business profile. Prefer tools over assumptions.";
+        }
+
         $context = new AgentToolContext($company, $chat, $customerPhone, $customerName, $incomingMessage);
         $messages = $this->buildMessages($company, $chat, $context, $incomingMessage, $cognitiveContext['prompt_block'] ?? '');
 
@@ -80,7 +91,8 @@ final class CommerceAgentOrchestrator
         $handoff = false;
         $orderFlowReply = null;
         $paymentDetailsReply = null;
-        $forcedToolNudgeUsed = false;
+        $forcedToolNudgeCount = 0;
+        $maxForcedNudges = 2;
         $trace = is_array($reasoning['trace'] ?? null) ? $reasoning['trace'] : [];
         $actionKind = mb_strtolower(trim((string) ($trace['action_kind'] ?? '')));
         $actionRequired = array_key_exists('action_required', $trace)
@@ -107,12 +119,18 @@ final class CommerceAgentOrchestrator
 
             if ($result->toolCalls === []) {
                 if ($result->content !== null && trim($result->content) !== '') {
-                    if (! $forcedToolNudgeUsed && $this->shouldForceDoActionTool($actionRequired, $actionKind, $toolsUsed, $wantsHuman)) {
-                        $forcedToolNudgeUsed = true;
+                    // Detect circular stalling replies ("let me know", "just let me know")
+                    $isCircularReply = preg_match('/\b(?:let me know|just let me know|feel free to|whenever you\'re ready)\b/iu', trim($result->content));
+
+                    if (($forcedToolNudgeCount < $maxForcedNudges) && ($isCircularReply || $this->shouldForceDoActionTool($actionRequired, $actionKind, $toolsUsed, $wantsHuman))) {
+                        $forcedToolNudgeCount++;
                         $messages[] = ['role' => 'assistant', 'content' => trim($result->content)];
+                        $nudgeText = $isCircularReply
+                            ? 'SYSTEM: Do NOT repeat the offer or ask the customer to confirm again. The customer already said yes. Execute the action NOW with the appropriate tool. If they want to order, call process_order_message. If they want to pay, call share_payment_details.'
+                            : $this->forcedDoActionNudge($actionKind);
                         $messages[] = [
-                            'role' => 'user',
-                            'content' => $this->forcedDoActionNudge($actionKind),
+                            'role' => 'system',
+                            'content' => $nudgeText,
                         ];
                         continue;
                     }
@@ -343,8 +361,9 @@ final class CommerceAgentOrchestrator
             }
         }
 
+        $sanitizedMessage = MessageSanitizer::sanitize($incomingMessage);
         if ($history->isEmpty() || $history->last()?->content !== $incomingMessage) {
-            $messages[] = ['role' => 'user', 'content' => $incomingMessage];
+            $messages[] = ['role' => 'user', 'content' => $sanitizedMessage];
         }
 
         return $messages;
@@ -361,6 +380,7 @@ You are this business's conversational operating system — the main front line 
 
 Understand intent from meaning in any language or style — never wait for fixed keywords.
 Read the full thread: if you asked a question or offered a next step, interpret the customer's reply as a response to that offer (affirmations, slang, short replies all count).
+CRITICAL: When the customer says "yes", "ok", "proceed", "sure", "go ahead", "I want to", or any affirmative — execute the action immediately with the appropriate tool. NEVER reply with "let me know if you're ready" or "just let me know" after a customer has already confirmed. Act, don't ask again.
 Classify each turn: inform vs do. If something must be done, execute the matching tool(s) in this turn. Do not only promise. Do not jump to transfer_to_human when a capability can finish the open thread.
 Your available tools are the full capability surface — pick by what the action needs.
 Be fluent and human; keep replies continuous with the prior turn so the chat never feels confusing. Never invent prices, stock, payment methods, or policies. Never expose tool names or internal labels to the customer.
@@ -398,7 +418,9 @@ TEXT;
             $cognitiveBlock,
         ]);
 
-        return implode("\n\n", $parts);
+        $prompt = implode("\n\n", $parts);
+
+        return $this->trimSystemPromptToTokenBudget($prompt, $this->learningConfig->maxPromptTokens());
     }
 
     /**
@@ -416,6 +438,34 @@ TEXT;
         );
 
         return $reply;
+    }
+
+    /**
+     * Trim the Agent OS system prompt to fit within the token budget,
+     * dropping least-critical context blocks from the bottom first.
+     */
+    private function trimSystemPromptToTokenBudget(string $prompt, int $budget): string
+    {
+        // Reserve tokens for conversation history + reply + user message
+        $historyLimit = (int) config('agent.conversation_history_limit', 24);
+        $reserved = 800 + 500 + ($historyLimit * 100);
+        $available = $budget - $reserved;
+
+        if ($available <= 0 || TokenEstimator::estimate($prompt) <= $available) {
+            return $prompt;
+        }
+
+        $lines = explode("\n", $prompt);
+        while ($lines !== [] && TokenEstimator::estimate(implode("\n", $lines)) > $available) {
+            array_pop($lines);
+        }
+
+        Log::info('Agent OS system prompt trimmed to fit token budget', [
+            'original_tokens' => TokenEstimator::estimate($prompt),
+            'budget' => $available,
+        ]);
+
+        return implode("\n", $lines);
     }
 
     /**

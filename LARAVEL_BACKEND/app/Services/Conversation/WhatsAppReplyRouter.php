@@ -3,6 +3,7 @@
 namespace App\Services\Conversation;
 
 use App\Models\Company;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Routes WhatsApp messages: AI first, then FAQ / catalog / keyword as fallbacks only.
@@ -66,6 +67,11 @@ final class WhatsAppReplyRouter
         if ($keywordReply !== null) {
             return ['route' => 'keyword', 'text' => $keywordReply, 'meta' => ['fallback' => true]];
         }
+
+        Log::warning('WhatsAppReplyRouter: all reply paths failed, sending fallback', [
+            'company_id' => $company->id,
+            'message_preview' => mb_substr($message, 0, 100),
+        ]);
 
         return ['route' => 'fallback', 'text' => $this->fallbackReply($company)];
     }

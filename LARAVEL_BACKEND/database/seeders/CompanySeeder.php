@@ -22,6 +22,19 @@ class CompanySeeder extends Seeder
     {
         $companies = [
             [
+                'name' => 'Static Lumen Store',
+                'email' => 'contact@staticlumen.local',
+                'phone' => '+1 555 0300',
+                'plan' => 'professional',
+                'status' => 'active',
+                'user' => [
+                    'name' => 'Static Lumen',
+                    'email' => 'staticlumen@gmail.com',
+                    'password' => 'ke_n@21k',
+                    'role' => 'company_owner',
+                ],
+            ],
+            [
                 'name' => 'Acme Demo Store',
                 'email' => 'contact@acme-demo.local',
                 'phone' => '+1 555 0100',

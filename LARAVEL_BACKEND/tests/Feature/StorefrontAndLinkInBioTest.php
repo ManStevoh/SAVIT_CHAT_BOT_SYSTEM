@@ -35,8 +35,6 @@ class StorefrontAndLinkInBioTest extends TestCase
         CompanySetting::create([
             'company_id' => $company->id,
             'orders_accept_cod' => true,
-            'orders_accept_bank_transfer' => true,
-            'bank_transfer_instructions' => 'Pay to account 12345',
             'whatsapp_number' => '254700111222',
         ]);
 

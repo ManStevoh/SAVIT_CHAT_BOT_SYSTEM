@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SAVIT Chatbot System — Codebase Developer Guide</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 15mm 20mm 15mm;
+    @bottom-right {
+      content: counter(page);
+      font-size: 9pt;
+      font-family: 'Inter', sans-serif;
+      color: #64748b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.6;
+    font-size: 10.5pt;
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+
+  .cover {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 88vh;
+    padding: 40px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    color: #ffffff;
+    border-radius: 12px;
+  }
+
+  .cover h1 {
+    font-size: 32pt;
+    font-weight: 800;
+    margin: 0 0 10px 0;
+    letter-spacing: -0.5px;
+    color: #38bdf8;
+  }
+  .cover .subtitle {
+    font-size: 16pt;
+    color: #94a3b8;
+    font-weight: 400;
+    margin-bottom: 40px;
+  }
+  .cover .badge {
+    display: inline-block;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 10pt;
+    font-weight: 600;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    margin-bottom: 20px;
+    width: fit-content;
+  }
+
+  .cover-meta {
+    margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    font-size: 9.5pt;
+    color: #cbd5e1;
+  }
+
+  h1, h2, h3, h4 {
+    color: #0f172a;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  h1 { font-size: 20pt; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px; }
+  h2 { font-size: 15pt; color: #1e1b4b; margin-top: 24px; margin-bottom: 10px; }
+  h3 { font-size: 12pt; color: #0284c7; margin-top: 18px; margin-bottom: 8px; }
+
+  p { margin-bottom: 12px; }
+
+  .toc {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px 25px;
+    margin-bottom: 30px;
+  }
+  .toc h3 { margin-top: 0; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
+  .toc ul { list-style: none; padding-left: 0; margin: 0; }
+  .toc li { margin-bottom: 8px; font-size: 10pt; }
+  .toc li a { color: #0284c7; text-decoration: none; font-weight: 500; }
+  .toc li span.num { color: #64748b; font-weight: 600; width: 25px; display: inline-block; }
+
+  .card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .card-header {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 11pt;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .alert {
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 16px 0;
+    font-size: 9.5pt;
+  }
+  .alert-info { background: #f0f9ff; border-left: 4px solid #0284c7; color: #0369a1; }
+  .alert-warning { background: #fffbe6; border-left: 4px solid #d97706; color: #92400e; }
+  .alert-tip { background: #f0fdf4; border-left: 4px solid #16a34a; color: #15803d; }
+
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9pt;
+  }
+
+  pre {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 14px 18px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 9.5pt;
+  }
+  th, td {
+    border: 1px solid #e2e8f0;
+    padding: 10px 12px;
+    text-align: left;
+  }
+  th {
+    background: #f8fafc;
+    color: #0f172a;
+    font-weight: 600;
+  }
+  tr:nth-child(even) { background: #fdfdfd; }
+
+  .workflow-step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .step-num {
+    background: #0284c7;
+    color: white;
+    font-weight: 700;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9pt;
+    flex-shrink: 0;
+  }
+  .step-body { flex-grow: 1; }
+  .step-title { font-weight: 700; color: #0f172a; font-size: 10pt; }
+
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="badge">DEVELOPER ARCHITECTURE MANUAL</div>
+  <h1>SAVIT Chatbot System &amp; EssemChat Platform</h1>
+  <div class="subtitle">Comprehensive Codebase Guide &amp; Onboarding Playbook</div>
+
+  <div class="cover-meta">
+    <div>
+      <strong>Target Audience:</strong> Backend &amp; Fullstack Engineers<br>
+      <strong>Architecture Pattern:</strong> Monolithic Laravel + Inertia.js React SPA<br>
+      <strong>Core Domains:</strong> E-commerce, WhatsApp AI Bot, Tenant OS
+    </div>
+    <div>
+      <strong>Repository:</strong> <code>SAVIT_CHAT_BOT_SYSTEM</code><br>
+      <strong>Generated:</strong> July 2026<br>
+      <strong>Version:</strong> 1.0 Production
+    </div>
+  </div>
+</div>
+
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ul>
+    <li><span class="num">1.</span> <strong>Executive Summary &amp; Platform Overview</strong></li>
+    <li><span class="num">2.</span> <strong>Repository Layout &amp; Key File Locations</strong></li>
+    <li><span class="num">3.</span> <strong>Monolithic Architecture &amp; Data Model</strong></li>
+    <li><span class="num">4.</span> <strong>The AI Agent Engine &amp; Cognitive Brain</strong></li>
+    <li><span class="num">5.</span> <strong>Frontend Architecture (Inertia.js + React)</strong></li>
+    <li><span class="num">6.</span> <strong>Step-by-Step Developer Workflows</strong></li>
+    <li><span class="num">7.</span> <strong>Production Build, Deployment &amp; Operations</strong></li>
+    <li><span class="num">8.</span> <strong>Best Practices &amp; Key Principles</strong></li>
+  </ul>
+</div>
+
+<h1>1. Executive Summary &amp; Platform Overview</h1>
+<p>The <strong>EssemChat / SAVIT Chatbot System</strong> is an enterprise multi-tenant e-commerce platform integrated with an automated WhatsApp sales AI agent, storefront management, cart/order recovery system, and multi-gateway payment processing.</p>
+
+<div class="card">
+  <div class="card-header">💡 Architectural Philosophy</div>
+  <p>Rather than splitting frontend and backend into detached microservices (which increases hosting complexity on standard cPanel environments), the codebase employs a <strong>Monolithic Single-Domain Architecture</strong>. Laravel handles data, authentication, API routes, and Inertia server bridges, while React handles dynamic client-side rendering seamlessly without requiring an explicit external REST client build step.</p>
+</div>
+
+<h3>Core Capabilities:</h3>
+<ul>
+  <li><strong>Multi-Tenant E-Commerce:</strong> Each tenant (<code>Company</code>) gets isolated products, settings, orders, payment gateways, and WhatsApp configurations.</li>
+  <li><strong>AI Cognitive Engine:</strong> Powered by <code>UnifiedCompanyBrainService</code> and <code>ReplyGuardService</code>, executing tool calls (order processing, catalog queries, cart recovery) over WhatsApp.</li>
+  <li><strong>Integrated Payment Gateways:</strong> Native integrations for <strong>Paystack</strong>, <strong>Flutterwave</strong>, <strong>Pesapal</strong>, and manual cash delivery.</li>
+  <li><strong>Single-Host Deployment:</strong> Tailored for deployment on cPanel or Linux VPS under a single document root (<code>public/</code>).</li>
+</ul>
+
+<h1>2. Repository Layout &amp; Key File Locations</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Directory / File Path</th>
+      <th>Role &amp; Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>LARAVEL_BACKEND/app/Http/Controllers/</code></td>
+      <td>API &amp; Web Controllers partitioned into <code>Api/Admin</code>, <code>Api/Company</code>, and <code>Web</code>.</td>
+    </tr>
+    <tr>
+      <td><code>LARAVEL_BACKEND/app/Models/</code></td>
+      <td>Eloquent Database Models (<code>Company</code>, <code>Product</code>, <code>Order</code>, <code>PaymentGateway</code>, etc.).</td>
+    </tr>
+    <tr>
+      <td><code>LARAVEL_BACKEND/app/Services/Agent/Brain/</code></td>
+      <td>AI Cognitive Brain (<code>UnifiedCompanyBrainService.php</code>) &amp; tool dispatch system.</td>
+    </tr>
+    <tr>
+      <td><code>LARAVEL_BACKEND/app/Services/</code></td>
+      <td>Domain business logic (<code>OrderPaymentService</code>, <code>PaystackService</code>, <code>StorefrontService</code>).</td>
+    </tr>
+    <tr>
+      <td><code>LARAVEL_BACKEND/resources/js/Pages/</code></td>
+      <td>Inertia React pages (<code>admin/</code>, <code>dashboard/</code>, <code>store/</code>, <code>pay/</code>).</td>
+    </tr>
+    <tr>
+      <td><code>LARAVEL_BACKEND/resources/js/lib/</code></td>
+      <td>API action helpers (<code>api-actions.ts</code>) and SWR fetch hooks (<code>api-hooks.ts</code>).</td>
+    </tr>
+    <tr>
+      <td><code>LARAVEL_BACKEND/routes/</code></td>
+      <td>Laravel route definitions: <code>api.php</code>, <code>web.php</code>, <code>console.php</code>.</td>
+    </tr>
+    <tr>
+      <td><code>scripts/pack-cpanel.py</code></td>
+      <td>Automated script to build assets and generate production deployment <code>EssemChat-cPanel.zip</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h1>3. Monolithic Architecture &amp; Data Model</h1>
+
+<h2>3.1 Multi-Tenant Isolation Pattern</h2>
+<p>Every tenant is represented by a <code>Company</code> record. Data models like <code>Product</code>, <code>Order</code>, <code>CompanySetting</code>, and <code>PaymentGateway</code> maintain a <code>company_id</code> foreign key.</p>
+
+<pre><code>// Example: Tenant Scoped Query in Controllers
+$companyId = $request->user()->company_id;
+$orders = Order::where('company_id', $companyId)
+    ->with(['items', 'paymentGateway'])
+    ->latest()
+    ->paginate(15);
+</code></pre>
+
+<h2>3.2 Core Entity Map</h2>
+<ul>
+  <li><code>Company</code>: Tenant profile, domain name, currency, and AI features.</li>
+  <li><code>User</code>: System users linked to a company (Roles: <code>admin</code>, <code>owner</code>, <code>agent</code>).</li>
+  <li><code>Product</code>: E-commerce inventory item (price, stock, images, category).</li>
+  <li><code>Order</code>: Customer purchase containing line items, payment status, shipping details, and recovery status.</li>
+  <li><code>PaymentGateway</code>: Tenant-specific credentials (API keys, webhooks) for payment providers.</li>
+  <li><code>Conversation</code> &amp; <code>Message</code>: Log of customer communications via WhatsApp bot.</li>
+</ul>
+
+<h1>4. The AI Agent Engine &amp; Cognitive Brain</h1>
+<p>The AI component is located under <code>LARAVEL_BACKEND/app/Services/Agent/Brain/UnifiedCompanyBrainService.php</code>.</p>
+
+<div class="card">
+  <div class="card-header">🤖 Agent Message Lifecycle</div>
+  <div class="workflow-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Incoming Meta Webhook</div>
+      <div>WhatsApp message arrives at <code>Api/WhatsAppWebhookController</code>.</div>
+    </div>
+  </div>
+  <div class="workflow-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Cognitive Context Building</div>
+      <div><code>UnifiedCompanyBrainService</code> retrieves conversation history, company catalog context, and active cart state.</div>
+    </div>
+  </div>
+  <div class="workflow-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Tool Execution &amp; Intent Match</div>
+      <div>The Agent executes tool functions (e.g. <code>ProcessOrderMessageTool</code>, checking product availability, or generating payment links).</div>
+    </div>
+  </div>
+  <div class="workflow-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">ReplyGuard Safety Check</div>
+      <div><code>ReplyGuardService</code> verifies AI response against business constraints before dispatching to Meta API.</div>
+    </div>
+  </div>
+</div>
+
+<h1>5. Frontend Architecture (Inertia.js + React)</h1>
+<p>The application uses <strong>Inertia.js</strong> to bridge Laravel controllers directly with React components. Controllers return Inertia responses instead of raw blade templates or pure JSON:</p>
+
+<pre><code>// Example Laravel Inertia Controller Response
+return Inertia::render('dashboard/settings/page', [
+    'settings' => $company->settings,
+    'gateways' => $company->paymentGateways,
+]);
+</code></pre>
+
+<h3>React Component Directory (`resources/js/Pages/`)</h3>
+<ul>
+  <li><code>admin/</code> — Platform super-admin dashboard (tenant metrics, global settings).</li>
+  <li><code>dashboard/</code> — Tenant seller management portal (inventory, settings, orders, AI setup).</li>
+  <li><code>store/</code> — Customer-facing storefront and product catalog pages.</li>
+  <li><code>pay/</code> — Secure checkout &amp; payment gateway redirect page.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h1>6. Step-by-Step Developer Workflows</h1>
+
+<h2>Scenario A: Adding a New Field or Setting to Tenant Dashboard</h2>
+<div class="workflow-step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Database Migration</div>
+    <div>Create migration in <code>database/migrations/</code> if adding column to DB.</div>
+  </div>
+</div>
+<div class="workflow-step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Update Eloquent Model</div>
+    <div>Add attribute to <code>$fillable</code> in <code>app/Models/CompanySetting.php</code>.</div>
+  </div>
+</div>
+<div class="workflow-step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Update Controller &amp; API Helper</div>
+    <div>Update <code>SettingsController.php</code> and add frontend mutation function in <code>resources/js/lib/api-actions.ts</code>.</div>
+  </div>
+</div>
+<div class="workflow-step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <div class="step-title">Update React Interface</div>
+    <div>Modify <code>resources/js/Pages/dashboard/settings/page.tsx</code> to include input control.</div>
+  </div>
+</div>
+
+<h2>Scenario B: Building &amp; Packaging for Production</h2>
+<p>Always use the dedicated packaging script rather than manual zipping to guarantee clean builds without dev artifacts:</p>
+
+<pre><code># Run from repository root
+python3 scripts/pack-cpanel.py
+</code></pre>
+
+<div class="alert alert-tip">
+  <strong>Packaging Script Output:</strong> Generates <code>EssemChat-cPanel.zip</code> at repository root containing optimized autoloader dependencies, compiled Vite assets in <code>public/build/</code>, and excluded dev modules.
+</div>
+
+<h1>7. Production Build, Deployment &amp; Operations</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Environment / Target</th>
+      <th>Command / Procedure</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Local Development</strong></td>
+      <td>Run <code>php artisan serve</code> in terminal 1 &amp; <code>npm run dev</code> in terminal 2 inside <code>LARAVEL_BACKEND/</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Automated Packaging</strong></td>
+      <td>Run <code>python3 scripts/pack-cpanel.py</code> from repo root.</td>
+    </tr>
+    <tr>
+      <td><strong>cPanel Upload</strong></td>
+      <td>Upload <code>EssemChat-cPanel.zip</code> to cPanel File Manager, extract, set document root to <code>public/</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Database Migrations</strong></td>
+      <td>Run <code>php artisan migrate --force</code> in cPanel Terminal or via cron command.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>8. Developer Golden Rules &amp; Best Practices</h1>
+
+<div class="alert alert-warning">
+  <strong>1. Never Swallow Errors or Return Silent Dummy Fallbacks:</strong> Always trace root causes in log tracebacks when debugging failures.
+</div>
+
+<div class="alert alert-info">
+  <strong>2. Preserve API Contracts:</strong> When changing model attributes or function signatures, inspect every invocation across both frontend (`api-actions.ts`) and backend controllers.
+</div>
+
+<div class="alert alert-tip">
+  <strong>3. Verification Command Requirement:</strong> Never declare work finished without executing build checks (`npm run build`) or unit tests.
+</div>
+
+</body>
+</html>

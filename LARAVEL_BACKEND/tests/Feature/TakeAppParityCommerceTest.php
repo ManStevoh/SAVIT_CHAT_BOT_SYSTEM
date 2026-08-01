@@ -49,8 +49,6 @@ class TakeAppParityCommerceTest extends TestCase
             'company_id' => $company->id,
             'orders_collect_payment_enabled' => true,
             'orders_accept_cod' => true,
-            'orders_accept_bank_transfer' => true,
-            'bank_transfer_instructions' => 'Pay to Acc 123456 Bank XYZ',
             'order_payment_manual_instructions' => 'Till 99999',
             'delivery_fees_enabled' => true,
             'default_delivery_fee' => 5,

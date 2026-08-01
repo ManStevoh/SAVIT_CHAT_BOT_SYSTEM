@@ -327,23 +327,6 @@ export default function DashboardStorefrontPage() {
             />
             Accept cash on delivery (COD)
           </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={ordersAcceptBankTransfer}
-              onChange={(e) => setOrdersAcceptBankTransfer(e.target.checked)}
-            />
-            Accept bank transfer
-          </label>
-          <div>
-            <Label>Bank transfer instructions</Label>
-            <Textarea
-              value={bankTransferInstructions}
-              onChange={(e) => setBankTransferInstructions(e.target.value)}
-              rows={3}
-              placeholder="Bank name, account number, reference format…"
-            />
-          </div>
         </CardContent>
       </Card>
 

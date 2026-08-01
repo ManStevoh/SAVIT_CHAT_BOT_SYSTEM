@@ -27,7 +27,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Building2, MessageSquare, Bot, Users, Bell, Plus, Trash2, Check, CreditCard } from "lucide-react"
+import {
+  Building2,
+  MessageSquare,
+  Bot,
+  Users,
+  Bell,
+  Plus,
+  Trash2,
+  Check,
+  CreditCard,
+  Smartphone,
+  Zap,
+  Banknote,
+  FileText,
+  Package,
+  Clock,
+  AlertCircle,
+  Settings2,
+  Loader2,
+} from "lucide-react"
 import { OnboardingInterviewPanel } from "@/components/agent/OnboardingInterviewPanel"
 
 function isMasked(val: unknown): boolean {
@@ -230,7 +249,7 @@ export default function SettingsPage() {
     if (activeTab === "whatsapp") {
       loadWhatsAppStatus()
       loadWhatsAppTemplates()
-      getWhatsAppCampaignAudience(campaignSegment).then((a) => setCampaignAudience(a.uniqueCustomers)).catch(() => {})
+      getWhatsAppCampaignAudience(campaignSegment).then((a) => setCampaignAudience(a.uniqueCustomers)).catch(() => { })
     }
   }, [activeTab, campaignSegment])
 
@@ -421,8 +440,6 @@ export default function SettingsPage() {
   const [ordersAcceptStripe, setOrdersAcceptStripe] = useState(false)
   const [ordersAcceptPaystack, setOrdersAcceptPaystack] = useState(false)
   const [ordersAcceptCod, setOrdersAcceptCod] = useState(false)
-  const [ordersAcceptBankTransfer, setOrdersAcceptBankTransfer] = useState(false)
-  const [bankTransferInstructions, setBankTransferInstructions] = useState('')
   const [deliveryFeesEnabled, setDeliveryFeesEnabled] = useState(false)
   const [defaultDeliveryFee, setDefaultDeliveryFee] = useState<string>("")
   const [freeDeliveryAbove, setFreeDeliveryAbove] = useState<string>("")
@@ -438,14 +455,30 @@ export default function SettingsPage() {
   const [mpesaEnv, setMpesaEnv] = useState<'sandbox' | 'production'>('sandbox')
   const [stripeSecret, setStripeSecret] = useState('')
   const [stripeCurrency, setStripeCurrency] = useState('usd')
-  /** User clicked Replace on a masked M-Pesa / Stripe secret field */
+  const [paystackSecretKey, setPaystackSecretKey] = useState('')
+  const [paystackPublicKey, setPaystackPublicKey] = useState('')
+  const [paystackCurrency, setPaystackCurrency] = useState('ngn')
   const [replacingMpesaSecret, setReplacingMpesaSecret] = useState<Record<string, boolean>>({})
   const [replacingStripeSecret, setReplacingStripeSecret] = useState(false)
+  const [replacingPaystackSecret, setReplacingPaystackSecret] = useState(false)
+
+  // Per-option saving and saved states for Order Payments tab
+  const [optionSaving, setOptionSaving] = useState<Record<string, boolean>>({})
+  const [optionSaved, setOptionSaved] = useState<Record<string, boolean>>({})
+
+  const setOptionSavingState = (key: string, isSaving: boolean) => {
+    setOptionSaving((prev) => ({ ...prev, [key]: isSaving }))
+  }
+
+  const setOptionSavedState = (key: string) => {
+    setOptionSaved((prev) => ({ ...prev, [key]: true }))
+    setTimeout(() => {
+      setOptionSaved((prev) => ({ ...prev, [key]: false }))
+    }, 3000)
+  }
 
   /** AI tab — persisted via PUT /api/company/settings (aiGreeting, aiTone, booleans). Model is platform-wide, not saved here. */
-  const [aiGreeting, setAiGreeting] = useState(
-    'You are a friendly and helpful customer service assistant for a restaurant. Be polite, professional, and helpful.'
-  )
+  const [aiGreeting, setAiGreeting] = useState('')
   const [aiTone, setAiTone] = useState('balanced')
   const [aiModelMode, setAiModelMode] = useState<'auto' | 'platform_default' | 'specific'>('auto')
   const [aiModelId, setAiModelId] = useState<string>('')
@@ -477,6 +510,7 @@ export default function SettingsPage() {
   const [agentCouncilEnabled, setAgentCouncilEnabled] = useState(false)
   const [learnFromConversations, setLearnFromConversations] = useState(true)
   const [learnFromConversationsEditable, setLearnFromConversationsEditable] = useState(true)
+  const [devModeEnabled, setDevModeEnabled] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [aiSaving, setAiSaving] = useState(false)
   const [aiMessage, setAiMessage] = useState<string | null>(null)
@@ -527,8 +561,6 @@ export default function SettingsPage() {
       if (settings.ordersAcceptStripe != null) setOrdersAcceptStripe(settings.ordersAcceptStripe)
       if (settings.ordersAcceptPaystack != null) setOrdersAcceptPaystack(settings.ordersAcceptPaystack)
       if (settings.ordersAcceptCod != null) setOrdersAcceptCod(settings.ordersAcceptCod)
-      if (settings.ordersAcceptBankTransfer != null) setOrdersAcceptBankTransfer(settings.ordersAcceptBankTransfer)
-      if (settings.bankTransferInstructions != null) setBankTransferInstructions(settings.bankTransferInstructions)
       if (settings.deliveryFeesEnabled != null) setDeliveryFeesEnabled(settings.deliveryFeesEnabled)
       if (settings.defaultDeliveryFee != null) setDefaultDeliveryFee(String(settings.defaultDeliveryFee))
       if (settings.freeDeliveryAbove != null) setFreeDeliveryAbove(String(settings.freeDeliveryAbove))
@@ -589,6 +621,7 @@ export default function SettingsPage() {
       if (settings.digitalTwin) setDigitalTwin(settings.digitalTwin)
       if (settings.agentCouncilEnabled != null) setAgentCouncilEnabled(settings.agentCouncilEnabled)
       if (settings.learnFromConversations != null) setLearnFromConversations(settings.learnFromConversations)
+      if (settings.devModeEnabled != null) setDevModeEnabled(settings.devModeEnabled)
       if (settings.learnFromConversationsEditable != null) {
         setLearnFromConversationsEditable(settings.learnFromConversationsEditable)
       }
@@ -642,7 +675,7 @@ export default function SettingsPage() {
         const openai = data.providers?.find((p) => p.slug === 'openai')
         setOpenaiKeyConfigured(!!openai?.apiKeyConfigured)
       })
-      .catch(() => {})
+      .catch(() => { })
     getCompanyAiUsage('30d')
       .then((data) => {
         setAiUsageSummary(data.summary)
@@ -666,7 +699,7 @@ export default function SettingsPage() {
     if (result.success) {
       setOpenaiApiKey('')
       setOpenaiKeyConfigured(true)
-      getCompanyAiUsage('30d').then((data) => setAiUsageSummary(data.summary)).catch(() => {})
+      getCompanyAiUsage('30d').then((data) => setAiUsageSummary(data.summary)).catch(() => { })
     }
     setAiMessage(result.success ? 'API key settings saved.' : (result.message ?? 'Failed to save API key.'))
   }
@@ -724,6 +757,7 @@ export default function SettingsPage() {
       digitalTwin: Object.keys(digitalTwin).length > 0 ? digitalTwin : null,
       agentCouncilEnabled,
       learnFromConversations,
+      devModeEnabled,
       notificationsEnabled,
     })
     setAiSaving(false)
@@ -760,26 +794,26 @@ export default function SettingsPage() {
     mutate("company-settings")
   }
 
-  const handleOrderPaymentsSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setOrderPaymentsMessage(null)
-    setOrderPaymentsSaving(true)
-    const payload: Parameters<typeof updateSettings>[0] = {
-      ordersCollectPaymentEnabled,
-      orderPaymentManualInstructions: orderPaymentManualInstructions.trim() || null,
-      ordersAcceptMpesa,
-      ordersAcceptStripe,
-      ordersAcceptPaystack,
-      ordersAcceptCod,
-      ordersAcceptBankTransfer,
-      bankTransferInstructions: bankTransferInstructions.trim() || null,
-      deliveryFeesEnabled,
-      defaultDeliveryFee: defaultDeliveryFee.trim() ? parseFloat(defaultDeliveryFee) : undefined,
-      freeDeliveryAbove: freeDeliveryAbove.trim() ? parseFloat(freeDeliveryAbove) : null,
-      paymentRecoveryEnabled,
+  const handleToggleOption = async (
+    key: string,
+    stateSetter: (val: boolean) => void,
+    newVal: boolean,
+    payloadKey: keyof Parameters<typeof updateSettings>[0]
+  ) => {
+    stateSetter(newVal)
+    setOptionSavingState(key, true)
+    const res = await updateSettings({ [payloadKey]: newVal })
+    setOptionSavingState(key, false)
+    if (res.success) {
+      setOptionSavedState(key)
+      mutate("company-settings")
     }
-    if (mpesaShortcode.trim()) {
-      payload.orderPaymentMpesaConfig = {
+  }
+
+  const handleSaveMpesaConfig = async () => {
+    setOptionSavingState('mpesaConfig', true)
+    const res = await updateSettings({
+      orderPaymentMpesaConfig: {
         type: mpesaType,
         shortcode: mpesaShortcode.trim(),
         passkey: mpesaPasskey.trim(),
@@ -787,19 +821,76 @@ export default function SettingsPage() {
         consumer_secret: mpesaConsumerSecret.trim() || undefined,
         env: mpesaEnv,
       }
+    })
+    setOptionSavingState('mpesaConfig', false)
+    if (res.success) {
+      setReplacingMpesaSecret({})
+      setOptionSavedState('mpesaConfig')
+      mutate("company-settings")
     }
-    if (stripeSecret.trim() || settings?.orderPaymentStripeConfigured) {
-      payload.orderPaymentStripeConfig = {
+  }
+
+  const handleSaveStripeConfig = async () => {
+    setOptionSavingState('stripeConfig', true)
+    const res = await updateSettings({
+      orderPaymentStripeConfig: {
         secret: stripeSecret.trim(),
         currency: stripeCurrency.trim() || "usd",
       }
-    }
-    const result = await updateSettings(payload)
-    setOrderPaymentsSaving(false)
-    setOrderPaymentsMessage(result.success ? 'Saved. Customers can now choose these payment methods when placing orders.' : (result.message ?? 'Failed to save.'))
-    if (result.success) {
-      setReplacingMpesaSecret({})
+    })
+    setOptionSavingState('stripeConfig', false)
+    if (res.success) {
       setReplacingStripeSecret(false)
+      setOptionSavedState('stripeConfig')
+      mutate("company-settings")
+    }
+  }
+
+  const handleSavePaystackConfig = async () => {
+    setOptionSavingState('paystackConfig', true)
+    const res = await updateSettings({
+      ordersAcceptPaystack: true,
+    })
+    setOptionSavingState('paystackConfig', false)
+    if (res.success) {
+      setOptionSavedState('paystackConfig')
+      mutate("company-settings")
+    }
+  }
+
+  const handleClearPaystackConfig = async () => {
+    setOptionSavingState('paystackConfig', true)
+    const res = await updateSettings({
+      ordersAcceptPaystack: false,
+    })
+    setOptionSavingState('paystackConfig', false)
+    if (res.success) {
+      setOptionSavedState('paystackConfig')
+      mutate("company-settings")
+    }
+  }
+
+  const handleSaveManualInstructions = async () => {
+    setOptionSavingState('manualInstructions', true)
+    const res = await updateSettings({
+      orderPaymentManualInstructions: orderPaymentManualInstructions.trim() || null,
+    })
+    setOptionSavingState('manualInstructions', false)
+    if (res.success) {
+      setOptionSavedState('manualInstructions')
+      mutate("company-settings")
+    }
+  }
+
+  const handleSaveDeliveryFeesConfig = async () => {
+    setOptionSavingState('deliveryFeesConfig', true)
+    const res = await updateSettings({
+      defaultDeliveryFee: defaultDeliveryFee.trim() ? parseFloat(defaultDeliveryFee) : undefined,
+      freeDeliveryAbove: freeDeliveryAbove.trim() ? parseFloat(freeDeliveryAbove) : null,
+    })
+    setOptionSavingState('deliveryFeesConfig', false)
+    if (res.success) {
+      setOptionSavedState('deliveryFeesConfig')
       mutate("company-settings")
     }
   }
@@ -1648,232 +1739,232 @@ export default function SettingsPage() {
                       </p>
                     )}
 
-                  {agentCommerceEnabled && (
-                    <>
-                      <div className="flex items-center justify-between pl-4 border-l-2 border-primary/30">
-                        <div>
-                          <p className="font-medium text-foreground">Proactive agent outreach</p>
-                          <p className="text-sm text-muted-foreground">
-                            AI follows up on abandoned carts and personalizes payment confirmations
-                          </p>
-                        </div>
-                        <Switch checked={agentProactiveEnabled} onCheckedChange={setAgentProactiveEnabled} />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-foreground">Voice note replies (TTS)</p>
-                          <p className="text-sm text-muted-foreground">
-                            When customers send voice notes, reply with synthesized audio when possible
-                          </p>
-                        </div>
-                        <Switch checked={agentVoiceReplyEnabled} onCheckedChange={setAgentVoiceReplyEnabled} />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-foreground">Morning brief on WhatsApp</p>
-                          <p className="text-sm text-muted-foreground">
-                            Send the daily commerce brief to the owner via WhatsApp at 7:00 AM
-                          </p>
-                        </div>
-                        <Switch
-                          checked={agentMorningBriefWhatsappEnabled}
-                          onCheckedChange={setAgentMorningBriefWhatsappEnabled}
-                        />
-                      </div>
-
-                      {agentMorningBriefWhatsappEnabled && (
-                        <div className="space-y-2 pl-4 border-l-2 border-primary/30">
-                          <FieldLabel htmlFor="ownerWhatsappPhone">Owner WhatsApp number</FieldLabel>
-                          <Input
-                            id="ownerWhatsappPhone"
-                            value={ownerWhatsappPhone}
-                            onChange={(e) => setOwnerWhatsappPhone(e.target.value)}
-                            placeholder="e.g. 254712345678"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Falls back to company owner profile phone or company phone if empty.
-                          </p>
-                        </div>
-                      )}
-
-                      {webWidgetToken && (
-                        <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
-                          <p className="font-medium">Web chat widget</p>
-                          <p className="font-mono break-all text-muted-foreground">Token: {webWidgetToken}</p>
-                          {channelIngestSecret && (
-                            <p className="font-mono break-all text-muted-foreground">
-                              Webhook secret: {channelIngestSecret}
+                    {agentCommerceEnabled && (
+                      <>
+                        <div className="flex items-center justify-between pl-4 border-l-2 border-primary/30">
+                          <div>
+                            <p className="font-medium text-foreground">Proactive agent outreach</p>
+                            <p className="text-sm text-muted-foreground">
+                              AI follows up on abandoned carts and personalizes payment confirmations
                             </p>
-                          )}
-                          {channelWebhookUrls && (
-                            <div className="space-y-1 text-muted-foreground">
-                              <p>Email webhook: {channelWebhookUrls.email}</p>
-                              <p>Instagram DM: {channelWebhookUrls.instagramDm}</p>
-                              <p className="text-[11px]">Header: X-Channel-Ingest-Secret</p>
-                            </div>
-                          )}
-                          {widgetScriptUrl && companyIdForEmbed && (
-                            <pre className="overflow-x-auto rounded bg-background p-2 text-[10px] whitespace-pre-wrap">{`<script
+                          </div>
+                          <Switch checked={agentProactiveEnabled} onCheckedChange={setAgentProactiveEnabled} />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-foreground">Voice note replies (TTS)</p>
+                            <p className="text-sm text-muted-foreground">
+                              When customers send voice notes, reply with synthesized audio when possible
+                            </p>
+                          </div>
+                          <Switch checked={agentVoiceReplyEnabled} onCheckedChange={setAgentVoiceReplyEnabled} />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-foreground">Morning brief on WhatsApp</p>
+                            <p className="text-sm text-muted-foreground">
+                              Send the daily commerce brief to the owner via WhatsApp at 7:00 AM
+                            </p>
+                          </div>
+                          <Switch
+                            checked={agentMorningBriefWhatsappEnabled}
+                            onCheckedChange={setAgentMorningBriefWhatsappEnabled}
+                          />
+                        </div>
+
+                        {agentMorningBriefWhatsappEnabled && (
+                          <div className="space-y-2 pl-4 border-l-2 border-primary/30">
+                            <FieldLabel htmlFor="ownerWhatsappPhone">Owner WhatsApp number</FieldLabel>
+                            <Input
+                              id="ownerWhatsappPhone"
+                              value={ownerWhatsappPhone}
+                              onChange={(e) => setOwnerWhatsappPhone(e.target.value)}
+                              placeholder="e.g. 254712345678"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Falls back to company owner profile phone or company phone if empty.
+                            </p>
+                          </div>
+                        )}
+
+                        {webWidgetToken && (
+                          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+                            <p className="font-medium">Web chat widget</p>
+                            <p className="font-mono break-all text-muted-foreground">Token: {webWidgetToken}</p>
+                            {channelIngestSecret && (
+                              <p className="font-mono break-all text-muted-foreground">
+                                Webhook secret: {channelIngestSecret}
+                              </p>
+                            )}
+                            {channelWebhookUrls && (
+                              <div className="space-y-1 text-muted-foreground">
+                                <p>Email webhook: {channelWebhookUrls.email}</p>
+                                <p>Instagram DM: {channelWebhookUrls.instagramDm}</p>
+                                <p className="text-[11px]">Header: X-Channel-Ingest-Secret</p>
+                              </div>
+                            )}
+                            {widgetScriptUrl && companyIdForEmbed && (
+                              <pre className="overflow-x-auto rounded bg-background p-2 text-[10px] whitespace-pre-wrap">{`<script
   src="${widgetScriptUrl}"
   data-company-id="${companyIdForEmbed}"
   data-widget-token="${webWidgetToken}"
   data-api-base="${typeof window !== "undefined" ? window.location.origin : ""}"
   async
 ></script>`}</pre>
-                          )}
-                        </div>
-                      )}
-
-                      {Object.keys(agentBusinessGoalCatalog).length > 0 && (
-                        <Field>
-                          <FieldLabel>Business goals</FieldLabel>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            The agent optimizes conversations toward these objectives
-                          </p>
-                          <div className="space-y-2">
-                            {Object.entries(agentBusinessGoalCatalog).map(([key, label]) => (
-                              <label key={key} className="flex items-start gap-2 text-sm cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  className="mt-1"
-                                  checked={agentBusinessGoals.includes(key)}
-                                  onChange={(e) => {
-                                    setAgentBusinessGoals((prev) =>
-                                      e.target.checked ? [...prev, key] : prev.filter((g) => g !== key)
-                                    )
-                                  }}
-                                />
-                                <span>
-                                  <span className="font-medium text-foreground">{key.replace(/_/g, ' ')}</span>
-                                  <span className="block text-muted-foreground text-xs">{label}</span>
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        </Field>
-                      )}
-
-                      <OnboardingInterviewPanel
-                        onComplete={() => {
-                          mutate("company-settings")
-                        }}
-                      />
-
-                      <Field>
-                        <FieldLabel>Business DNA</FieldLabel>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Same question, different voice — a luxury brand and a friendly café should answer differently.
-                        </p>
-                        <Select
-                          value={businessDnaPreset}
-                          onValueChange={(v) =>
-                            applyBusinessDnaPreset(v as 'industry_default' | 'luxury_brand' | 'friendly_cafe' | 'custom')
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose a personality" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="industry_default">
-                              Industry default ({industry})
-                            </SelectItem>
-                            {businessDnaPresets.luxury_brand && (
-                              <SelectItem value="luxury_brand">
-                                {businessDnaPresets.luxury_brand.label ?? 'Luxury brand'}
-                              </SelectItem>
                             )}
-                            {businessDnaPresets.friendly_cafe && (
-                              <SelectItem value="friendly_cafe">
-                                {businessDnaPresets.friendly_cafe.label ?? 'Friendly café'}
-                              </SelectItem>
-                            )}
-                            <SelectItem value="custom">Custom (edit fields below)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {businessDnaPreset !== 'industry_default' && (
-                          <div className="mt-3 space-y-3 rounded-md border bg-background/80 p-3">
-                            {businessDnaPreset === 'luxury_brand' && businessDnaPresets.luxury_brand?.description && (
-                              <p className="text-xs text-muted-foreground">{businessDnaPresets.luxury_brand.description}</p>
-                            )}
-                            {businessDnaPreset === 'friendly_cafe' && businessDnaPresets.friendly_cafe?.description && (
-                              <p className="text-xs text-muted-foreground">{businessDnaPresets.friendly_cafe.description}</p>
-                            )}
-                            <Field>
-                              <FieldLabel>Tone</FieldLabel>
-                              <Input
-                                value={businessDna.tone ?? ''}
-                                onChange={(e) => {
-                                  setBusinessDnaPreset('custom')
-                                  setBusinessDna((d) => ({ ...d, tone: e.target.value }))
-                                }}
-                                placeholder="e.g. luxury and calm"
-                              />
-                            </Field>
-                            <Field>
-                              <FieldLabel>Core values (comma-separated)</FieldLabel>
-                              <Input
-                                value={(businessDna.values ?? []).join(', ')}
-                                onChange={(e) => {
-                                  setBusinessDnaPreset('custom')
-                                  setBusinessDna((d) => ({
-                                    ...d,
-                                    values: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-                                  }))
-                                }}
-                                placeholder="quality, discretion, craftsmanship"
-                              />
-                            </Field>
-                            <Field>
-                              <FieldLabel>Risk tolerance</FieldLabel>
-                              <Select
-                                value={businessDna.risk_tolerance ?? 'medium'}
-                                onValueChange={(v) => {
-                                  setBusinessDnaPreset('custom')
-                                  setBusinessDna((d) => ({
-                                    ...d,
-                                    risk_tolerance: v as 'low' | 'medium' | 'high',
-                                  }))
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="low">Low — cautious, escalate early</SelectItem>
-                                  <SelectItem value="medium">Medium — balanced</SelectItem>
-                                  <SelectItem value="high">High — more autonomous offers</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </Field>
-                            <Field>
-                              <FieldLabel>Service philosophy</FieldLabel>
-                              <Textarea
-                                rows={2}
-                                value={businessDna.service_philosophy ?? ''}
-                                onChange={(e) => {
-                                  setBusinessDnaPreset('custom')
-                                  setBusinessDna((d) => ({ ...d, service_philosophy: e.target.value }))
-                                }}
-                              />
-                            </Field>
-                            <Field>
-                              <FieldLabel>Communication style</FieldLabel>
-                              <Textarea
-                                rows={2}
-                                value={businessDna.communication_style ?? ''}
-                                onChange={(e) => {
-                                  setBusinessDnaPreset('custom')
-                                  setBusinessDna((d) => ({ ...d, communication_style: e.target.value }))
-                                }}
-                              />
-                            </Field>
                           </div>
                         )}
-                      </Field>
-                    </>
-                  )}
+
+                        {Object.keys(agentBusinessGoalCatalog).length > 0 && (
+                          <Field>
+                            <FieldLabel>Business goals</FieldLabel>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              The agent optimizes conversations toward these objectives
+                            </p>
+                            <div className="space-y-2">
+                              {Object.entries(agentBusinessGoalCatalog).map(([key, label]) => (
+                                <label key={key} className="flex items-start gap-2 text-sm cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    className="mt-1"
+                                    checked={agentBusinessGoals.includes(key)}
+                                    onChange={(e) => {
+                                      setAgentBusinessGoals((prev) =>
+                                        e.target.checked ? [...prev, key] : prev.filter((g) => g !== key)
+                                      )
+                                    }}
+                                  />
+                                  <span>
+                                    <span className="font-medium text-foreground">{key.replace(/_/g, ' ')}</span>
+                                    <span className="block text-muted-foreground text-xs">{label}</span>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </Field>
+                        )}
+
+                        <OnboardingInterviewPanel
+                          onComplete={() => {
+                            mutate("company-settings")
+                          }}
+                        />
+
+                        <Field>
+                          <FieldLabel>Business DNA</FieldLabel>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Same question, different voice — a luxury brand and a friendly café should answer differently.
+                          </p>
+                          <Select
+                            value={businessDnaPreset}
+                            onValueChange={(v) =>
+                              applyBusinessDnaPreset(v as 'industry_default' | 'luxury_brand' | 'friendly_cafe' | 'custom')
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose a personality" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="industry_default">
+                                Industry default ({industry})
+                              </SelectItem>
+                              {businessDnaPresets.luxury_brand && (
+                                <SelectItem value="luxury_brand">
+                                  {businessDnaPresets.luxury_brand.label ?? 'Luxury brand'}
+                                </SelectItem>
+                              )}
+                              {businessDnaPresets.friendly_cafe && (
+                                <SelectItem value="friendly_cafe">
+                                  {businessDnaPresets.friendly_cafe.label ?? 'Friendly café'}
+                                </SelectItem>
+                              )}
+                              <SelectItem value="custom">Custom (edit fields below)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {businessDnaPreset !== 'industry_default' && (
+                            <div className="mt-3 space-y-3 rounded-md border bg-background/80 p-3">
+                              {businessDnaPreset === 'luxury_brand' && businessDnaPresets.luxury_brand?.description && (
+                                <p className="text-xs text-muted-foreground">{businessDnaPresets.luxury_brand.description}</p>
+                              )}
+                              {businessDnaPreset === 'friendly_cafe' && businessDnaPresets.friendly_cafe?.description && (
+                                <p className="text-xs text-muted-foreground">{businessDnaPresets.friendly_cafe.description}</p>
+                              )}
+                              <Field>
+                                <FieldLabel>Tone</FieldLabel>
+                                <Input
+                                  value={businessDna.tone ?? ''}
+                                  onChange={(e) => {
+                                    setBusinessDnaPreset('custom')
+                                    setBusinessDna((d) => ({ ...d, tone: e.target.value }))
+                                  }}
+                                  placeholder="e.g. luxury and calm"
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Core values (comma-separated)</FieldLabel>
+                                <Input
+                                  value={(businessDna.values ?? []).join(', ')}
+                                  onChange={(e) => {
+                                    setBusinessDnaPreset('custom')
+                                    setBusinessDna((d) => ({
+                                      ...d,
+                                      values: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                                    }))
+                                  }}
+                                  placeholder="quality, discretion, craftsmanship"
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Risk tolerance</FieldLabel>
+                                <Select
+                                  value={businessDna.risk_tolerance ?? 'medium'}
+                                  onValueChange={(v) => {
+                                    setBusinessDnaPreset('custom')
+                                    setBusinessDna((d) => ({
+                                      ...d,
+                                      risk_tolerance: v as 'low' | 'medium' | 'high',
+                                    }))
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="low">Low — cautious, escalate early</SelectItem>
+                                    <SelectItem value="medium">Medium — balanced</SelectItem>
+                                    <SelectItem value="high">High — more autonomous offers</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </Field>
+                              <Field>
+                                <FieldLabel>Service philosophy</FieldLabel>
+                                <Textarea
+                                  rows={2}
+                                  value={businessDna.service_philosophy ?? ''}
+                                  onChange={(e) => {
+                                    setBusinessDnaPreset('custom')
+                                    setBusinessDna((d) => ({ ...d, service_philosophy: e.target.value }))
+                                  }}
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Communication style</FieldLabel>
+                                <Textarea
+                                  rows={2}
+                                  value={businessDna.communication_style ?? ''}
+                                  onChange={(e) => {
+                                    setBusinessDnaPreset('custom')
+                                    setBusinessDna((d) => ({ ...d, communication_style: e.target.value }))
+                                  }}
+                                />
+                              </Field>
+                            </div>
+                          )}
+                        </Field>
+                      </>
+                    )}
                   </div>
 
                   <Field>
@@ -1926,6 +2017,16 @@ export default function SettingsPage() {
                       <p className="text-sm text-muted-foreground">In-app / email notifications for your team</p>
                     </div>
                     <Switch checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled} />
+                  </div>
+
+                  <div className="flex items-center justify-between border-t pt-4">
+                    <div>
+                      <p className="font-medium text-foreground">Developer Mode & AI Prompt Debugger</p>
+                      <p className="text-sm text-muted-foreground">
+                        Capture full raw LLM prompt payloads and enable prompt downloads on the web dashboard
+                      </p>
+                    </div>
+                    <Switch checked={devModeEnabled} onCheckedChange={setDevModeEnabled} />
                   </div>
                 </div>
 
@@ -1982,54 +2083,54 @@ export default function SettingsPage() {
                 </p>
               ) : (
                 <>
-              {aiUsageSummary && (
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>
-                    This period: {String(aiUsageSummary.totalRequests ?? 0)} requests · platform billed $
-                    {String(aiUsageSummary.platformBilledCostUsd ?? 0)}
-                    {aiUsageSummary.platformCostLimitUsd != null
-                      ? ` / $${String(aiUsageSummary.platformCostLimitUsd)} limit`
-                      : ''}
-                  </p>
-                  {aiUsageExtras?.learningEmbeddingCoveragePercent != null && (
-                    <p>Learning memory embedding coverage: {aiUsageExtras.learningEmbeddingCoveragePercent}%</p>
+                  {aiUsageSummary && (
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>
+                        This period: {String(aiUsageSummary.totalRequests ?? 0)} requests · platform billed $
+                        {String(aiUsageSummary.platformBilledCostUsd ?? 0)}
+                        {aiUsageSummary.platformCostLimitUsd != null
+                          ? ` / $${String(aiUsageSummary.platformCostLimitUsd)} limit`
+                          : ''}
+                      </p>
+                      {aiUsageExtras?.learningEmbeddingCoveragePercent != null && (
+                        <p>Learning memory embedding coverage: {aiUsageExtras.learningEmbeddingCoveragePercent}%</p>
+                      )}
+                      {(aiUsageExtras?.byCredentialSource ?? []).map((row) => (
+                        <p key={row.source}>
+                          {row.source}: {row.requests} requests · ${row.billedCostUsd.toFixed(4)} billed
+                        </p>
+                      ))}
+                    </div>
                   )}
-                  {(aiUsageExtras?.byCredentialSource ?? []).map((row) => (
-                    <p key={row.source}>
-                      {row.source}: {row.requests} requests · ${row.billedCostUsd.toFixed(4)} billed
-                    </p>
-                  ))}
-                </div>
-              )}
-              <Field>
-                <FieldLabel>Credential mode</FieldLabel>
-                <Select value={aiCredentialMode} onValueChange={(v) => setAiCredentialMode(v as typeof aiCredentialMode)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="platform">Platform keys only</SelectItem>
-                    {(aiPlanCapabilities?.allowedCredentialModes ?? []).includes('company_preferred') && (
-                      <SelectItem value="company_preferred">My key first, then platform</SelectItem>
-                    )}
-                    {(aiPlanCapabilities?.allowedCredentialModes ?? []).includes('company') && (
-                      <SelectItem value="company">My keys only (required)</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>OpenAI API key</FieldLabel>
-                <Input
-                  type="password"
-                  value={openaiApiKey}
-                  onChange={(e) => setOpenaiApiKey(e.target.value)}
-                  placeholder={openaiKeyConfigured ? '•••••••• (configured — enter to replace)' : 'sk-…'}
-                />
-              </Field>
-              <Button type="button" onClick={handleByokSave} disabled={byokSaving}>
-                {byokSaving ? 'Saving…' : 'Save API key settings'}
-              </Button>
+                  <Field>
+                    <FieldLabel>Credential mode</FieldLabel>
+                    <Select value={aiCredentialMode} onValueChange={(v) => setAiCredentialMode(v as typeof aiCredentialMode)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="platform">Platform keys only</SelectItem>
+                        {(aiPlanCapabilities?.allowedCredentialModes ?? []).includes('company_preferred') && (
+                          <SelectItem value="company_preferred">My key first, then platform</SelectItem>
+                        )}
+                        {(aiPlanCapabilities?.allowedCredentialModes ?? []).includes('company') && (
+                          <SelectItem value="company">My keys only (required)</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel>OpenAI API key</FieldLabel>
+                    <Input
+                      type="password"
+                      value={openaiApiKey}
+                      onChange={(e) => setOpenaiApiKey(e.target.value)}
+                      placeholder={openaiKeyConfigured ? '•••••••• (configured — enter to replace)' : 'sk-…'}
+                    />
+                  </Field>
+                  <Button type="button" onClick={handleByokSave} disabled={byokSaving}>
+                    {byokSaving ? 'Saving…' : 'Save API key settings'}
+                  </Button>
                 </>
               )}
             </CardContent>
@@ -2113,7 +2214,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <h3 className="font-medium text-foreground">Email Notifications</h3>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-foreground">New orders</p>
@@ -2149,7 +2250,7 @@ export default function SettingsPage() {
 
               <div className="space-y-4 pt-4 border-t border-border">
                 <h3 className="font-medium text-foreground">Push Notifications</h3>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-foreground">New messages</p>
@@ -2172,135 +2273,158 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Order Payments — enable M-Pesa and/or Stripe for customer orders */}
-        <TabsContent value="order-payments">
-          <Card>
-            <CardHeader>
-              <CardTitle>Collect payment for orders</CardTitle>
-              <CardDescription>
-                Choose whether to collect payment after orders. You can use M-Pesa, card (Stripe), Paystack, and/or manual payment details (e.g. bank account). Turn off to skip payment and only confirm the order.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleOrderPaymentsSubmit} className="space-y-6">
-                {orderPaymentsMessage && (
-                  <p className={`text-sm ${orderPaymentsMessage.startsWith('Saved') ? 'text-primary' : 'text-muted-foreground'}`}>
-                    {orderPaymentsMessage}
-                  </p>
-                )}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Collect payment for orders</p>
-                    <p className="text-sm text-muted-foreground">When on, the bot will ask the customer how to pay (M-Pesa, card, or manual). When off, the bot only confirms the order.</p>
+        {/* Order Payments — cleanly separated payment methods with per-option save and check indicators */}
+        <TabsContent value="order-payments" className="space-y-6">
+          {/* Top Master Hero Card */}
+          <Card className="border-l-4 border-l-primary shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="rounded-xl p-3 bg-primary/10 text-primary shrink-0">
+                    <CreditCard className="h-6 w-6" />
                   </div>
-                  <Switch checked={ordersCollectPaymentEnabled} onCheckedChange={setOrdersCollectPaymentEnabled} />
-                </div>
-
-                <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-foreground">M-Pesa (STK push)</p>
-                    <p className="text-sm text-muted-foreground">Customer receives M-Pesa prompt on their phone to pay</p>
-                  </div>
-                  <Switch checked={ordersAcceptMpesa} onCheckedChange={setOrdersAcceptMpesa} disabled={!ordersCollectPaymentEnabled} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Card (Stripe)</p>
-                    <p className="text-sm text-muted-foreground">Customer gets a payment link to pay by card online</p>
-                  </div>
-                  <Switch checked={ordersAcceptStripe} onCheckedChange={setOrdersAcceptStripe} disabled={!ordersCollectPaymentEnabled} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Paystack</p>
-                    <p className="text-sm text-muted-foreground">Customer gets a Paystack payment link (cards, bank, mobile money)</p>
-                  </div>
-                  <Switch checked={ordersAcceptPaystack} onCheckedChange={setOrdersAcceptPaystack} disabled={!ordersCollectPaymentEnabled} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Cash on delivery</p>
-                    <p className="text-sm text-muted-foreground">Customer pays in cash when the order arrives; order is confirmed immediately</p>
-                  </div>
-                  <Switch checked={ordersAcceptCod} onCheckedChange={setOrdersAcceptCod} disabled={!ordersCollectPaymentEnabled} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Bank transfer</p>
-                    <p className="text-sm text-muted-foreground">Customer transfers directly to your bank account using the details below</p>
-                  </div>
-                  <Switch checked={ordersAcceptBankTransfer} onCheckedChange={setOrdersAcceptBankTransfer} disabled={!ordersCollectPaymentEnabled} />
-                </div>
-                {ordersAcceptBankTransfer && (
-                  <FieldGroup>
-                    <div>
-                      <p className="font-medium text-foreground">Bank transfer details</p>
-                      <p className="text-sm text-muted-foreground">Shown to customers who choose bank transfer (account name, number, bank, branch, etc.)</p>
-                    </div>
-                    <Textarea
-                      placeholder="e.g. Bank: Equity, Account name: My Shop Ltd, Account no: 1234567890"
-                      value={bankTransferInstructions}
-                      onChange={(e) => setBankTransferInstructions(e.target.value)}
-                      rows={3}
-                      className="mt-2"
-                    />
-                  </FieldGroup>
-                )}
-
-                <FieldGroup>
-                  <div>
-                    <p className="font-medium text-foreground">Manual payment instructions (optional)</p>
-                    <p className="text-sm text-muted-foreground">Bank account, PayBill to pay manually, etc. The bot will show this to the customer as option 3 or as the only payment option if you don&apos;t use M-Pesa/Stripe.</p>
-                  </div>
-                  <Textarea
-                    placeholder="e.g. Pay via M-Pesa to Till 123456&#10;Or bank: KCB 1234567890, Account: MyShop. Use order number as reference."
-                    value={orderPaymentManualInstructions}
-                    onChange={(e) => setOrderPaymentManualInstructions(e.target.value)}
-                    rows={4}
-                    className="mt-2"
-                    disabled={!ordersCollectPaymentEnabled}
-                  />
-                </FieldGroup>
-
-                <div className="border-t border-border pt-6 space-y-6">
-                  <h3 className="font-medium text-foreground">Use your own payment details (optional)</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Add your M-Pesa till or Stripe account so payments go to you. Otherwise the platform default is used.
-                  </p>
-
-                  <FieldGroup>
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-medium text-foreground">M-Pesa (Lipa Na M-Pesa Online)</p>
-                        <p className="text-sm text-muted-foreground">PayBill or Till (Buy Goods); shortcode + passkey. Optional: Daraja consumer key/secret</p>
-                      </div>
-                      {settings?.orderPaymentMpesaConfigured && (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default" className="gap-1"><Check className="h-3 w-3" /> Configured</Badge>
-                          <Button type="button" variant="outline" size="sm" onClick={handleClearMpesaConfig}>Clear</Button>
-                        </div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-semibold tracking-tight text-foreground">Collect Payment for Orders</h2>
+                      {ordersCollectPaymentEnabled ? (
+                        <Badge variant="default" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1 font-normal">
+                          <Check className="h-3 w-3" /> Active & Collecting
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-muted-foreground font-normal">
+                          Payments Paused
+                        </Badge>
+                      )}
+                      {optionSaving['collectPayment'] && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-1" />
+                      )}
+                      {optionSaved['collectPayment'] && (
+                        <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                          <Check className="h-3 w-3" /> Saved
+                        </Badge>
                       )}
                     </div>
-                    <Field>
-                      <FieldLabel>Type</FieldLabel>
-                      <Select value={mpesaType} onValueChange={(v) => setMpesaType(v as 'paybill' | 'till')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="paybill">PayBill</SelectItem>
-                          <SelectItem value="till">Till (Buy Goods and Services)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">Use PayBill if you have a business PayBill number; use Till if you have a Lipa Na M-Pesa Till (Buy Goods) number.</p>
-                    </Field>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Field>
-                        <FieldLabel>Shortcode</FieldLabel>
-                        <Input placeholder={mpesaType === 'till' ? 'Till number' : 'e.g. 174379'} value={mpesaShortcode} onChange={(e) => setMpesaShortcode(e.target.value)} />
-                      </Field>
-                      <Field>
-                        <FieldLabel>Passkey</FieldLabel>
-                        {isMasked(mpesaPasskey) && !replacingMpesaSecret[mpesaSecretKey("passkey")] ? (
-                          <div className="space-y-1.5">
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Choose whether to collect payment after orders are placed. Turn off to automatically confirm orders without requiring upfront payment.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
+                  <span className="text-sm font-medium text-foreground">
+                    {ordersCollectPaymentEnabled ? "Enabled" : "Disabled"}
+                  </span>
+                  <Switch 
+                    checked={ordersCollectPaymentEnabled} 
+                    onCheckedChange={(v) => handleToggleOption('collectPayment', setOrdersCollectPaymentEnabled, v, 'ordersCollectPaymentEnabled')} 
+                    disabled={optionSaving['collectPayment']}
+                  />
+                </div>
+              </div>
+
+              {!ordersCollectPaymentEnabled && (
+                <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+                  <span>Payment collection is turned off. The chatbot will skip payment options and confirm customer orders immediately.</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            {/* Category 1: Digital & Mobile Payment Gateways */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Smartphone className="h-5 w-5 text-primary" />
+                  Digital & Mobile Payment Gateways
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Instant online checkout links and mobile money push notifications processed automatically.
+                </p>
+              </div>
+
+              <div className="grid gap-4">
+                {/* M-Pesa Payment Card */}
+                <Card className={`transition-all duration-200 ${ordersAcceptMpesa ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
+                          <Smartphone className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">M-Pesa (STK Push)</h4>
+                            <Badge variant="outline" className="text-xs bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium">
+                              Mobile Money
+                            </Badge>
+                            {optionSaving['mpesaToggle'] && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            {optionSaved['mpesaToggle'] && (
+                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                                <Check className="h-3 w-3" /> Saved
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Customer receives an instant M-Pesa payment prompt on their phone during WhatsApp checkout.
+                          </p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={ordersAcceptMpesa} 
+                        onCheckedChange={(v) => handleToggleOption('mpesaToggle', setOrdersAcceptMpesa, v, 'ordersAcceptMpesa')} 
+                        disabled={!ordersCollectPaymentEnabled || optionSaving['mpesaToggle']} 
+                      />
+                    </div>
+
+                    {/* Integrated M-Pesa Custom Configuration Box */}
+                    {ordersAcceptMpesa && (
+                      <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-semibold text-foreground">M-Pesa Account Credentials (Optional)</span>
+                          </div>
+                          {settings?.orderPaymentMpesaConfigured ? (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="gap-1 bg-emerald-600 text-white font-normal text-xs"><Check className="h-3 w-3" /> Custom Credentials Active</Badge>
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearMpesaConfig}>Clear</Button>
+                            </div>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs text-muted-foreground font-normal">Using Platform Default</Badge>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-muted-foreground">
+                          Add your Lipa Na M-Pesa PayBill or Till number so payments go directly to your business bank or till.
+                        </p>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Account Type</FieldLabel>
+                            <Select value={mpesaType} onValueChange={(v) => setMpesaType(v as 'paybill' | 'till')}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="paybill">PayBill (Business Number)</SelectItem>
+                                <SelectItem value="till">Till (Buy Goods & Services)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field>
+                            <FieldLabel>{mpesaType === 'till' ? 'Till Number' : 'PayBill Shortcode'}</FieldLabel>
+                            <Input 
+                              placeholder={mpesaType === 'till' ? 'e.g. 123456' : 'e.g. 174379'} 
+                              value={mpesaShortcode} 
+                              onChange={(e) => setMpesaShortcode(e.target.value)} 
+                            />
+                          </Field>
+                        </div>
+
+                        <Field>
+                          <FieldLabel>Lipa Na M-Pesa Passkey</FieldLabel>
+                          {isMasked(mpesaPasskey) && !replacingMpesaSecret[mpesaSecretKey("passkey")] ? (
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                               <Input type="text" readOnly className="font-mono text-sm" value={mpesaPasskey} />
                               <Button
@@ -2313,235 +2437,660 @@ export default function SettingsPage() {
                                   setMpesaPasskey("")
                                 }}
                               >
-                                Replace
+                                Replace Passkey
                               </Button>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              Stored passkey (masked). Use Replace to enter a new value.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <Input
-                              type="password"
-                              placeholder="Lipa Na M-Pesa passkey"
-                              value={mpesaPasskey}
-                              onChange={(e) => setMpesaPasskey(e.target.value)}
-                            />
-                            {replacingMpesaSecret[mpesaSecretKey("passkey")] && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-xs"
-                                onClick={() => {
-                                  setReplacingMpesaSecret((p) => {
-                                    const n = { ...p }
-                                    delete n[mpesaSecretKey("passkey")]
-                                    return n
-                                  })
-                                  mutate("company-settings")
-                                }}
-                              >
-                                Cancel replace
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </Field>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Field>
-                        <FieldLabel>Consumer key (optional)</FieldLabel>
-                        <Input placeholder="Daraja app consumer key" value={mpesaConsumerKey} onChange={(e) => setMpesaConsumerKey(e.target.value)} />
-                      </Field>
-                      <Field>
-                        <FieldLabel>Consumer secret (optional)</FieldLabel>
-                        {isMasked(mpesaConsumerSecret) && !replacingMpesaSecret[mpesaSecretKey("consumer_secret")] ? (
-                          <div className="space-y-1.5">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                              <Input type="text" readOnly className="font-mono text-sm" value={mpesaConsumerSecret} />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="shrink-0"
-                                onClick={() => {
-                                  setReplacingMpesaSecret((p) => ({ ...p, [mpesaSecretKey("consumer_secret")]: true }))
-                                  setMpesaConsumerSecret("")
-                                }}
-                              >
-                                Replace
-                              </Button>
+                          ) : (
+                            <div className="space-y-1">
+                              <Input
+                                type="password"
+                                placeholder="Enter Lipa Na M-Pesa Passkey"
+                                value={mpesaPasskey}
+                                onChange={(e) => setMpesaPasskey(e.target.value)}
+                              />
+                              {replacingMpesaSecret[mpesaSecretKey("passkey")] && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-xs text-muted-foreground"
+                                  onClick={() => {
+                                    setReplacingMpesaSecret((p) => {
+                                      const n = { ...p }
+                                      delete n[mpesaSecretKey("passkey")]
+                                      return n
+                                    })
+                                    mutate("company-settings")
+                                  }}
+                                >
+                                  Cancel Replace
+                                </Button>
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              Stored consumer secret (masked). Use Replace to enter a new value.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <Input
-                              type="password"
-                              placeholder="Daraja app consumer secret"
-                              value={mpesaConsumerSecret}
-                              onChange={(e) => setMpesaConsumerSecret(e.target.value)}
-                            />
-                            {replacingMpesaSecret[mpesaSecretKey("consumer_secret")] && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-xs"
-                                onClick={() => {
-                                  setReplacingMpesaSecret((p) => {
-                                    const n = { ...p }
-                                    delete n[mpesaSecretKey("consumer_secret")]
-                                    return n
-                                  })
-                                  mutate("company-settings")
-                                }}
-                              >
-                                Cancel replace
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </Field>
-                    </div>
-                    <Field>
-                      <FieldLabel>Environment</FieldLabel>
-                      <Select value={mpesaEnv} onValueChange={(v) => setMpesaEnv(v as 'sandbox' | 'production')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="sandbox">Sandbox</SelectItem>
-                          <SelectItem value="production">Production</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  </FieldGroup>
+                          )}
+                        </Field>
 
-                  <FieldGroup>
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-medium text-foreground">Stripe account</p>
-                        <p className="text-sm text-muted-foreground">Secret key (sk_live_... or sk_test_...) so payments go to your Stripe</p>
-                      </div>
-                      {settings?.orderPaymentStripeConfigured && (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default" className="gap-1"><Check className="h-3 w-3" /> Configured</Badge>
-                          <Button type="button" variant="outline" size="sm" onClick={handleClearStripeConfig}>Clear</Button>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Consumer Key (Optional)</FieldLabel>
+                            <Input placeholder="Daraja Consumer Key" value={mpesaConsumerKey} onChange={(e) => setMpesaConsumerKey(e.target.value)} />
+                          </Field>
+                          <Field>
+                            <FieldLabel>Consumer Secret (Optional)</FieldLabel>
+                            {isMasked(mpesaConsumerSecret) && !replacingMpesaSecret[mpesaSecretKey("consumer_secret")] ? (
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input type="text" readOnly className="font-mono text-sm" value={mpesaConsumerSecret} />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => {
+                                    setReplacingMpesaSecret((p) => ({ ...p, [mpesaSecretKey("consumer_secret")]: true }))
+                                    setMpesaConsumerSecret("")
+                                  }}
+                                >
+                                  Replace
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Input
+                                  type="password"
+                                  placeholder="Daraja Consumer Secret"
+                                  value={mpesaConsumerSecret}
+                                  onChange={(e) => setMpesaConsumerSecret(e.target.value)}
+                                />
+                                {replacingMpesaSecret[mpesaSecretKey("consumer_secret")] && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs text-muted-foreground"
+                                    onClick={() => {
+                                      setReplacingMpesaSecret((p) => {
+                                        const n = { ...p }
+                                        delete n[mpesaSecretKey("consumer_secret")]
+                                        return n
+                                      })
+                                      mutate("company-settings")
+                                    }}
+                                  >
+                                    Cancel Replace
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </Field>
                         </div>
-                      )}
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Field>
-                        <FieldLabel>Secret key</FieldLabel>
-                        {isMasked(stripeSecret) && !replacingStripeSecret ? (
-                          <div className="space-y-1.5">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                              <Input type="text" readOnly className="font-mono text-sm" value={stripeSecret} />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="shrink-0"
-                                onClick={() => {
-                                  setReplacingStripeSecret(true)
-                                  setStripeSecret("")
-                                }}
-                              >
-                                Replace
-                              </Button>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Stored Stripe secret (masked). Use Replace to enter a new key.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <Input
-                              type="password"
-                              placeholder="sk_live_... or sk_test_..."
-                              value={stripeSecret}
-                              onChange={(e) => setStripeSecret(e.target.value)}
-                            />
-                            {replacingStripeSecret && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-xs"
-                                onClick={() => {
-                                  setReplacingStripeSecret(false)
-                                  mutate("company-settings")
-                                }}
-                              >
-                                Cancel replace
-                              </Button>
+
+                        <Field>
+                          <FieldLabel>Environment</FieldLabel>
+                          <Select value={mpesaEnv} onValueChange={(v) => setMpesaEnv(v as 'sandbox' | 'production')}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sandbox">Sandbox (Testing Environment)</SelectItem>
+                              <SelectItem value="production">Production (Live Environment)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </Field>
+
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={optionSaving['mpesaConfig']}
+                            onClick={handleSaveMpesaConfig}
+                            className="gap-1.5"
+                          >
+                            {optionSaving['mpesaConfig'] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                              </>
+                            ) : optionSaved['mpesaConfig'] ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" /> Save M-Pesa Credentials
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Card (Stripe) Payment Method Card */}
+                <Card className={`transition-all duration-200 ${ordersAcceptStripe ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
+                          <CreditCard className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">Card (Stripe)</h4>
+                            <Badge variant="outline" className="text-xs bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-medium">
+                              Cards & Digital Wallets
+                            </Badge>
+                            {optionSaving['stripeToggle'] && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            {optionSaved['stripeToggle'] && (
+                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                                <Check className="h-3 w-3" /> Saved
+                              </Badge>
                             )}
                           </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Customer receives a checkout link to pay securely by Visa, Mastercard, or Apple Pay online.
+                          </p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={ordersAcceptStripe} 
+                        onCheckedChange={(v) => handleToggleOption('stripeToggle', setOrdersAcceptStripe, v, 'ordersAcceptStripe')} 
+                        disabled={!ordersCollectPaymentEnabled || optionSaving['stripeToggle']} 
+                      />
+                    </div>
+
+                    {/* Integrated Stripe Custom Configuration Box */}
+                    {ordersAcceptStripe && (
+                      <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-semibold text-foreground">Stripe Account Credentials (Optional)</span>
+                          </div>
+                          {settings?.orderPaymentStripeConfigured ? (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="gap-1 bg-indigo-600 text-white font-normal text-xs"><Check className="h-3 w-3" /> Custom Stripe Configured</Badge>
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearStripeConfig}>Clear</Button>
+                            </div>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs text-muted-foreground font-normal">Using Platform Default</Badge>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          Add your Stripe Secret Key so payments generated by the chatbot are credited directly to your Stripe account.
+                        </p>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Stripe Secret Key</FieldLabel>
+                            {isMasked(stripeSecret) && !replacingStripeSecret ? (
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input type="text" readOnly className="font-mono text-sm" value={stripeSecret} />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => {
+                                    setReplacingStripeSecret(true)
+                                    setStripeSecret("")
+                                  }}
+                                >
+                                  Replace Key
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Input
+                                  type="password"
+                                  placeholder="sk_live_... or sk_test_..."
+                                  value={stripeSecret}
+                                  onChange={(e) => setStripeSecret(e.target.value)}
+                                />
+                                {replacingStripeSecret && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs text-muted-foreground"
+                                    onClick={() => {
+                                      setReplacingStripeSecret(false)
+                                      mutate("company-settings")
+                                    }}
+                                  >
+                                    Cancel Replace
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </Field>
+
+                          <Field>
+                            <FieldLabel>Settlement Currency</FieldLabel>
+                            <Input placeholder="usd, kes, eur, etc." value={stripeCurrency} onChange={(e) => setStripeCurrency(e.target.value)} />
+                          </Field>
+                        </div>
+
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={optionSaving['stripeConfig']}
+                            onClick={handleSaveStripeConfig}
+                            className="gap-1.5"
+                          >
+                            {optionSaving['stripeConfig'] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                              </>
+                            ) : optionSaved['stripeConfig'] ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" /> Save Stripe Credentials
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Paystack Payment Card */}
+                <Card className={`transition-all duration-200 ${ordersAcceptPaystack ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg p-2.5 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5">
+                          <Zap className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">Paystack</h4>
+                            <Badge variant="outline" className="text-xs bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-medium">
+                              Multi-channel Checkout
+                            </Badge>
+                            {optionSaving['paystackToggle'] && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            {optionSaved['paystackToggle'] && (
+                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                                <Check className="h-3 w-3" /> Saved
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Customer receives a Paystack link supporting cards, bank transfers, and mobile money options.
+                          </p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={ordersAcceptPaystack} 
+                        onCheckedChange={(v) => handleToggleOption('paystackToggle', setOrdersAcceptPaystack, v, 'ordersAcceptPaystack')} 
+                        disabled={!ordersCollectPaymentEnabled || optionSaving['paystackToggle']} 
+                      />
+                    </div>
+
+                    {/* Integrated Paystack Custom Configuration Box */}
+                    {ordersAcceptPaystack && (
+                      <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-semibold text-foreground">Paystack Account Credentials (Optional)</span>
+                          </div>
+                          {settings?.orderPaymentPaystackConfigured ? (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="gap-1 bg-cyan-600 text-white font-normal text-xs"><Check className="h-3 w-3" /> Custom Paystack Configured</Badge>
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearPaystackConfig}>Clear</Button>
+                            </div>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs text-muted-foreground font-normal">Using Platform Default</Badge>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          Add your Paystack Secret Key so payments generated by the chatbot are credited directly to your Paystack account.
+                        </p>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Paystack Secret Key</FieldLabel>
+                            {isMasked(paystackSecretKey) && !replacingPaystackSecret ? (
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input type="text" readOnly className="font-mono text-sm" value={paystackSecretKey} />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => {
+                                    setReplacingPaystackSecret(true)
+                                    setPaystackSecretKey("")
+                                  }}
+                                >
+                                  Replace Key
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Input
+                                  type="password"
+                                  placeholder="sk_live_... or sk_test_..."
+                                  value={paystackSecretKey}
+                                  onChange={(e) => setPaystackSecretKey(e.target.value)}
+                                />
+                                {replacingPaystackSecret && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs text-muted-foreground"
+                                    onClick={() => {
+                                      setReplacingPaystackSecret(false)
+                                      mutate("company-settings")
+                                    }}
+                                  >
+                                    Cancel Replace
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </Field>
+
+                          <Field>
+                            <FieldLabel>Public Key (Optional)</FieldLabel>
+                            <Input 
+                              placeholder="pk_live_... or pk_test_..." 
+                              value={paystackPublicKey} 
+                              onChange={(e) => setPaystackPublicKey(e.target.value)} 
+                            />
+                          </Field>
+                        </div>
+
+                        <Field>
+                          <FieldLabel>Settlement Currency</FieldLabel>
+                          <Input 
+                            placeholder="ngn, kes, usd, ghs, zar, etc." 
+                            value={paystackCurrency} 
+                            onChange={(e) => setPaystackCurrency(e.target.value)} 
+                          />
+                        </Field>
+
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={optionSaving['paystackConfig']}
+                            onClick={handleSavePaystackConfig}
+                            className="gap-1.5"
+                          >
+                            {optionSaving['paystackConfig'] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                              </>
+                            ) : optionSaved['paystackConfig'] ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" /> Save Paystack Credentials
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Category 2: Offline & Manual Payment Options */}
+            <div className="space-y-4 pt-6 border-t border-border">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-primary" />
+                  Offline & Manual Payment Options
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Allow customers to pay in cash upon delivery or using custom manual instructions.
+                </p>
+              </div>
+
+              <div className="grid gap-4">
+                {/* Cash on Delivery Card */}
+                <Card className={`transition-all duration-200 ${ordersAcceptCod ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                          <Banknote className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">Cash on Delivery (COD)</h4>
+                            <Badge variant="outline" className="text-xs bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400 font-medium">
+                              Pay on Arrival
+                            </Badge>
+                            {optionSaving['codToggle'] && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            {optionSaved['codToggle'] && (
+                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                                <Check className="h-3 w-3" /> Saved
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Customer pays cash when the order is delivered; order is confirmed immediately.
+                          </p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={ordersAcceptCod} 
+                        onCheckedChange={(v) => handleToggleOption('codToggle', setOrdersAcceptCod, v, 'ordersAcceptCod')} 
+                        disabled={!ordersCollectPaymentEnabled || optionSaving['codToggle']} 
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Custom Manual Payment Instructions Card */}
+                <Card className="bg-card shadow-sm">
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg p-2.5 bg-slate-500/10 text-slate-600 dark:text-slate-400 shrink-0 mt-0.5">
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">Custom Manual Payment Instructions</h4>
+                            {optionSaving['manualInstructions'] && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            {optionSaved['manualInstructions'] && (
+                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                                <Check className="h-3 w-3" /> Saved
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Additional manual payment notes (e.g. manual Till number, deposit details, or custom instructions) displayed when customers choose manual payment.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Textarea
+                      placeholder="e.g. Pay via M-Pesa to Till 123456 (MyShop). Include order number in transaction reference."
+                      value={orderPaymentManualInstructions}
+                      onChange={(e) => setOrderPaymentManualInstructions(e.target.value)}
+                      rows={3}
+                      className="text-sm"
+                      disabled={!ordersCollectPaymentEnabled}
+                    />
+
+                    <div className="pt-2 flex items-center justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={!ordersCollectPaymentEnabled || optionSaving['manualInstructions']}
+                        onClick={handleSaveManualInstructions}
+                        className="gap-1.5"
+                      >
+                        {optionSaving['manualInstructions'] ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                          </>
+                        ) : optionSaved['manualInstructions'] ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-3.5 w-3.5" /> Save Instructions
+                          </>
                         )}
-                      </Field>
-                      <Field>
-                        <FieldLabel>Currency</FieldLabel>
-                        <Input placeholder="usd, kes, etc." value={stripeCurrency} onChange={(e) => setStripeCurrency(e.target.value)} />
-                      </Field>
+                      </Button>
                     </div>
-                  </FieldGroup>
-                </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
 
-                <div className="border-t border-border pt-6 space-y-6">
-                  <h3 className="font-medium text-foreground">Delivery fees</h3>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-foreground">Charge delivery fees</p>
-                      <p className="text-sm text-muted-foreground">Add a delivery fee to orders. Use Delivery zones to set area-specific fees.</p>
-                    </div>
-                    <Switch checked={deliveryFeesEnabled} onCheckedChange={setDeliveryFeesEnabled} />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field>
-                      <FieldLabel>Default delivery fee</FieldLabel>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={defaultDeliveryFee}
-                        onChange={(e) => setDefaultDeliveryFee(e.target.value)}
-                        disabled={!deliveryFeesEnabled}
+            {/* Category 3: Delivery Fees & Payment Reminders */}
+            <div className="space-y-4 pt-6 border-t border-border">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Delivery Charges & Payment Reminders
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Manage order fulfillment fees and automated WhatsApp payment recovery.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Delivery Fees Card */}
+                <Card className="bg-card shadow-sm">
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-foreground">Charge Delivery Fees</h4>
+                          {optionSaving['deliveryFeesToggle'] && (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                          )}
+                          {optionSaved['deliveryFeesToggle'] && (
+                            <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                              <Check className="h-3 w-3" /> Saved
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Automatically add shipping/delivery costs to orders.
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={deliveryFeesEnabled} 
+                        onCheckedChange={(v) => handleToggleOption('deliveryFeesToggle', setDeliveryFeesEnabled, v, 'deliveryFeesEnabled')} 
+                        disabled={optionSaving['deliveryFeesToggle']}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Used when the address doesn&apos;t match any delivery zone.</p>
-                    </Field>
-                    <Field>
-                      <FieldLabel>Free delivery above (optional)</FieldLabel>
-                      <Input
-                        type="number"
-                        placeholder="e.g. 5000"
-                        value={freeDeliveryAbove}
-                        onChange={(e) => setFreeDeliveryAbove(e.target.value)}
-                        disabled={!deliveryFeesEnabled}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Delivery becomes free once the order subtotal reaches this amount.</p>
-                    </Field>
-                  </div>
-                </div>
-
-                <div className="border-t border-border pt-6 space-y-6">
-                  <h3 className="font-medium text-foreground">Payment reminders</h3>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-foreground">Automatic payment recovery</p>
-                      <p className="text-sm text-muted-foreground">Send WhatsApp reminders with a pay link to customers with unpaid orders (not cash on delivery)</p>
                     </div>
-                    <Switch checked={paymentRecoveryEnabled} onCheckedChange={setPaymentRecoveryEnabled} />
-                  </div>
-                </div>
 
-                <Button type="submit" disabled={orderPaymentsSaving}>
-                  {orderPaymentsSaving ? 'Saving…' : 'Save'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                    {deliveryFeesEnabled && (
+                      <div className="space-y-3 pt-2 border-t border-border/40">
+                        <Field>
+                          <FieldLabel className="text-xs">Default Delivery Fee</FieldLabel>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={defaultDeliveryFee}
+                            onChange={(e) => setDefaultDeliveryFee(e.target.value)}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel className="text-xs">Free Delivery Threshold (Optional)</FieldLabel>
+                          <Input
+                            type="number"
+                            placeholder="e.g. 5000"
+                            value={freeDeliveryAbove}
+                            onChange={(e) => setFreeDeliveryAbove(e.target.value)}
+                          />
+                        </Field>
+                        <div className="pt-2 flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={optionSaving['deliveryFeesConfig']}
+                            onClick={handleSaveDeliveryFeesConfig}
+                            className="gap-1.5"
+                          >
+                            {optionSaving['deliveryFeesConfig'] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                              </>
+                            ) : optionSaved['deliveryFeesConfig'] ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" /> Save Delivery Fees
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Automatic Payment Recovery Card */}
+                <Card className="bg-card shadow-sm">
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-foreground flex items-center gap-1.5">
+                            <Clock className="h-4 w-4 text-primary" />
+                            Automatic Payment Recovery
+                          </h4>
+                          {optionSaving['paymentRecoveryToggle'] && (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                          )}
+                          {optionSaved['paymentRecoveryToggle'] && (
+                            <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                              <Check className="h-3 w-3" /> Saved
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Send WhatsApp reminders with a payment link to customers with unpaid orders.
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={paymentRecoveryEnabled} 
+                        onCheckedChange={(v) => handleToggleOption('paymentRecoveryToggle', setPaymentRecoveryEnabled, v, 'paymentRecoveryEnabled')} 
+                        disabled={optionSaving['paymentRecoveryToggle']}
+                      />
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-muted/60 border border-border text-xs text-muted-foreground flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                      <span>When enabled, unpaid order follow-ups will be sent automatically to help recover abandoned checkouts.</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

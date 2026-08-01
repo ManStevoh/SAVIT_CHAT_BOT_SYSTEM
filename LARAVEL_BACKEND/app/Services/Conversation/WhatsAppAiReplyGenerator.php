@@ -34,6 +34,7 @@ final class WhatsAppAiReplyGenerator
             company: $company,
             useCase: AiUseCase::WHATSAPP,
             chatId: $chatId,
+            temperature: 0.3,
             timeoutSeconds: 25,
             latestUserMessage: $message,
         );
@@ -44,7 +45,7 @@ final class WhatsAppAiReplyGenerator
                 company: $company,
                 useCase: AiUseCase::WHATSAPP,
                 chatId: $chatId,
-                temperature: 0.4,
+                temperature: 0.3,
                 timeoutSeconds: 30,
                 latestUserMessage: $message,
             );

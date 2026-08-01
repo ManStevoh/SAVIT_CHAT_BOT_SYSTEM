@@ -239,7 +239,7 @@ class OrderFlowService
             $pay = $this->resolvePaymentAcceptance($company->settings);
 
             // Only manual configured → share till/bank details immediately (no empty menu).
-            if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack'] && ! $pay['acceptCod'] && ! $pay['acceptBankTransfer']) {
+            if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack'] && ! $pay['acceptCod']) {
                 $this->clearState($chat);
 
                 return "Delivery address saved: {$address}\n\n".$this->formatOrderWithManualPaymentInstructions($order);
@@ -247,7 +247,7 @@ class OrderFlowService
 
             $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, $draft);
 
-            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], false, $pay['acceptCod'], $pay['acceptBankTransfer']);
+            return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order, $pay['acceptMpesa'], $pay['acceptStripe'], $pay['acceptPaystack'], $pay['acceptManual'], false, $pay['acceptCod']);
         }
 
         if ($step === self::STEP_EXISTING_ORDER_PAYMENT_METHOD) {
@@ -267,9 +267,6 @@ class OrderFlowService
             }
             if ($method === 'cod') {
                 return $this->handleCodPayment($order, $chat);
-            }
-            if ($method === 'bank_transfer') {
-                return $this->handleBankTransferPayment($order, $chat);
             }
             if ($method === 'mpesa') {
                 $draft['payment_method'] = 'mpesa';
@@ -428,8 +425,8 @@ class OrderFlowService
                     return $this->withReceipt($order, "Order confirmed! Your order number is: {$order->order_number}.\n".$this->formatOrderMoneySummary($order)."\n".$this->formatPublicPayLinks($order)."\nWe'll prepare it and contact you for delivery.");
                 }
                 $pay = $this->resolvePaymentAcceptance($settings);
-                if ($pay['acceptMpesa'] || $pay['acceptStripe'] || $pay['acceptPaystack'] || $pay['acceptCod'] || $pay['acceptBankTransfer'] || $pay['acceptManual']) {
-                    if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack'] && ! $pay['acceptCod'] && ! $pay['acceptBankTransfer']) {
+                if ($pay['acceptMpesa'] || $pay['acceptStripe'] || $pay['acceptPaystack'] || $pay['acceptCod'] || $pay['acceptManual']) {
+                    if ($pay['acceptManual'] && ! $pay['acceptMpesa'] && ! $pay['acceptStripe'] && ! $pay['acceptPaystack'] && ! $pay['acceptCod']) {
                         $this->clearState($chat);
 
                         return $this->formatOrderWithManualPaymentInstructions($order);
@@ -444,8 +441,7 @@ class OrderFlowService
                         $pay['acceptPaystack'],
                         $pay['acceptManual'],
                         false,
-                        $pay['acceptCod'],
-                        $pay['acceptBankTransfer']
+                        $pay['acceptCod']
                     );
                 }
                 $this->clearState($chat);
@@ -471,8 +467,7 @@ class OrderFlowService
                 $pay['acceptStripe'],
                 $pay['acceptPaystack'],
                 $pay['acceptManual'],
-                $pay['acceptCod'],
-                $pay['acceptBankTransfer']
+                $pay['acceptCod']
             );
 
             if ($method === 'manual') {
@@ -482,9 +477,6 @@ class OrderFlowService
             }
             if ($method === 'cod') {
                 return $this->handleCodPayment($order, $chat, true);
-            }
-            if ($method === 'bank_transfer') {
-                return $this->handleBankTransferPayment($order, $chat, true);
             }
             if ($method === 'mpesa') {
                 $draft['payment_method'] = 'mpesa';
@@ -510,8 +502,7 @@ class OrderFlowService
                 $pay['acceptPaystack'],
                 $pay['acceptManual'],
                 true,
-                $pay['acceptCod'],
-                $pay['acceptBankTransfer']
+                $pay['acceptCod']
             );
         }
 
@@ -584,7 +575,14 @@ class OrderFlowService
         }
         $ids = $draft['catalog_product_ids'] ?? [];
         if ($ids === []) {
-            return null;
+            // Rebuild catalog IDs if they were lost (e.g. Agent OS handled a prior turn)
+            $ids = $this->getCatalogProducts($company)->pluck('id')->all();
+            if ($ids !== []) {
+                $draft['catalog_product_ids'] = $ids;
+                $this->setStep($chat, self::STEP_PRODUCT, $draft);
+            } else {
+                return null;
+            }
         }
         $n = (int) $trimmed;
         if ($n < 1 || $n > count($ids)) {
@@ -911,24 +909,53 @@ class OrderFlowService
     }
 
     /**
-     * @return array{acceptMpesa: bool, acceptStripe: bool, acceptPaystack: bool, acceptManual: bool, acceptCod: bool, acceptBankTransfer: bool}
+     * @return array{acceptMpesa: bool, acceptStripe: bool, acceptPaystack: bool, acceptManual: bool, acceptCod: bool}
      */
     protected function resolvePaymentAcceptance(?\App\Models\CompanySetting $settings): array
     {
+        if (! $settings) {
+            return [
+                'acceptMpesa' => false,
+                'acceptStripe' => false,
+                'acceptPaystack' => false,
+                'acceptManual' => false,
+                'acceptCod' => false,
+            ];
+        }
+
+        $company = $settings->company ?? \App\Models\Company::find($settings->company_id);
+        if (! $company) {
+            return [
+                'acceptMpesa' => false,
+                'acceptStripe' => false,
+                'acceptPaystack' => false,
+                'acceptManual' => false,
+                'acceptCod' => false,
+            ];
+        }
+
+        /** @var \App\Services\PaymentGateways\PaymentGatewayRegistry $registry */
+        $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
+        $drivers = $registry->getAvailableDrivers($company);
+
+        $active = [];
+        foreach ($drivers as $d) {
+            $active[$d->getId()] = true;
+        }
+
         return [
-            'acceptMpesa' => $settings && $settings->orders_accept_mpesa && (MpesaService::isEnabled() || $settings->hasOrderPaymentMpesaConfig()),
-            'acceptStripe' => $settings && $settings->orders_accept_stripe && (StripeService::isEnabled() || $settings->hasOrderPaymentStripeConfig()),
-            'acceptPaystack' => $settings && $settings->orders_accept_paystack && PaystackService::isEnabled(),
-            'acceptManual' => $settings && $settings->hasOrderPaymentManualInstructions(),
-            'acceptCod' => (bool) ($settings && $settings->orders_accept_cod),
-            'acceptBankTransfer' => (bool) ($settings && $settings->orders_accept_bank_transfer),
+            'acceptMpesa' => ! empty($active['mpesa']),
+            'acceptStripe' => ! empty($active['stripe']),
+            'acceptPaystack' => ! empty($active['paystack']),
+            'acceptManual' => ! empty($active['manual']),
+            'acceptCod' => ! empty($active['cod']),
         ];
     }
 
     /**
      * @return list<string>
      */
-    protected function paymentMethodKeys(bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual, bool $acceptCod = false, bool $acceptBankTransfer = false): array
+    protected function paymentMethodKeys(bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual, bool $acceptCod = false): array
     {
         $keys = [];
         if ($acceptMpesa) {
@@ -943,9 +970,6 @@ class OrderFlowService
         if ($acceptCod) {
             $keys[] = 'cod';
         }
-        if ($acceptBankTransfer) {
-            $keys[] = 'bank_transfer';
-        }
         if ($acceptManual) {
             $keys[] = 'manual';
         }
@@ -953,9 +977,9 @@ class OrderFlowService
         return $keys;
     }
 
-    protected function matchPaymentMethod(string $lower, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual, bool $acceptCod = false, bool $acceptBankTransfer = false): ?string
+    protected function matchPaymentMethod(string $lower, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual, bool $acceptCod = false): ?string
     {
-        $keys = $this->paymentMethodKeys($acceptMpesa, $acceptStripe, $acceptPaystack, $acceptManual, $acceptCod, $acceptBankTransfer);
+        $keys = $this->paymentMethodKeys($acceptMpesa, $acceptStripe, $acceptPaystack, $acceptManual, $acceptCod);
         if (preg_match('/^\d+$/', $lower)) {
             $idx = (int) $lower - 1;
 
@@ -973,9 +997,6 @@ class OrderFlowService
         if ($acceptCod && $this->wantsCodText($lower)) {
             return 'cod';
         }
-        if ($acceptBankTransfer && $this->wantsBankTransferText($lower)) {
-            return 'bank_transfer';
-        }
         if ($acceptManual && $this->wantsManual($lower)) {
             return 'manual';
         }
@@ -983,7 +1004,7 @@ class OrderFlowService
         return null;
     }
 
-    protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual = false, bool $invalid = false, bool $acceptCod = false, bool $acceptBankTransfer = false): string
+    protected function formatPaymentMethodPrompt(Order $order, bool $acceptMpesa, bool $acceptStripe, bool $acceptPaystack, bool $acceptManual = false, bool $invalid = false, bool $acceptCod = false): string
     {
         $line = 'Order #'.$order->order_number."\n".$this->formatOrderMoneySummary($order)."\n\nHow would you like to pay?";
         $opts = [];
@@ -1009,7 +1030,7 @@ class OrderFlowService
             $n++;
         }
         if ($acceptManual) {
-            $opts[] = "{$n}. Pay manually (bank / other details)";
+            $opts[] = "{$n}. Pay manually (custom instructions)";
         }
         $line .= "\n".implode("\n", $opts);
         if ($invalid) {
@@ -1094,85 +1115,6 @@ class OrderFlowService
                 ."\nYou'll pay in cash when your order arrives.\n\n"
                 .$this->formatPublicPayLinks($order)
         );
-    }
-
-    protected function handleBankTransferPayment(Order $order, Chat $chat, bool $confirmedOrder = false): string
-    {
-        $this->orderPayment->markOrderBankTransferConfirmed($order);
-        $order->refresh();
-        $this->clearState($chat);
-
-        $settings = $order->company?->settings;
-        $instructions = $settings && $settings->hasBankTransferInstructions()
-            ? trim($settings->bank_transfer_instructions)
-            : 'We will send you the bank details shortly.';
-        $header = $confirmedOrder
-            ? "Order confirmed! Your order number is: {$order->order_number}."
-            : "Order #{$order->order_number} confirmed.";
-
-        return $this->withReceipt(
-            $order,
-            "{$header}\n".$this->formatOrderMoneySummary($order)
-                ."\n\nTo complete payment via bank transfer:\n\n{$instructions}\n\n"
-                .$this->formatPublicPayLinks($order)
-                ."\n\nReply once you have made the payment. Thank you!"
-        );
-    }
-
-    protected function wantsManual(string $lower): bool
-    {
-        return in_array($lower, ['3', 'manual', 'bank', 'bank transfer', 'pay manually', 'other', 'till', 'paybill', 'pay bill'], true)
-            || str_contains($lower, 'bank')
-            || str_contains($lower, 'manual')
-            || str_contains($lower, 'till')
-            || str_contains($lower, 'paybill')
-            || str_contains($lower, 'payment detail')
-            || str_contains($lower, 'how to pay')
-            || str_contains($lower, 'want to pay');
-    }
-
-    protected function wantsMpesa(string $lower): bool
-    {
-        return in_array($lower, ['1', 'mpesa', 'm-pesa', 'mobile', 'phone'], true)
-            || str_contains($lower, 'mpesa') || str_contains($lower, 'm-pesa');
-    }
-
-    protected function wantsStripe(string $lower): bool
-    {
-        return in_array($lower, ['2', 'card', 'stripe', 'pay online', 'online', 'link'], true)
-            || str_contains($lower, 'card') || str_contains($lower, 'pay online');
-    }
-
-    protected function wantsMpesaText(string $lower): bool
-    {
-        return in_array($lower, ['mpesa', 'm-pesa', 'mobile', 'phone'], true)
-            || str_contains($lower, 'mpesa') || str_contains($lower, 'm-pesa');
-    }
-
-    protected function wantsStripeText(string $lower): bool
-    {
-        return in_array($lower, ['card', 'stripe', 'pay online', 'online'], true)
-            || str_contains($lower, 'card') || str_contains($lower, 'pay online');
-    }
-
-    protected function wantsPaystackText(string $lower): bool
-    {
-        return in_array($lower, ['paystack', 'link'], true) || str_contains($lower, 'paystack');
-    }
-
-    protected function wantsCodText(string $lower): bool
-    {
-        return in_array($lower, ['cod', 'cash', 'cash on delivery', 'pay on delivery', 'pay cash', 'cash payment'], true)
-            || str_contains($lower, 'cash on delivery')
-            || str_contains($lower, 'pay on delivery')
-            || str_contains($lower, 'cash');
-    }
-
-    protected function wantsBankTransferText(string $lower): bool
-    {
-        return in_array($lower, ['bank', 'bank transfer', 'transfer'], true)
-            || str_contains($lower, 'bank transfer')
-            || (str_contains($lower, 'bank') && ! str_contains($lower, 'paystack'));
     }
 
     protected function wantsPickup(string $lower): bool

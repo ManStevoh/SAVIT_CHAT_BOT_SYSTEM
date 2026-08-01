@@ -29,6 +29,7 @@ class CompanySetting extends Model
         'timezone',
         'working_hours',
         'learn_from_conversations',
+        'dev_mode_enabled',
         'agent_commerce_enabled',
         'agent_business_goals',
         'agent_proactive_enabled',
@@ -47,12 +48,10 @@ class CompanySetting extends Model
         'orders_accept_stripe',
         'orders_accept_paystack',
         'orders_accept_cod',
-        'orders_accept_bank_transfer',
         'orders_collect_payment_enabled',
         'order_payment_mpesa_config',
         'order_payment_stripe_config',
         'order_payment_manual_instructions',
-        'bank_transfer_instructions',
         'delivery_fees_enabled',
         'default_delivery_fee',
         'free_delivery_above',
@@ -82,7 +81,6 @@ class CompanySetting extends Model
         'orders_accept_stripe' => 'boolean',
         'orders_accept_paystack' => 'boolean',
         'orders_accept_cod' => 'boolean',
-        'orders_accept_bank_transfer' => 'boolean',
         'orders_collect_payment_enabled' => 'boolean',
         'order_payment_mpesa_config' => 'array',
         'order_payment_stripe_config' => 'array',
@@ -101,6 +99,7 @@ class CompanySetting extends Model
         'dine_in_enabled' => 'boolean',
         'working_hours' => 'array',
         'learn_from_conversations' => 'boolean',
+        'dev_mode_enabled' => 'boolean',
         'agent_commerce_enabled' => 'boolean',
         'agent_business_goals' => 'array',
         'agent_proactive_enabled' => 'boolean',
@@ -130,16 +129,17 @@ class CompanySetting extends Model
         return is_array($c) && ! empty($c['secret']);
     }
 
+    protected static function booted(): void
+    {
+        static::saved(function (CompanySetting $setting) {
+            \Illuminate\Support\Facades\Cache::forget('company_settings_'.$setting->company_id);
+        });
+    }
+
     /** Whether company has manual payment instructions (e.g. bank details) for orders. */
     public function hasOrderPaymentManualInstructions(): bool
     {
         $t = $this->order_payment_manual_instructions;
-        return is_string($t) && trim($t) !== '';
-    }
-
-    public function hasBankTransferInstructions(): bool
-    {
-        $t = $this->bank_transfer_instructions;
         return is_string($t) && trim($t) !== '';
     }
 

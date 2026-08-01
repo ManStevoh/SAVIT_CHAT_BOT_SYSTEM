@@ -58,6 +58,8 @@ export interface Message {
   learningFeedback?: number | null
   learningSampleId?: string | null
   replyToMessageId?: string | null
+  aiRequestLogId?: string | null
+  promptAvailable?: boolean
   replyTo?: {
     id: string
     content: string

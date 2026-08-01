@@ -171,11 +171,14 @@ class ReplyGuardService
             return true;
         }
 
+        // Year-like numbers
         if ($value >= 1900 && $value <= 2100 && floor($value) === $value) {
             return true;
         }
 
-        if ($value <= 20 && floor($value) === $value) {
+        // Configurable threshold (default 20, can be lowered for cheap-item catalogs)
+        $threshold = (int) config('agent.reply_guard.ignore_below_price', 20);
+        if ($value <= $threshold && floor($value) === $value) {
             return true;
         }
 

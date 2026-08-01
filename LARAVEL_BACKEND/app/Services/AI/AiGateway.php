@@ -5,6 +5,7 @@ namespace App\Services\AI;
 use App\Models\AiModel;
 use App\Models\AiRequestLog;
 use App\Models\Company;
+use App\Models\CompanySetting;
 use App\Models\PlatformSetting;
 use App\Services\AI\Drivers\OpenAiDriver;
 use App\Services\AI\Drivers\Contracts\AiProviderDriver;
@@ -86,7 +87,27 @@ class AiGateway
         $driver = $this->driverFactory->driverFor($resolved->provider);
         $result = $driver->chatCompletion($resolved, $messages, $maxTokens, $temperature, $jsonMode, $timeoutSeconds);
         $result = $this->withCost($resolved->model, $result);
-        $this->persistLog($result, $useCase, $company?->id, $chatId, $resolved);
+        $logId = $this->persistLog($result, $useCase, $company?->id, $chatId, $resolved, $messages);
+
+        if ($logId !== null) {
+            $result = new OpenAiChatResult(
+                content: $result->content,
+                success: $result->success,
+                model: $result->model,
+                promptTokens: $result->promptTokens,
+                completionTokens: $result->completionTokens,
+                totalTokens: $result->totalTokens,
+                latencyMs: $result->latencyMs,
+                httpStatus: $result->httpStatus,
+                error: $result->error,
+                providerId: $result->providerId,
+                modelId: $result->modelId,
+                estimatedCostUsd: $result->estimatedCostUsd,
+                toolCalls: $result->toolCalls,
+                finishReason: $result->finishReason,
+                logId: $logId,
+            );
+        }
 
         return $result;
     }
@@ -368,15 +389,24 @@ class AiGateway
         ?int $companyId,
         ?int $chatId = null,
         ?ResolvedAiModel $resolved = null,
-    ): void {
+        ?array $messages = null,
+    ): ?int {
         $credentialSource = $resolved?->credentialSource;
         $selectionSource = $resolved?->selectionSource;
         $billed = $credentialSource !== null
             ? $this->billing->billedCostUsd($result->estimatedCostUsd, $credentialSource)
             : null;
 
+        $promptPayload = null;
+        if ($messages !== null && $companyId !== null) {
+            $devMode = (bool) CompanySetting::where('company_id', $companyId)->value('dev_mode_enabled');
+            if ($devMode) {
+                $promptPayload = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            }
+        }
+
         try {
-            AiRequestLog::create([
+            $log = AiRequestLog::create([
                 'company_id' => $companyId,
                 'ai_provider_id' => $result->providerId,
                 'ai_model_id' => $result->modelId,
@@ -394,10 +424,14 @@ class AiGateway
                 'success' => $result->success,
                 'http_status' => $result->httpStatus,
                 'error_message' => $result->error ? mb_substr($result->error, 0, 500) : null,
+                'prompt_payload' => $promptPayload,
                 'created_at' => now(),
             ]);
+
+            return (int) $log->id;
         } catch (\Throwable $e) {
             Log::warning('Failed to persist AI request log', ['error' => $e->getMessage()]);
+            return null;
         }
     }
 

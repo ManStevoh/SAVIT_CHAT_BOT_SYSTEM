@@ -56,7 +56,6 @@ export default function PublicPayPage({ token, order, company, paymentOptions, s
     paymentOptions.stripe && { key: 'stripe', label: 'Card (Stripe)' },
     paymentOptions.paystack && { key: 'paystack', label: 'Paystack' },
     paymentOptions.cod && { key: 'cod', label: 'Cash on delivery' },
-    paymentOptions.bankTransfer && { key: 'bank_transfer', label: 'Bank transfer' },
   ].filter(Boolean) as { key: string; label: string }[]
 
   return (
@@ -104,11 +103,6 @@ export default function PublicPayPage({ token, order, company, paymentOptions, s
               </div>
             )}
 
-            {method === 'bank_transfer' && paymentOptions.bankTransferInstructions && (
-              <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600 whitespace-pre-line">
-                {paymentOptions.bankTransferInstructions}
-              </div>
-            )}
 
             <Button type="submit" disabled={!method || submitting} className="w-full">
               {submitting ? 'Processing…' : 'Continue'}
