@@ -37,12 +37,22 @@ type Props = {
   order: OrderPayload
   company: { name: string }
   paymentOptions: PaymentOptions
+  initialMethod?: string | null
   status?: string
   errors?: Record<string, string>
 }
 
-export default function PublicPayPage({ token, order, company, paymentOptions, status, errors = {} }: Props) {
-  const [method, setMethod] = useState<string>('')
+export default function PublicPayPage({ token, order, company, paymentOptions, initialMethod, status, errors = {} }: Props) {
+  const getInitialMethod = () => {
+    if (initialMethod) return initialMethod
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      return params.get('method') || params.get('gateway') || ''
+    }
+    return ''
+  }
+
+  const [method, setMethod] = useState<string>(getInitialMethod)
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState(order.customerEmail ?? '')
   const [submitting, setSubmitting] = useState(false)

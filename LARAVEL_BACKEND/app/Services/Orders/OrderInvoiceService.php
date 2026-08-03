@@ -213,7 +213,7 @@ HTML;
 
         $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
         $defaultCaption = sprintf(
-            "Invoice for order #%s — %s (%s). Payment status: %s.\n\nView online:\n%s",
+            "📄 *Invoice for Order #%s*\nTotal: *%s*\nStatus: %s (Payment: %s)\n\n🔗 *View Online:*\n%s",
             $order->order_number,
             MoneyFormatter::formatFromSettings((float) $order->total, $company->settings),
             $order->status,
@@ -266,16 +266,17 @@ HTML;
         ));
 
         $lines = [
-            'Invoice for order #'.$order->order_number,
-            'Status: '.$order->status.' | Payment: '.($order->payment_status ?? 'unknown'),
+            "📄 *INVOICE — Order #{$order->order_number}*",
+            "Status: *{$order->status}* | Payment: *".($order->payment_status ?? 'unknown')."*",
+            "————————————",
             ...$money,
-            '',
-            'View / pay invoice:',
+            "",
+            "🔗 *View & Pay Invoice:*",
             $receiptUrl,
         ];
         if ($includePdfNote) {
-            $lines[] = '';
-            $lines[] = '(PDF attached when available)';
+            $lines[] = "";
+            $lines[] = "_(PDF document attached below)_";
         }
 
         return implode("\n", $lines);

@@ -15,9 +15,10 @@ import DashboardLayout from './layouts/DashboardLayout'
 const appName = import.meta.env.VITE_APP_NAME || 'RelayIQ'
 
 function resolveLayout(name: string) {
-  if (name.startsWith('Auth/')) return AuthLayout
-  if (name.startsWith('dashboard/')) return DashboardLayout
-  if (name.startsWith('admin/')) return AdminLayout
+  const lower = name.toLowerCase()
+  if (lower.startsWith('auth/')) return AuthLayout
+  if (lower.startsWith('dashboard/')) return DashboardLayout
+  if (lower.startsWith('admin/')) return AdminLayout
   return undefined
 }
 

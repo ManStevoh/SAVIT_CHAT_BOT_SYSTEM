@@ -186,23 +186,20 @@ export function DashboardNavLinks({
         ?.items.some((item) => isNavActive(pathname, item.href)) ?? false,
     [pathname]
   )
-  const [aiOpen, setAiOpen] = useState(aiActive)
-
-  useEffect(() => {
-    if (aiActive) setAiOpen(true)
-  }, [aiActive])
+  const [userToggled, setUserToggled] = useState<boolean | null>(null)
+  const aiOpen = userToggled !== null ? userToggled : aiActive
 
   return (
     <nav className="flex flex-col gap-4 overflow-y-auto p-3 pb-6">
       {dashboardNavGroups.map((group) => {
         if (group.collapsible) {
-          const open = collapsed ? aiActive : aiOpen || aiActive
+          const open = collapsed ? aiActive : aiOpen
           return (
             <div key={group.id} className="space-y-0.5">
               {!collapsed ? (
                 <button
                   type="button"
-                  onClick={() => setAiOpen((v) => !v)}
+                  onClick={() => setUserToggled((prev) => (prev !== null ? !prev : !aiActive))}
                   className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/45 hover:text-sidebar-foreground/70"
                 >
                   <span className="inline-flex items-center gap-1.5">

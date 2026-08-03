@@ -53,6 +53,11 @@ export default function CognitivePage() {
 
   const causal = cognitive?.causalAnalysis
   const counts = cognitive?.counts
+  const workforceList = Array.isArray(cognitive?.workforce)
+    ? cognitive.workforce
+    : Array.isArray((cognitive?.workforce as unknown as { workforce?: unknown[] })?.workforce)
+      ? (cognitive.workforce as unknown as { workforce: unknown[] }).workforce
+      : []
 
   return (
     <div className="space-y-6">
@@ -83,7 +88,7 @@ export default function CognitivePage() {
         />
         <StatsCard
           title="Digital workforce"
-          value={isLoading ? "…" : String(cognitive?.workforce?.length ?? 0)}
+          value={isLoading ? "…" : String(workforceList.length)}
           description="Director AIs advising the Chief Agent"
           icon={Users}
         />
@@ -180,8 +185,8 @@ export default function CognitivePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-            {cognitive?.workforce?.map((w) => (
-              <div key={w.id} className="rounded-lg border p-3 text-sm">
+            {workforceList.map((w: any) => (
+              <div key={w.id || w.title} className="rounded-lg border p-3 text-sm">
                 <p className="font-medium">{w.title}</p>
                 <p className="text-muted-foreground">{w.objective}</p>
                 <p className="text-xs text-muted-foreground mt-1">Reports: {w.reports}</p>

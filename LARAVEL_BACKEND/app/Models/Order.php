@@ -111,11 +111,16 @@ class Order extends Model
         }
     }
 
-    public function publicPayUrl(): string
+    public function publicPayUrl(?string $method = null): string
     {
         $this->ensurePublicTokens();
+        $base = url('/pay/'.$this->pay_token);
+        $m = $method ?? $this->payment_method;
+        if ($m) {
+            return $base.'?method='.urlencode((string) $m);
+        }
 
-        return url('/pay/'.$this->pay_token);
+        return $base;
     }
 
     public function publicInvoiceUrl(): string

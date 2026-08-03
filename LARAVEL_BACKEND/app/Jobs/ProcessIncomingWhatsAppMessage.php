@@ -402,7 +402,15 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
                 if ($agentResult['handoff']) {
                     $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
                 }
-                $this->sendReplyAndSave($waSender, $company, $chat, $agentResult['reply'], $agentResult['route'], $agentResult['log_id'] ?? null);
+                $this->sendReplyAndSave(
+                    $waSender,
+                    $company,
+                    $chat,
+                    $agentResult['reply'],
+                    $agentResult['route'],
+                    $agentResult['log_id'] ?? null,
+                    $agentResult['pay_url'] ?? null,
+                );
                 $this->maybeSendVisionProductImage($waSender, $company, $chat);
                 $this->schedulePostConversationJobs($company, $chat);
 
@@ -570,6 +578,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         string $replyText,
         ?string $replySource = null,
         ?int $aiRequestLogId = null,
+        ?string $ctaUrl = null,
     ): void {
         $account = $company->whatsappAccount;
         if (! $account || ! $account->isActive()) {
@@ -600,6 +609,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             'voice_mode' => $voiceMode,
             'should_voice' => $shouldVoice,
             'reply_text_preview' => mb_substr($replyText, 0, 150),
+            'cta_url' => $ctaUrl,
         ]);
 
         if ($shouldVoice && $voiceMode === 'voice_only') {
@@ -625,7 +635,28 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             }
         }
 
-        $result = $waSender->sendText($account, $this->customerPhone, $replyText);
+        if (($ctaUrl === null || $ctaUrl === '') && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|/receipt|/orders/receipt|pesapaliframe)[^\s]*)~i', $replyText, $m)) {
+            $ctaUrl = trim($m[1], "().,;[]");
+        }
+
+        if ($ctaUrl !== null && $ctaUrl !== '') {
+            $buttonText = 'Pay Online';
+            if (str_contains($ctaUrl, '/invoice/')) {
+                $buttonText = 'View Invoice';
+            } elseif (str_contains($ctaUrl, '/receipt')) {
+                $buttonText = 'View Receipt';
+            }
+
+            $result = $waSender->sendInteractiveCtaUrl(
+                $account,
+                $this->customerPhone,
+                $replyText,
+                $buttonText,
+                $ctaUrl
+            );
+        } else {
+            $result = $waSender->sendText($account, $this->customerPhone, $replyText);
+        }
         \App\Services\WhatsApp\WhatsAppDebugLogger::log('TEXT_SEND_META_API_RESULT', [
             'success' => $result['success'] ?? false,
             'message_id' => $result['message_id'] ?? null,

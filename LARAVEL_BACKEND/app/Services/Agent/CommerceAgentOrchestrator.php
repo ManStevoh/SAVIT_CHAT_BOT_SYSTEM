@@ -120,6 +120,7 @@ final class CommerceAgentOrchestrator
         $handoff = false;
         $orderFlowReply = null;
         $paymentDetailsReply = null;
+        $paymentUrl = null;
         $forcedToolNudgeCount = 0;
         $maxForcedNudges = 2;
         $trace = is_array($reasoning['trace'] ?? null) ? $reasoning['trace'] : [];
@@ -171,6 +172,38 @@ final class CommerceAgentOrchestrator
             }
 
             if ($result->toolCalls === []) {
+                if ($paymentDetailsReply !== null && trim($paymentDetailsReply) !== '') {
+                    $reply = $this->finalizeReply($company, trim($paymentDetailsReply), $cognitiveContext, true);
+                    $this->learningRecorder->recordOpenAiExchange($company, $incomingMessage, $reply, (int) $chat->id);
+                    $this->learningRecorder->recordAgentExchange($company, $incomingMessage, $reply, (int) $chat->id);
+                    $this->cognitive->finalizeEpisode((int) $cognitiveContext['episode_id'], [], 'payment_assisted');
+                    $this->logTrust($company, $chat, $cognitiveContext, $reasoning, $toolsUsed, $reply, 'payment_assisted');
+
+                    return [
+                        'reply' => $reply,
+                        'route' => 'agent_os_payment',
+                        'handoff' => false,
+                        'order_flow_reply' => $orderFlowReply,
+                        'log_id' => $lastLogId,
+                    ];
+                }
+
+                if ($orderFlowReply !== null && trim($orderFlowReply) !== '') {
+                    $reply = $this->finalizeReply($company, trim($orderFlowReply), $cognitiveContext, true);
+                    $this->learningRecorder->recordOpenAiExchange($company, $incomingMessage, $reply, (int) $chat->id);
+                    $this->learningRecorder->recordAgentExchange($company, $incomingMessage, $reply, (int) $chat->id);
+                    $this->cognitive->finalizeEpisode((int) $cognitiveContext['episode_id'], [], 'order_assisted');
+                    $this->logTrust($company, $chat, $cognitiveContext, $reasoning, $toolsUsed, $reply, 'order_assisted');
+
+                    return [
+                        'reply' => $reply,
+                        'route' => 'agent_os_order',
+                        'handoff' => $handoff,
+                        'order_flow_reply' => $orderFlowReply,
+                        'log_id' => $lastLogId,
+                    ];
+                }
+
                 if ($result->content !== null && trim($result->content) !== '') {
                     // Detect circular stalling replies ("let me know", "just let me know")
                     $isCircularReply = preg_match('/\b(?:let me know|just let me know|feel free to|whenever you\'re ready)\b/iu', trim($result->content));
@@ -251,9 +284,15 @@ final class CommerceAgentOrchestrator
                 }
                 if ($tc['name'] === 'process_order_message' && ! empty($toolResult['order_flow_reply'])) {
                     $orderFlowReply = (string) $toolResult['order_flow_reply'];
+                    if (! empty($toolResult['pay_url'])) {
+                        $paymentUrl = (string) $toolResult['pay_url'];
+                    }
                 }
                 if ($tc['name'] === 'share_payment_details' && ! empty($toolResult['customer_message'])) {
                     $paymentDetailsReply = (string) $toolResult['customer_message'];
+                    if (! empty($toolResult['pay_url'])) {
+                        $paymentUrl = (string) $toolResult['pay_url'];
+                    }
                 }
 
                 $messages[] = [
@@ -279,6 +318,7 @@ final class CommerceAgentOrchestrator
                 'route' => 'agent_os_payment',
                 'handoff' => false,
                 'order_flow_reply' => $orderFlowReply,
+                'pay_url' => $paymentUrl,
                 'log_id' => $lastLogId,
             ];
         }
@@ -298,6 +338,7 @@ final class CommerceAgentOrchestrator
                 'route' => 'agent_os_order',
                 'handoff' => $handoff,
                 'order_flow_reply' => $orderFlowReply,
+                'pay_url' => $paymentUrl,
                 'log_id' => $lastLogId,
             ];
         }

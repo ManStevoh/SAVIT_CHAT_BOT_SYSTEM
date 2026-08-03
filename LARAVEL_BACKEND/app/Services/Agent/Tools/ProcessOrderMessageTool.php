@@ -80,11 +80,17 @@ final class ProcessOrderMessageTool implements AgentTool
             ];
         }
 
+        $payUrl = null;
+        if (preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|/receipt|/orders/receipt|pesapaliframe)[^\s]*)~i', (string) $lastReply, $m)) {
+            $payUrl = trim($m[1], "().,;[]");
+        }
+
         return [
             'order_flow_reply' => $lastReply,
             'conversation_step' => $context->chat->conversation_step,
             'has_reply' => true,
             'tried_messages' => $tried,
+            'pay_url' => $payUrl,
         ];
     }
 

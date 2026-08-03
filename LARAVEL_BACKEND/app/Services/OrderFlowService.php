@@ -915,9 +915,9 @@ class OrderFlowService
     {
         $products = $this->getCatalogProducts($company);
         if ($products->isEmpty()) {
-            return 'We don\'t have any products in the catalog right now. Please contact us for availability.';
+            return "🛍️ *Catalog currently empty*\n\nWe don't have any items available in our catalog right now. Please contact us for assistance.";
         }
-        $lines = ["🛍️ Product list\n(Reply with a number to add an item)\n"];
+        $lines = ["🛍️ *OUR CATALOG*\n_Reply with a number to select an item_\n"];
         $i = 1;
         foreach ($products as $p) {
             if ($this->productHasActiveVariants($p)) {
@@ -926,11 +926,16 @@ class OrderFlowService
             } else {
                 $priceLabel = $this->formatMoney($company, (float) $p->price);
             }
-            $lines[] = "{$i}. {$p->name} — {$priceLabel}";
+            $line = "*{$i}. {$p->name}* — {$priceLabel}";
+            if ($p->description) {
+                $shortDesc = Str::limit(trim($p->description), 50);
+                $line .= "\n   _{$shortDesc}_";
+            }
+            $lines[] = $line;
             $i++;
         }
 
-        return implode("\n", $lines);
+        return implode("\n\n", $lines);
     }
 
     /**
@@ -951,7 +956,10 @@ class OrderFlowService
 
     protected function afterAddItemInstructions(): string
     {
-        return "Next steps:\n1 - Add another item (reply with a product number)\n2 - Add with quantity (example: 2 x Sugar)\n0 - Done (enter delivery address)";
+        return "📋 *Next steps:*\n"
+            . "• Reply with a *product number* to add another item\n"
+            . "• Type quantity & item name (e.g., *2 x Sugar*)\n"
+            . "• Reply *0* or *\"done\"* to complete checkout";
     }
 
     /**
@@ -963,7 +971,7 @@ class OrderFlowService
     {
         $summary = $this->formatDraftSummary($company, $draft);
 
-        return "✅ Added to cart\n{$name} x {$quantity}\n\n{$summary}\n\n".$this->afterAddItemInstructions();
+        return "✅ *Added to cart*\n*{$name}* x {$quantity}\n\n{$summary}\n\n".$this->afterAddItemInstructions();
     }
 
 
@@ -1112,7 +1120,7 @@ class OrderFlowService
 
     protected function withReceipt(Order $order, string $message): string
     {
-        return rtrim($message)."\n\nView invoice / receipt:\n".$order->publicReceiptUrl();
+        return rtrim($message)."\n\n📄 *Invoice & Receipt:*\n".$order->publicReceiptUrl();
     }
 
     /**
@@ -1122,7 +1130,7 @@ class OrderFlowService
     {
         $order->ensurePublicTokens();
 
-        return 'Pay online: '.$order->publicPayUrl()."\nInvoice: ".$order->publicInvoiceUrl();
+        return "💳 *Pay Online:*\n".$order->publicPayUrl()."\n\n📄 *View Invoice:*\n".$order->publicInvoiceUrl();
     }
 
     protected function handleCodPayment(Order $order, Chat $chat, bool $confirmedOrder = false): string
@@ -1378,7 +1386,13 @@ class OrderFlowService
 
     protected function productStepUnrecognizedReply(): string
     {
-        return 'I didn\'t catch that as a product number or quantity. Reply with a number from the list, text like "2 x ProductName", or 0 / "done" when your cart is ready. You can also ask a question about our shop or products — say "cancel" to stop your order.';
+        return "I didn't catch that as a product number or quantity. 🤔\n\n"
+            . "*How to respond:*\n"
+            . "• Reply with a *number* from the catalog (e.g. *1*)\n"
+            . "• Type quantity & item name (e.g. *2 x Coffee*)\n"
+            . "• Reply *0* or *\"done\"* when your cart is ready\n"
+            . "• Say *\"cancel\"* to stop your order\n\n"
+            . "You can also ask any question about our products or shop!";
     }
 
     /**
@@ -1611,17 +1625,18 @@ class OrderFlowService
     {
         $items = $draft['items'] ?? [];
         if (empty($items)) {
-            return 'Your cart is empty for now.';
+            return '🛒 *Cart is empty.*';
         }
-        $lines = ['Here’s your order summary:'];
+        $lines = ['🛒 *YOUR CART SUMMARY*'];
         foreach ($items as $item) {
             $qty = (int) ($item['quantity'] ?? 0);
             $unit = (float) ($item['price'] ?? 0);
             $lineSubtotal = round($unit * $qty, 2);
-            $lines[] = '• '.$item['name'].' — '.$qty.' x '.$this->formatMoney($company, $unit).' = '.$this->formatMoney($company, $lineSubtotal);
+            $lines[] = '• *'.$item['name'].'* — '.$qty.' x '.$this->formatMoney($company, $unit).' = *'.$this->formatMoney($company, $lineSubtotal).'*';
         }
 
         $calc = $this->taxCalculator->calculateForCompany($company, $items);
+        $lines[] = '————————————';
         $lines[] = 'Subtotal: '.$this->formatMoney($company, (float) $calc['subtotal']);
 
         $needsDelivery = $this->draftRequiresDeliveryAddress($draft);
@@ -1644,16 +1659,16 @@ class OrderFlowService
         }
 
         $total = round((float) $calc['total'] + $deliveryFee, 2);
-        $lines[] = 'Total: '.$this->formatMoney($company, $total);
+        $lines[] = '*Total: '.$this->formatMoney($company, $total).'*';
 
-        $lines[] = 'Fulfillment: '.$this->fulfillmentLabel($fulfillmentType);
+        $lines[] = 'Fulfillment: *'.$this->fulfillmentLabel($fulfillmentType).'*';
         if (! $needsDelivery && $fulfillmentType === 'pickup' && empty($draft['fulfillment_type'])) {
-            $lines[] = 'Delivery: No physical shipping needed';
+            $lines[] = 'Delivery: _No physical shipping needed_';
         }
 
         if (! empty($draft['scheduled_for'])) {
             try {
-                $lines[] = 'Scheduled for: '.Carbon::parse((string) $draft['scheduled_for'])->toDayDateTimeString();
+                $lines[] = 'Scheduled for: _'.Carbon::parse((string) $draft['scheduled_for'])->toDayDateTimeString().'_';
             } catch (\Throwable) {
                 // ignore unparsable scheduled_for values in summary display
             }
@@ -1760,7 +1775,11 @@ class OrderFlowService
 
     protected function numberedOrderInstructions(): string
     {
-        return "How to order:\n1) Reply with a product number (we’ll ask for quantity)\n2) Or type: 2 x ProductName\n0) Done (we’ll continue checkout)\n\nTip: Reply \"back\" anytime to return to the list.";
+        return "📌 *How to order:*\n"
+            . "• Reply with a *product number* (e.g., *1*)\n"
+            . "• Or type: *2 x Product Name*\n"
+            . "• Reply *0* or *\"done\"* to checkout\n\n"
+            . "💡 _Tip: Reply \"back\" anytime to return to the catalog._";
     }
 
     /**

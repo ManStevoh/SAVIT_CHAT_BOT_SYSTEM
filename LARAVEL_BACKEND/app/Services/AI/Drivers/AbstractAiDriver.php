@@ -21,17 +21,52 @@ abstract class AbstractAiDriver implements AiProviderDriver
         $last = null;
         for ($attempt = 1; $attempt <= 3; $attempt++) {
             try {
+                $parsedUrl = parse_url($url);
+                $host = $parsedUrl['host'] ?? '';
+                $port = ($parsedUrl['scheme'] ?? 'https') === 'https' ? 443 : 80;
+
+                $curlOpts = [
+                    CURLOPT_NOSIGNAL => 1,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ];
+
                 $response = Http::withToken($apiKey)
+                    ->withOptions([
+                        'force_ip_resolve' => 'v4',
+                        'curl' => $curlOpts,
+                    ])
                     ->withHeaders($headers)
                     ->timeout($timeoutSeconds)
                     ->post($url, $payload);
             } catch (ConnectionException $e) {
-                if ($attempt >= 3) {
-                    throw $e;
+                if (str_contains($e->getMessage(), 'getaddrinfo') || str_contains($e->getMessage(), 'cURL error 6')) {
+                    $ip = gethostbyname($host);
+                    if ($ip && $ip !== $host) {
+                        $curlOpts[CURLOPT_RESOLVE] = ["{$host}:{$port}:{$ip}"];
+                    }
+                    try {
+                        $response = Http::withToken($apiKey)
+                            ->withOptions([
+                                'force_ip_resolve' => 'v4',
+                                'curl' => $curlOpts,
+                            ])
+                            ->withHeaders($headers)
+                            ->timeout($timeoutSeconds)
+                            ->post($url, $payload);
+                    } catch (ConnectionException $retryE) {
+                        if ($attempt >= 3) {
+                            throw $retryE;
+                        }
+                        usleep($attempt * 300_000);
+                        continue;
+                    }
+                } else {
+                    if ($attempt >= 3) {
+                        throw $e;
+                    }
+                    usleep($attempt * 300_000);
+                    continue;
                 }
-                usleep($attempt * 500_000);
-
-                continue;
             }
 
             if ($response->successful() || ! $this->shouldRetry($response) || $attempt >= 3) {

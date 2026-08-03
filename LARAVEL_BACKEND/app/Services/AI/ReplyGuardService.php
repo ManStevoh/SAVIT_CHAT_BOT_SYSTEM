@@ -28,6 +28,11 @@ class ReplyGuardService
 
     public function guardPrices(Company $company, string $reply): string
     {
+        // Skip price guarding on calculated order summaries, receipts, invoices, till numbers, and payment details
+        if (preg_match('/\b(?:order #|subtotal|vat|total due|total:|till|receipt|invoice|pay online|payment options|pesapal|paystack|cod)\b/iu', $reply)) {
+            return $reply;
+        }
+
         $allowed = $this->catalogPrices($company);
         if ($allowed === []) {
             return $reply;
@@ -59,7 +64,7 @@ class ReplyGuardService
             return $reply;
         }
 
-        $guarded = trim(preg_replace('/\s+/', ' ', $guarded) ?? $guarded);
+        $guarded = trim(preg_replace('/[ \t]+/', ' ', $guarded) ?? $guarded);
 
         return rtrim($guarded)
             ."\n\nReply \"prices\" for our full product list with exact amounts.";

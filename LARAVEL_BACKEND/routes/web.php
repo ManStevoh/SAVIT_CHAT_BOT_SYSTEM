@@ -48,6 +48,22 @@ Route::get('/whatsapp_debug.txt', function () {
     ]);
 });
 
+Route::get('/debug.txt', function () {
+    $publicLog = public_path('whatsapp_debug.txt');
+    $storageLog = storage_path('logs/whatsapp_debug.log');
+
+    $content = '';
+    if (file_exists($publicLog) && filesize($publicLog) > 0) {
+        $content = file_get_contents($publicLog);
+    } elseif (file_exists($storageLog) && filesize($storageLog) > 0) {
+        $content = file_get_contents($storageLog);
+    }
+
+    return response($content !== '' ? $content : "No WhatsApp debug logs recorded yet.\nSend a message on WhatsApp and refresh this URL.", 200, [
+        'Content-Type' => 'text/plain; charset=UTF-8',
+    ]);
+});
+
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/pricing', [PageController::class, 'pricing'])->name('pricing');

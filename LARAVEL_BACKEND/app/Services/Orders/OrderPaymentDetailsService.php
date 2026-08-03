@@ -130,6 +130,7 @@ class OrderPaymentDetailsService
             'total' => $total,
             'payment_status' => $order->payment_status,
             'methods' => $methods,
+            'pay_url' => $order->publicPayUrl(),
             'manual_instructions' => ($manualDriver && $manualDriver->isReady($company))
                 ? $manualDriver->getInstructions($company, $order)
                 : null,

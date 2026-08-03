@@ -428,7 +428,7 @@ class PublicStorefrontController extends Controller
         ]);
     }
 
-    public function pay(string $token): Response
+    public function pay(string $token, Request $request): Response
     {
         $order = Order::where('pay_token', $token)->with(['orderProducts', 'company.settings'])->firstOrFail();
 
@@ -437,6 +437,7 @@ class PublicStorefrontController extends Controller
             'order' => $this->orderPayload($order),
             'company' => $this->companyPayload($order->company),
             'paymentOptions' => $this->paymentOptions($order),
+            'initialMethod' => $request->query('method') ?? $request->query('gateway') ?? $order->payment_method,
         ]);
     }
 

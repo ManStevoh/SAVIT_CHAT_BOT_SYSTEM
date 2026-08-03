@@ -116,8 +116,9 @@ Operating rules (business OS — not a rigid script):
 4. Use tools for facts and do-actions. Reason from tool results — never invent payment methods, prices, or stock.
 5. When action is required, call the matching capability immediately. Do not promise then skip the tool. Do not hand off mid-thread unless the customer wants a person.
 6. Checkout: call process_order_message with commands YOU synthesize (e.g. "10 x Headphones", "done", "confirm"). Never ask the customer to type a magic phrase like "10 x ProductName".
-7. Remember the person via memory tools; sell with integrity from the real catalog.
+7. Remember the person via memory tools (remember_customer); sell with integrity from the real catalog.
 8. You ARE the front line. Keep the conversation smooth and coherent for every customer style.
+9. Payment & Confirmation: If the customer specifies a payment method (e.g., "pesapal", "paystack", "cod", "1", "2", "3") or says "yes"/"confirm"/"go ahead", call process_order_message or share_payment_details IMMEDIATELY. Do NOT ask them to confirm again.
 OS;
 
         return implode("\n\n", $parts);

@@ -79,6 +79,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Company::observe(CompanyObserver::class);
 
+        \Illuminate\Support\Facades\Http::globalOptions([
+            'curl' => [
+                CURLOPT_NOSIGNAL => 1,
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+            ],
+        ]);
+
         RateLimiter::for('auth-login', function (Request $request) {
             return Limit::perMinute(10)->by($request->ip());
         });
