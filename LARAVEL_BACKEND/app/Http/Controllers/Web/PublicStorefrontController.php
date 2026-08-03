@@ -48,7 +48,18 @@ class PublicStorefrontController extends Controller
             'type' => $request->query('type'),
         ];
         $products = $this->storefront->catalogFiltered($company, $filters);
-        $session = $this->storefront->getSession($company, $this->cartToken($company));
+        $token = $this->cartToken($company, $request);
+        $session = $this->storefront->getSession($company, $token);
+
+        $phone = $request->query('phone');
+        if (is_string($phone) && trim($phone) !== '') {
+            $session->update(['customer_phone' => preg_replace('/\D+/', '', $phone)]);
+        }
+        $email = $request->query('email');
+        if (is_string($email) && trim($email) !== '') {
+            $session->update(['customer_email' => trim($email)]);
+        }
+
         $this->persistCartToken($company, $session->session_token);
         $this->storefront->recordEvent($company, 'view_catalog', $session->session_token);
 
@@ -167,10 +178,21 @@ class PublicStorefrontController extends Controller
         ]);
     }
 
-    public function cart(string $slug): Response
+    public function cart(string $slug, Request $request): Response
     {
         $company = $this->storefront->resolveCompanyBySlug($slug);
-        $session = $this->storefront->getSession($company, $this->cartToken($company));
+        $token = $this->cartToken($company, $request);
+        $session = $this->storefront->getSession($company, $token);
+
+        $phone = $request->query('phone');
+        if (is_string($phone) && trim($phone) !== '') {
+            $session->update(['customer_phone' => preg_replace('/\D+/', '', $phone)]);
+        }
+        $email = $request->query('email');
+        if (is_string($email) && trim($email) !== '') {
+            $session->update(['customer_email' => trim($email)]);
+        }
+
         $this->persistCartToken($company, $session->session_token);
         $cart = $this->storefront->cartSummary($company, $session);
         $cartUrl = url("/s/{$slug}/cart");
@@ -180,7 +202,7 @@ class PublicStorefrontController extends Controller
 
         return Inertia::render('store/cart', [
             'slug' => $slug,
-            'company' => $this->companyPayload($company, null, $waPrefill),
+            'company' => $this->companyPayload($company, $request, $waPrefill),
             'cart' => $cart,
         ]);
     }
@@ -354,14 +376,18 @@ class PublicStorefrontController extends Controller
         return response()->json($this->storefront->quoteCheckout($company, $session, $validated));
     }
 
-    public function track(string $slug): Response
+    public function track(string $slug, Request $request): Response
     {
         $company = $this->storefront->resolveCompanyBySlug($slug);
+        $token = $this->cartToken($company, $request);
+        $session = $this->storefront->getSession($company, $token);
+        $phone = $request->query('phone') ?? $session->customer_phone;
 
         return Inertia::render('store/track', [
             'slug' => $slug,
-            'company' => $this->companyPayload($company),
+            'company' => $this->companyPayload($company, $request),
             'order' => null,
+            'defaultPhone' => is_string($phone) ? $phone : '',
             'notFound' => false,
         ]);
     }
@@ -428,16 +454,102 @@ class PublicStorefrontController extends Controller
         ]);
     }
 
-    public function pay(string $token, Request $request): Response
+    public function pay(string $token, Request $request): SymfonyResponse
     {
         $order = Order::where('pay_token', $token)->with(['orderProducts', 'company.settings'])->firstOrFail();
+
+        if ($order->payment_status === 'paid') {
+            return Inertia::render('pay/page', [
+                'token' => $token,
+                'order' => $this->orderPayload($order),
+                'company' => $this->companyPayload($order->company),
+                'paymentOptions' => $this->paymentOptions($order),
+                'initialMethod' => $request->query('method') ?? $request->query('gateway') ?? $order->payment_method,
+            ]);
+        }
+
+        $targetMethod = $request->query('method') ?? $request->query('gateway') ?? $order->payment_method;
+
+        $hasSessionFeedback = session()->has('status') || session()->has('errors');
+        $forceSelect = $request->boolean('select') || $request->boolean('change');
+
+        if ($targetMethod && ! $hasSessionFeedback && ! $forceSelect) {
+            /** @var PaymentGatewayRegistry $registry */
+            $registry = app(PaymentGatewayRegistry::class);
+            $driver = $registry->getDriver($targetMethod);
+            $available = collect($registry->getAvailableDrivers($order->company))
+                ->contains(fn ($candidate) => $candidate->getId() === $targetMethod);
+
+            if ($driver && $available) {
+                switch ($targetMethod) {
+                    case 'stripe':
+                        $result = $this->orderPayment->createStripePaymentLinkForOrder($order);
+                        if ($result['success'] && ! empty($result['url'])) {
+                            return redirect()->away($result['url']);
+                        }
+                        session()->flash('errors', ['method' => $result['error'] ?? 'Could not start card payment.']);
+                        break;
+
+                    case 'paystack':
+                        $result = $this->orderPayment->createPaystackPaymentLinkForOrder($order);
+                        if ($result['success'] && ! empty($result['url'])) {
+                            return redirect()->away($result['url']);
+                        }
+                        session()->flash('errors', ['method' => $result['error'] ?? 'Could not start payment.']);
+                        break;
+
+                    case 'pesapal':
+                        $result = $this->orderPayment->createPesapalPaymentLinkForOrder($order);
+                        if ($result['success'] && ! empty($result['url'])) {
+                            return redirect()->away($result['url']);
+                        }
+                        session()->flash('errors', ['method' => $result['error'] ?? 'Could not start Pesapal payment.']);
+                        break;
+
+                    case 'flutterwave':
+                        $result = $this->orderPayment->createFlutterwavePaymentLinkForOrder($order);
+                        if ($result['success'] && ! empty($result['url'])) {
+                            return redirect()->away($result['url']);
+                        }
+                        session()->flash('errors', ['method' => $result['error'] ?? 'Could not start Flutterwave payment.']);
+                        break;
+
+                    case 'cod':
+                        $order->update(['payment_method' => 'cod', 'status' => 'confirmed']);
+
+                        return redirect()->to(url("/pay/{$token}"))->with('status', 'Order confirmed for cash on delivery.');
+
+                    case 'manual':
+                        $order->update(['payment_method' => 'manual']);
+
+                        return redirect()->to(url("/pay/{$token}"))->with('status', 'Manual payment instructions shown below.');
+
+                    case 'mpesa':
+                        if (! empty($order->customer_phone)) {
+                            $result = $this->orderPayment->sendStkPushForOrder($order, $order->customer_phone);
+                            if ($result['success']) {
+                                return redirect()->to(url("/pay/{$token}"))->with('status', 'M-Pesa prompt sent. Enter your PIN to complete payment.');
+                            }
+                            session()->flash('errors', ['method' => $result['error'] ?? 'Could not send M-Pesa prompt.']);
+                        }
+                        break;
+
+                    default:
+                        $payResult = $driver->initiatePayment($order);
+                        if (! empty($payResult['url'])) {
+                            return redirect()->away($payResult['url']);
+                        }
+                        break;
+                }
+            }
+        }
 
         return Inertia::render('pay/page', [
             'token' => $token,
             'order' => $this->orderPayload($order),
             'company' => $this->companyPayload($order->company),
             'paymentOptions' => $this->paymentOptions($order),
-            'initialMethod' => $request->query('method') ?? $request->query('gateway') ?? $order->payment_method,
+            'initialMethod' => $targetMethod,
         ]);
     }
 
@@ -784,8 +896,17 @@ class PublicStorefrontController extends Controller
         ];
     }
 
-    protected function cartToken(Company $company): ?string
+    protected function cartToken(Company $company, ?Request $request = null): ?string
     {
+        $req = $request ?? request();
+        $token = $req ? ($req->query('token') ?? $req->query('cart_token')) : null;
+        if (is_string($token) && trim($token) !== '') {
+            $token = trim($token);
+            $this->persistCartToken($company, $token);
+
+            return $token;
+        }
+
         return session('storefront_cart_'.$company->id);
     }
 

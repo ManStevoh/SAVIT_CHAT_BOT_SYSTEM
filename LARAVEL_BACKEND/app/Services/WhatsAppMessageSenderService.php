@@ -503,13 +503,22 @@ class WhatsAppMessageSenderService
      */
     public function sendSmartReply(WhatsAppAccount $account, string $to, string $text): array
     {
-        if (preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|/receipt|/orders/receipt)[^\s]*)~i', $text, $match)) {
+        if (preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|/receipt|/orders/receipt|/s/)[^\s]*)~i', $text, $match)) {
             $url = trim($match[1], "().,;[]");
-            $buttonText = 'Pay Online';
-            if (str_contains($url, '/invoice/')) {
+            $lowerUrl = strtolower($url);
+            $buttonText = 'Shop Online';
+            if (str_contains($lowerUrl, '/pay/')) {
+                $buttonText = 'Pay Online';
+            } elseif (str_contains($lowerUrl, '/invoice/')) {
                 $buttonText = 'View Invoice';
-            } elseif (str_contains($url, '/receipt')) {
+            } elseif (str_contains($lowerUrl, '/receipt')) {
                 $buttonText = 'View Receipt';
+            } elseif (str_contains($lowerUrl, '/cart')) {
+                $buttonText = 'View Cart';
+            } elseif (str_contains($lowerUrl, '/track')) {
+                $buttonText = 'Track Order';
+            } elseif (str_contains($lowerUrl, '/s/')) {
+                $buttonText = 'Shop Online';
             }
 
             $ctaResult = $this->sendInteractiveCtaUrl(
@@ -581,10 +590,10 @@ class WhatsAppMessageSenderService
 
         foreach ($lines as $line) {
             $trimmed = trim($line);
-            if (str_contains($line, $targetUrl)) {
+            if (str_contains($line, $targetUrl) || preg_match('~https?://~i', $line)) {
                 continue;
             }
-            if (preg_match('/^(?:📄\s*\*?(?:Invoice|Receipt|View Invoice|View Receipt)\*?:?|💳\s*\*?Pay Online\*?:?|Pay online:|Invoice:|View invoice \/ receipt:)$/iu', $trimmed)) {
+            if (preg_match('/^(?:📄\s*\*?(?:Invoice|Receipt|View Invoice|View Receipt)\*?:?|💳\s*\*?Pay Online\*?:?|Pay online:?|Invoice:?|View invoice \/ receipt:?|Instructions:\s*Pay online.*|Please complete payment here:?)$/iu', $trimmed)) {
                 continue;
             }
             $filtered[] = $line;

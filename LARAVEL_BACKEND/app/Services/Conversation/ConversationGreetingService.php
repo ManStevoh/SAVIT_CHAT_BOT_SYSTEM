@@ -59,18 +59,46 @@ final class ConversationGreetingService
         return $trimmed;
     }
 
-    public function buildOpening(Company $company, ?string $customerName): string
+    public function publicStorefrontUrl(Company $company, ?Chat $chat = null, ?string $customerPhone = null): ?string
+    {
+        $slug = $company->store_slug ?: \Illuminate\Support\Str::slug($company->name);
+        if (! $slug) {
+            $slug = 'store-'.$company->id;
+        }
+
+        $phone = $chat ? $chat->customer_phone : ($customerPhone ? preg_replace('/\D+/', '', $customerPhone) : null);
+        $baseUrl = url('/s/'.$slug);
+
+        if (! $phone) {
+            return $baseUrl;
+        }
+
+        if ($chat) {
+            $session = app(\App\Services\Storefront\StorefrontService::class)->syncChatCartToStorefrontSession($company, $chat);
+
+            return $baseUrl.'?phone='.urlencode($phone).'&token='.$session->session_token;
+        }
+
+        return $baseUrl.'?phone='.urlencode($phone);
+    }
+
+    public function buildOpening(Company $company, ?string $customerName = null, ?Chat $chat = null, ?string $customerPhone = null): string
     {
         $settings = $company->settings;
         $greeting = $settings?->ai_greeting;
-        if ($greeting && ! $this->looksLikeSystemPrompt($greeting)) {
-            return $this->appendQuickMenu($greeting);
+        if (! $greeting || $this->looksLikeSystemPrompt($greeting)) {
+            $safeName = $this->sanitizeName($customerName);
+            $greeting = 'Hello'.($safeName !== '' ? " {$safeName}" : '').'! Thanks for reaching out. How can we help you today?';
         }
 
-        $safeName = $this->sanitizeName($customerName);
-        $default = 'Hello'.($safeName !== '' ? " {$safeName}" : '').'! Thanks for reaching out. How can we help you today?';
+        $baseText = $this->appendQuickMenu($greeting);
 
-        return $this->appendQuickMenu($default);
+        $storeUrl = $this->publicStorefrontUrl($company, $chat, $customerPhone);
+        if ($storeUrl && ! str_contains($baseText, '/s/')) {
+            $baseText .= "\n\n🛍️ *Shop Online:*\n{$storeUrl}";
+        }
+
+        return $baseText;
     }
 
     public function appendQuickMenu(string $text): string

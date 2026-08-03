@@ -21,8 +21,8 @@ final class ProcessOrderMessageTool implements AgentTool
 
     public function description(): string
     {
-        return 'Advance checkout whenever the customer specifies a product number (e.g. 1, 2, 3), item name, quantity (e.g. "2 earphones"), address, payment, or confirm. '
-            .'Pass their message, OR a normalized checkout command (e.g. "1", "2 earphones", "done", "confirm").';
+        return 'Advance checkout whenever the customer specifies a product number (e.g. 1, 2, 3), item name, quantity (e.g. "2 earphones"), address, payment, view cart, clear cart, or confirm. '
+            .'Pass their message, OR a normalized checkout command (e.g. "1", "2 earphones", "view cart", "clear", "done", "confirm").';
     }
 
     public function parametersSchema(): array

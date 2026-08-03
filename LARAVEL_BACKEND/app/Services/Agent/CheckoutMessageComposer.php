@@ -32,7 +32,12 @@ final class CheckoutMessageComposer
             $candidates[] = $qtyProduct;
         }
 
-        if ($this->looksLikeAffirm($lower) || $this->looksLikePayIntent($lower)) {
+        $isPureNumber = (bool) preg_match('/^\d+$/', $lower);
+        if ($isPureNumber && ($step === OrderFlowService::STEP_CONFIRM || $step === 'confirm') && $lower === '1') {
+            $candidates[] = 'confirm';
+        }
+
+        if (! $isPureNumber && ($this->looksLikeAffirm($lower) || $this->looksLikePayIntent($lower))) {
             if ($step === OrderFlowService::STEP_CONFIRM || $step === 'confirm') {
                 $candidates[] = 'confirm';
             } elseif ($step === OrderFlowService::STEP_PRODUCT && $hasItems) {
@@ -110,7 +115,7 @@ final class CheckoutMessageComposer
         if (in_array($lower, [
             'ok', 'okay', 'k', 'yes', 'y', 'yeah', 'yep', 'yup', 'sure', 'sawa', 'saa',
             'confirm', 'confirmed', 'proceed', 'go ahead', 'go for it', 'place order',
-            'confirm order', 'place it', 'do it', 'alright', 'all right', 'fine', '1',
+            'confirm order', 'place it', 'do it', 'alright', 'all right', 'fine',
         ], true)) {
             return true;
         }

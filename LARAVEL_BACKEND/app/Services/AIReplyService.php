@@ -106,7 +106,7 @@ class AIReplyService
         return $this->resolveRouted($company, $text, $customerName, $chatId, $orderFlowContext);
     }
 
-    public function getGreetingOpening(Company $company, ?string $customerName = null): string
+    public function getGreetingOpening(Company $company, ?string $customerName = null, ?\App\Models\Chat $chat = null): string
     {
         $company->loadMissing('settings');
 
@@ -118,7 +118,7 @@ class AIReplyService
 
         $this->setReplyRoute('greeting_menu');
 
-        return $this->greetingService->buildOpening($company, $customerName);
+        return $this->greetingService->buildOpening($company, $customerName, $chat);
     }
 
     protected function resolveRouted(

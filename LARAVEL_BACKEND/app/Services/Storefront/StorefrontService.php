@@ -357,6 +357,69 @@ class StorefrontService
         return $session;
     }
 
+    public function clearCartForPhone(Company $company, string $phone): void
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        if ($digits === '') {
+            return;
+        }
+
+        StorefrontSession::where('company_id', $company->id)
+            ->where('customer_phone', $digits)
+            ->update(['cart' => []]);
+    }
+
+    public function syncChatCartToStorefrontSession(Company $company, Chat $chat, ?StorefrontSession $session = null): StorefrontSession
+    {
+        if (! $session) {
+            $phone = preg_replace('/\D+/', '', (string) $chat->customer_phone) ?? '';
+            $token = session('storefront_cart_'.$company->id);
+            $session = StorefrontSession::where('company_id', $company->id)
+                ->where(function ($q) use ($phone, $token) {
+                    if ($phone !== '') {
+                        $q->where('customer_phone', $phone);
+                    }
+                    if ($token) {
+                        $q->orWhere('session_token', $token);
+                    }
+                })
+                ->latest('last_activity_at')
+                ->first();
+
+            if (! $session) {
+                $session = $this->getSession($company, $token);
+            }
+        }
+
+        $draft = is_array($chat->order_draft) ? $chat->order_draft : [];
+        $items = is_array($draft['items'] ?? null) ? $draft['items'] : [];
+
+        $cart = [];
+        foreach ($items as $item) {
+            $pId = (int) ($item['product_id'] ?? 0);
+            if ($pId <= 0) {
+                continue;
+            }
+            $vId = ! empty($item['product_variant_id']) ? (int) $item['product_variant_id'] : null;
+            $qty = max(1, (int) ($item['quantity'] ?? 1));
+            $key = $pId.':'.($vId ?: 0);
+            $cart[$key] = [
+                'product_id' => $pId,
+                'product_variant_id' => $vId,
+                'quantity' => $qty,
+            ];
+        }
+
+        $session->update([
+            'customer_name' => $chat->customer_name ?: $session->customer_name,
+            'customer_phone' => $chat->customer_phone ?: $session->customer_phone,
+            'cart' => $cart,
+            'last_activity_at' => now(),
+        ]);
+
+        return $session;
+    }
+
     public function updateFulfillment(StorefrontSession $session, string $fulfillmentType, ?int $dineInTableId = null): StorefrontSession
     {
         $session->update([
@@ -778,6 +841,15 @@ class StorefrontService
 
         $order->ensurePublicTokens();
         $this->clearCart($session);
+        if ($chatId) {
+            $chat = Chat::find($chatId);
+            if ($chat) {
+                $chat->update([
+                    'conversation_step' => null,
+                    'order_draft' => null,
+                ]);
+            }
+        }
 
         if ($customerPhone !== '') {
             $customer = $this->findOrCreateCustomer($company, $customerPhone, $customerName, $customerEmail ?: null);

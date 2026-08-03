@@ -192,6 +192,108 @@ class OrderFlowService
             $draft = $this->getDraft($chat);
         }
 
+        // Request catalog / product list
+        if ($this->wantsCatalogList($lower, $trimmed)) {
+            $this->setStep($chat, self::STEP_PRODUCT, $this->withCatalogIds($company, $draft));
+
+            return $this->formatCatalogMessage($company, $chat);
+        }
+
+        // WhatsApp Cart Management Commands
+        if (in_array($lower, ['view cart', 'my cart', 'cart', 'show cart', 'basket', 'view basket', '0'], true)) {
+            $items = $draft['items'] ?? [];
+            if (empty($items)) {
+                return "🛒 *Your cart is currently empty.*\n\nReply with a product number or name to add items to your cart.";
+            }
+
+            return $this->formatDraftSummary($company, $draft, $chat)."\n\n📋 *Next steps:*\n• Reply *done* or *checkout* to place order\n• Reply *clear* to empty cart";
+        }
+
+        if (in_array($lower, ['clear cart', 'empty cart', 'reset cart', 'clear'], true)) {
+            $this->clearState($chat);
+            app(\App\Services\Storefront\StorefrontService::class)->clearCartForPhone($company, $customerPhone);
+
+            return "🛒 *Your cart has been emptied.*\n\nReply with a product number or name whenever you'd like to start a new order!";
+        }
+
+        if (preg_match('/^(?:remove|delete|drop)\s+(.+)$/iu', $trimmed, $matches) && ! empty($draft['items'])) {
+            $target = mb_strtolower(trim($matches[1]));
+            $newItems = [];
+            $removedName = null;
+            foreach ($draft['items'] as $item) {
+                $itemName = mb_strtolower($item['name'] ?? '');
+                if ($removedName === null && (str_contains($itemName, $target) || str_contains($target, $itemName))) {
+                    $removedName = $item['name'];
+                    continue;
+                }
+                $newItems[] = $item;
+            }
+            if ($removedName !== null) {
+                $draft['items'] = $newItems;
+                $this->setStep($chat, empty($newItems) ? self::STEP_NONE : self::STEP_PRODUCT, $draft);
+                app(\App\Services\Storefront\StorefrontService::class)->syncChatCartToStorefrontSession($company, $chat);
+                if (empty($newItems)) {
+                    return "🗑️ Removed *{$removedName}* from your cart.\n\n🛒 Your cart is now empty.";
+                }
+
+                return "🗑️ Removed *{$removedName}* from your cart.\n\n".$this->formatDraftSummary($company, $draft, $chat);
+            }
+        }
+
+        // Request images of cart items
+        if ($this->wantsCartImages($lower, $trimmed)) {
+            $items = $draft['items'] ?? [];
+            if (empty($items)) {
+                return "🛒 *Your cart is currently empty.*\n\nReply with a product number or name to add items to your cart.";
+            }
+
+            $imagesSent = 0;
+            $replyParts = [];
+
+            foreach ($items as $item) {
+                $pId = (int) ($item['product_id'] ?? 0);
+                if ($pId <= 0) {
+                    continue;
+                }
+                $product = Product::where('company_id', $company->id)->find($pId);
+                if (! $product) {
+                    continue;
+                }
+
+                $imageUrl = $this->resolveProductImageUrl($company, $product);
+                if ($imageUrl) {
+                    $imagesSent++;
+                    $name = (string) ($item['name'] ?? $product->name);
+                    $priceStr = $this->formatMoney($company, (float) ($item['price'] ?? $product->price));
+                    $caption = "📷 *{$name}* — {$priceStr}";
+                    if (! empty($product->description)) {
+                        $caption .= "\n_".Str::limit(strip_tags($product->description), 120)."_";
+                    }
+
+                    $replyParts[] = "[IMAGE_URL: {$imageUrl} CAPTION: {$caption}]";
+                }
+            }
+
+            if ($imagesSent === 0) {
+                $noImageReply = "📷 *No images are currently uploaded for the items in your cart.*\n\n".$this->formatDraftSummary($company, $draft, $chat);
+                if ($step === self::STEP_CONFIRM) {
+                    $noImageReply .= "\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+                }
+
+                return $noImageReply;
+            }
+
+            $summary = $this->formatDraftSummary($company, $draft, $chat);
+            $imgHeader = "Here's the image of the item".(count($items) > 1 ? 's' : '')." in your cart: 📷";
+            $response = $imgHeader."\n\n".implode("\n\n", $replyParts)."\n\n".$summary;
+
+            if ($step === self::STEP_CONFIRM) {
+                $response .= "\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+            }
+
+            return $response;
+        }
+
         // If the customer mentions another product name in their message (e.g. "i want headphones"),
         // intercept it and redirect the flow to that product instead of being stuck in the current step.
         if ($step && ! $this->looksLikeGreetingOnly($lower) && ! preg_match('/^\d+$/', $trimmed)) {
@@ -208,7 +310,7 @@ class OrderFlowService
                 $draft = $this->withCatalogIds($company, $draft);
                 $this->setStep($chat, self::STEP_PRODUCT, $draft);
 
-                return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft);
+                return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft, $chat);
             }
         }
 
@@ -283,6 +385,7 @@ class OrderFlowService
 
             if ($matchedDriver) {
                 $method = $matchedDriver->getId();
+                $order->update(['payment_method' => $method]);
                 if ($method === 'manual') {
                     $this->clearState($chat);
 
@@ -341,7 +444,7 @@ class OrderFlowService
                     $draft = ['items' => [$parsed]];
                     $draft = $this->withCatalogIds($company, $draft);
                     $this->setStep($chat, self::STEP_PRODUCT, $draft);
-                    return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft);
+                    return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft, $chat);
                 }
             }
         }
@@ -397,7 +500,7 @@ class OrderFlowService
                 unset($draft['pending_product_id'], $draft['pending_variant_id'], $draft['variant_ids'], $draft['pending_qty']);
                 $draft = $this->withCatalogIds($company, $draft);
                 $this->setStep($chat, self::STEP_PRODUCT, $draft);
-                return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft);
+                return $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft, $chat);
             }
 
             return $this->productStepUnrecognizedReply();
@@ -413,17 +516,17 @@ class OrderFlowService
                 $draft['fulfillment_type'] = 'pickup';
                 unset($draft['delivery_address']);
                 $this->setStep($chat, self::STEP_CONFIRM, $draft);
-                $summary = $this->formatDraftSummary($company, $draft);
+                $summary = $this->formatDraftSummary($company, $draft, $chat);
 
-                return "📦 Pickup selected.\n\n{$summary}\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+                return "📦 Pickup selected.\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
             }
             if ($this->wantsDineIn($lower)) {
                 $draft['fulfillment_type'] = 'dine_in';
                 unset($draft['delivery_address']);
                 $this->setStep($chat, self::STEP_CONFIRM, $draft);
-                $summary = $this->formatDraftSummary($company, $draft);
+                $summary = $this->formatDraftSummary($company, $draft, $chat);
 
-                return "🍽️ Dine-in selected.\n\n{$summary}\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+                return "🍽️ Dine-in selected.\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
             }
 
             $scheduled = $this->tryParseSchedule($trimmed);
@@ -441,9 +544,9 @@ class OrderFlowService
             $draft['delivery_address'] = $address;
             $draft['fulfillment_type'] = $draft['fulfillment_type'] ?? 'delivery';
             $this->setStep($chat, self::STEP_CONFIRM, $draft);
-            $summary = $this->formatDraftSummary($company, $draft);
+            $summary = $this->formatDraftSummary($company, $draft, $chat);
 
-            return "📍 Delivery address:\n{$address}\n\n{$summary}\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+            return "📍 Delivery address:\n{$address}\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
         }
 
         if ($step === self::STEP_CONFIRM) {
@@ -501,6 +604,7 @@ class OrderFlowService
 
             if ($matchedDriver) {
                 $method = $matchedDriver->getId();
+                $order->update(['payment_method' => $method]);
                 if ($method === 'manual') {
                     $this->clearState($chat);
 
@@ -717,7 +821,7 @@ class OrderFlowService
                 $draft = $this->withCatalogIds($company, $draft);
                 $this->setStep($chat, self::STEP_PRODUCT, $draft);
 
-                return $this->formatAddedToCartMessage($company, (string) $line['name'], (int) $qty, $draft);
+                return $this->formatAddedToCartMessage($company, (string) $line['name'], (int) $qty, $draft, $chat);
             }
         }
 
@@ -833,7 +937,7 @@ class OrderFlowService
         unset($draft['pending_product_id'], $draft['pending_variant_id'], $draft['variant_ids']);
         $draft = $this->withCatalogIds($company, $draft);
         $this->setStep($chat, self::STEP_PRODUCT, $draft);
-        return $this->formatAddedToCartMessage($company, (string) $line['name'], (int) $qty, $draft);
+        return $this->formatAddedToCartMessage($company, (string) $line['name'], (int) $qty, $draft, $chat);
     }
 
     protected function beginProductStep(Chat $chat, Company $company, array $draft): string
@@ -967,9 +1071,9 @@ class OrderFlowService
      *
      * @param  array<string, mixed>  $draft
      */
-    protected function formatAddedToCartMessage(Company $company, string $name, int $quantity, array $draft): string
+    protected function formatAddedToCartMessage(Company $company, string $name, int $quantity, array $draft, ?Chat $chat = null): string
     {
-        $summary = $this->formatDraftSummary($company, $draft);
+        $summary = $this->formatDraftSummary($company, $draft, $chat);
 
         return "✅ *Added to cart*\n*{$name}* x {$quantity}\n\n{$summary}\n\n".$this->afterAddItemInstructions();
     }
@@ -1621,7 +1725,71 @@ class OrderFlowService
         return $this->formatNumberedProductList($company);
     }
 
-    protected function formatDraftSummary(Company $company, array $draft): string
+    public function publicCartUrl(Company $company, Chat $chat): ?string
+    {
+        $session = app(\App\Services\Storefront\StorefrontService::class)->syncChatCartToStorefrontSession($company, $chat);
+        $slug = $company->store_slug ?: \Illuminate\Support\Str::slug($company->name);
+        if (! $slug) {
+            $slug = 'store-'.$company->id;
+        }
+
+        return url('/s/'.$slug.'/cart?token='.$session->session_token);
+    }
+
+    protected function wantsCatalogList(string $lower, string $trimmed): bool
+    {
+        if (in_array($lower, ['catalog', 'show catalog', 'my catalog', 'view catalog', 'our catalog', 'products', 'show products', 'menu', 'show menu', 'list', 'items', 'shop'], true)) {
+            return true;
+        }
+
+        return (bool) preg_match('/\b(?:catalog|products|menu|items|what do you sell|show me your catalog|show me catalog|show catalog|view catalog|list products|see products|see catalog)\b/iu', $lower);
+    }
+
+    public function formatCatalogMessage(Company $company, ?Chat $chat = null): string
+    {
+        $catalogText = $this->formatNumberedProductList($company);
+
+        $response = "🛍️ *OUR CATALOG*\n\n{$catalogText}\n\n".$this->numberedOrderInstructions();
+
+        $storeUrl = app(\App\Services\Conversation\ConversationGreetingService::class)->publicStorefrontUrl($company, $chat);
+        if ($storeUrl) {
+            $response .= "\n\n🛍️ *Shop Online:*\n{$storeUrl}";
+        }
+
+        return $response;
+    }
+
+    protected function confirmationFootnote(): string
+    {
+        return "📷 *Would you like to see images of the items in your cart?*\nReply *\"images\"* or *\"photos\"* to view them.";
+    }
+
+    protected function wantsCartImages(string $lower, string $trimmed): bool
+    {
+        if (in_array($lower, ['images', 'image', 'photos', 'photo', 'pictures', 'picture', 'show images', 'show photos', 'send images', 'view images', 'view photos', 'can i get an image of the item in my cart'], true)) {
+            return true;
+        }
+
+        return (bool) preg_match('/\b(?:image|images|photo|photos|picture|pictures|photo of|image of|picture of)\b/iu', $lower);
+    }
+
+    public function resolveProductImageUrl(Company $company, Product $product): ?string
+    {
+        $primary = $product->primaryImage();
+        $path = $primary?->path ?? $product->image;
+        if (! $path) {
+            return null;
+        }
+
+        $url = Storage::url($path);
+        if (str_starts_with($url, '/')) {
+            return url($url);
+        }
+
+        return $url;
+    }
+
+    protected function formatDraftSummary(Company $company, array $draft, ?Chat $chat = null): string
     {
         $items = $draft['items'] ?? [];
         if (empty($items)) {
@@ -1671,6 +1839,15 @@ class OrderFlowService
                 $lines[] = 'Scheduled for: _'.Carbon::parse((string) $draft['scheduled_for'])->toDayDateTimeString().'_';
             } catch (\Throwable) {
                 // ignore unparsable scheduled_for values in summary display
+            }
+        }
+
+        if ($company->store_slug && $chat) {
+            $webCartUrl = $this->publicCartUrl($company, $chat);
+            if ($webCartUrl) {
+                $lines[] = '';
+                $lines[] = '🌐 *View / Checkout on Web:*';
+                $lines[] = $webCartUrl;
             }
         }
 

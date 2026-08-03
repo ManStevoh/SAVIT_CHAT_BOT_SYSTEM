@@ -462,7 +462,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
             $skipOpening = $aiReply->shouldSkipScriptedOpening($company, $this->messageText);
             if (! $skipOpening) {
-                $greeting = $aiReply->getGreetingOpening($company, $this->customerName);
+                $greeting = $aiReply->getGreetingOpening($company, $this->customerName, $chat);
                 \App\Services\WhatsApp\WhatsAppDebugLogger::log('FIRST_MESSAGE_GREETING_SEND', [
                     'greeting_preview' => mb_substr($greeting, 0, 150),
                 ]);
@@ -635,61 +635,110 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             }
         }
 
-        if (($ctaUrl === null || $ctaUrl === '') && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|/receipt|/orders/receipt|pesapaliframe)[^\s]*)~i', $replyText, $m)) {
-            $ctaUrl = trim($m[1], "().,;[]");
+        $extractedImages = $this->extractMediaImages($replyText);
+        $cleanReplyText = $replyText;
+        if (! empty($extractedImages)) {
+            foreach ($extractedImages as $img) {
+                $cleanReplyText = str_replace($img['raw'], '', $cleanReplyText);
+            }
+            $cleanReplyText = trim(preg_replace('/\n{3,}/', "\n\n", $cleanReplyText));
         }
 
-        if ($ctaUrl !== null && $ctaUrl !== '') {
-            $buttonText = 'Pay Online';
-            if (str_contains($ctaUrl, '/invoice/')) {
-                $buttonText = 'View Invoice';
-            } elseif (str_contains($ctaUrl, '/receipt')) {
-                $buttonText = 'View Receipt';
+        if ($cleanReplyText !== '') {
+            if (($ctaUrl === null || $ctaUrl === '') && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|/receipt|/orders/receipt|/s/|pesapaliframe)[^\s]*)~i', $cleanReplyText, $m)) {
+                $ctaUrl = trim($m[1], "().,;[]");
             }
 
-            $result = $waSender->sendInteractiveCtaUrl(
-                $account,
-                $this->customerPhone,
-                $replyText,
-                $buttonText,
-                $ctaUrl
-            );
-        } else {
-            $result = $waSender->sendText($account, $this->customerPhone, $replyText);
+            if ($ctaUrl !== null && $ctaUrl !== '') {
+                $lowerUrl = strtolower($ctaUrl);
+                $buttonText = 'Shop Online';
+                if (str_contains($lowerUrl, 'pesapal')) {
+                    $buttonText = 'Pay via Pesapal';
+                } elseif (str_contains($lowerUrl, 'paystack')) {
+                    $buttonText = 'Pay via Paystack';
+                } elseif (str_contains($lowerUrl, 'stripe')) {
+                    $buttonText = 'Pay via Stripe';
+                } elseif (str_contains($lowerUrl, '/pay/')) {
+                    $buttonText = 'Pay Online';
+                } elseif (str_contains($lowerUrl, '/invoice/')) {
+                    $buttonText = 'View Invoice';
+                } elseif (str_contains($lowerUrl, '/receipt')) {
+                    $buttonText = 'View Receipt';
+                } elseif (str_contains($lowerUrl, '/cart')) {
+                    $buttonText = 'View Cart';
+                } elseif (str_contains($lowerUrl, '/track')) {
+                    $buttonText = 'Track Order';
+                } elseif (str_contains($lowerUrl, '/s/')) {
+                    $buttonText = 'Shop Online';
+                }
+
+                $result = $waSender->sendInteractiveCtaUrl(
+                    $account,
+                    $this->customerPhone,
+                    $cleanReplyText,
+                    $buttonText,
+                    $ctaUrl
+                );
+            } else {
+                $result = $waSender->sendText($account, $this->customerPhone, $cleanReplyText);
+            }
+            \App\Services\WhatsApp\WhatsAppDebugLogger::log('TEXT_SEND_META_API_RESULT', [
+                'success' => $result['success'] ?? false,
+                'message_id' => $result['message_id'] ?? null,
+                'error' => $result['error'] ?? null,
+            ]);
+
+            $message = Message::create([
+                'chat_id' => $this->chatId,
+                'content' => $cleanReplyText,
+                'sender' => 'bot',
+                'reply_source' => $replySource,
+                'status' => ($result['success'] ?? false) ? 'sent' : 'failed',
+                'whatsapp_message_id' => $result['message_id'] ?? null,
+                'ai_request_log_id' => $aiRequestLogId,
+            ]);
+
+            if (($result['success'] ?? false) && $this->shouldLinkLearningSample($replySource)) {
+                $sampleId = app(ConversationLearningService::class)->linkSampleToMessage(
+                    (int) $company->id,
+                    $this->chatId,
+                    $this->messageText,
+                    (int) $message->id,
+                );
+                if ($sampleId !== null) {
+                    $message->update(['learning_sample_id' => $sampleId]);
+                }
+            }
+
+            $chat->update([
+                'last_message' => $cleanReplyText,
+                'last_message_at' => now(),
+                'ai_handled' => true,
+            ]);
         }
-        \App\Services\WhatsApp\WhatsAppDebugLogger::log('TEXT_SEND_META_API_RESULT', [
-            'success' => $result['success'] ?? false,
-            'message_id' => $result['message_id'] ?? null,
-            'error' => $result['error'] ?? null,
-        ]);
 
-        $message = Message::create([
-            'chat_id' => $this->chatId,
-            'content' => $replyText,
-            'sender' => 'bot',
-            'reply_source' => $replySource,
-            'status' => $result['success'] ? 'sent' : 'failed',
-            'whatsapp_message_id' => $result['message_id'] ?? null,
-            'ai_request_log_id' => $aiRequestLogId,
-        ]);
+        // Send extracted images as native WhatsApp photo messages
+        foreach ($extractedImages as $img) {
+            $imgUrl = $img['url'];
+            if (str_starts_with($imgUrl, '/')) {
+                $imgUrl = url($imgUrl);
+            }
+            $caption = $img['caption'] !== '' ? $img['caption'] : null;
 
-        if ($result['success'] && $this->shouldLinkLearningSample($replySource)) {
-            $sampleId = app(ConversationLearningService::class)->linkSampleToMessage(
-                (int) $company->id,
-                $this->chatId,
-                $this->messageText,
-                (int) $message->id,
-            );
-            if ($sampleId !== null) {
-                $message->update(['learning_sample_id' => $sampleId]);
+            $imgResult = $waSender->sendImage($account, $this->customerPhone, $imgUrl, $caption);
+            if (! empty($imgResult['success'])) {
+                Message::create([
+                    'chat_id' => $this->chatId,
+                    'sender' => 'bot',
+                    'content' => $caption ? "📷 {$caption}" : '[Image]',
+                    'message_type' => 'image',
+                    'attachment_url' => $imgUrl,
+                    'reply_source' => ($replySource ?? 'agent').'_image',
+                    'whatsapp_message_id' => $imgResult['message_id'] ?? null,
+                    'ai_request_log_id' => $aiRequestLogId,
+                ]);
             }
         }
-
-        $chat->update([
-            'last_message' => $replyText,
-            'last_message_at' => now(),
-            'ai_handled' => true,
-        ]);
 
         if ($shouldVoice && $voiceMode === 'dual_text_and_voice') {
             try {
@@ -1039,5 +1088,34 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         $bgDelay = (int) config('agent.platform.background_thinking_delay_minutes', 50);
         RunBackgroundThinkingJob::dispatch($this->companyId, $this->chatId)
             ->delay(now()->addMinutes($bgDelay));
+    }
+
+    protected function extractMediaImages(string $text): array
+    {
+        $images = [];
+
+        // 1. Markdown images: ![alt](url)
+        if (preg_match_all('/!\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/i', $text, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $images[] = [
+                    'raw' => $m[0],
+                    'caption' => trim($m[1]),
+                    'url' => trim($m[2]),
+                ];
+            }
+        }
+
+        // 2. Tag images: [IMAGE_URL: url CAPTION: caption] or [IMAGE_URL: url]
+        if (preg_match_all('/\[IMAGE_URL:\s*(https?:\/\/[^\s\]]+)(?:\s+CAPTION:\s*([^\]]+))?\]/i', $text, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $images[] = [
+                    'raw' => $m[0],
+                    'caption' => isset($m[2]) ? trim($m[2]) : '',
+                    'url' => trim($m[1]),
+                ];
+            }
+        }
+
+        return $images;
     }
 }

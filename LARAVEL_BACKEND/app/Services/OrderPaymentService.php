@@ -115,6 +115,8 @@ class OrderPaymentService
             return ['success' => false, 'error' => 'Could not create payment link. Please try again.'];
         }
 
+        $order->update(['payment_method' => 'stripe']);
+
         return ['success' => true, 'url' => $url];
     }
 
@@ -142,6 +144,8 @@ class OrderPaymentService
         if (! $result['success'] || empty($result['url'])) {
             return ['success' => false, 'error' => $result['error'] ?? 'Could not create payment link.'];
         }
+
+        $order->update(['payment_method' => 'paystack']);
 
         $reference = $result['reference'] ?? null;
         if ($reference) {
@@ -246,6 +250,8 @@ class OrderPaymentService
             return ['success' => false, 'error' => $result['error'] ?? 'Could not create Pesapal payment link.'];
         }
 
+        $order->update(['payment_method' => 'pesapal']);
+
         $reference = $result['reference'] ?? null;
         if ($reference) {
             Cache::put(
@@ -283,6 +289,8 @@ class OrderPaymentService
         if (! $result['success'] || empty($result['url'])) {
             return ['success' => false, 'error' => $result['error'] ?? 'Could not create Flutterwave payment link.'];
         }
+
+        $order->update(['payment_method' => 'flutterwave']);
 
         $reference = $result['reference'] ?? null;
         if ($reference) {
