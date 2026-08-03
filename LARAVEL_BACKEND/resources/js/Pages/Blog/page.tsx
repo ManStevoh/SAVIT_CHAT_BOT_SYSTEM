@@ -48,11 +48,11 @@ export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
                     className="mb-4 aspect-[2/1] w-full rounded-xl object-cover"
                   />
                 ) : null}
-                <h2 className="text-xl font-bold text-black group-hover:text-primary sm:text-2xl">
+                <h2 className="text-xl font-bold text-foreground group-hover:text-primary sm:text-2xl">
                   {post.title}
                 </h2>
                 {post.publishedAt ? (
-                  <time className="mt-2 block text-xs text-gray-500" dateTime={post.publishedAt}>
+                  <time className="mt-2 block text-xs text-muted-foreground" dateTime={post.publishedAt}>
                     {new Date(post.publishedAt).toLocaleDateString(undefined, {
                       year: "numeric",
                       month: "long",
@@ -60,7 +60,7 @@ export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
                     })}
                   </time>
                 ) : null}
-                {post.excerpt ? <p className="mt-3 text-sm leading-relaxed text-gray-600">{post.excerpt}</p> : null}
+                {post.excerpt ? <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{post.excerpt}</p> : null}
                 <span className="mt-3 inline-block text-sm font-medium text-primary">Read more →</span>
               </Link>
             </article>

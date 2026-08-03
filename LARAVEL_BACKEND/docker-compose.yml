@@ -6,6 +6,7 @@ services:
     container_name: essemchat_app
     ports:
       - "8080:8080"
+      - "5173:5173"
     volumes:
       - .:/var/www/html
     environment:

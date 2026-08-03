@@ -1,4 +1,4 @@
-﻿import Link from "next/link"
+import Link from "next/link"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { BRAND } from "@/lib/branding"
 import type { CmsLink } from "./types"
@@ -95,13 +95,13 @@ export function LandoFooter({
       : "Coming soon on Google Play and the App Store.")
 
   return (
-    <footer className="lando-footer border-t border-gray-200 bg-muted">
+    <footer className="lando-footer border-t border-border bg-muted">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 lg:grid-cols-4 sm:px-6 lg:px-8">
         <div>
-          <AppLogoAndName variant="navbar" className="font-bold text-black" />
-          <p className="mt-3 text-sm text-gray-600">{BRAND.productOf}</p>
-          <p className="mt-1 text-sm text-gray-500">{BRAND.poweredBy}</p>
-          <p className="mt-4 text-sm text-gray-500">{copy}</p>
+          <AppLogoAndName variant="navbar" className="font-bold text-foreground" />
+          <p className="mt-3 text-sm text-muted-foreground">{BRAND.productOf}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{BRAND.poweredBy}</p>
+          <p className="mt-4 text-sm text-muted-foreground">{copy}</p>
           <a
             href={BRAND.companyWebsite}
             target="_blank"
@@ -114,7 +114,7 @@ export function LandoFooter({
 
         <div className="flex flex-col gap-2">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium text-black hover:text-primary">
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-foreground hover:text-primary">
               {link.label}
             </Link>
           ))}
@@ -127,7 +127,7 @@ export function LandoFooter({
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-black hover:text-primary"
+              className="text-sm font-medium text-foreground hover:text-primary"
             >
               {link.label}
             </a>
@@ -136,16 +136,16 @@ export function LandoFooter({
 
         <div className="flex flex-col gap-2">
           {legalLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium text-black hover:text-primary">
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-foreground hover:text-primary">
               {link.label}
             </Link>
           ))}
 
           {showApp && (
-            <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+            <div className="mt-4 space-y-3 border-t border-border pt-4">
               <div>
-                <p className="text-sm font-semibold text-black">{appTitle}</p>
-                <p className="mt-1 text-xs text-gray-500">{appDescription}</p>
+                <p className="text-sm font-semibold text-foreground">{appTitle}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{appDescription}</p>
               </div>
               {hasStoreLinks ? (
                 <div className="flex flex-wrap gap-2">
@@ -153,7 +153,7 @@ export function LandoFooter({
                   {appUrl !== "" && <StoreBadge href={appUrl} kind="apple" />}
                 </div>
               ) : (
-                <p className="text-xs font-medium text-gray-600">Coming soon</p>
+                <p className="text-xs font-medium text-muted-foreground">Coming soon</p>
               )}
             </div>
           )}

@@ -1,4 +1,4 @@
-﻿import { Star } from "lucide-react"
+import { Star } from "lucide-react"
 import {
   Accordion,
   AccordionContent,
@@ -31,14 +31,14 @@ export function LandoTrustedCompanies({
   return (
     <section className="bg-muted py-12">
       <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
-        {title && <p className="text-sm text-gray-600">{title}</p>}
+        {title && <p className="text-sm text-muted-foreground">{title}</p>}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-8 lg:gap-12">
           {parsed.map((company) => (
             <div key={company.name} className="flex items-center gap-2">
               {company.logoUrl ? (
-                <img src={company.logoUrl} alt={company.name} loading="lazy" decoding="async" className="h-8 max-w-[120px] object-contain opacity-60" />
+                <img src={company.logoUrl} alt={company.name} loading="lazy" decoding="async" className="h-8 max-w-[120px] object-contain opacity-60 dark:invert" />
               ) : (
-                <span className="text-lg font-bold text-gray-400">{company.name}</span>
+                <span className="text-lg font-bold text-muted-foreground">{company.name}</span>
               )}
             </div>
           ))}
@@ -63,20 +63,20 @@ export function LandoTestimonials({
     <section className="bg-muted py-16 lg:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
-          {description && <p className="mt-3 text-gray-600">{description}</p>}
+          {title && <h2 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h2>}
+          {description && <p className="mt-3 text-muted-foreground">{description}</p>}
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {testimonials.slice(0, 3).map((t) => (
-            <div key={t.id} className="rounded-2xl bg-white p-8 text-center shadow-sm">
-              <p className="text-base leading-relaxed text-black">&ldquo;{t.content}&rdquo;</p>
+            <div key={t.id} className="rounded-2xl bg-card border border-border p-8 text-center shadow-sm">
+              <p className="text-base leading-relaxed text-card-foreground">&ldquo;{t.content}&rdquo;</p>
               <div className="mt-4 flex justify-center gap-0.5">
                 {Array.from({ length: t.rating || 5 }).map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-primary text-primary" />
                 ))}
               </div>
-              <p className="mt-4 font-bold text-black">{t.name}</p>
-              {t.role && <p className="text-sm text-gray-500">{t.role}</p>}
+              <p className="mt-4 font-bold text-card-foreground">{t.name}</p>
+              {t.role && <p className="text-sm text-muted-foreground">{t.role}</p>}
             </div>
           ))}
         </div>
@@ -123,7 +123,7 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
             <div
               key={plan.id}
               className={cn(
-                "relative rounded-2xl bg-white p-8 shadow-sm",
+                "relative rounded-2xl bg-card border border-border p-8 shadow-sm",
                 plan.popular && "ring-2 ring-primary"
               )}
             >
@@ -132,12 +132,12 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                   {popularBadge}
                 </span>
               )}
-              <h3 className="text-xl font-bold text-black">{plan.name}</h3>
-              <p className="mt-4 text-4xl font-bold text-black">{plan.price}</p>
-              <p className="mt-2 text-sm text-gray-600">{plan.description}</p>
+              <h3 className="text-xl font-bold text-card-foreground">{plan.name}</h3>
+              <p className="mt-4 text-4xl font-bold text-card-foreground">{plan.price}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
               <ul className="mt-6 space-y-3">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
+                  <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     {f}
                   </li>
@@ -148,7 +148,7 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                   "mt-8 w-full rounded-lg",
                   plan.popular
                     ? "bg-primary text-white hover:bg-primary/90"
-                    : "border-black bg-white text-black hover:bg-gray-50"
+                    : "border-border bg-card text-foreground hover:bg-muted"
                 )}
                 variant={plan.popular ? "default" : "outline"}
                 disabled={busy !== null}
@@ -184,20 +184,20 @@ export function LandoCompareFeatures({
   return (
     <section className="bg-muted py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-bold text-black">{title}</h2>
-        <div className="mt-8 overflow-hidden rounded-2xl bg-white shadow-sm">
-          <div className="grid border-b border-gray-200 md:grid-cols-3">
+        <h2 className="text-3xl font-bold text-foreground">{title}</h2>
+        <div className="mt-8 overflow-hidden rounded-2xl bg-card border border-border shadow-sm">
+          <div className="grid border-b border-border md:grid-cols-3">
             {columns.map((col) => (
-              <div key={col.name} className="border-gray-200 p-6 font-bold text-black md:border-r last:md:border-r-0">
+              <div key={col.name} className="border-border p-6 font-bold text-card-foreground md:border-r last:md:border-r-0">
                 {col.name}
               </div>
             ))}
           </div>
           <div className="grid md:grid-cols-3">
             {columns.map((col) => (
-              <div key={col.name} className="space-y-4 border-gray-200 p-6 md:border-r last:md:border-r-0">
+              <div key={col.name} className="space-y-4 border-border p-6 md:border-r last:md:border-r-0">
                 {col.features.map((f) => (
-                  <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
+                  <div key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
                       <Check className="h-3 w-3" />
                     </span>
@@ -225,14 +225,14 @@ export function LandoFaqSection({
   return (
     <section className="bg-muted py-16 lg:py-24">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-center text-3xl font-bold text-black sm:text-4xl">{title}</h2>
+        <h2 className="text-center text-3xl font-bold text-foreground sm:text-4xl">{title}</h2>
         <Accordion type="single" collapsible className="mt-10">
           {faqs.map((faq) => (
-            <AccordionItem key={faq.id} value={faq.id} className="border-gray-300">
-              <AccordionTrigger className="text-left font-medium text-black hover:no-underline">
+            <AccordionItem key={faq.id} value={faq.id} className="border-border">
+              <AccordionTrigger className="text-left font-medium text-foreground hover:no-underline">
                 {faq.question}
               </AccordionTrigger>
-              <AccordionContent className="text-gray-600">{faq.answer}</AccordionContent>
+              <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
@@ -253,7 +253,7 @@ export function LandoAboutHero({
   imageAlt?: string
 }) {
   return (
-    <section className="relative overflow-hidden bg-[#eef2f7] pt-28 pb-0 lg:pt-32">
+    <section className="relative overflow-hidden bg-muted pt-28 pb-0 lg:pt-32">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(37,99,235,0.12),_transparent_55%)]"
@@ -261,11 +261,11 @@ export function LandoAboutHero({
       <div className="relative mx-auto grid max-w-6xl items-end gap-10 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-8">
         <div className="pb-12 lg:pb-20">
           <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">RelayIQ</p>
-          <h1 className="mt-4 max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-black sm:text-5xl lg:text-[3.4rem]">
+          <h1 className="mt-4 max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-5xl lg:text-[3.4rem]">
             {title}
           </h1>
           {description && (
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-gray-600 sm:text-lg">
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
               {description}
             </p>
           )}
@@ -289,11 +289,11 @@ export function LandoAboutHero({
 
 export function LandoMission({ title, description }: { title: string; description?: string }) {
   return (
-    <section className="border-t border-gray-200/80 bg-muted py-16 text-center lg:py-20">
+    <section className="border-t border-border bg-card py-16 text-center lg:py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-bold tracking-tight text-black sm:text-4xl">{title}</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-card-foreground sm:text-4xl">{title}</h2>
         {description && (
-          <p className="mt-6 text-base leading-relaxed text-gray-600 sm:text-lg">{description}</p>
+          <p className="mt-6 text-base leading-relaxed text-muted-foreground sm:text-lg">{description}</p>
         )}
       </div>
     </section>
@@ -315,21 +315,21 @@ export function LandoEfficiency({
   const displayTitle = lines.length > 1 ? lines.join(" ") : title
 
   return (
-    <section className="relative overflow-hidden bg-foreground py-20 text-white lg:py-28">
+    <section className="relative overflow-hidden bg-card border-y border-border py-20 text-card-foreground lg:py-28">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(37,99,235,0.35),_transparent_45%),radial-gradient(circle_at_80%_80%,_rgba(56,189,248,0.18),_transparent_40%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(37,99,235,0.15),_transparent_45%),radial-gradient(circle_at_80%_80%,_rgba(56,189,248,0.10),_transparent_40%)]"
       />
       <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 text-center sm:px-6 lg:px-8">
-        <h2 className="max-w-3xl text-balance text-3xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+        <h2 className="max-w-3xl text-balance text-3xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl text-card-foreground">
           {displayTitle}
         </h2>
         {description ? (
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             {description}
           </p>
         ) : (
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Automate WhatsApp sales, keep humans in control, and grow with a platform built for commerce teams.
           </p>
         )}
@@ -367,8 +367,8 @@ export function LandoTeam({
   return (
     <section className="bg-muted py-16 lg:py-24">
       <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
-        {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
-        {description && <p className="mt-3 text-gray-600">{description}</p>}
+        {title && <h2 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h2>}
+        {description && <p className="mt-3 text-muted-foreground">{description}</p>}
         <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {members.map((m) => (
             <div key={m.name}>
@@ -381,12 +381,12 @@ export function LandoTeam({
                   className="mx-auto h-32 w-32 rounded-full object-cover"
                 />
               ) : (
-                <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-gray-200 text-2xl font-bold text-gray-500">
+                <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-card text-2xl font-bold text-muted-foreground border border-border">
                   {m.name.charAt(0)}
                 </div>
               )}
-              <p className="mt-4 font-bold text-black">{m.name}</p>
-              <p className="text-sm text-gray-500">{m.role}</p>
+              <p className="mt-4 font-bold text-foreground">{m.name}</p>
+              <p className="text-sm text-muted-foreground">{m.role}</p>
             </div>
           ))}
         </div>
@@ -468,42 +468,42 @@ export function LandoContactSection({
           <img src={imageUrl} alt={imageAlt} loading="eager" decoding="async" className="max-h-[400px] w-full object-contain" />
         )}
         <div>
-          <h1 className="text-4xl font-bold text-black sm:text-5xl">{title}</h1>
-          {description && <p className="mt-4 text-gray-600">{description}</p>}
+          <h1 className="text-4xl font-bold text-foreground sm:text-5xl">{title}</h1>
+          {description && <p className="mt-4 text-muted-foreground">{description}</p>}
           {sent ? (
-            <p className="mt-8 rounded-lg bg-green-50 p-4 text-green-800">{successMessage}</p>
+            <p className="mt-8 rounded-lg bg-green-500/10 border border-green-500/20 p-4 text-green-600 dark:text-green-400">{successMessage}</p>
           ) : (
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-black">{nameLabel}</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">{nameLabel}</label>
                 <input
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={namePlaceholder}
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-primary"
+                  className="h-11 w-full rounded-lg border border-border bg-card px-4 text-card-foreground outline-none focus:border-primary"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-black">{emailLabel}</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">{emailLabel}</label>
                 <input
                   required
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={emailPlaceholder}
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-black outline-none focus:border-primary"
+                  className="h-11 w-full rounded-lg border border-border bg-card px-4 text-card-foreground outline-none focus:border-primary"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-black">{messageLabel}</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">{messageLabel}</label>
                 <textarea
                   required
                   rows={4}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={messagePlaceholder}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-black outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-border bg-card px-4 py-3 text-card-foreground outline-none focus:border-primary"
                 />
               </div>
               <RecaptchaWidget onChange={setRecaptchaToken} />

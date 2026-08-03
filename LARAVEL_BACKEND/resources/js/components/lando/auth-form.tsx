@@ -1,4 +1,4 @@
-﻿import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 export const landoBtnClass =
   "h-11 w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
@@ -17,8 +17,8 @@ export function LandoAuthHeader({
 }) {
   return (
     <div className={cn("mb-8", className)}>
-      <h1 className="text-3xl font-bold text-black sm:text-4xl">{title}</h1>
-      {description && <p className="mt-2 text-base text-gray-600">{description}</p>}
+      <h1 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h1>
+      {description && <p className="mt-2 text-base text-muted-foreground">{description}</p>}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-﻿import { LandoCmsPage } from "@/components/lando/cms-page"
+import { LandoCmsPage } from "@/components/lando/cms-page"
 import { useCmsGlobal } from "@/lib/api-hooks"
 import { LandoNavbar } from "@/components/lando/navbar"
 import { LandoFooter, mobileAppFromFooterContent } from "@/components/lando/footer"
@@ -31,8 +31,8 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
         activePath={activePath}
       />
       <main className="mx-auto max-w-3xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32">
-        <h1 className="text-3xl font-bold tracking-tight text-black sm:text-4xl">{title}</h1>
-        <div className="prose prose-sm mt-10 max-w-none text-gray-600 prose-headings:font-semibold prose-headings:text-black prose-a:text-primary">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h1>
+        <div className="prose prose-sm dark:prose-invert mt-10 max-w-none text-muted-foreground prose-headings:font-semibold prose-headings:text-foreground prose-a:text-primary">
           {children}
         </div>
       </main>

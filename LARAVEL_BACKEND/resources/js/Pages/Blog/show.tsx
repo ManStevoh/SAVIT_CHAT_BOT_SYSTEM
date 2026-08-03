@@ -44,7 +44,7 @@ export default function BlogShowPage({
         {post && (
           <>
             {post.publishedAt ? (
-              <time className="mt-2 block text-xs text-gray-500" dateTime={post.publishedAt}>
+              <time className="mt-2 block text-xs text-muted-foreground" dateTime={post.publishedAt}>
                 {new Date(post.publishedAt).toLocaleDateString(undefined, {
                   year: "numeric",
                   month: "long",

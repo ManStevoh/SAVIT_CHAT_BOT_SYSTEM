@@ -92,27 +92,27 @@ function RegisterPageContent() {
         {error && <LandoAuthError>{error}</LandoAuthError>}
 
         <div className="space-y-2">
-          <Label htmlFor="company" className="text-sm font-medium text-black">Company Name</Label>
+          <Label htmlFor="company" className="text-sm font-medium text-foreground">Company Name</Label>
           <Input id="company" name="company" type="text" placeholder="Your company name" required className={landoInputClass} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-sm font-medium text-black">Your Name</Label>
+          <Label htmlFor="name" className="text-sm font-medium text-foreground">Your Name</Label>
           <Input id="name" name="name" type="text" placeholder="Your name" className={landoInputClass} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium text-black">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
           <Input id="email" name="email" type="email" placeholder="you@company.com" required className={landoInputClass} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phone" className="text-sm font-medium text-black">Phone</Label>
+          <Label htmlFor="phone" className="text-sm font-medium text-foreground">Phone</Label>
           <Input id="phone" name="phone" type="tel" placeholder="+254 700 000 000" required className={landoInputClass} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-sm font-medium text-black">Password</Label>
+          <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
           <div className="relative">
             <Input
               id="password"
@@ -125,7 +125,7 @@ function RegisterPageContent() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -133,7 +133,7 @@ function RegisterPageContent() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword" className="text-sm font-medium text-black">Confirm Password</Label>
+          <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">Confirm Password</Label>
           <div className="relative">
             <Input
               id="confirmPassword"
@@ -146,14 +146,14 @@ function RegisterPageContent() {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
         </div>
 
-        <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <div className="space-y-3 rounded-lg border border-border bg-card p-3">
           <div className="flex items-start gap-2">
             <Checkbox
               id="acceptTerms"
@@ -161,7 +161,7 @@ function RegisterPageContent() {
               onCheckedChange={(v) => setAcceptTerms(v === true)}
               className="mt-0.5"
             />
-            <label htmlFor="acceptTerms" className="text-sm text-gray-700 leading-snug cursor-pointer">
+            <label htmlFor="acceptTerms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
               I agree to the{" "}
               <Link href="/terms" target="_blank" className="font-medium text-primary hover:underline">
                 Terms of Service
@@ -180,7 +180,7 @@ function RegisterPageContent() {
               onCheckedChange={(v) => setMarketingConsent(v === true)}
               className="mt-0.5"
             />
-            <label htmlFor="marketingConsent" className="text-sm text-gray-700 leading-snug cursor-pointer">
+            <label htmlFor="marketingConsent" className="text-sm text-muted-foreground leading-snug cursor-pointer">
               Send me product updates and marketing emails (optional)
             </label>
           </div>
@@ -193,7 +193,7 @@ function RegisterPageContent() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-600">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href={loginHref} className="font-medium text-primary hover:text-primary/80">Sign in</Link>
       </p>

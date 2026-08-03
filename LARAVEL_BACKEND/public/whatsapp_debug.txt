@@ -1,1 +1,2 @@
 [2026-08-01 15:09:00] [SYSTEM_INIT] WhatsApp Debug Logger Initialized. Waiting for incoming WhatsApp text or voice messages.
+[2026-08-03 05:50:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"commerce_morning_brief","company_id":2,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}

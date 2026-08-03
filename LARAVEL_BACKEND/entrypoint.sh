@@ -39,9 +39,9 @@ echo "Running database migrations and seeders..."
 php artisan migrate --force
 php artisan db:seed --force
 
-# Build assets
-echo "Building Vite assets..."
-npm run build
+# Run Vite dev server in background for HMR hot reload
+echo "Starting Vite dev server with Hot Reload..."
+npm run dev -- --host 0.0.0.0 &
 
 echo "Starting RelayIQ web server on 0.0.0.0:8080..."
 exec php artisan serve --host=0.0.0.0 --port=8080

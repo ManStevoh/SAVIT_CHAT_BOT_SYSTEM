@@ -209,7 +209,7 @@ function LoginPageContent() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium text-black">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
           <Input
             id="email"
             type="email"
@@ -224,7 +224,7 @@ function LoginPageContent() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-sm font-medium text-black">Password</Label>
+          <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
           <div className="relative">
             <Input
               id="password"
@@ -239,7 +239,7 @@ function LoginPageContent() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -256,7 +256,7 @@ function LoginPageContent() {
               onCheckedChange={(checked) => handleFieldChange('rememberMe', checked === true)}
               disabled={isLoading}
             />
-            <label htmlFor="remember" className="cursor-pointer text-sm text-gray-600">Remember me</label>
+            <label htmlFor="remember" className="cursor-pointer text-sm text-muted-foreground">Remember me</label>
           </div>
           <Link href="/forgot-password" className="text-sm font-medium text-primary hover:text-primary/80">
             Forgot password?
@@ -268,7 +268,7 @@ function LoginPageContent() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-600">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         {"Don't have an account? "}
         <Link href={registerHref} className="font-medium text-primary hover:text-primary/80">Sign up</Link>
       </p>

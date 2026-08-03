@@ -1,4 +1,4 @@
-﻿import Link from "next/link"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { LandoHeroFlowSimulation } from "./hero-flow-simulation"
@@ -44,15 +44,15 @@ export function LandoHeroSection({
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
         <div>
           {kicker && (
-            <p className="mb-4 text-xs font-semibold tracking-widest text-gray-500 uppercase">
+            <p className="mb-4 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
               — {kicker}
             </p>
           )}
-          <h1 className="text-4xl font-bold leading-tight text-black sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
+          <h1 className="text-4xl font-bold leading-tight text-foreground sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
             {title}
           </h1>
           {description && (
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-gray-600 sm:text-lg">
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
               {description}
             </p>
           )}
@@ -70,7 +70,7 @@ export function LandoHeroSection({
                 <Button
                   asChild
                   variant="outline"
-                  className="h-11 rounded-lg border-black bg-white px-6 text-black hover:bg-gray-50"
+                  className="h-11 rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted"
                 >
                   <Link href={secondaryCtaHref}>{secondaryCtaText}</Link>
                 </Button>
@@ -104,9 +104,9 @@ export function LandoPageHero({ title, description }: { title: string; descripti
   return (
     <section className="bg-muted pt-28 pb-12 text-center lg:pt-32">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-black sm:text-5xl">{title}</h1>
+        <h1 className="text-4xl font-bold text-foreground sm:text-5xl">{title}</h1>
         {description && (
-          <p className="mx-auto mt-4 max-w-xl text-base text-gray-600 sm:text-lg">{description}</p>
+          <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">{description}</p>
         )}
       </div>
     </section>
@@ -139,8 +139,8 @@ export function LandoCapabilities({
     <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          {title && <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>}
-          {description && <p className="mt-3 text-base text-gray-600 sm:text-lg">{description}</p>}
+          {title && <h2 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h2>}
+          {description && <p className="mt-3 text-base text-muted-foreground sm:text-lg">{description}</p>}
         </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => {
@@ -148,14 +148,14 @@ export function LandoCapabilities({
             return (
               <div
                 key={item.title}
-                className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+                className="rounded-2xl border border-border bg-card p-6 shadow-sm"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" aria-hidden />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-black">{item.title}</h3>
+                <h3 className="mt-4 text-lg font-semibold text-card-foreground">{item.title}</h3>
                 {item.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.description}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
                 )}
               </div>
             )
@@ -184,11 +184,11 @@ export function LandoIntroCard({
   return (
     <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-3xl bg-white p-8 shadow-sm lg:p-12">
+        <div className="overflow-hidden rounded-3xl bg-card p-8 shadow-sm lg:p-12 border border-border">
           <div className="grid items-center gap-10 lg:grid-cols-2">
             <div>
-              <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
-              {description && <p className="mt-4 text-base text-gray-600 sm:text-lg">{description}</p>}
+              <h2 className="text-3xl font-bold text-card-foreground sm:text-4xl">{title}</h2>
+              {description && <p className="mt-4 text-base text-muted-foreground sm:text-lg">{description}</p>}
               {ctaText && ctaHref && (
                 <Button asChild className="mt-8 h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90">
                   <Link href={ctaHref}>{ctaText}</Link>
@@ -235,15 +235,15 @@ export function LandoFeatureBlock({
           {imagePosition === "left" && image}
           <div className={cn(imagePosition === "right" ? "lg:order-1" : "lg:order-2")}>
             {label && (
-              <p className="mb-3 text-xs font-bold tracking-widest text-gray-500 uppercase">{label}</p>
+              <p className="mb-3 text-xs font-bold tracking-widest text-muted-foreground uppercase">{label}</p>
             )}
-            <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
-            {description && <p className="mt-4 text-base leading-relaxed text-gray-600">{description}</p>}
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h2>
+            {description && <p className="mt-4 text-base leading-relaxed text-muted-foreground">{description}</p>}
             {ctaText && ctaHref && (
               <Button
                 asChild
                 variant="outline"
-                className="mt-8 h-11 rounded-lg border-black bg-transparent px-6 text-black hover:bg-gray-50"
+                className="mt-8 h-11 rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted"
               >
                 <Link href={ctaHref}>{ctaText}</Link>
               </Button>
@@ -278,18 +278,18 @@ export function LandoGrowthEngine({
   return (
     <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-3xl bg-foreground px-8 py-10 text-white shadow-sm lg:px-12 lg:py-14">
+        <div className="overflow-hidden rounded-3xl bg-card border border-border px-8 py-10 text-card-foreground shadow-sm lg:px-12 lg:py-14">
           <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
             <div>
               {label && (
-                <p className="mb-3 text-xs font-bold tracking-widest text-blue-300 uppercase">{label}</p>
+                <p className="mb-3 text-xs font-bold tracking-widest text-primary uppercase">{label}</p>
               )}
-              <h2 className="text-3xl font-bold sm:text-4xl">{title}</h2>
-              {description && <p className="mt-4 text-base leading-relaxed text-slate-300">{description}</p>}
+              <h2 className="text-3xl font-bold sm:text-4xl text-card-foreground">{title}</h2>
+              {description && <p className="mt-4 text-base leading-relaxed text-muted-foreground">{description}</p>}
               {points.length > 0 && (
                 <ul className="mt-6 space-y-3">
                   {points.map((point) => (
-                    <li key={point} className="flex gap-3 text-sm text-slate-200">
+                    <li key={point} className="flex gap-3 text-sm text-muted-foreground">
                       <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
                       <span>{point}</span>
                     </li>
@@ -340,8 +340,8 @@ export function LandoHowToJoin({
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
-            {description && <p className="mt-4 text-base text-gray-600">{description}</p>}
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h2>
+            {description && <p className="mt-4 text-base text-muted-foreground">{description}</p>}
             <div className="mt-8 space-y-6">
               {steps.map((step, i) => (
                 <div key={step.title + i} className="flex gap-4">
@@ -349,9 +349,9 @@ export function LandoHowToJoin({
                     {i + 1}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-black">{step.title}</h3>
+                    <h3 className="font-semibold text-foreground">{step.title}</h3>
                     {step.description && (
-                      <p className="mt-1 text-sm leading-relaxed text-gray-600">{step.description}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
                     )}
                   </div>
                 </div>
@@ -392,7 +392,7 @@ export function LandoCtaSection({
   return (
     <section className="bg-muted py-12 lg:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-3xl bg-white px-8 py-12 text-center shadow-sm lg:px-16">
+        <div className="overflow-hidden rounded-3xl bg-card border border-border px-8 py-12 text-center shadow-sm lg:px-16">
           {showImage && imageUrl && (
             <img
               src={imageUrl}
@@ -402,8 +402,8 @@ export function LandoCtaSection({
               className="mx-auto mb-8 max-h-40 object-contain"
             />
           )}
-          <h2 className="text-3xl font-bold text-black sm:text-4xl">{title}</h2>
-          {description && <p className="mx-auto mt-4 max-w-xl text-base text-gray-600">{description}</p>}
+          <h2 className="text-3xl font-bold text-card-foreground sm:text-4xl">{title}</h2>
+          {description && <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">{description}</p>}
           {ctaText && ctaHref && (
             <Button asChild className="mt-8 h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90">
               <Link href={ctaHref}>{ctaText}</Link>
