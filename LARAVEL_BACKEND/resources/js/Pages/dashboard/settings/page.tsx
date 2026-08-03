@@ -46,6 +46,12 @@ import {
   AlertCircle,
   Settings2,
   Loader2,
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Copy,
 } from "lucide-react"
 import { OnboardingInterviewPanel } from "@/components/agent/OnboardingInterviewPanel"
 
@@ -105,6 +111,27 @@ export default function SettingsPage() {
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [profileSuccess, setProfileSuccess] = useState(false)
+
+  // Card-specific save states for AI Settings
+  const [aiModelSaving, setAiModelSaving] = useState(false)
+  const [aiModelError, setAiModelError] = useState<string | null>(null)
+  const [aiModelSuccess, setAiModelSuccess] = useState(false)
+
+  const [aiCommerceSaving, setAiCommerceSaving] = useState(false)
+  const [aiCommerceError, setAiCommerceError] = useState<string | null>(null)
+  const [aiCommerceSuccess, setAiCommerceSuccess] = useState(false)
+
+  const [aiVoiceSaving, setAiVoiceSaving] = useState(false)
+  const [aiVoiceError, setAiVoiceError] = useState<string | null>(null)
+  const [aiVoiceSuccess, setAiVoiceSuccess] = useState(false)
+
+  const [businessDnaSaving, setBusinessDnaSaving] = useState(false)
+  const [businessDnaError, setBusinessDnaError] = useState<string | null>(null)
+  const [businessDnaSuccess, setBusinessDnaSuccess] = useState(false)
+
+  const [aiAdvancedSaving, setAiAdvancedSaving] = useState(false)
+  const [aiAdvancedError, setAiAdvancedError] = useState<string | null>(null)
+  const [aiAdvancedSuccess, setAiAdvancedSuccess] = useState(false)
   const [businessName, setBusinessName] = useState("QuickBite Restaurant")
   const [industry, setIndustry] = useState<'retail' | 'restaurant' | 'services' | 'other'>('other')
   const [email, setEmail] = useState("contact@quickbite.com")
@@ -165,6 +192,19 @@ export default function SettingsPage() {
   const [campaignCaption, setCampaignCaption] = useState("")
   const [campaignSending, setCampaignSending] = useState(false)
   const [tplLoading, setTplLoading] = useState(false)
+
+  // Interactive WhatsApp Onboarding Flow State
+  const [waModalOpen, setWaModalOpen] = useState(false)
+  const [waStep, setWaStep] = useState<1 | 2 | 3 | 4>(1)
+  const [waMethod, setWaMethod] = useState<"embedded" | "manual">("embedded")
+  const [waChecklist, setWaChecklist] = useState({
+    phoneReady: false,
+    metaAccess: false,
+    noConflict: false,
+  })
+  const [copiedWebhook, setCopiedWebhook] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+  const toggleSection = (id: string) => setCollapsedSections((prev) => ({ ...prev, [id]: !prev[id] }))
 
   const loadWhatsAppTemplates = async () => {
     try {
@@ -440,6 +480,7 @@ export default function SettingsPage() {
   const [ordersAcceptStripe, setOrdersAcceptStripe] = useState(false)
   const [ordersAcceptPaystack, setOrdersAcceptPaystack] = useState(false)
   const [ordersAcceptPesapal, setOrdersAcceptPesapal] = useState(false)
+  const [ordersAcceptFlutterwave, setOrdersAcceptFlutterwave] = useState(false)
   const [ordersAcceptCod, setOrdersAcceptCod] = useState(false)
   const [deliveryFeesEnabled, setDeliveryFeesEnabled] = useState(false)
   const [defaultDeliveryFee, setDefaultDeliveryFee] = useState<string>("")
@@ -465,10 +506,16 @@ export default function SettingsPage() {
   const [pesapalConsumerSecret, setPesapalConsumerSecret] = useState('')
   const [pesapalCurrency, setPesapalCurrency] = useState('kes')
   const [pesapalEnv, setPesapalEnv] = useState<'sandbox' | 'production'>('sandbox')
+  const [flutterwavePublicKey, setFlutterwavePublicKey] = useState('')
+  const [flutterwaveSecretKey, setFlutterwaveSecretKey] = useState('')
+  const [flutterwaveSecretHash, setFlutterwaveSecretHash] = useState('')
+  const [flutterwaveCurrency, setFlutterwaveCurrency] = useState('kes')
+  const [flutterwaveEnv, setFlutterwaveEnv] = useState<'sandbox' | 'production'>('sandbox')
   const [replacingMpesaSecret, setReplacingMpesaSecret] = useState<Record<string, boolean>>({})
   const [replacingStripeSecret, setReplacingStripeSecret] = useState(false)
   const [replacingPaystackSecret, setReplacingPaystackSecret] = useState(false)
   const [replacingPesapalSecret, setReplacingPesapalSecret] = useState(false)
+  const [replacingFlutterwaveSecret, setReplacingFlutterwaveSecret] = useState(false)
 
   // Per-option saving and saved states for Order Payments tab
   const [optionSaving, setOptionSaving] = useState<Record<string, boolean>>({})
@@ -502,6 +549,8 @@ export default function SettingsPage() {
   const [agentCommerceEnabled, setAgentCommerceEnabled] = useState(false)
   const [agentProactiveEnabled, setAgentProactiveEnabled] = useState(false)
   const [agentVoiceReplyEnabled, setAgentVoiceReplyEnabled] = useState(false)
+  const [agentVoiceReplyMode, setAgentVoiceReplyMode] = useState<'voice_only' | 'dual_text_and_voice' | 'text_only'>('dual_text_and_voice')
+  const [agentVoiceId, setAgentVoiceId] = useState<string>('nova')
   const [agentMorningBriefWhatsappEnabled, setAgentMorningBriefWhatsappEnabled] = useState(false)
   const [ownerWhatsappPhone, setOwnerWhatsappPhone] = useState('')
   const [webWidgetToken, setWebWidgetToken] = useState<string | null>(null)
@@ -611,6 +660,8 @@ export default function SettingsPage() {
       if (settings.agentCommerceEnabled != null) setAgentCommerceEnabled(settings.agentCommerceEnabled)
       if (settings.agentProactiveEnabled != null) setAgentProactiveEnabled(settings.agentProactiveEnabled)
       if (settings.agentVoiceReplyEnabled != null) setAgentVoiceReplyEnabled(settings.agentVoiceReplyEnabled)
+      if (settings.agentVoiceReplyMode != null) setAgentVoiceReplyMode(settings.agentVoiceReplyMode)
+      if (settings.agentVoiceId != null) setAgentVoiceId(settings.agentVoiceId)
       if (settings.agentMorningBriefWhatsappEnabled != null) {
         setAgentMorningBriefWhatsappEnabled(settings.agentMorningBriefWhatsappEnabled)
       }
@@ -635,6 +686,13 @@ export default function SettingsPage() {
         setLearnFromConversationsEditable(settings.learnFromConversationsEditable)
       }
       if (settings.notificationsEnabled != null) setNotificationsEnabled(settings.notificationsEnabled)
+
+      if (settings.ordersAcceptMpesa != null) setOrdersAcceptMpesa(settings.ordersAcceptMpesa)
+      if (settings.ordersAcceptStripe != null) setOrdersAcceptStripe(settings.ordersAcceptStripe)
+      if (settings.ordersAcceptPaystack != null) setOrdersAcceptPaystack(settings.ordersAcceptPaystack)
+      if (settings.ordersAcceptPesapal != null) setOrdersAcceptPesapal(settings.ordersAcceptPesapal)
+      if (settings.ordersAcceptFlutterwave != null) setOrdersAcceptFlutterwave(settings.ordersAcceptFlutterwave)
+      if (settings.ordersAcceptCod != null) setOrdersAcceptCod(settings.ordersAcceptCod)
 
       const mpc = settings.orderPaymentMpesaConfig
       if (mpc) {
@@ -687,6 +745,20 @@ export default function SettingsPage() {
         setPesapalConsumerSecret("")
         setPesapalCurrency("kes")
         setPesapalEnv("sandbox")
+      }
+      const flw = settings.orderPaymentFlutterwaveConfig
+      if (flw) {
+        if (flw.public_key != null && flw.public_key !== "") setFlutterwavePublicKey(flw.public_key)
+        if (flw.secret_key != null && flw.secret_key !== "") setFlutterwaveSecretKey(flw.secret_key)
+        if (flw.secret_hash != null && flw.secret_hash !== "") setFlutterwaveSecretHash(flw.secret_hash)
+        if (flw.currency != null && flw.currency !== "") setFlutterwaveCurrency(flw.currency)
+        if (flw.env === "production" || flw.env === "sandbox") setFlutterwaveEnv(flw.env)
+      } else if (settings.orderPaymentFlutterwaveConfigured === false) {
+        setFlutterwavePublicKey("")
+        setFlutterwaveSecretKey("")
+        setFlutterwaveSecretHash("")
+        setFlutterwaveCurrency("kes")
+        setFlutterwaveEnv("sandbox")
       }
     }
   }, [settings])
@@ -786,6 +858,8 @@ export default function SettingsPage() {
       agentCommerceEnabled,
       agentProactiveEnabled,
       agentVoiceReplyEnabled,
+      agentVoiceReplyMode,
+      agentVoiceId,
       agentMorningBriefWhatsappEnabled,
       ownerWhatsappPhone: ownerWhatsappPhone.trim() || null,
       agentBusinessGoals,
@@ -799,6 +873,113 @@ export default function SettingsPage() {
     setAiSaving(false)
     setAiMessage(result.success ? 'AI settings saved.' : (result.message ?? 'Failed to save.'))
     if (result.success) mutate('company-settings')
+  }
+
+  const handleSaveAiModelAndTone = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setAiModelError(null)
+    setAiModelSuccess(false)
+    setAiModelSaving(true)
+    const result = await updateSettings({
+      aiGreeting: aiGreeting.trim(),
+      aiTone: aiTone.trim(),
+      aiModelMode,
+      aiModelId: aiModelMode === 'specific' && aiModelId ? aiModelId : null,
+      aiReplyMode,
+      autoReplyEnabled,
+      replyInCustomerLanguage,
+      defaultReplyLanguage: defaultReplyLanguage.trim() || null,
+    })
+    setAiModelSaving(false)
+    if (!result.success) {
+      setAiModelError(result.message ?? "Failed to save AI model & tone settings")
+      return
+    }
+    setAiModelSuccess(true)
+    setTimeout(() => setAiModelSuccess(false), 3000)
+    mutate("company-settings")
+  }
+
+  const handleSaveAiCommerce = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setAiCommerceError(null)
+    setAiCommerceSuccess(false)
+    setAiCommerceSaving(true)
+    const result = await updateSettings({
+      agentCommerceEnabled,
+      agentProactiveEnabled,
+      agentMorningBriefWhatsappEnabled,
+      ownerWhatsappPhone: ownerWhatsappPhone.trim() || null,
+    })
+    setAiCommerceSaving(false)
+    if (!result.success) {
+      setAiCommerceError(result.message ?? "Failed to save commerce agent settings")
+      return
+    }
+    setAiCommerceSuccess(true)
+    setTimeout(() => setAiCommerceSuccess(false), 3000)
+    mutate("company-settings")
+  }
+
+  const handleSaveAiVoice = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setAiVoiceError(null)
+    setAiVoiceSuccess(false)
+    setAiVoiceSaving(true)
+    const result = await updateSettings({
+      agentVoiceReplyEnabled,
+      agentVoiceReplyMode,
+      agentVoiceId,
+    })
+    setAiVoiceSaving(false)
+    if (!result.success) {
+      setAiVoiceError(result.message ?? "Failed to save voice note settings")
+      return
+    }
+    setAiVoiceSuccess(true)
+    setTimeout(() => setAiVoiceSuccess(false), 3000)
+    mutate("company-settings")
+  }
+
+  const handleSaveBusinessDna = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setBusinessDnaError(null)
+    setBusinessDnaSuccess(false)
+    setBusinessDnaSaving(true)
+    const result = await updateSettings({
+      agentBusinessGoals,
+      businessDna: businessDnaPayload(),
+      digitalTwin: Object.keys(digitalTwin).length > 0 ? digitalTwin : null,
+    })
+    setBusinessDnaSaving(false)
+    if (!result.success) {
+      setBusinessDnaError(result.message ?? "Failed to save Business DNA & Digital Twin")
+      return
+    }
+    setBusinessDnaSuccess(true)
+    setTimeout(() => setBusinessDnaSuccess(false), 3000)
+    mutate("company-settings")
+  }
+
+  const handleSaveAiAdvanced = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setAiAdvancedError(null)
+    setAiAdvancedSuccess(false)
+    setAiAdvancedSaving(true)
+    const result = await updateSettings({
+      agentCouncilEnabled,
+      learnFromConversations,
+      devModeEnabled,
+      notificationsEnabled,
+    })
+    setAiAdvancedSaving(false)
+    if (!result.success) {
+      setAiAdvancedError(result.message ?? "Failed to save advanced AI controls")
+      return
+    }
+    setAiAdvancedSuccess(true)
+    setTimeout(() => setAiAdvancedSuccess(false), 3000)
+    mutate("company-settings")
   }
 
   const handleProfileSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -951,6 +1132,42 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSaveFlutterwaveConfig = async () => {
+    setOptionSavingState('flutterwaveConfig', true)
+    const res = await updateSettings({
+      ordersAcceptFlutterwave: true,
+      orderPaymentFlutterwaveConfig: {
+        public_key: flutterwavePublicKey.trim(),
+        secret_key: flutterwaveSecretKey.trim(),
+        secret_hash: flutterwaveSecretHash.trim(),
+        currency: flutterwaveCurrency.trim() || "kes",
+        env: flutterwaveEnv,
+      },
+    })
+    setOptionSavingState('flutterwaveConfig', false)
+    if (res.success) {
+      setOptionSavedState('flutterwaveConfig')
+      setReplacingFlutterwaveSecret(false)
+      mutate("company-settings")
+    }
+  }
+
+  const handleClearFlutterwaveConfig = async () => {
+    setOptionSavingState('flutterwaveConfig', true)
+    const res = await updateSettings({
+      orderPaymentFlutterwaveConfig: null,
+    })
+    setOptionSavingState('flutterwaveConfig', false)
+    if (res.success) {
+      setOptionSavedState('flutterwaveConfig')
+      setFlutterwavePublicKey("")
+      setFlutterwaveSecretKey("")
+      setFlutterwaveSecretHash("")
+      setReplacingFlutterwaveSecret(false)
+      mutate("company-settings")
+    }
+  }
+
   const handleSaveManualInstructions = async () => {
     setOptionSavingState('manualInstructions', true)
     const res = await updateSettings({
@@ -1038,50 +1255,38 @@ export default function SettingsPage() {
 
         {/* Business Profile — API: PUT /api/company/settings (companyName, email, phone) */}
         <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Business Profile</CardTitle>
-              <CardDescription>Update your business information</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-6" onSubmit={handleProfileSubmit}>
-                {profileError && (
-                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-                    {profileError}
+          <form className="space-y-6" onSubmit={handleProfileSubmit}>
+            {profileError && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {profileError}
+              </div>
+            )}
+            {profileSuccess && (
+              <div className="rounded-lg border border-primary/50 bg-primary/10 px-4 py-3 text-sm text-primary">
+                Settings saved successfully.
+              </div>
+            )}
+
+            {/* Basic Information */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <CardTitle>Basic Information</CardTitle>
+                    <CardDescription>Manage your business identity and primary contact details</CardDescription>
                   </div>
-                )}
-                {profileSuccess && (
-                  <div className="rounded-lg border border-primary/50 bg-primary/10 px-4 py-2 text-sm text-primary">
-                    Settings saved successfully.
-                  </div>
-                )}
-                <FieldGroup>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="businessName">Business Name</FieldLabel>
                     <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
                   </Field>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field>
-                      <FieldLabel htmlFor="email">Email</FieldLabel>
-                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="phone">Phone</FieldLabel>
-                      <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                    </Field>
-                  </div>
-
-                  <Field>
-                    <FieldLabel htmlFor="address">Address</FieldLabel>
-                    <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} />
-                  </Field>
-
                   <Field>
                     <FieldLabel htmlFor="industry">Industry</FieldLabel>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Used for CRM follow-up templates and portfolio insights matching.
-                    </p>
                     <Select value={industry} onValueChange={(v) => setIndustry(v as typeof industry)}>
                       <SelectTrigger id="industry">
                         <SelectValue />
@@ -1093,34 +1298,83 @@ export default function SettingsPage() {
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
-                  </Field>
-
-                  <Field>
-                    <FieldLabel htmlFor="attributionRetentionDays">Attribution data retention (days)</FieldLabel>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      How long to keep social attribution data (30–730 days). Leave empty for platform default.
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Used for CRM follow-up templates and portfolio insights matching.
                     </p>
-                    <Input
-                      id="attributionRetentionDays"
-                      type="number"
-                      min={30}
-                      max={730}
-                      placeholder="e.g. 365"
-                      value={attributionRetentionDays}
-                      onChange={(e) => setAttributionRetentionDays(e.target.value)}
-                    />
                   </Field>
+                </div>
 
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="displayCurrency">Catalog currency</FieldLabel>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Prices and totals use this currency in the dashboard, WhatsApp catalog, and AI replies (ISO 4217 code).
-                      Manage VAT/GST and sales tax rates under{" "}
-                      <a href="/dashboard/taxes" className="underline underline-offset-2">
-                        Taxes
-                      </a>
-                      .
-                    </p>
+                    <FieldLabel htmlFor="email">Email Address</FieldLabel>
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="phone">Phone Number</FieldLabel>
+                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                  </Field>
+                </div>
+
+                <Field>
+                  <FieldLabel htmlFor="address">Physical Address</FieldLabel>
+                  <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} />
+                </Field>
+              </CardContent>
+            </Card>
+
+            {/* Regional & Timezone */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <CardTitle>Regional & Timezone</CardTitle>
+                    <CardDescription>Configure local time preferences for business hours and automated responses</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Field className="max-w-md">
+                  <FieldLabel htmlFor="timezone">Timezone</FieldLabel>
+                  <Select value={timezone} onValueChange={setTimezone}>
+                    <SelectTrigger id="timezone" className="w-full">
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[min(360px,70vh)]">
+                      {timezoneGroupsForSelect.map((group) => (
+                        <SelectGroup key={group.label}>
+                          <SelectLabel>{group.label}</SelectLabel>
+                          {group.options.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Used for business hours, away messages, and timestamps. Pick your region (e.g. Nairobi for East Africa Time, EAT).
+                  </p>
+                </Field>
+              </CardContent>
+            </Card>
+
+            {/* Currency & Financial Formatting */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <CardTitle>Currency & Formatting</CardTitle>
+                    <CardDescription>Define how currency and price totals appear across catalogs and chat replies</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="displayCurrency">Catalog Currency</FieldLabel>
                     <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
                       <SelectTrigger id="displayCurrency">
                         <SelectValue placeholder="Select currency" />
@@ -1133,13 +1387,17 @@ export default function SettingsPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ISO 4217 code used in dashboard, WhatsApp catalog, and AI replies. Manage tax rates under{" "}
+                      <a href="/dashboard/taxes" className="underline underline-offset-2">
+                        Taxes
+                      </a>
+                      .
+                    </p>
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="currencySymbol">Currency symbol</FieldLabel>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Optional label shown before amounts (e.g. KSh, €, $). Leave empty to use the currency code.
-                    </p>
+                    <FieldLabel htmlFor="currencySymbol">Currency Symbol (Optional)</FieldLabel>
                     <Input
                       id="currencySymbol"
                       value={currencySymbol}
@@ -1147,89 +1405,103 @@ export default function SettingsPage() {
                       placeholder="e.g. KSh"
                       maxLength={16}
                     />
-                  </Field>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field>
-                      <FieldLabel htmlFor="thousandsSeparator">Thousands separator</FieldLabel>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Grouping mark for large amounts (1,000 vs 1.000).
-                      </p>
-                      <Select
-                        value={thousandsSeparator}
-                        onValueChange={(value) => {
-                          setThousandsSeparator(value)
-                          setDecimalSeparator(pairedDecimalForThousands(value))
-                        }}
-                      >
-                        <SelectTrigger id="thousandsSeparator">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value=",">Comma (1,000.00)</SelectItem>
-                          <SelectItem value=".">Dot (1.000,00)</SelectItem>
-                          <SelectItem value=" ">Space (1 000,00)</SelectItem>
-                          <SelectItem value="'">Apostrophe (1&apos;000.00)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="decimalSeparator">Decimal separator</FieldLabel>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Mark before cents/fraction. Auto-updates when thousands style changes.
-                      </p>
-                      <Select value={decimalSeparator} onValueChange={setDecimalSeparator}>
-                        <SelectTrigger id="decimalSeparator">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value=".">Dot (…00.50)</SelectItem>
-                          <SelectItem value=",">Comma (…00,50)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  </div>
-
-                  <p className="text-sm text-muted-foreground">
-                    Preview:{" "}
-                    <span className="font-medium text-foreground">
-                      {formatCurrencyAmount(1234567.89, displayCurrency, {
-                        symbol: currencySymbol || null,
-                        thousandsSeparator,
-                        decimalSeparator,
-                      })}
-                    </span>
-                  </p>
-
-                  <Field>
-                    <FieldLabel htmlFor="timezone">Timezone</FieldLabel>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Used for business hours, away messages, and timestamps. Pick your region (e.g. Nairobi for East Africa Time, EAT).
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Label shown before amounts. Leave empty to default to currency code.
                     </p>
-                    <Select value={timezone} onValueChange={setTimezone}>
-                      <SelectTrigger id="timezone" className="w-full max-w-md">
-                        <SelectValue placeholder="Select timezone" />
+                  </Field>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="thousandsSeparator">Thousands Separator</FieldLabel>
+                    <Select
+                      value={thousandsSeparator}
+                      onValueChange={(value) => {
+                        setThousandsSeparator(value)
+                        setDecimalSeparator(pairedDecimalForThousands(value))
+                      }}
+                    >
+                      <SelectTrigger id="thousandsSeparator">
+                        <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="max-h-[min(360px,70vh)]">
-                        {timezoneGroupsForSelect.map((group) => (
-                          <SelectGroup key={group.label}>
-                            <SelectLabel>{group.label}</SelectLabel>
-                            {group.options.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        ))}
+                      <SelectContent>
+                        <SelectItem value=",">Comma (1,000.00)</SelectItem>
+                        <SelectItem value=".">Dot (1.000,00)</SelectItem>
+                        <SelectItem value=" ">Space (1 000,00)</SelectItem>
+                        <SelectItem value="'">Apostrophe (1&apos;000.00)</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Grouping mark for large amounts.
+                    </p>
                   </Field>
-                </FieldGroup>
 
-                <Button type="submit" disabled={profileSaving}>{profileSaving ? "Saving..." : "Save Changes"}</Button>
-              </form>
-            </CardContent>
-          </Card>
+                  <Field>
+                    <FieldLabel htmlFor="decimalSeparator">Decimal Separator</FieldLabel>
+                    <Select value={decimalSeparator} onValueChange={setDecimalSeparator}>
+                      <SelectTrigger id="decimalSeparator">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value=".">Dot (…00.50)</SelectItem>
+                        <SelectItem value=",">Comma (…00,50)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Mark before cents/fraction. Auto-updates when thousands style changes.
+                    </p>
+                  </Field>
+                </div>
+
+                <div className="rounded-lg border bg-muted/30 p-3.5 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground font-medium">Format Preview:</span>
+                  <span className="font-mono font-semibold text-foreground">
+                    {formatCurrencyAmount(1234567.89, displayCurrency, {
+                      symbol: currencySymbol || null,
+                      thousandsSeparator,
+                      decimalSeparator,
+                    })}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Data Retention */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <CardTitle>Data Retention</CardTitle>
+                    <CardDescription>Configure storage retention duration for social attribution data</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Field className="max-w-md">
+                  <FieldLabel htmlFor="attributionRetentionDays">Attribution Data Retention (Days)</FieldLabel>
+                  <Input
+                    id="attributionRetentionDays"
+                    type="number"
+                    min={30}
+                    max={730}
+                    placeholder="e.g. 365"
+                    value={attributionRetentionDays}
+                    onChange={(e) => setAttributionRetentionDays(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    How long to keep social attribution data (30–730 days). Leave empty for platform default.
+                  </p>
+                </Field>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={profileSaving} size="lg">
+                {profileSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
         </TabsContent>
 
         <TabsContent value="whatsapp">
@@ -1329,155 +1601,531 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-5">
-                  {waStatus?.embeddedSignupEnabled && (
-                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-                      <p className="text-sm font-medium text-foreground">Connect with Facebook</p>
-                      <p className="text-sm text-muted-foreground">
-                        Sign in with Facebook, select or create your WhatsApp Business account, and verify your phone number with OTP. No Meta Developer setup required on your side.
-                        {waStatus.requiresMetaPaymentMethod === false && (
-                          <> WhatsApp usage is billed through the platform — you do not need to add a payment method in Meta.</>
-                        )}
-                      </p>
-                      {waStatus.platformBillingReady === false && (
-                        <p className="text-sm text-amber-600">
-                          Platform billing is enabled but not fully configured. Contact your administrator before connecting.
-                        </p>
-                      )}
-                      <Button type="button" onClick={handleEmbeddedSignup} disabled={waEmbeddedLoading || waStatus.platformBillingReady === false}>
-                        {waEmbeddedLoading ? "Opening Meta signup…" : "Connect with Facebook"}
-                      </Button>
+                /* DISCONNECTED: STEP-BY-STEP ONBOARDING WIZARD */
+                <div className="space-y-6">
+                  {/* Stepper Header Navigation Bar */}
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between">
+                      {[
+                        { step: 1, title: "Select Method", desc: "OAuth vs Manual" },
+                        { step: 2, title: "Prerequisites", desc: "Readiness Check" },
+                        { step: 3, title: "Configuration", desc: "Credentials / Login" },
+                        { step: 4, title: "Finish & Verify", desc: "Finalize Setup" },
+                      ].map((s, idx) => (
+                        <div key={s.step} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => s.step < waStep && setWaStep(s.step as 1 | 2 | 3 | 4)}
+                            disabled={s.step > waStep}
+                            className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-colors ${
+                              waStep === s.step
+                                ? "border-foreground bg-foreground text-background"
+                                : waStep > s.step
+                                ? "border-muted-foreground bg-muted/40 text-foreground cursor-pointer"
+                                : "border-border text-muted-foreground cursor-not-allowed opacity-60"
+                            }`}
+                          >
+                            {waStep > s.step ? <Check className="h-4 w-4" /> : s.step}
+                          </button>
+                          <div className="hidden sm:block text-left">
+                            <p className={`text-xs font-medium ${waStep === s.step ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{s.title}</p>
+                            <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+                          </div>
+                          {idx < 3 && <ChevronRight className="h-4 w-4 text-muted-foreground/60 hidden md:block mx-1" />}
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
 
-                  {waStatus?.manualConnectEnabled && (
-                    <div className="rounded-lg border border-border p-4 space-y-4">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-foreground">Manual connection</p>
-                        <p className="text-sm text-muted-foreground">
-                          Paste credentials from <strong>your</strong> Meta Developer app → WhatsApp → API Setup.
-                          Manual connection uses only your Phone Number ID, token, WABA ID, App Secret, and verify token —
-                          not the platform/super-admin Meta app credentials.
-                          {waStatus?.webhookUrl && (
-                            <> Platform webhook callback URL (set this in your Meta app): <code className="text-xs">{waStatus.webhookUrl}</code></>
-                          )}
+                  {/* STEP 1: CHOOSE CONNECTION METHOD */}
+                  {waStep === 1 && (
+                    <div className="space-y-5">
+                      <div>
+                        <h3 className="text-base font-semibold text-foreground">Step 1: Choose Connection Method</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Select how you want to link your WhatsApp Business account to the platform.
                         </p>
                       </div>
-                      <form onSubmit={handleManualConnect} className="space-y-3">
-                        <Field>
-                          <FieldLabel htmlFor="waManualPhoneNumberId">Phone Number ID</FieldLabel>
-                          <Input
-                            id="waManualPhoneNumberId"
-                            value={waManualPhoneNumberId}
-                            onChange={(e) => setWaManualPhoneNumberId(e.target.value)}
-                            placeholder="From Meta → WhatsApp → API Setup"
-                            required
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor="waManualAccessToken">Permanent access token</FieldLabel>
-                          <Input
-                            id="waManualAccessToken"
-                            type="password"
-                            value={waManualAccessToken}
-                            onChange={(e) => setWaManualAccessToken(e.target.value)}
-                            placeholder="System user or permanent token"
-                            required
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor="waManualWabaId">WhatsApp Business Account ID</FieldLabel>
-                          <Input
-                            id="waManualWabaId"
-                            value={waManualWabaId}
-                            onChange={(e) => setWaManualWabaId(e.target.value)}
-                            placeholder="Required for receiving inbound messages"
-                            required
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor="waManualMetaAppSecret">Meta App Secret</FieldLabel>
-                          <Input
-                            id="waManualMetaAppSecret"
-                            type="password"
-                            value={waManualMetaAppSecret}
-                            onChange={(e) => setWaManualMetaAppSecret(e.target.value)}
-                            placeholder="From Meta → Your App → Settings → Basic"
-                            required
-                          />
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {/* Method Option A: Embedded Signup */}
+                        <div
+                          onClick={() => setWaMethod("embedded")}
+                          className={`rounded-lg border p-5 cursor-pointer transition-all space-y-3 ${
+                            waMethod === "embedded"
+                              ? "border-foreground bg-muted/30 shadow-sm"
+                              : "border-border hover:border-muted-foreground/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Smartphone className="h-5 w-5 text-foreground" />
+                              <p className="text-sm font-semibold text-foreground">Facebook Embedded Signup</p>
+                            </div>
+                            <Badge variant="outline" className="text-[10px]">Recommended</Badge>
+                          </div>
                           <p className="text-xs text-muted-foreground">
-                            Required. Must be the App Secret for the <strong>same</strong> Meta Developer app that created this access token.
-                            Do not paste the platform/super-admin App Secret unless this token is from that same app.
+                            Fastest 2-minute setup. Log in with Facebook to select your Meta Business portfolio and verify your phone number via SMS.
                           </p>
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor="waManualWebhookVerifyToken">Webhook verify token</FieldLabel>
-                          <Input
-                            id="waManualWebhookVerifyToken"
-                            type="password"
-                            value={waManualWebhookVerifyToken}
-                            onChange={(e) => setWaManualWebhookVerifyToken(e.target.value)}
-                            placeholder="Same token you set in Meta → Webhooks"
-                            required
-                          />
+                          <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+                            <li>No Meta Developer app required</li>
+                            <li>Automatic webhook & API token setup</li>
+                            <li>Direct OTP phone verification</li>
+                          </ul>
+                        </div>
+
+                        {/* Method Option B: Manual Credentials */}
+                        <div
+                          onClick={() => setWaMethod("manual")}
+                          className={`rounded-lg border p-5 cursor-pointer transition-all space-y-3 ${
+                            waMethod === "manual"
+                              ? "border-foreground bg-muted/30 shadow-sm"
+                              : "border-border hover:border-muted-foreground/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Settings2 className="h-5 w-5 text-foreground" />
+                              <p className="text-sm font-semibold text-foreground">Manual Meta Developer Setup</p>
+                            </div>
+                            <Badge variant="outline" className="text-[10px]">Custom App</Badge>
+                          </div>
                           <p className="text-xs text-muted-foreground">
-                            Required. Create any string in Meta → Your App → WhatsApp → Configuration → Verify token, then paste it here.
-                            Callback URL: <code className="text-xs">{waStatus?.webhookUrl ?? "https://…/api/whatsapp/webhook"}</code>
+                            For existing Meta Developer apps. Connect using your own System User Permanent Access Token, Phone Number ID, App Secret, and Webhook Verify Token.
                           </p>
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor="waManualDisplayPhone">Display phone number (optional)</FieldLabel>
-                          <Input
-                            id="waManualDisplayPhone"
-                            value={waManualDisplayPhone}
-                            onChange={(e) => setWaManualDisplayPhone(e.target.value)}
-                            placeholder="+254712345678"
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor="waManualRegistrationPin">Two-step verification PIN</FieldLabel>
-                          <Input
-                            id="waManualRegistrationPin"
-                            type="password"
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            maxLength={6}
-                            value={waManualRegistrationPin}
-                            onChange={(e) => setWaManualRegistrationPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                            placeholder="6-digit PIN from WhatsApp Manager"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Required if this number already has two-step verification enabled in Meta. Leave blank only for a brand-new number.
-                          </p>
-                        </Field>
-                        <Button type="submit" disabled={waManualLoading}>
-                          {waManualLoading ? "Connecting…" : "Connect manually"}
+                          <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+                            <li>Full control over custom Meta App</li>
+                            <li>Custom Webhook Callback URL configuration</li>
+                            <li>Includes simple PDF setup guide for non-developers</li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-3 border-t">
+                        <Button type="button" onClick={() => setWaStep(2)} className="gap-1">
+                          <span>Next: Prerequisites</span>
+                          <ChevronRight className="h-4 w-4" />
                         </Button>
-                      </form>
+                      </div>
                     </div>
                   )}
 
-                  {!waStatus?.embeddedSignupEnabled && !waStatus?.manualConnectEnabled && (
-                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground">
-                      WhatsApp connection is not available yet. Ask your platform administrator to enable Embedded Signup or manual connection in Admin → Settings → Integrations.
+                  {/* STEP 2: PREREQUISITES & READINESS CHECKLIST */}
+                  {waStep === 2 && (
+                    <div className="space-y-5">
+                      <div>
+                        <h3 className="text-base font-semibold text-foreground">Step 2: Prerequisites & Readiness Checklist</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Review requirements before proceeding to connect your number.
+                        </p>
+                      </div>
+
+                      {/* Explicit Guide on How to Register a Free Meta Developer Account */}
+                      <div className="rounded-lg border p-4 space-y-3 bg-muted/20">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            <span>How to Create a Free Meta Developer Account (60 Seconds)</span>
+                          </p>
+                          <a
+                            href="/docs/Meta_Developer_WhatsApp_Setup_Guide.pdf"
+                            target="_blank"
+                            rel="noreferrer"
+                            download="Meta_Developer_WhatsApp_Setup_Guide.pdf"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-foreground underline underline-offset-2 hover:text-primary shrink-0"
+                          >
+                            <FileText className="h-3 w-3" />
+                            <span>Download Full PDF Guide</span>
+                          </a>
+                        </div>
+                        
+                        <p className="text-xs text-muted-foreground">
+                          Creating a Meta Developer account does <strong>NOT</strong> require any programming skills! It is simply a free feature by Meta that lets business owners connect automated tools to their official WhatsApp account using their regular Facebook login.
+                        </p>
+
+                        <div className="rounded border bg-background p-3 text-xs space-y-2 text-muted-foreground">
+                          <ol className="list-decimal pl-4 space-y-1 text-foreground">
+                            <li>Go to <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="underline font-medium">developers.facebook.com</a> in your browser.</li>
+                            <li>Click <strong>Log In</strong> in the top right using your normal personal Facebook account.</li>
+                            <li>Click <strong>Get Started</strong> (or Register), accept the terms, and confirm your phone/email.</li>
+                            <li>Select your role as <strong>Business Owner</strong> or <strong>Administrator</strong> and finish.</li>
+                          </ol>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border p-4 space-y-4 bg-muted/10">
+                        <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Required Readiness Checks</p>
+                        
+                        <div className="space-y-3 text-sm">
+                          <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={waChecklist.phoneReady}
+                              onChange={(e) => setWaChecklist((prev) => ({ ...prev, phoneReady: e.target.checked }))}
+                              className="mt-1 h-4 w-4 rounded border-border"
+                            />
+                            <div>
+                              <p className="font-medium text-foreground">Phone Number SMS / Voice OTP Ready</p>
+                              <p className="text-xs text-muted-foreground">
+                                I have access to a phone number that can receive SMS or voice OTP calls during setup.
+                              </p>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={waChecklist.noConflict}
+                              onChange={(e) => setWaChecklist((prev) => ({ ...prev, noConflict: e.target.checked }))}
+                              className="mt-1 h-4 w-4 rounded border-border"
+                            />
+                            <div>
+                              <p className="font-medium text-foreground">Mobile WhatsApp App Disconnected</p>
+                              <p className="text-xs text-muted-foreground">
+                                This number is NOT currently logged into standard mobile WhatsApp app (or has been deleted/migrated to Cloud API).
+                              </p>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={waChecklist.metaAccess}
+                              onChange={(e) => setWaChecklist((prev) => ({ ...prev, metaAccess: e.target.checked }))}
+                              className="mt-1 h-4 w-4 rounded border-border"
+                            />
+                            <div>
+                              <p className="font-medium text-foreground">Meta Account Admin Access</p>
+                              <p className="text-xs text-muted-foreground">
+                                {waMethod === "embedded"
+                                  ? "I have login credentials for a Facebook account with admin rights to our Meta Business Portfolio."
+                                  : "I have registered a free Meta Developer account using my Facebook login."}
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border p-4 space-y-2 bg-muted/20 text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground">Important Note on Phone Numbers:</p>
+                        <p>
+                          WhatsApp Cloud API cannot share a number simultaneously with the iOS/Android WhatsApp app. If your number is on standard WhatsApp, delete your mobile WhatsApp account first under Settings → Account → Delete My Account before starting verification.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t">
+                        <Button type="button" variant="outline" onClick={() => setWaStep(1)} className="gap-1">
+                          <ChevronLeft className="h-4 w-4" />
+                          <span>Back</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => setWaStep(3)}
+                          disabled={!waChecklist.phoneReady || !waChecklist.metaAccess || !waChecklist.noConflict}
+                          className="gap-1"
+                        >
+                          <span>Proceed to Configuration</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   )}
 
-                  <div className="rounded-lg border border-border p-4 space-y-2">
-                    <p className="text-sm font-medium text-foreground">Before you connect</p>
-                    <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
-                      <li>Use a number that can receive SMS or voice OTP (Embedded Signup) or is already on Cloud API (manual).</li>
-                      <li>Do not use a number already linked to another WhatsApp API provider.</li>
-                      {waStatus?.requiresMetaPaymentMethod !== false ? (
-                        <li>Add a payment method to your WhatsApp Business account in Meta when prompted (required for messaging).</li>
+                  {/* STEP 3: CREDENTIALS & ACCOUNT SETUP */}
+                  {waStep === 3 && (
+                    <div className="space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b">
+                        <div>
+                          <h3 className="text-base font-semibold text-foreground">
+                            Step 3: {waMethod === "embedded" ? "Facebook OAuth Connection" : "Enter Meta API Credentials"}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {waMethod === "embedded"
+                              ? "Launch the Facebook pop-up window to authorize your WhatsApp Business account."
+                              : "Input your custom Meta Developer app credentials below."}
+                          </p>
+                        </div>
+                        <div className="inline-flex rounded-md border bg-muted/30 p-1 shrink-0 self-start sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => setWaMethod("embedded")}
+                            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                              waMethod === "embedded"
+                                ? "bg-background text-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            Facebook OAuth
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setWaMethod("manual")}
+                            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                              waMethod === "manual"
+                                ? "bg-background text-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            Manual Setup
+                          </button>
+                        </div>
+                      </div>
+
+                      {waMethod === "embedded" ? (
+                        <div className="rounded-lg border p-5 space-y-4 bg-muted/10">
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-foreground">Meta Embedded Signup Overview</p>
+                            <p className="text-xs text-muted-foreground">
+                              Clicking below will open Meta&apos;s official authorization window. You will be prompted to:
+                            </p>
+                            <ol className="text-xs text-muted-foreground list-decimal pl-5 space-y-1">
+                              <li>Log in with your Facebook account.</li>
+                              <li>Select your Business Portfolio and WhatsApp Business Profile.</li>
+                              <li>Enter your phone number and verify via 6-digit SMS OTP.</li>
+                            </ol>
+                          </div>
+
+                          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t">
+                            <div className="flex items-center gap-2">
+                              <Button type="button" variant="outline" onClick={() => setWaStep(2)} className="gap-1">
+                                <ChevronLeft className="h-4 w-4" />
+                                <span>Back</span>
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={handleEmbeddedSignup}
+                                disabled={waEmbeddedLoading || waStatus?.platformBillingReady === false}
+                                className="gap-2"
+                              >
+                                <Smartphone className="h-4 w-4" />
+                                {waEmbeddedLoading ? "Opening Meta Window…" : "Launch Facebook Connection"}
+                              </Button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setWaMethod("manual")}
+                              className="text-xs text-muted-foreground underline hover:text-foreground text-left sm:text-right"
+                            >
+                              Want to use custom Meta Developer app? Switch to Manual Setup →
+                            </button>
+                          </div>
+                        </div>
                       ) : (
-                        <li>WhatsApp conversation fees are billed through the platform — no Meta payment card required.</li>
+                        <form onSubmit={handleManualConnect} className="space-y-5 border rounded-lg p-5 bg-background">
+                          {/* PDF Guide Callout */}
+                          <div className="rounded-md border bg-muted/20 p-3 flex items-center justify-between gap-3 text-xs">
+                            <div className="space-y-0.5">
+                              <p className="font-semibold text-foreground flex items-center gap-1.5">
+                                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>Non-Developer Setup Guide (PDF)</span>
+                              </p>
+                              <p className="text-muted-foreground">Step-by-step PDF guide explaining where to find Meta API credentials.</p>
+                            </div>
+                            <a
+                              href="/docs/Meta_Developer_WhatsApp_Setup_Guide.pdf"
+                              target="_blank"
+                              rel="noreferrer"
+                              download="Meta_Developer_WhatsApp_Setup_Guide.pdf"
+                              className="inline-flex items-center gap-1 rounded border bg-background px-2.5 py-1 font-medium text-foreground hover:bg-muted shrink-0"
+                            >
+                              <FileText className="h-3 w-3" />
+                              <span>Download PDF</span>
+                            </a>
+                          </div>
+
+                          {/* Section A: App Identifiers */}
+                          <div className="space-y-4 rounded-lg border bg-muted/10 p-4">
+                            <div className="flex items-center gap-2.5 pb-2 border-b border-border/60">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-foreground text-background text-xs font-bold font-mono">
+                                A
+                              </span>
+                              <h4 className="text-sm font-bold text-foreground tracking-tight">Meta App & Phone Identifiers</h4>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <Field>
+                                <FieldLabel htmlFor="waManualPhoneNumberId">Phone Number ID</FieldLabel>
+                                <Input
+                                  id="waManualPhoneNumberId"
+                                  value={waManualPhoneNumberId}
+                                  onChange={(e) => setWaManualPhoneNumberId(e.target.value)}
+                                  placeholder="e.g. 10482019283719"
+                                  required
+                                />
+                              </Field>
+
+                              <Field>
+                                <FieldLabel htmlFor="waManualWabaId">WhatsApp Business Account ID</FieldLabel>
+                                <Input
+                                  id="waManualWabaId"
+                                  value={waManualWabaId}
+                                  onChange={(e) => setWaManualWabaId(e.target.value)}
+                                  placeholder="e.g. 10928374910283"
+                                  required
+                                />
+                              </Field>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground bg-background/80 p-2.5 rounded border">
+                              <span className="font-semibold text-foreground">For Non-Developers:</span> <strong>Phone Number ID</strong> is Meta&apos;s code for your phone. <strong>WABA ID</strong> is your WhatsApp Business Account ID.
+                            </div>
+                          </div>
+
+                          {/* Section B: Tokens & Secrets */}
+                          <div className="space-y-4 rounded-lg border bg-muted/10 p-4">
+                            <div className="flex items-center gap-2.5 pb-2 border-b border-border/60">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-foreground text-background text-xs font-bold font-mono">
+                                B
+                              </span>
+                              <h4 className="text-sm font-bold text-foreground tracking-tight">System User Access Token & Meta App Secret</h4>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <Field>
+                                <FieldLabel htmlFor="waManualAccessToken">Permanent System User Access Token</FieldLabel>
+                                <Input
+                                  id="waManualAccessToken"
+                                  type="password"
+                                  value={waManualAccessToken}
+                                  onChange={(e) => setWaManualAccessToken(e.target.value)}
+                                  placeholder="EAAG..."
+                                  required
+                                />
+                              </Field>
+
+                              <Field>
+                                <FieldLabel htmlFor="waManualMetaAppSecret">Meta App Secret</FieldLabel>
+                                <Input
+                                  id="waManualMetaAppSecret"
+                                  type="password"
+                                  value={waManualMetaAppSecret}
+                                  onChange={(e) => setWaManualMetaAppSecret(e.target.value)}
+                                  placeholder="Meta App → Settings → Basic"
+                                  required
+                                />
+                              </Field>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground bg-background/80 p-2.5 rounded border">
+                              <span className="font-semibold text-foreground">For Non-Developers:</span> <strong>Permanent System User Access Token</strong> is generated under Meta Business Settings → System Users. <strong>Meta App Secret</strong> is under App Settings → Basic.
+                            </div>
+                          </div>
+
+                          {/* Section C: Webhook Configuration */}
+                          <div className="space-y-4 rounded-lg border bg-muted/10 p-4">
+                            <div className="flex items-center gap-2.5 pb-2 border-b border-border/60">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-foreground text-background text-xs font-bold font-mono">
+                                C
+                              </span>
+                              <h4 className="text-sm font-bold text-foreground tracking-tight">Webhook Configuration</h4>
+                            </div>
+
+                            <Field>
+                              <FieldLabel htmlFor="waManualWebhookVerifyToken">Webhook Verify Token</FieldLabel>
+                              <Input
+                                id="waManualWebhookVerifyToken"
+                                type="password"
+                                value={waManualWebhookVerifyToken}
+                                onChange={(e) => setWaManualWebhookVerifyToken(e.target.value)}
+                                placeholder="e.g. my_secret_key_123"
+                                required
+                              />
+                            </Field>
+
+                            <div className="space-y-1.5">
+                              <FieldLabel>Webhook Callback URL (Paste into Meta Webhooks Console)</FieldLabel>
+                              <div className="flex items-center justify-between rounded-md border bg-background p-2 text-xs font-mono">
+                                <span className="truncate mr-2 select-all">{waStatus?.webhookUrl ?? "http://localhost:8080/api/whatsapp/webhook"}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 gap-1 shrink-0"
+                                  onClick={() => {
+                                    const url = waStatus?.webhookUrl ?? "http://localhost:8080/api/whatsapp/webhook"
+                                    navigator.clipboard.writeText(url)
+                                    setCopiedWebhook(true)
+                                    setTimeout(() => setCopiedWebhook(false), 2000)
+                                  }}
+                                >
+                                  {copiedWebhook ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                  <span>{copiedWebhook ? "Copied" : "Copy URL"}</span>
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="text-[11px] text-muted-foreground bg-background/80 p-2.5 rounded border">
+                              <span className="font-semibold text-foreground">For Non-Developers:</span> In Meta Developer Portal → Webhooks, paste the <strong>Callback URL</strong> above and enter the exact same <strong>Verify Token</strong> secret passphrase you typed here.
+                            </div>
+                          </div>
+
+                          {/* Section D: Optional Details */}
+                          <div className="space-y-4 rounded-lg border bg-muted/10 p-4">
+                            <div className="flex items-center gap-2.5 pb-2 border-b border-border/60">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted-foreground/20 text-foreground text-xs font-bold font-mono">
+                                D
+                              </span>
+                              <h4 className="text-sm font-bold text-foreground tracking-tight">Optional Details (Display Phone & 2FA PIN)</h4>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <Field>
+                                <FieldLabel htmlFor="waManualDisplayPhone">Display Phone Number (Optional)</FieldLabel>
+                                <Input
+                                  id="waManualDisplayPhone"
+                                  value={waManualDisplayPhone}
+                                  onChange={(e) => setWaManualDisplayPhone(e.target.value)}
+                                  placeholder="+254712345678"
+                                />
+                              </Field>
+
+                              <Field>
+                                <FieldLabel htmlFor="waManualRegistrationPin">2FA Verification PIN (Optional)</FieldLabel>
+                                <Input
+                                  id="waManualRegistrationPin"
+                                  type="password"
+                                  inputMode="numeric"
+                                  autoComplete="one-time-code"
+                                  maxLength={6}
+                                  value={waManualRegistrationPin}
+                                  onChange={(e) => setWaManualRegistrationPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                  placeholder="6-digit PIN"
+                                />
+                              </Field>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <Button type="button" variant="outline" onClick={() => setWaStep(2)} className="gap-1">
+                              <ChevronLeft className="h-4 w-4" />
+                              <span>Back</span>
+                            </Button>
+                            <Button type="submit" disabled={waManualLoading} className="gap-1">
+                              <span>{waManualLoading ? "Connecting…" : "Connect Manually & Save"}</span>
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </form>
                       )}
-                      {waStatus?.embeddedSignupEnabled && (
-                        <li>Finish all Meta popup steps without closing the window.</li>
-                      )}
-                    </ul>
-                  </div>
+                    </div>
+                  )}
+
+                  {/* STEP 4: FINISH & VERIFY */}
+                  {waStep === 4 && (
+                    <div className="space-y-4 pt-1">
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground">Step 4: Connection Completed</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Your WhatsApp Business account is successfully connected.
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg border p-4 space-y-3 bg-muted/20">
+                        <div className="flex items-center gap-2 text-foreground font-medium text-sm">
+                          <Check className="h-4 w-4 text-emerald-500" />
+                          <span>Status: Active & Connected</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          You can now create message templates, run broadcast campaigns, and configure AI chatbot responses.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {waMessage && (
@@ -1661,193 +2309,193 @@ export default function SettingsPage() {
           )}
         </TabsContent>
 
-        {/* AI Settings — PUT /api/company/settings */}
+        {/* AI Settings — Unified Single Form with Clean Section Cards */}
         <TabsContent value="ai">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Configuration</CardTitle>
-              <CardDescription>Configure your AI assistant behavior</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-6" onSubmit={handleAiSubmit}>
-                {aiMessage && (
-                  <p className={`text-sm ${aiMessage.startsWith('AI settings saved') ? 'text-primary' : 'text-destructive'}`}>
-                    {aiMessage}
-                  </p>
-                )}
-                <Field>
-                  <FieldLabel htmlFor="aiModel">AI Model</FieldLabel>
-                  <Select
-                    value={aiModelMode === 'specific' && aiModelId ? `model:${aiModelId}` : aiModelMode}
-                    onValueChange={(v) => {
-                      if (v === 'auto' || v === 'platform_default') {
-                        setAiModelMode(v)
-                        setAiModelId('')
-                      } else if (v.startsWith('model:')) {
-                        setAiModelMode('specific')
-                        setAiModelId(v.replace('model:', ''))
-                      }
-                    }}
-                  >
-                    <SelectTrigger id="aiModel">
-                      <SelectValue placeholder="Select model strategy" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('auto') && (
-                        <SelectItem value="auto">Auto (best value — picks lowest-cost enabled model)</SelectItem>
-                      )}
-                      {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('platform_default') && (
-                        <SelectItem value="platform_default">Platform default</SelectItem>
-                      )}
-                      {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('specific') && availableAiModels.length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Specific model (Enterprise)</SelectLabel>
-                          {availableAiModels.map((m) => (
-                            <SelectItem key={m.id} value={`model:${m.id}`}>
-                              {m.displayName} ({m.provider}) — ${m.inputCostPerMillion.toFixed(2)}/${m.outputCostPerMillion.toFixed(2)} per 1M
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {aiPlanCapabilities?.plan === 'starter'
-                      ? 'Starter plan uses Auto model selection only. Upgrade for platform default or a specific model.'
-                      : aiPlanCapabilities?.plan === 'professional'
-                        ? 'Professional: Auto or platform default. Upgrade to Enterprise to pick a specific model.'
-                        : 'Auto selects the cheapest configured model with a valid API key.'}
-                  </p>
-                </Field>
+          <form onSubmit={handleAiSubmit} className="space-y-6">
+            {aiMessage && (
+              <p className={`text-sm p-3 rounded-md ${aiMessage.startsWith('AI settings saved') ? 'bg-emerald-500/10 text-emerald-600 font-medium border border-emerald-500/30' : 'bg-destructive/10 text-destructive font-medium border border-destructive/30'}`}>
+                {aiMessage}
+              </p>
+            )}
 
-                <Field>
-                  <FieldLabel htmlFor="aiReplyMode">Reply routing</FieldLabel>
-                  <Select value={aiReplyMode} onValueChange={(v) => setAiReplyMode(v as 'ai_first' | 'balanced')}>
-                    <SelectTrigger id="aiReplyMode">
-                      <SelectValue placeholder="Select routing mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ai_first">AI-first (recommended) — AI answers questions; FAQs inform the model</SelectItem>
-                      <SelectItem value="balanced">Balanced — keyword shortcuts and direct FAQ matches before AI</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    AI-first uses your knowledge base and products in the system prompt. Canned replies are only used when AI is unavailable.
-                  </p>
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="personality">AI Personality</FieldLabel>
-                  <Textarea
-                    id="personality"
-                    value={aiGreeting}
-                    onChange={(e) => setAiGreeting(e.target.value)}
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Used for greeting-style messages and context. Tone for all replies is set below.
-                  </p>
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="responseStyle">Response Style</FieldLabel>
-                  <Select value={aiTone} onValueChange={setAiTone}>
-                    <SelectTrigger id="responseStyle">
-                      <SelectValue placeholder="Select style" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="formal">Formal</SelectItem>
-                      <SelectItem value="balanced">Balanced</SelectItem>
-                      <SelectItem value="casual">Casual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-
-                <div className="space-y-4 pt-4 border-t border-border">
-                  <div className="flex items-center justify-between">
+            {/* CARD 1: AI MODEL & PERSONALITY */}
+            <Card>
+              <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection('ai_card_1')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-foreground">Auto-reply</p>
-                      <p className="text-sm text-muted-foreground">Enable automated AI replies where configured</p>
+                      <CardTitle>AI Model & Personality</CardTitle>
+                      <CardDescription>Choose your AI model strategy, routing rules, and base persona</CardDescription>
                     </div>
-                    <Switch checked={autoReplyEnabled} onCheckedChange={setAutoReplyEnabled} />
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground shrink-0">
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['ai_card_1'] ? 'rotate-180' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              {!collapsedSections['ai_card_1'] && (
+                <CardContent className="space-y-5">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="aiModel">AI Model Selection Strategy</FieldLabel>
+                      <Select
+                        value={aiModelMode === 'specific' && aiModelId ? `model:${aiModelId}` : aiModelMode}
+                        onValueChange={(v) => {
+                          if (v === 'auto' || v === 'platform_default') {
+                            setAiModelMode(v)
+                            setAiModelId('')
+                          } else if (v.startsWith('model:')) {
+                            setAiModelMode('specific')
+                            setAiModelId(v.replace('model:', ''))
+                          }
+                        }}
+                      >
+                        <SelectTrigger id="aiModel">
+                          <SelectValue placeholder="Select model strategy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('auto') && (
+                            <SelectItem value="auto">Auto (Best Value — lowest cost enabled model)</SelectItem>
+                          )}
+                          {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('platform_default') && (
+                            <SelectItem value="platform_default">Platform Default Model</SelectItem>
+                          )}
+                          {(aiPlanCapabilities?.allowedModelModes ?? ['auto', 'platform_default', 'specific']).includes('specific') && availableAiModels.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel>Specific Model (Enterprise)</SelectLabel>
+                              {availableAiModels.map((m) => (
+                                <SelectItem key={m.id} value={`model:${m.id}`}>
+                                  {m.displayName} ({m.provider}) — ${m.inputCostPerMillion.toFixed(2)}/${m.outputCostPerMillion.toFixed(2)} per 1M
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="aiReplyMode">Reply Routing Strategy</FieldLabel>
+                      <Select value={aiReplyMode} onValueChange={(v) => setAiReplyMode(v as 'ai_first' | 'balanced')}>
+                        <SelectTrigger id="aiReplyMode">
+                          <SelectValue placeholder="Select routing mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ai_first">AI-First (Recommended — AI generates replies informed by FAQs)</SelectItem>
+                          <SelectItem value="balanced">Balanced (Keyword shortcuts & direct FAQ matches first)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-foreground">Reply in customer&apos;s language</p>
-                      <p className="text-sm text-muted-foreground">When off, use the default language below</p>
-                    </div>
-                    <Switch checked={replyInCustomerLanguage} onCheckedChange={setReplyInCustomerLanguage} />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="personality">AI Greeting & Context Persona</FieldLabel>
+                      <Textarea
+                        id="personality"
+                        value={aiGreeting}
+                        onChange={(e) => setAiGreeting(e.target.value)}
+                        rows={3}
+                        placeholder="e.g. Welcome! I'm your assistant for QuickBite. How can I help you today?"
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="responseStyle">Response Tone & Style</FieldLabel>
+                      <Select value={aiTone} onValueChange={setAiTone}>
+                        <SelectTrigger id="responseStyle">
+                          <SelectValue placeholder="Select style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="formal">Formal & Professional</SelectItem>
+                          <SelectItem value="balanced">Balanced & Friendly</SelectItem>
+                          <SelectItem value="casual">Casual & Conversational</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="mt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-foreground">Auto-reply Messages</p>
+                            <p className="text-[11px] text-muted-foreground">Enable automated AI replies across channels</p>
+                          </div>
+                          <Switch checked={autoReplyEnabled} onCheckedChange={setAutoReplyEnabled} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-foreground">Reply in Customer&apos;s Language</p>
+                            <p className="text-[11px] text-muted-foreground">Detect and match customer language</p>
+                          </div>
+                          <Switch checked={replyInCustomerLanguage} onCheckedChange={setReplyInCustomerLanguage} />
+                        </div>
+                      </div>
+                    </Field>
                   </div>
 
                   {!replyInCustomerLanguage && (
                     <Field>
-                      <FieldLabel>Default reply language</FieldLabel>
+                      <FieldLabel>Default Fallback Language Code</FieldLabel>
                       <Input
                         value={defaultReplyLanguage}
                         onChange={(e) => setDefaultReplyLanguage(e.target.value)}
                         placeholder="en"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">ISO code, e.g. en, sw, ar, fr</p>
                     </Field>
                   )}
+                </CardContent>
+              )}
+            </Card>
 
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-4">
+            {/* CARD 2: COMMERCE AI AGENT & AUTOMATION */}
+            <Card>
+              <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection('ai_card_2')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <CardTitle>Commerce AI Agent & Automation</CardTitle>
+                      <CardDescription>Tool-using AI worker for product catalog, orders, and proactive outreach</CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {agentCommerceEnabled && (
+                      <Badge variant="default" className="text-[10px] uppercase tracking-wide">
+                        Agent Active
+                      </Badge>
+                    )}
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground shrink-0">
+                      <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['ai_card_2'] ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              {!collapsedSections['ai_card_2'] && (
+                <CardContent className="space-y-5">
+                  <div className="rounded-lg border p-4 space-y-4 bg-muted/10">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-foreground">Agent commerce mode</p>
-                          <p className="text-sm text-muted-foreground">
-                            Tool-using AI for catalog, orders, and FAQ. Included on Growth+ plans (auto-enabled on upgrade).
-                          </p>
-                          {agentCommerceEnabled && (
-                            <Badge variant="default" className="text-[10px] uppercase tracking-wide">
-                              ON
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Turns on the AI employee with tools (search products, orders, memory, refunds).
-                          Requires <strong>Auto-reply</strong> enabled and an OpenAI-compatible provider.
+                        <p className="font-semibold text-foreground text-sm">Agent Commerce Mode</p>
+                        <p className="text-xs text-muted-foreground">
+                          Empowers the AI employee to search products, process orders, check inventory, and issue refunds directly in chat.
                         </p>
                       </div>
                       <Switch checked={agentCommerceEnabled} onCheckedChange={setAgentCommerceEnabled} />
                     </div>
 
-                    {agentCommerceEnabled && !autoReplyEnabled && (
-                      <p className="text-sm text-amber-700 dark:text-amber-400 rounded-md bg-amber-500/10 px-3 py-2">
-                        Enable <strong>Auto-reply</strong> above so the agent can respond on WhatsApp.
-                      </p>
-                    )}
-
                     {agentCommerceEnabled && (
-                      <>
-                        <div className="flex items-center justify-between pl-4 border-l-2 border-primary/30">
+                      <div className="space-y-4 pt-3 border-t border-border/60">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-foreground">Proactive agent outreach</p>
-                            <p className="text-sm text-muted-foreground">
-                              AI follows up on abandoned carts and personalizes payment confirmations
-                            </p>
+                            <p className="text-xs font-semibold text-foreground">Proactive Customer Outreach</p>
+                            <p className="text-[11px] text-muted-foreground">Automatically follow up on abandoned carts and send payment confirmations</p>
                           </div>
                           <Switch checked={agentProactiveEnabled} onCheckedChange={setAgentProactiveEnabled} />
                         </div>
 
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-foreground">Voice note replies (TTS)</p>
-                            <p className="text-sm text-muted-foreground">
-                              When customers send voice notes, reply with synthesized audio when possible
-                            </p>
-                          </div>
-                          <Switch checked={agentVoiceReplyEnabled} onCheckedChange={setAgentVoiceReplyEnabled} />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-foreground">Morning brief on WhatsApp</p>
-                            <p className="text-sm text-muted-foreground">
-                              Send the daily commerce brief to the owner via WhatsApp at 7:00 AM
-                            </p>
+                            <p className="text-xs font-semibold text-foreground">Morning Commerce Brief on WhatsApp</p>
+                            <p className="text-[11px] text-muted-foreground">Receive daily 7:00 AM sales & AI performance summaries on WhatsApp</p>
                           </div>
                           <Switch
                             checked={agentMorningBriefWhatsappEnabled}
@@ -1856,296 +2504,349 @@ export default function SettingsPage() {
                         </div>
 
                         {agentMorningBriefWhatsappEnabled && (
-                          <div className="space-y-2 pl-4 border-l-2 border-primary/30">
-                            <FieldLabel htmlFor="ownerWhatsappPhone">Owner WhatsApp number</FieldLabel>
+                          <Field>
+                            <FieldLabel htmlFor="ownerWhatsappPhone">Owner WhatsApp Phone Number</FieldLabel>
                             <Input
                               id="ownerWhatsappPhone"
                               value={ownerWhatsappPhone}
                               onChange={(e) => setOwnerWhatsappPhone(e.target.value)}
                               placeholder="e.g. 254712345678"
                             />
-                            <p className="text-xs text-muted-foreground">
-                              Falls back to company owner profile phone or company phone if empty.
-                            </p>
-                          </div>
+                          </Field>
                         )}
+                      </div>
+                    )}
+                  </div>
 
-                        {webWidgetToken && (
-                          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
-                            <p className="font-medium">Web chat widget</p>
-                            <p className="font-mono break-all text-muted-foreground">Token: {webWidgetToken}</p>
-                            {channelIngestSecret && (
-                              <p className="font-mono break-all text-muted-foreground">
-                                Webhook secret: {channelIngestSecret}
-                              </p>
-                            )}
-                            {channelWebhookUrls && (
-                              <div className="space-y-1 text-muted-foreground">
-                                <p>Email webhook: {channelWebhookUrls.email}</p>
-                                <p>Instagram DM: {channelWebhookUrls.instagramDm}</p>
-                                <p className="text-[11px]">Header: X-Channel-Ingest-Secret</p>
-                              </div>
-                            )}
-                            {widgetScriptUrl && companyIdForEmbed && (
-                              <pre className="overflow-x-auto rounded bg-background p-2 text-[10px] whitespace-pre-wrap">{`<script
+                  {webWidgetToken && (
+                    <div className="rounded-lg border bg-muted/20 p-4 text-xs space-y-2">
+                      <p className="font-semibold text-foreground">Web Chat Widget Token & Embed Code</p>
+                      <p className="font-mono text-muted-foreground truncate">Token: {webWidgetToken}</p>
+                      {widgetScriptUrl && companyIdForEmbed && (
+                        <pre className="overflow-x-auto rounded bg-background p-2.5 text-[10px] font-mono whitespace-pre-wrap">{`<script
   src="${widgetScriptUrl}"
   data-company-id="${companyIdForEmbed}"
   data-widget-token="${webWidgetToken}"
   data-api-base="${typeof window !== "undefined" ? window.location.origin : ""}"
   async
 ></script>`}</pre>
-                            )}
-                          </div>
-                        )}
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
 
-                        {Object.keys(agentBusinessGoalCatalog).length > 0 && (
-                          <Field>
-                            <FieldLabel>Business goals</FieldLabel>
-                            <p className="text-xs text-muted-foreground mb-2">
-                              The agent optimizes conversations toward these objectives
-                            </p>
-                            <div className="space-y-2">
-                              {Object.entries(agentBusinessGoalCatalog).map(([key, label]) => (
-                                <label key={key} className="flex items-start gap-2 text-sm cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    className="mt-1"
-                                    checked={agentBusinessGoals.includes(key)}
-                                    onChange={(e) => {
-                                      setAgentBusinessGoals((prev) =>
-                                        e.target.checked ? [...prev, key] : prev.filter((g) => g !== key)
-                                      )
-                                    }}
-                                  />
-                                  <span>
-                                    <span className="font-medium text-foreground">{key.replace(/_/g, ' ')}</span>
-                                    <span className="block text-muted-foreground text-xs">{label}</span>
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </Field>
-                        )}
-
-                        <OnboardingInterviewPanel
-                          onComplete={() => {
-                            mutate("company-settings")
-                          }}
-                        />
-
-                        <Field>
-                          <FieldLabel>Business DNA</FieldLabel>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Same question, different voice — a luxury brand and a friendly café should answer differently.
-                          </p>
-                          <Select
-                            value={businessDnaPreset}
-                            onValueChange={(v) =>
-                              applyBusinessDnaPreset(v as 'industry_default' | 'luxury_brand' | 'friendly_cafe' | 'custom')
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose a personality" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="industry_default">
-                                Industry default ({industry})
-                              </SelectItem>
-                              {businessDnaPresets.luxury_brand && (
-                                <SelectItem value="luxury_brand">
-                                  {businessDnaPresets.luxury_brand.label ?? 'Luxury brand'}
-                                </SelectItem>
-                              )}
-                              {businessDnaPresets.friendly_cafe && (
-                                <SelectItem value="friendly_cafe">
-                                  {businessDnaPresets.friendly_cafe.label ?? 'Friendly café'}
-                                </SelectItem>
-                              )}
-                              <SelectItem value="custom">Custom (edit fields below)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {businessDnaPreset !== 'industry_default' && (
-                            <div className="mt-3 space-y-3 rounded-md border bg-background/80 p-3">
-                              {businessDnaPreset === 'luxury_brand' && businessDnaPresets.luxury_brand?.description && (
-                                <p className="text-xs text-muted-foreground">{businessDnaPresets.luxury_brand.description}</p>
-                              )}
-                              {businessDnaPreset === 'friendly_cafe' && businessDnaPresets.friendly_cafe?.description && (
-                                <p className="text-xs text-muted-foreground">{businessDnaPresets.friendly_cafe.description}</p>
-                              )}
-                              <Field>
-                                <FieldLabel>Tone</FieldLabel>
-                                <Input
-                                  value={businessDna.tone ?? ''}
-                                  onChange={(e) => {
-                                    setBusinessDnaPreset('custom')
-                                    setBusinessDna((d) => ({ ...d, tone: e.target.value }))
-                                  }}
-                                  placeholder="e.g. luxury and calm"
-                                />
-                              </Field>
-                              <Field>
-                                <FieldLabel>Core values (comma-separated)</FieldLabel>
-                                <Input
-                                  value={(businessDna.values ?? []).join(', ')}
-                                  onChange={(e) => {
-                                    setBusinessDnaPreset('custom')
-                                    setBusinessDna((d) => ({
-                                      ...d,
-                                      values: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-                                    }))
-                                  }}
-                                  placeholder="quality, discretion, craftsmanship"
-                                />
-                              </Field>
-                              <Field>
-                                <FieldLabel>Risk tolerance</FieldLabel>
-                                <Select
-                                  value={businessDna.risk_tolerance ?? 'medium'}
-                                  onValueChange={(v) => {
-                                    setBusinessDnaPreset('custom')
-                                    setBusinessDna((d) => ({
-                                      ...d,
-                                      risk_tolerance: v as 'low' | 'medium' | 'high',
-                                    }))
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="low">Low — cautious, escalate early</SelectItem>
-                                    <SelectItem value="medium">Medium — balanced</SelectItem>
-                                    <SelectItem value="high">High — more autonomous offers</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </Field>
-                              <Field>
-                                <FieldLabel>Service philosophy</FieldLabel>
-                                <Textarea
-                                  rows={2}
-                                  value={businessDna.service_philosophy ?? ''}
-                                  onChange={(e) => {
-                                    setBusinessDnaPreset('custom')
-                                    setBusinessDna((d) => ({ ...d, service_philosophy: e.target.value }))
-                                  }}
-                                />
-                              </Field>
-                              <Field>
-                                <FieldLabel>Communication style</FieldLabel>
-                                <Textarea
-                                  rows={2}
-                                  value={businessDna.communication_style ?? ''}
-                                  onChange={(e) => {
-                                    setBusinessDnaPreset('custom')
-                                    setBusinessDna((d) => ({ ...d, communication_style: e.target.value }))
-                                  }}
-                                />
-                              </Field>
-                            </div>
-                          )}
-                        </Field>
-                      </>
-                    )}
+            {/* CARD 3: VOICE NOTES & SPEECH SYNTHESIS */}
+            <Card>
+              <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection('ai_card_3')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <CardTitle>Voice Notes & Speech Synthesis (TTS)</CardTitle>
+                      <CardDescription>Transcribe customer audio voice notes and reply with AI voice output</CardDescription>
+                    </div>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground shrink-0">
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['ai_card_3'] ? 'rotate-180' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              {!collapsedSections['ai_card_3'] && (
+                <CardContent className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-foreground text-sm">Enable Voice Note Replies</p>
+                      <p className="text-xs text-muted-foreground">Transcribe voice notes from WhatsApp and generate spoken audio responses</p>
+                    </div>
+                    <Switch checked={agentVoiceReplyEnabled} onCheckedChange={setAgentVoiceReplyEnabled} />
                   </div>
 
+                  {agentVoiceReplyEnabled && (
+                    <div className="grid gap-4 md:grid-cols-2 p-4 rounded-lg bg-muted/20 border">
+                      <Field>
+                        <FieldLabel>Outbound Audio Reply Mode</FieldLabel>
+                        <Select value={agentVoiceReplyMode} onValueChange={(v) => setAgentVoiceReplyMode(v as 'voice_only' | 'dual_text_and_voice' | 'text_only')}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="dual_text_and_voice">Dual Mode (Text Message + Audio Voice Note)</SelectItem>
+                            <SelectItem value="voice_only">Voice Note Audio Only</SelectItem>
+                            <SelectItem value="text_only">Text Message Fallback Only</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+
+                      <Field>
+                        <FieldLabel>Brand Voice Persona / Speaker</FieldLabel>
+                        <Select value={agentVoiceId} onValueChange={setAgentVoiceId}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nova">Nova (Warm & Professional Female)</SelectItem>
+                            <SelectItem value="alloy">Alloy (Balanced Neutral)</SelectItem>
+                            <SelectItem value="echo">Echo (Warm Male)</SelectItem>
+                            <SelectItem value="fable">Fable (Expressive British)</SelectItem>
+                            <SelectItem value="onyx">Onyx (Deep Authoritative Male)</SelectItem>
+                            <SelectItem value="shimmer">Shimmer (Clear & Energetic Female)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* CARD 4: BUSINESS DNA & DIGITAL TWIN */}
+            <Card>
+              <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection('ai_card_4')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <CardTitle>Business DNA & Digital Twin</CardTitle>
+                      <CardDescription>Define your brand philosophy, service values, and AI strategic modeling</CardDescription>
+                    </div>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground shrink-0">
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['ai_card_4'] ? 'rotate-180' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              {!collapsedSections['ai_card_4'] && (
+                <CardContent className="space-y-6">
+                  <OnboardingInterviewPanel
+                    onComplete={() => {
+                      mutate("company-settings")
+                    }}
+                  />
+
                   <Field>
-                    <FieldLabel>Digital twin</FieldLabel>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Mission, brand voice, and strategy — how the agent models your business.
-                    </p>
-                    <div className="space-y-2">
+                    <FieldLabel>Business DNA Preset</FieldLabel>
+                    <Select
+                      value={businessDnaPreset}
+                      onValueChange={(v) =>
+                        applyBusinessDnaPreset(v as 'industry_default' | 'luxury_brand' | 'friendly_cafe' | 'custom')
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a personality" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="industry_default">
+                          Industry Default ({industry})
+                        </SelectItem>
+                        {businessDnaPresets.luxury_brand && (
+                          <SelectItem value="luxury_brand">
+                            {businessDnaPresets.luxury_brand.label ?? 'Luxury Brand'}
+                          </SelectItem>
+                        )}
+                        {businessDnaPresets.friendly_cafe && (
+                          <SelectItem value="friendly_cafe">
+                            {businessDnaPresets.friendly_cafe.label ?? 'Friendly Café'}
+                          </SelectItem>
+                        )}
+                        <SelectItem value="custom">Custom Brand DNA</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  {businessDnaPreset !== 'industry_default' && (
+                    <div className="grid gap-4 md:grid-cols-2 rounded-lg border bg-muted/10 p-4">
+                      <Field>
+                        <FieldLabel>Brand Tone</FieldLabel>
+                        <Input
+                          value={businessDna.tone ?? ''}
+                          onChange={(e) => {
+                            setBusinessDnaPreset('custom')
+                            setBusinessDna((d) => ({ ...d, tone: e.target.value }))
+                          }}
+                          placeholder="e.g. luxury, calm, high-end"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Risk Tolerance</FieldLabel>
+                        <Select
+                          value={businessDna.risk_tolerance ?? 'medium'}
+                          onValueChange={(v) => {
+                            setBusinessDnaPreset('custom')
+                            setBusinessDna((d) => ({
+                              ...d,
+                              risk_tolerance: v as 'low' | 'medium' | 'high',
+                            }))
+                          }}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low — cautious, escalate early</SelectItem>
+                            <SelectItem value="medium">Medium — balanced autonomous decisions</SelectItem>
+                            <SelectItem value="high">High — max autonomy</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field className="md:col-span-2">
+                        <FieldLabel>Core Values (comma-separated)</FieldLabel>
+                        <Input
+                          value={(businessDna.values ?? []).join(', ')}
+                          onChange={(e) => {
+                            setBusinessDnaPreset('custom')
+                            setBusinessDna((d) => ({
+                              ...d,
+                              values: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                            }))
+                          }}
+                          placeholder="quality, speed, discretion"
+                        />
+                      </Field>
+                    </div>
+                  )}
+
+                  {Object.keys(agentBusinessGoalCatalog).length > 0 && (
+                    <Field>
+                      <FieldLabel>Target Business Goals</FieldLabel>
+                      <div className="grid gap-2 sm:grid-cols-2 mt-1">
+                        {Object.entries(agentBusinessGoalCatalog).map(([key, label]) => (
+                          <label key={key} className="flex items-center gap-2 rounded border bg-background p-2 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-border"
+                              checked={agentBusinessGoals.includes(key)}
+                              onChange={(e) => {
+                                setAgentBusinessGoals((prev) =>
+                                  e.target.checked ? [...prev, key] : prev.filter((g) => g !== key)
+                                )
+                              }}
+                            />
+                            <div>
+                              <p className="font-medium text-foreground capitalize">{key.replace(/_/g, ' ')}</p>
+                              <p className="text-[10px] text-muted-foreground">{label}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </Field>
+                  )}
+
+                  <Field>
+                    <FieldLabel>Digital Twin Context Modeling</FieldLabel>
+                    <div className="grid gap-3 md:grid-cols-2 mt-1">
                       {(['mission', 'brand_voice', 'sales_strategy', 'pricing_rules', 'competitors', 'target_customers'] as const).map((key) => (
                         <Textarea
                           key={key}
                           rows={2}
-                          placeholder={key.replace(/_/g, ' ')}
+                          placeholder={key.replace(/_/g, ' ').toUpperCase()}
                           value={digitalTwin[key] ?? ''}
                           onChange={(e) => setDigitalTwin((prev) => ({ ...prev, [key]: e.target.value }))}
                         />
                       ))}
                     </div>
                   </Field>
+                </CardContent>
+              )}
+            </Card>
 
-                  <div className="flex items-center justify-between">
+            {/* CARD 5: ADVANCED CONTROLS & GOVERNANCE */}
+            <Card>
+              <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection('ai_card_5')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-foreground">Agent council</p>
-                      <p className="text-sm text-muted-foreground">
-                        Enable internal specialist debate before the Chief Agent replies.
-                      </p>
+                      <CardTitle>Advanced AI Controls & Governance</CardTitle>
+                      <CardDescription>Specialist council debate, continuous learning memory, and prompt debugging</CardDescription>
                     </div>
-                    <Switch checked={agentCouncilEnabled} onCheckedChange={setAgentCouncilEnabled} />
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-foreground">Learn from conversations</p>
-                      <p className="text-sm text-muted-foreground">
-                        {learnFromConversationsEditable
-                          ? "Use past WhatsApp AI exchanges to improve reply consistency"
-                          : "Controlled by platform administrator"}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={learnFromConversations}
-                      onCheckedChange={setLearnFromConversations}
-                      disabled={!learnFromConversationsEditable}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-foreground">Notifications</p>
-                      <p className="text-sm text-muted-foreground">In-app / email notifications for your team</p>
-                    </div>
-                    <Switch checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled} />
-                  </div>
-
-                  <div className="flex items-center justify-between border-t pt-4">
-                    <div>
-                      <p className="font-medium text-foreground">Developer Mode & AI Prompt Debugger</p>
-                      <p className="text-sm text-muted-foreground">
-                        Capture full raw LLM prompt payloads and enable prompt downloads on the web dashboard
-                      </p>
-                    </div>
-                    <Switch checked={devModeEnabled} onCheckedChange={setDevModeEnabled} />
-                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground shrink-0">
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['ai_card_5'] ? 'rotate-180' : ''}`} />
+                  </Button>
                 </div>
+              </CardHeader>
+              {!collapsedSections['ai_card_5'] && (
+                <CardContent className="space-y-5">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground text-sm">Agent Council Internal Debate</p>
+                        <p className="text-xs text-muted-foreground">Enable specialist agent internal review before sending replies</p>
+                      </div>
+                      <Switch checked={agentCouncilEnabled} onCheckedChange={setAgentCouncilEnabled} />
+                    </div>
 
-                <Button type="submit" disabled={aiSaving}>
-                  {aiSaving ? 'Saving…' : 'Save AI Settings'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground text-sm">Learn from Past Conversations</p>
+                        <p className="text-xs text-muted-foreground">Improve future AI replies using successful past exchanges</p>
+                      </div>
+                      <Switch
+                        checked={learnFromConversations}
+                        onCheckedChange={setLearnFromConversations}
+                        disabled={!learnFromConversationsEditable}
+                      />
+                    </div>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Learning memory (GDPR)</CardTitle>
-              <CardDescription>Export conversation learning samples stored for your company</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    const blob = await exportLearningSamples()
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement("a")
-                    a.href = url
-                    a.download = `learning-samples-${new Date().toISOString().slice(0, 10)}.csv`
-                    a.click()
-                    URL.revokeObjectURL(url)
-                  } catch {
-                    setAiMessage("Export failed.")
-                  }
-                }}
-              >
-                Download learning samples CSV
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground text-sm">In-App & Team Notifications</p>
+                        <p className="text-xs text-muted-foreground">Notify staff when human escalation occurs</p>
+                      </div>
+                      <Switch checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled} />
+                    </div>
+
+                    <div className="flex items-center justify-between border-t pt-3">
+                      <div>
+                        <p className="font-medium text-foreground text-sm">Developer Mode & Prompt Debugger</p>
+                        <p className="text-xs text-muted-foreground">Log raw LLM prompts and enable prompt inspector</p>
+                      </div>
+                      <Switch checked={devModeEnabled} onCheckedChange={setDevModeEnabled} />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border p-4 bg-muted/10 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">Learning Memory (GDPR Compliant)</p>
+                        <p className="text-[11px] text-muted-foreground">Export stored conversation learning samples for compliance or fine-tuning</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const blob = await exportLearningSamples()
+                            const url = URL.createObjectURL(blob)
+                            const a = document.createElement("a")
+                            a.href = url
+                            a.download = `learning-samples-${new Date().toISOString().slice(0, 10)}.csv`
+                            a.click()
+                            URL.revokeObjectURL(url)
+                          } catch {
+                            setAiMessage("Export failed.")
+                          }
+                        }}
+                      >
+                        Export CSV
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+
+            {/* SINGLE SAVE BUTTON AT THE BOTTOM OF THE AI TAB */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-lg border bg-background p-4 shadow-sm">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Save All AI Settings</p>
+                <p className="text-xs text-muted-foreground">Applies changes across models, commerce tools, voice output, and Business DNA.</p>
+              </div>
+              <Button type="submit" disabled={aiSaving} size="lg" className="w-full sm:w-auto">
+                {aiSaving ? "Saving All AI Settings…" : "Save AI Settings"}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </form>
+        </TabsContent>
 
+        <TabsContent value="byok">
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Your AI API keys (BYOK)</CardTitle>
@@ -2357,22 +3058,22 @@ export default function SettingsPage() {
         {/* Order Payments — cleanly separated payment methods with per-option save and check indicators */}
         <TabsContent value="order-payments" className="space-y-6">
           {/* Top Master Hero Card */}
-          <Card className="border-l-4 border-l-primary shadow-sm">
+          <Card className="shadow-sm">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
-                  <div className="rounded-xl p-3 bg-primary/10 text-primary shrink-0">
+                  <div className="rounded-xl p-3 bg-muted text-foreground shrink-0">
                     <CreditCard className="h-6 w-6" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-xl font-semibold tracking-tight text-foreground">Collect Payment for Orders</h2>
                       {ordersCollectPaymentEnabled ? (
-                        <Badge variant="default" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1 font-normal">
+                        <Badge variant="default" className="gap-1 font-normal">
                           <Check className="h-3 w-3" /> Active & Collecting
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-muted-foreground font-normal">
+                        <Badge variant="secondary" className="font-normal">
                           Payments Paused
                         </Badge>
                       )}
@@ -2380,7 +3081,7 @@ export default function SettingsPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-1" />
                       )}
                       {optionSaved['collectPayment'] && (
-                        <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                        <Badge variant="outline" className="gap-1 font-medium text-xs">
                           <Check className="h-3 w-3" /> Saved
                         </Badge>
                       )}
@@ -2394,17 +3095,17 @@ export default function SettingsPage() {
                   <span className="text-sm font-medium text-foreground">
                     {ordersCollectPaymentEnabled ? "Enabled" : "Disabled"}
                   </span>
-                  <Switch 
-                    checked={ordersCollectPaymentEnabled} 
-                    onCheckedChange={(v) => handleToggleOption('collectPayment', setOrdersCollectPaymentEnabled, v, 'ordersCollectPaymentEnabled')} 
+                  <Switch
+                    checked={ordersCollectPaymentEnabled}
+                    onCheckedChange={(v) => handleToggleOption('collectPayment', setOrdersCollectPaymentEnabled, v, 'ordersCollectPaymentEnabled')}
                     disabled={optionSaving['collectPayment']}
                   />
                 </div>
               </div>
 
               {!ordersCollectPaymentEnabled && (
-                <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+                <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span>Payment collection is turned off. The chatbot will skip payment options and confirm customer orders immediately.</span>
                 </div>
               )}
@@ -2416,7 +3117,7 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <Smartphone className="h-5 w-5 text-primary" />
+                  <Smartphone className="h-5 w-5 text-muted-foreground" />
                   Digital & Mobile Payment Gateways
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -2426,24 +3127,24 @@ export default function SettingsPage() {
 
               <div className="grid gap-4">
                 {/* M-Pesa Payment Card */}
-                <Card className={`transition-all duration-200 ${ordersAcceptMpesa ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                <Card className={`transition-all duration-200 ${ordersAcceptMpesa ? 'bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
                   <CardContent className="p-5 space-y-4">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className={`flex items-start justify-between gap-4 ${ordersAcceptMpesa ? 'cursor-pointer select-none' : ''}`} onClick={() => ordersAcceptMpesa && toggleSection('mpesa')}>
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
+                        <div className="rounded-lg p-2.5 bg-muted text-foreground shrink-0 mt-0.5">
                           <Smartphone className="h-5 w-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-foreground">M-Pesa (STK Push)</h4>
-                            <Badge variant="outline" className="text-xs bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium">
+                            <Badge variant="outline" className="text-xs font-medium">
                               Mobile Money
                             </Badge>
                             {optionSaving['mpesaToggle'] && (
                               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             )}
                             {optionSaved['mpesaToggle'] && (
-                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                              <Badge variant="outline" className="gap-1 font-medium text-xs">
                                 <Check className="h-3 w-3" /> Saved
                               </Badge>
                             )}
@@ -2453,15 +3154,31 @@ export default function SettingsPage() {
                           </p>
                         </div>
                       </div>
-                      <Switch 
-                        checked={ordersAcceptMpesa} 
-                        onCheckedChange={(v) => handleToggleOption('mpesaToggle', setOrdersAcceptMpesa, v, 'ordersAcceptMpesa')} 
-                        disabled={!ordersCollectPaymentEnabled || optionSaving['mpesaToggle']} 
-                      />
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={ordersAcceptMpesa}
+                          onCheckedChange={(v) => handleToggleOption('mpesaToggle', setOrdersAcceptMpesa, v, 'ordersAcceptMpesa')}
+                          disabled={!ordersCollectPaymentEnabled || optionSaving['mpesaToggle']}
+                        />
+                        {ordersAcceptMpesa && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleSection('mpesa')
+                            }}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['mpesa'] ? 'rotate-180' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Integrated M-Pesa Custom Configuration Box */}
-                    {ordersAcceptMpesa && (
+                    {!collapsedSections['mpesa'] && ordersAcceptMpesa && (
                       <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -2470,14 +3187,14 @@ export default function SettingsPage() {
                           </div>
                           {settings?.orderPaymentMpesaConfigured ? (
                             <div className="flex items-center gap-2">
-                              <Badge variant="default" className="gap-1 bg-emerald-600 text-white font-normal text-xs"><Check className="h-3 w-3" /> Custom Credentials Active</Badge>
+                              <Badge variant="default" className="gap-1 font-normal text-xs"><Check className="h-3 w-3" /> Custom Credentials Active</Badge>
                               <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearMpesaConfig}>Clear</Button>
                             </div>
                           ) : (
-                            <Badge variant="secondary" className="text-xs text-muted-foreground font-normal">Using Platform Default</Badge>
+                            <Badge variant="secondary" className="text-xs font-normal">Using Platform Default</Badge>
                           )}
                         </div>
-                        
+
                         <p className="text-xs text-muted-foreground">
                           Add your Lipa Na M-Pesa PayBill or Till number so payments go directly to your business bank or till.
                         </p>
@@ -2495,10 +3212,10 @@ export default function SettingsPage() {
                           </Field>
                           <Field>
                             <FieldLabel>{mpesaType === 'till' ? 'Till Number' : 'PayBill Shortcode'}</FieldLabel>
-                            <Input 
-                              placeholder={mpesaType === 'till' ? 'e.g. 123456' : 'e.g. 174379'} 
-                              value={mpesaShortcode} 
-                              onChange={(e) => setMpesaShortcode(e.target.value)} 
+                            <Input
+                              placeholder={mpesaType === 'till' ? 'e.g. 123456' : 'e.g. 174379'}
+                              value={mpesaShortcode}
+                              onChange={(e) => setMpesaShortcode(e.target.value)}
                             />
                           </Field>
                         </div>
@@ -2630,7 +3347,7 @@ export default function SettingsPage() {
                               </>
                             ) : optionSaved['mpesaConfig'] ? (
                               <>
-                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                                <Check className="h-3.5 w-3.5 text-foreground" /> Saved!
                               </>
                             ) : (
                               <>
@@ -2645,24 +3362,24 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* Card (Stripe) Payment Method Card */}
-                <Card className={`transition-all duration-200 ${ordersAcceptStripe ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                <Card className={`transition-all duration-200 ${ordersAcceptStripe ? 'bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
                   <CardContent className="p-5 space-y-4">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className={`flex items-start justify-between gap-4 ${ordersAcceptStripe ? 'cursor-pointer select-none' : ''}`} onClick={() => ordersAcceptStripe && toggleSection('stripe')}>
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
+                        <div className="rounded-lg p-2.5 bg-muted text-foreground shrink-0 mt-0.5">
                           <CreditCard className="h-5 w-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-foreground">Card (Stripe)</h4>
-                            <Badge variant="outline" className="text-xs bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-medium">
+                            <Badge variant="outline" className="text-xs font-medium">
                               Cards & Digital Wallets
                             </Badge>
                             {optionSaving['stripeToggle'] && (
                               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             )}
                             {optionSaved['stripeToggle'] && (
-                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                              <Badge variant="outline" className="gap-1 font-medium text-xs">
                                 <Check className="h-3 w-3" /> Saved
                               </Badge>
                             )}
@@ -2672,15 +3389,31 @@ export default function SettingsPage() {
                           </p>
                         </div>
                       </div>
-                      <Switch 
-                        checked={ordersAcceptStripe} 
-                        onCheckedChange={(v) => handleToggleOption('stripeToggle', setOrdersAcceptStripe, v, 'ordersAcceptStripe')} 
-                        disabled={!ordersCollectPaymentEnabled || optionSaving['stripeToggle']} 
-                      />
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={ordersAcceptStripe}
+                          onCheckedChange={(v) => handleToggleOption('stripeToggle', setOrdersAcceptStripe, v, 'ordersAcceptStripe')}
+                          disabled={!ordersCollectPaymentEnabled || optionSaving['stripeToggle']}
+                        />
+                        {ordersAcceptStripe && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleSection('stripe')
+                            }}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['stripe'] ? 'rotate-180' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Integrated Stripe Custom Configuration Box */}
-                    {ordersAcceptStripe && (
+                    {!collapsedSections['stripe'] && ordersAcceptStripe && (
                       <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -2689,11 +3422,11 @@ export default function SettingsPage() {
                           </div>
                           {settings?.orderPaymentStripeConfigured ? (
                             <div className="flex items-center gap-2">
-                              <Badge variant="default" className="gap-1 bg-indigo-600 text-white font-normal text-xs"><Check className="h-3 w-3" /> Custom Stripe Configured</Badge>
+                              <Badge variant="default" className="gap-1 font-normal text-xs"><Check className="h-3 w-3" /> Custom Stripe Configured</Badge>
                               <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearStripeConfig}>Clear</Button>
                             </div>
                           ) : (
-                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/30 bg-amber-500/10 font-normal">Merchant Credentials Required</Badge>
+                            <Badge variant="outline" className="text-xs font-normal">Merchant Credentials Required</Badge>
                           )}
                         </div>
 
@@ -2777,7 +3510,7 @@ export default function SettingsPage() {
                               </>
                             ) : optionSaved['stripeConfig'] ? (
                               <>
-                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                                <Check className="h-3.5 w-3.5 text-foreground" /> Saved!
                               </>
                             ) : (
                               <>
@@ -2792,24 +3525,24 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* Paystack Payment Card */}
-                <Card className={`transition-all duration-200 ${ordersAcceptPaystack ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                <Card className={`transition-all duration-200 ${ordersAcceptPaystack ? 'bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
                   <CardContent className="p-5 space-y-4">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className={`flex items-start justify-between gap-4 ${ordersAcceptPaystack ? 'cursor-pointer select-none' : ''}`} onClick={() => ordersAcceptPaystack && toggleSection('paystack')}>
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg p-2.5 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5">
+                        <div className="rounded-lg p-2.5 bg-muted text-foreground shrink-0 mt-0.5">
                           <Zap className="h-5 w-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-foreground">Paystack</h4>
-                            <Badge variant="outline" className="text-xs bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-medium">
+                            <Badge variant="outline" className="text-xs font-medium">
                               Multi-channel Checkout
                             </Badge>
                             {optionSaving['paystackToggle'] && (
                               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             )}
                             {optionSaved['paystackToggle'] && (
-                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                              <Badge variant="outline" className="gap-1 font-medium text-xs">
                                 <Check className="h-3 w-3" /> Saved
                               </Badge>
                             )}
@@ -2819,15 +3552,31 @@ export default function SettingsPage() {
                           </p>
                         </div>
                       </div>
-                      <Switch 
-                        checked={ordersAcceptPaystack} 
-                        onCheckedChange={(v) => handleToggleOption('paystackToggle', setOrdersAcceptPaystack, v, 'ordersAcceptPaystack')} 
-                        disabled={!ordersCollectPaymentEnabled || optionSaving['paystackToggle']} 
-                      />
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={ordersAcceptPaystack}
+                          onCheckedChange={(v) => handleToggleOption('paystackToggle', setOrdersAcceptPaystack, v, 'ordersAcceptPaystack')}
+                          disabled={!ordersCollectPaymentEnabled || optionSaving['paystackToggle']}
+                        />
+                        {ordersAcceptPaystack && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleSection('paystack')
+                            }}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['paystack'] ? 'rotate-180' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Integrated Paystack Custom Configuration Box */}
-                    {ordersAcceptPaystack && (
+                    {!collapsedSections['paystack'] && ordersAcceptPaystack && (
                       <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -2836,11 +3585,11 @@ export default function SettingsPage() {
                           </div>
                           {settings?.orderPaymentPaystackConfigured ? (
                             <div className="flex items-center gap-2">
-                              <Badge variant="default" className="gap-1 bg-cyan-600 text-white font-normal text-xs"><Check className="h-3 w-3" /> Custom Paystack Configured</Badge>
+                              <Badge variant="default" className="gap-1 font-normal text-xs"><Check className="h-3 w-3" /> Custom Paystack Configured</Badge>
                               <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearPaystackConfig}>Clear</Button>
                             </div>
                           ) : (
-                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/30 bg-amber-500/10 font-normal">Merchant Credentials Required</Badge>
+                            <Badge variant="outline" className="text-xs font-normal">Merchant Credentials Required</Badge>
                           )}
                         </div>
 
@@ -2895,10 +3644,10 @@ export default function SettingsPage() {
 
                           <Field>
                             <FieldLabel>Public Key (Optional)</FieldLabel>
-                            <Input 
-                              placeholder="pk_live_... or pk_test_..." 
-                              value={paystackPublicKey} 
-                              onChange={(e) => setPaystackPublicKey(e.target.value)} 
+                            <Input
+                              placeholder="pk_live_... or pk_test_..."
+                              value={paystackPublicKey}
+                              onChange={(e) => setPaystackPublicKey(e.target.value)}
                             />
                           </Field>
                         </div>
@@ -2906,10 +3655,10 @@ export default function SettingsPage() {
                         <div className="grid gap-4 md:grid-cols-2">
                           <Field>
                             <FieldLabel>Settlement Currency</FieldLabel>
-                            <Input 
-                              placeholder="kes, ngn, usd, ghs, zar, etc." 
-                              value={paystackCurrency} 
-                              onChange={(e) => setPaystackCurrency(e.target.value)} 
+                            <Input
+                              placeholder="kes, ngn, usd, ghs, zar, etc."
+                              value={paystackCurrency}
+                              onChange={(e) => setPaystackCurrency(e.target.value)}
                             />
                           </Field>
                           <Field>
@@ -2938,7 +3687,7 @@ export default function SettingsPage() {
                               </>
                             ) : optionSaved['paystackConfig'] ? (
                               <>
-                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                                <Check className="h-3.5 w-3.5 text-foreground" /> Saved!
                               </>
                             ) : (
                               <>
@@ -2953,24 +3702,24 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* Pesapal Payment Card */}
-                <Card className={`transition-all duration-200 ${ordersAcceptPesapal ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                <Card className={`transition-all duration-200 ${ordersAcceptPesapal ? 'bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
                   <CardContent className="p-5 space-y-4">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className={`flex items-start justify-between gap-4 ${ordersAcceptPesapal ? 'cursor-pointer select-none' : ''}`} onClick={() => ordersAcceptPesapal && toggleSection('pesapal')}>
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
+                        <div className="rounded-lg p-2.5 bg-muted text-foreground shrink-0 mt-0.5">
                           <CreditCard className="h-5 w-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-foreground">Pesapal</h4>
-                            <Badge variant="outline" className="text-xs bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 font-medium">
+                            <Badge variant="outline" className="text-xs font-medium">
                               Cards, Mobile Money & Bank
                             </Badge>
                             {optionSaving['pesapalToggle'] && (
                               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             )}
                             {optionSaved['pesapalToggle'] && (
-                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                              <Badge variant="outline" className="gap-1 font-medium text-xs">
                                 <Check className="h-3 w-3" /> Saved
                               </Badge>
                             )}
@@ -2980,15 +3729,31 @@ export default function SettingsPage() {
                           </p>
                         </div>
                       </div>
-                      <Switch 
-                        checked={ordersAcceptPesapal} 
-                        onCheckedChange={(v) => handleToggleOption('pesapalToggle', setOrdersAcceptPesapal, v, 'ordersAcceptPesapal')} 
-                        disabled={!ordersCollectPaymentEnabled || optionSaving['pesapalToggle']} 
-                      />
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={ordersAcceptPesapal}
+                          onCheckedChange={(v) => handleToggleOption('pesapalToggle', setOrdersAcceptPesapal, v, 'ordersAcceptPesapal')}
+                          disabled={!ordersCollectPaymentEnabled || optionSaving['pesapalToggle']}
+                        />
+                        {ordersAcceptPesapal && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleSection('pesapal')
+                            }}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['pesapal'] ? 'rotate-180' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Integrated Pesapal Custom Configuration Box */}
-                    {ordersAcceptPesapal && (
+                    {!collapsedSections['pesapal'] && ordersAcceptPesapal && (
                       <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -2997,11 +3762,11 @@ export default function SettingsPage() {
                           </div>
                           {settings?.orderPaymentPesapalConfigured ? (
                             <div className="flex items-center gap-2">
-                              <Badge variant="default" className="gap-1 bg-blue-600 text-white font-normal text-xs"><Check className="h-3 w-3" /> Custom Pesapal Configured</Badge>
+                              <Badge variant="default" className="gap-1 font-normal text-xs"><Check className="h-3 w-3" /> Custom Pesapal Configured</Badge>
                               <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearPesapalConfig}>Clear</Button>
                             </div>
                           ) : (
-                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/30 bg-amber-500/10 font-normal">Merchant Credentials Required</Badge>
+                            <Badge variant="outline" className="text-xs font-normal">Merchant Credentials Required</Badge>
                           )}
                         </div>
 
@@ -3012,10 +3777,10 @@ export default function SettingsPage() {
                         <div className="grid gap-4 md:grid-cols-2">
                           <Field>
                             <FieldLabel>Pesapal Consumer Key</FieldLabel>
-                            <Input 
-                              placeholder="Consumer Key from Pesapal dashboard" 
-                              value={pesapalConsumerKey} 
-                              onChange={(e) => setPesapalConsumerKey(e.target.value)} 
+                            <Input
+                              placeholder="Consumer Key from Pesapal dashboard"
+                              value={pesapalConsumerKey}
+                              onChange={(e) => setPesapalConsumerKey(e.target.value)}
                             />
                           </Field>
 
@@ -3067,10 +3832,10 @@ export default function SettingsPage() {
                         <div className="grid gap-4 md:grid-cols-2">
                           <Field>
                             <FieldLabel>Default Currency</FieldLabel>
-                            <Input 
-                              placeholder="kes, usd, ugx, tzs, rwf" 
-                              value={pesapalCurrency} 
-                              onChange={(e) => setPesapalCurrency(e.target.value)} 
+                            <Input
+                              placeholder="kes, usd, ugx, tzs, rwf"
+                              value={pesapalCurrency}
+                              onChange={(e) => setPesapalCurrency(e.target.value)}
                             />
                           </Field>
                           <Field>
@@ -3099,11 +3864,188 @@ export default function SettingsPage() {
                               </>
                             ) : optionSaved['pesapalConfig'] ? (
                               <>
-                                <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
+                                <Check className="h-3.5 w-3.5 text-foreground" /> Saved!
                               </>
                             ) : (
                               <>
                                 <Check className="h-3.5 w-3.5" /> Save Pesapal Credentials
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Flutterwave Payment Card */}
+                <Card className={`transition-all duration-200 ${ordersAcceptFlutterwave ? 'bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                  <CardContent className="p-5 space-y-4">
+                    <div className={`flex items-start justify-between gap-4 ${ordersAcceptFlutterwave ? 'cursor-pointer select-none' : ''}`} onClick={() => ordersAcceptFlutterwave && toggleSection('flutterwave')}>
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg p-2.5 bg-muted text-foreground shrink-0 mt-0.5">
+                          <CreditCard className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">Flutterwave</h4>
+                            <Badge variant="outline" className="text-xs font-medium">
+                              Cards, Mobile Money & Bank
+                            </Badge>
+                            {optionSaving['flutterwaveToggle'] && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            {optionSaved['flutterwaveToggle'] && (
+                              <Badge variant="outline" className="gap-1 font-medium text-xs">
+                                <Check className="h-3 w-3" /> Saved
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Accept online payments via Flutterwave (Cards, Mobile Money, Bank Transfer, USSD).
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={ordersAcceptFlutterwave}
+                          onCheckedChange={(v) => handleToggleOption('flutterwaveToggle', setOrdersAcceptFlutterwave, v, 'ordersAcceptFlutterwave')}
+                          disabled={!ordersCollectPaymentEnabled || optionSaving['flutterwaveToggle']}
+                        />
+                        {ordersAcceptFlutterwave && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleSection('flutterwave')
+                            }}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['flutterwave'] ? 'rotate-180' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Integrated Flutterwave Custom Configuration Box */}
+                    {!collapsedSections['flutterwave'] && ordersAcceptFlutterwave && (
+                      <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-semibold text-foreground">Flutterwave v3 Credentials</span>
+                          </div>
+                          {settings?.orderPaymentFlutterwaveConfigured ? (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="gap-1 font-normal text-xs"><Check className="h-3 w-3" /> Custom Flutterwave Configured</Badge>
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearFlutterwaveConfig}>Clear</Button>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-xs font-normal">Merchant Credentials Required</Badge>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          Enter your Flutterwave Secret Key from your Flutterwave dashboard settings.
+                        </p>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Public Key (Optional)</FieldLabel>
+                            <Input
+                              placeholder="FLWPUBK_TEST-..."
+                              value={flutterwavePublicKey}
+                              onChange={(e) => setFlutterwavePublicKey(e.target.value)}
+                            />
+                          </Field>
+
+                          <Field>
+                            <FieldLabel>Secret Key</FieldLabel>
+                            {isMasked(flutterwaveSecretKey) && !replacingFlutterwaveSecret ? (
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input type="text" readOnly className="font-mono text-sm" value={flutterwaveSecretKey} />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => {
+                                    setReplacingFlutterwaveSecret(true)
+                                    setFlutterwaveSecretKey("")
+                                  }}
+                                >
+                                  Replace Secret
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Input
+                                  type="password"
+                                  placeholder="FLWSECK_TEST-..."
+                                  value={flutterwaveSecretKey}
+                                  onChange={(e) => setFlutterwaveSecretKey(e.target.value)}
+                                />
+                                {replacingFlutterwaveSecret && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs text-muted-foreground"
+                                    onClick={() => {
+                                      setReplacingFlutterwaveSecret(false)
+                                      mutate("company-settings")
+                                    }}
+                                  >
+                                    Cancel Replace
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </Field>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Default Currency</FieldLabel>
+                            <Input
+                              placeholder="kes, ngn, usd, ghs, zar"
+                              value={flutterwaveCurrency}
+                              onChange={(e) => setFlutterwaveCurrency(e.target.value)}
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel>Environment Mode</FieldLabel>
+                            <Select value={flutterwaveEnv} onValueChange={(v) => setFlutterwaveEnv(v as 'sandbox' | 'production')}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                                <SelectItem value="production">Production (Live)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        </div>
+
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={optionSaving['flutterwaveConfig']}
+                            onClick={handleSaveFlutterwaveConfig}
+                            className="gap-1.5"
+                          >
+                            {optionSaving['flutterwaveConfig'] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                              </>
+                            ) : optionSaved['flutterwaveConfig'] ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-foreground" /> Saved!
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" /> Save Flutterwave Credentials
                               </>
                             )}
                           </Button>
@@ -3119,7 +4061,7 @@ export default function SettingsPage() {
             <div className="space-y-4 pt-6 border-t border-border">
               <div>
                 <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <Banknote className="h-5 w-5 text-primary" />
+                  <Banknote className="h-5 w-5 text-muted-foreground" />
                   Offline & Manual Payment Options
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -3129,24 +4071,24 @@ export default function SettingsPage() {
 
               <div className="grid gap-4">
                 {/* Cash on Delivery Card */}
-                <Card className={`transition-all duration-200 ${ordersAcceptCod ? 'border-primary/40 bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                <Card className={`transition-all duration-200 ${ordersAcceptCod ? 'bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                        <div className="rounded-lg p-2.5 bg-muted text-foreground shrink-0 mt-0.5">
                           <Banknote className="h-5 w-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-foreground">Cash on Delivery (COD)</h4>
-                            <Badge variant="outline" className="text-xs bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400 font-medium">
+                            <Badge variant="outline" className="text-xs font-medium">
                               Pay on Arrival
                             </Badge>
                             {optionSaving['codToggle'] && (
                               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             )}
                             {optionSaved['codToggle'] && (
-                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                              <Badge variant="outline" className="gap-1 font-medium text-xs">
                                 <Check className="h-3 w-3" /> Saved
                               </Badge>
                             )}
@@ -3156,10 +4098,10 @@ export default function SettingsPage() {
                           </p>
                         </div>
                       </div>
-                      <Switch 
-                        checked={ordersAcceptCod} 
-                        onCheckedChange={(v) => handleToggleOption('codToggle', setOrdersAcceptCod, v, 'ordersAcceptCod')} 
-                        disabled={!ordersCollectPaymentEnabled || optionSaving['codToggle']} 
+                      <Switch
+                        checked={ordersAcceptCod}
+                        onCheckedChange={(v) => handleToggleOption('codToggle', setOrdersAcceptCod, v, 'ordersAcceptCod')}
+                        disabled={!ordersCollectPaymentEnabled || optionSaving['codToggle']}
                       />
                     </div>
                   </CardContent>
@@ -3168,9 +4110,9 @@ export default function SettingsPage() {
                 {/* Custom Manual Payment Instructions Card */}
                 <Card className="bg-card shadow-sm">
                   <CardContent className="p-5 space-y-3">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start justify-between gap-4 cursor-pointer select-none" onClick={() => toggleSection('manualInstructions')}>
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg p-2.5 bg-slate-500/10 text-slate-600 dark:text-slate-400 shrink-0 mt-0.5">
+                        <div className="rounded-lg p-2.5 bg-muted text-foreground shrink-0 mt-0.5">
                           <FileText className="h-5 w-5" />
                         </div>
                         <div>
@@ -3180,7 +4122,7 @@ export default function SettingsPage() {
                               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             )}
                             {optionSaved['manualInstructions'] && (
-                              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 gap-1 font-medium text-xs">
+                              <Badge variant="outline" className="gap-1 font-medium text-xs">
                                 <Check className="h-3 w-3" /> Saved
                               </Badge>
                             )}
@@ -3190,40 +4132,56 @@ export default function SettingsPage() {
                           </p>
                         </div>
                       </div>
-                    </div>
-
-                    <Textarea
-                      placeholder="e.g. Pay via M-Pesa to Till 123456 (MyShop). Include order number in transaction reference."
-                      value={orderPaymentManualInstructions}
-                      onChange={(e) => setOrderPaymentManualInstructions(e.target.value)}
-                      rows={3}
-                      className="text-sm"
-                      disabled={!ordersCollectPaymentEnabled}
-                    />
-
-                    <div className="pt-2 flex items-center justify-end gap-2">
                       <Button
                         type="button"
-                        size="sm"
-                        disabled={!ordersCollectPaymentEnabled || optionSaving['manualInstructions']}
-                        onClick={handleSaveManualInstructions}
-                        className="gap-1.5"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleSection('manualInstructions')
+                        }}
                       >
-                        {optionSaving['manualInstructions'] ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
-                          </>
-                        ) : optionSaved['manualInstructions'] ? (
-                          <>
-                            <Check className="h-3.5 w-3.5 text-emerald-400" /> Saved!
-                          </>
-                        ) : (
-                          <>
-                            <Check className="h-3.5 w-3.5" /> Save Instructions
-                          </>
-                        )}
+                        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['manualInstructions'] ? 'rotate-180' : ''}`} />
                       </Button>
                     </div>
+
+                    {!collapsedSections['manualInstructions'] && (
+                      <>
+                        <Textarea
+                          placeholder="e.g. Pay via M-Pesa to Till 123456 (MyShop). Include order number in transaction reference."
+                          value={orderPaymentManualInstructions}
+                          onChange={(e) => setOrderPaymentManualInstructions(e.target.value)}
+                          rows={3}
+                          className="text-sm"
+                          disabled={!ordersCollectPaymentEnabled}
+                        />
+
+                        <div className="pt-2 flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={!ordersCollectPaymentEnabled || optionSaving['manualInstructions']}
+                            onClick={handleSaveManualInstructions}
+                            className="gap-1.5"
+                          >
+                            {optionSaving['manualInstructions'] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                              </>
+                            ) : optionSaved['manualInstructions'] ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-foreground" /> Saved!
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" /> Save Instructions
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -3262,9 +4220,9 @@ export default function SettingsPage() {
                           Automatically add shipping/delivery costs to orders.
                         </p>
                       </div>
-                      <Switch 
-                        checked={deliveryFeesEnabled} 
-                        onCheckedChange={(v) => handleToggleOption('deliveryFeesToggle', setDeliveryFeesEnabled, v, 'deliveryFeesEnabled')} 
+                      <Switch
+                        checked={deliveryFeesEnabled}
+                        onCheckedChange={(v) => handleToggleOption('deliveryFeesToggle', setDeliveryFeesEnabled, v, 'deliveryFeesEnabled')}
                         disabled={optionSaving['deliveryFeesToggle']}
                       />
                     </div>
@@ -3340,9 +4298,9 @@ export default function SettingsPage() {
                           Send WhatsApp reminders with a payment link to customers with unpaid orders.
                         </p>
                       </div>
-                      <Switch 
-                        checked={paymentRecoveryEnabled} 
-                        onCheckedChange={(v) => handleToggleOption('paymentRecoveryToggle', setPaymentRecoveryEnabled, v, 'paymentRecoveryEnabled')} 
+                      <Switch
+                        checked={paymentRecoveryEnabled}
+                        onCheckedChange={(v) => handleToggleOption('paymentRecoveryToggle', setPaymentRecoveryEnabled, v, 'paymentRecoveryEnabled')}
                         disabled={optionSaving['paymentRecoveryToggle']}
                       />
                     </div>

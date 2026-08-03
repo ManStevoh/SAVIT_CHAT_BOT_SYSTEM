@@ -79,10 +79,23 @@ class PesapalService
                 ]);
 
             if (! $response->successful()) {
-                $msg = $response->json('message') ?? $response->json('error.message') ?? $response->body();
+                $json = $response->json() ?? [];
+                $errCode = $json['error']['code'] ?? $json['code'] ?? null;
+                $errMsg = $json['error']['message'] ?? $json['message'] ?? null;
+
+                $msg = ! empty($errMsg) ? $errMsg : (! empty($errCode) ? str_replace('_', ' ', (string) $errCode) : null);
+
+                if ($errCode === 'invalid_consumer_key_or_secret_provided') {
+                    $msg = 'Invalid Pesapal Consumer Key or Secret. If using Live credentials, please set Environment Mode to "Production".';
+                }
+
+                if (empty($msg)) {
+                    $msg = 'Pesapal authentication failed (HTTP '.$response->status().')';
+                }
+
                 Log::error('Pesapal Auth/RequestToken failed', ['status' => $response->status(), 'body' => $response->body()]);
 
-                return ['success' => false, 'error' => is_string($msg) ? $msg : 'Pesapal authentication failed'];
+                return ['success' => false, 'error' => (string) $msg];
             }
 
             $token = $response->json('token');

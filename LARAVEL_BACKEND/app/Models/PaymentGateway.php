@@ -88,6 +88,14 @@ class PaymentGateway extends Model
                 'ipn_id' => '',
                 'callback_url' => '',
             ],
+            'flutterwave' => [
+                'public_key' => '',
+                'secret_key' => '',
+                'secret_hash' => '',
+                'currency' => 'kes',
+                'env' => 'sandbox',
+                'callback_url' => '',
+            ],
             'manual' => [
                 'bank_name' => '',
                 'account_name' => '',

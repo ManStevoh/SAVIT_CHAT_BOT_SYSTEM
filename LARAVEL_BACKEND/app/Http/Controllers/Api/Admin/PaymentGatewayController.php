@@ -89,6 +89,7 @@ class PaymentGatewayController extends Controller
             'mpesa' => ['consumer_secret', 'passkey'],
             'paystack' => ['secret_key'],
             'pesapal' => ['consumer_secret'],
+            'flutterwave' => ['secret_key', 'secret_hash'],
             default => [],
         }, true);
     }
@@ -108,6 +109,7 @@ class PaymentGatewayController extends Controller
             'mpesa' => ['consumer_secret', 'passkey'],
             'paystack' => ['secret_key'],
             'pesapal' => ['consumer_secret'],
+            'flutterwave' => ['secret_key', 'secret_hash'],
             default => [],
         };
 

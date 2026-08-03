@@ -52,7 +52,7 @@ class PlatformPesapalDriver implements PlatformPaymentDriverInterface
         }
 
         $reference = 'sub_pesapal_'.uniqid().'_'.$company->id;
-        $callbackUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/dashboard/subscription/complete';
+        $callbackUrl = url('/api/pesapal/callback');
 
         $cfg = PaymentGateway::getConfig('pesapal');
         $currency = strtoupper((string) ($cfg['currency'] ?? 'KES'));

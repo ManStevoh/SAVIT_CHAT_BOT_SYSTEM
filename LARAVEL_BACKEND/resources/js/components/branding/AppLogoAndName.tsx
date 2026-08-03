@@ -4,15 +4,18 @@ import { Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
-const DEFAULT_MARK = "/images/branding/relaysiq-mark.png"
+const DEFAULT_FULL_LOGO_LIGHT = "/images/branding/relaysiq-wordmark-light.png?v=5"
+const DEFAULT_FULL_LOGO_DARK = "/images/branding/relaysiq-wordmark-dark.png?v=5"
+const DEFAULT_MARK_LIGHT = "/images/branding/relaysiq-mark.png?v=5"
+const DEFAULT_MARK_DARK = "/images/branding/relaysiq-mark-dark.png?v=5"
 
 type Variant = "sidebar" | "navbar" | "footer" | "admin"
 
-const sizeMap: Record<Variant, { box: string; icon: string; textClass: string }> = {
-  sidebar: { box: "h-7 w-7", icon: "h-3.5 w-3.5", textClass: "text-sidebar-foreground text-sm" },
-  navbar: { box: "h-8 w-8", icon: "h-4 w-4", textClass: "text-foreground text-sm" },
-  footer: { box: "h-8 w-8", icon: "h-4 w-4", textClass: "text-foreground text-sm" },
-  admin: { box: "h-7 w-7", icon: "h-3.5 w-3.5", textClass: "text-sidebar-foreground text-sm" },
+const sizeMap: Record<Variant, { imgClass: string; markClass: string }> = {
+  sidebar: { imgClass: "h-9 w-auto object-contain max-w-[170px]", markClass: "h-7 w-auto object-contain" },
+  navbar: { imgClass: "h-9 w-auto object-contain max-w-[180px]", markClass: "h-8 w-auto object-contain" },
+  footer: { imgClass: "h-9 w-auto object-contain max-w-[180px]", markClass: "h-8 w-auto object-contain" },
+  admin: { imgClass: "h-8 w-auto object-contain max-w-[160px]", markClass: "h-7 w-auto object-contain" },
 }
 
 export function AppLogoAndName({
@@ -31,40 +34,39 @@ export function AppLogoAndName({
   const branding = useAppBranding()
   const sizes = sizeMap[variant]
   const name = branding.applicationName || "RelayIQ"
-  const logoSrc = branding.appLogo || DEFAULT_MARK
 
-  const iconBox = (
-    <div
-      className={cn(
-        `flex ${sizes.box} items-center justify-center rounded-lg bg-foreground shrink-0 overflow-hidden`,
-        "bg-transparent"
-      )}
-    >
-      {showAdminBadge && !branding.appLogo ? (
-        <div className={cn(`flex ${sizes.box} items-center justify-center rounded-lg bg-foreground`)}>
-          <Shield className={`${sizes.icon} text-background`} />
-        </div>
-      ) : (
+  if (iconOnly) {
+    return (
+      <div className={cn("inline-flex items-center justify-center shrink-0", className)}>
         <img
-          src={logoSrc}
-          alt=""
-          className="h-full w-full object-contain"
+          src={DEFAULT_MARK_LIGHT}
+          alt={name}
+          className={cn(sizes.markClass, "dark:hidden")}
         />
-      )}
-    </div>
-  )
-
-  if (iconOnly) return <div className={className}>{iconBox}</div>
+        <img
+          src={DEFAULT_MARK_DARK}
+          alt={name}
+          className={cn(sizes.markClass, "hidden dark:block")}
+        />
+      </div>
+    )
+  }
 
   return (
-    <div className={className ?? "flex items-center gap-2.5"}>
-      {iconBox}
-      <div className="flex min-w-0 items-center">
-        <span className={cn("font-semibold tracking-tight truncate", sizes.textClass)}>
-          {name}
-        </span>
-        {suffix}
+    <div className={cn("flex items-center gap-2 shrink-0 select-none", className)}>
+      <div className="flex items-center shrink-0">
+        <img
+          src={DEFAULT_FULL_LOGO_LIGHT}
+          alt={name}
+          className={cn(sizes.imgClass, "dark:hidden")}
+        />
+        <img
+          src={DEFAULT_FULL_LOGO_DARK}
+          alt={name}
+          className={cn(sizes.imgClass, "hidden dark:block")}
+        />
       </div>
+      {suffix}
     </div>
   )
 }

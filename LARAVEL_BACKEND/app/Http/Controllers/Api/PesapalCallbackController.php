@@ -88,6 +88,11 @@ class PesapalCallbackController extends Controller
                 $this->orderPaymentService->markOrderPaid($order);
             }
 
+            if (! $request->expectsJson() && $request->isMethod('GET')) {
+                return redirect()->to(url("/pay/{$order->pay_token}"))
+                    ->with('status', 'Payment successful! Thank you for your order.');
+            }
+
             return response()->json([
                 'orderNotificationType' => $notificationType,
                 'orderTrackingId' => $orderTrackingId,
@@ -99,6 +104,14 @@ class PesapalCallbackController extends Controller
         // 2. Process Subscription Payment if reference starts with sub_pesapal_ or sub_
         if (str_starts_with($merchantReference, 'sub_pesapal_') || str_starts_with($merchantReference, 'sub_')) {
             $this->processSubscriptionPayment($merchantReference, $orderTrackingId, $statusResult['data'] ?? []);
+
+            if (! $request->expectsJson() && $request->isMethod('GET')) {
+                return redirect()->to(url('/dashboard/subscription?checkout=success'));
+            }
+        }
+
+        if (! $request->expectsJson() && $request->isMethod('GET')) {
+            return redirect()->to(url('/'));
         }
 
         return response()->json([

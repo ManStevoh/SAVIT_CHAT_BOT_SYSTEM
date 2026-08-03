@@ -22,13 +22,27 @@ final class VoiceOutboundService
 
     public function shouldReplyWithVoice(Company $company, bool $inboundWasAudio): bool
     {
-        if (! $inboundWasAudio || ! config('agent.voice.enabled', true)) {
+        if (! config('agent.voice.enabled', true)) {
             return false;
         }
 
         $company->loadMissing('settings');
+        $settings = $company->settings;
+        if (! $settings) {
+            return false;
+        }
 
-        return (bool) ($company->settings?->agent_voice_reply_enabled ?? false);
+        $enabled = (bool) ($settings->agent_voice_reply_enabled ?? false);
+        if (! $enabled) {
+            return false;
+        }
+
+        $mode = $settings->agent_voice_reply_mode ?? 'dual_text_and_voice';
+        if ($mode === 'text_only') {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -41,7 +55,10 @@ final class VoiceOutboundService
             return ['success' => false, 'error' => 'Empty speech text'];
         }
 
-        $result = $this->gateway->synthesizeSpeech($plain, $company);
+        $company->loadMissing('settings');
+        $voiceId = $company->settings?->agent_voice_id ?? config('agent.voice.tts_voice', 'nova');
+
+        $result = $this->gateway->synthesizeSpeech($plain, $company, $voiceId);
         if (! $result->success || ! $result->audioPath || ! is_readable($result->audioPath)) {
             return ['success' => false, 'error' => $result->error ?? 'TTS synthesis failed'];
         }

@@ -70,26 +70,39 @@ final class CommerceAgentOrchestrator
     ): array {
         $company->loadMissing('settings');
 
-        $logger = \Illuminate\Support\Facades\Log::build([
-            'driver' => 'single',
-            'path' => storage_path('logs/agent-debug.log'),
-        ]);
+        $logger = Log::channel('single');
+        try {
+            $built = Log::build([
+                'driver' => 'single',
+                'path' => storage_path('logs/agent-debug.log'),
+            ]);
+            if ($built) {
+                $logger = $built;
+            }
+        } catch (\Throwable) {
+        }
 
-        $logger->info("========================================================================\n"
-            ."[NEW TURN] Chat ID: {$chat->id} | Company ID: {$company->id} | Phone: {$customerPhone} | Name: {$customerName}\n"
-            ."Incoming Message: \"{$incomingMessage}\"\n"
-            ."Active Conversation Step: \"{$chat->conversation_step}\"");
+        try {
+            $logger->info("========================================================================\n"
+                ."[NEW TURN] Chat ID: {$chat->id} | Company ID: {$company->id} | Phone: {$customerPhone} | Name: {$customerName}\n"
+                ."Incoming Message: \"{$incomingMessage}\"\n"
+                ."Active Conversation Step: \"{$chat->conversation_step}\"");
+        } catch (\Throwable) {
+        }
 
         $cognitiveContext = $this->cognitive->processTurn(
             $company, $chat, $customerPhone, $customerName, $incomingMessage,
         );
         $reasoning = $cognitiveContext['reasoning'];
 
-        $logger->info("Inferred Reasoning:", [
-            'action_required' => $reasoning['trace']['action_required'] ?? null,
-            'action_kind' => $reasoning['trace']['action_kind'] ?? null,
-            'customer_stance' => $reasoning['trace']['customer_stance'] ?? null,
-        ]);
+        try {
+            $logger->info("Inferred Reasoning:", [
+                'action_required' => $reasoning['trace']['action_required'] ?? null,
+                'action_kind' => $reasoning['trace']['action_kind'] ?? null,
+                'customer_stance' => $reasoning['trace']['customer_stance'] ?? null,
+            ]);
+        } catch (\Throwable) {
+        }
 
         // Reasoning fallback — when trace is unavailable, inject minimal guidance
         if (($reasoning['trace'] ?? null) === null) {
@@ -135,15 +148,25 @@ final class CommerceAgentOrchestrator
                 $lastLogId = $result->logId;
             }
 
-            $logger->info("AI Completion Iteration {$i}:", [
-                'success' => $result->success,
-                'log_id' => $result->logId,
-                'error' => $result->error,
-                'content' => $result->content,
-                'tool_calls_count' => count($result->toolCalls),
-            ]);
+            try {
+                $logger->info("AI Completion Iteration {$i}:", [
+                    'success' => $result->success,
+                    'log_id' => $result->logId,
+                    'error' => $result->error,
+                    'content' => $result->content,
+                    'tool_calls_count' => count($result->toolCalls),
+                ]);
+            } catch (\Throwable) {
+            }
 
             if (! $result->success) {
+                \App\Services\WhatsApp\WhatsAppDebugLogger::error('COMMERCE_AGENT_ITERATION_FAILED', [
+                    'company_id' => $company->id,
+                    'chat_id' => $chat->id,
+                    'iteration' => $i,
+                    'error' => $result->error,
+                ]);
+
                 break;
             }
 

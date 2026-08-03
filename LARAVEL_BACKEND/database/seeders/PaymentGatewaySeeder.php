@@ -63,6 +63,19 @@ class PaymentGatewaySeeder extends Seeder
                 ],
             ],
             [
+                'slug' => 'flutterwave',
+                'name' => 'Flutterwave (Cards, Mobile Money, Bank Transfer & USSD)',
+                'is_enabled' => false,
+                'config' => [
+                    'public_key' => '',
+                    'secret_key' => '',
+                    'secret_hash' => '',
+                    'currency' => 'kes',
+                    'env' => 'sandbox',
+                    'callback_url' => '',
+                ],
+            ],
+            [
                 'slug' => 'manual',
                 'name' => 'Bank Transfer / Invoice',
                 'is_enabled' => false,

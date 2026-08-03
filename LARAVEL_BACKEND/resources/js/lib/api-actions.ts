@@ -1243,6 +1243,8 @@ export interface UpdateSettingsData {
   agentCommerceEnabled?: boolean
   agentProactiveEnabled?: boolean
   agentVoiceReplyEnabled?: boolean
+  agentVoiceReplyMode?: 'voice_only' | 'dual_text_and_voice' | 'text_only'
+  agentVoiceId?: string
   agentMorningBriefWhatsappEnabled?: boolean
   ownerWhatsappPhone?: string | null
   agentBusinessGoals?: string[]
@@ -1256,6 +1258,7 @@ export interface UpdateSettingsData {
   ordersAcceptStripe?: boolean
   ordersAcceptPaystack?: boolean
   ordersAcceptPesapal?: boolean
+  ordersAcceptFlutterwave?: boolean
   ordersAcceptCod?: boolean
   attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
@@ -1282,6 +1285,13 @@ export interface UpdateSettingsData {
   orderPaymentPesapalConfig?: {
     consumer_key?: string
     consumer_secret?: string
+    currency?: string
+    env?: 'sandbox' | 'production'
+  } | null
+  orderPaymentFlutterwaveConfig?: {
+    secret_key?: string
+    public_key?: string
+    secret_hash?: string
     currency?: string
     env?: 'sandbox' | 'production'
   } | null

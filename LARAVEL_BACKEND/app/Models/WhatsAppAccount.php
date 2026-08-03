@@ -101,6 +101,11 @@ class WhatsAppAccount extends Model
 
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        $status = strtolower((string) $this->status);
+        if (in_array($status, ['disconnected', 'inactive', 'disabled', 'failed'], true)) {
+            return false;
+        }
+
+        return $status !== '';
     }
 }

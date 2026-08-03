@@ -25,6 +25,7 @@ class OrderPaymentService
         protected StripeService $stripe,
         protected PaystackService $paystack,
         protected PesapalService $pesapal,
+        protected FlutterwaveService $flutterwave,
         protected WhatsAppMessageSenderService $waSender,
         protected OrderFulfillmentService $fulfillmentService,
     ) {}
@@ -239,7 +240,7 @@ class OrderPaymentService
             return ['success' => false, 'error' => 'Pesapal is disabled systemwide and not configured for this business.'];
         }
 
-        $callbackUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')).'/orders/payment-complete';
+        $callbackUrl = url('/api/pesapal/callback');
         $result = $this->pesapal->createPaymentLinkForOrder($order, $callbackUrl, $useCompanyConfig ? $companyPesapal : null);
         if (! $result['success'] || empty($result['url'])) {
             return ['success' => false, 'error' => $result['error'] ?? 'Could not create Pesapal payment link.'];
@@ -259,6 +260,43 @@ class OrderPaymentService
             'url' => $result['url'],
             'reference' => $reference,
             'order_tracking_id' => $result['order_tracking_id'] ?? null,
+        ];
+    }
+
+    /**
+     * Create a Flutterwave payment link for an order.
+     *
+     * @return array{success: bool, url?: string, reference?: string, error?: string}
+     */
+    public function createFlutterwavePaymentLinkForOrder(Order $order): array
+    {
+        $settings = $order->company?->settings;
+        $companyFlutterwave = $settings?->order_payment_flutterwave_config;
+        $useCompanyConfig = is_array($companyFlutterwave) && ! empty($companyFlutterwave['secret_key']);
+
+        if (! FlutterwaveService::isEnabled() && ! $useCompanyConfig) {
+            return ['success' => false, 'error' => 'Flutterwave is disabled systemwide and not configured for this business.'];
+        }
+
+        $callbackUrl = url('/api/flutterwave/callback');
+        $result = $this->flutterwave->createPaymentLinkForOrder($order, $callbackUrl, $useCompanyConfig ? $companyFlutterwave : null);
+        if (! $result['success'] || empty($result['url'])) {
+            return ['success' => false, 'error' => $result['error'] ?? 'Could not create Flutterwave payment link.'];
+        }
+
+        $reference = $result['reference'] ?? null;
+        if ($reference) {
+            Cache::put(
+                FlutterwaveService::CACHE_KEY_ORDER_PREFIX.$reference,
+                ['order_id' => $order->id],
+                now()->addMinutes(self::CACHE_TTL_MINUTES)
+            );
+        }
+
+        return [
+            'success' => true,
+            'url' => $result['url'],
+            'reference' => $reference,
         ];
     }
 

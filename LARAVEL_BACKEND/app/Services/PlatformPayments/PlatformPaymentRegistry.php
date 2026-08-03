@@ -3,6 +3,7 @@
 namespace App\Services\PlatformPayments;
 
 use App\Services\PlatformPayments\Contracts\PlatformPaymentDriverInterface;
+use App\Services\PlatformPayments\Drivers\PlatformFlutterwaveDriver;
 use App\Services\PlatformPayments\Drivers\PlatformManualDriver;
 use App\Services\PlatformPayments\Drivers\PlatformMpesaDriver;
 use App\Services\PlatformPayments\Drivers\PlatformPaystackDriver;
@@ -18,12 +19,14 @@ class PlatformPaymentRegistry
         PlatformStripeDriver $stripe,
         PlatformPaystackDriver $paystack,
         PlatformPesapalDriver $pesapal,
+        PlatformFlutterwaveDriver $flutterwave,
         PlatformMpesaDriver $mpesa,
         PlatformManualDriver $manual,
     ) {
         $this->registerDriver($stripe);
         $this->registerDriver($paystack);
         $this->registerDriver($pesapal);
+        $this->registerDriver($flutterwave);
         $this->registerDriver($mpesa);
         $this->registerDriver($manual);
     }

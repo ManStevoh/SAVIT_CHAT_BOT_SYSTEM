@@ -619,6 +619,8 @@ export interface CompanySettings {
   agentCommerceEnabled?: boolean
   agentProactiveEnabled?: boolean
   agentVoiceReplyEnabled?: boolean
+  agentVoiceReplyMode?: 'voice_only' | 'dual_text_and_voice' | 'text_only'
+  agentVoiceId?: string
   agentMorningBriefWhatsappEnabled?: boolean
   ownerWhatsappPhone?: string | null
   consciousnessLastSensedAt?: string | null
@@ -641,6 +643,7 @@ export interface CompanySettings {
   ordersAcceptStripe?: boolean
   ordersAcceptPaystack?: boolean
   ordersAcceptPesapal?: boolean
+  ordersAcceptFlutterwave?: boolean
   ordersAcceptCod?: boolean
   ordersAcceptBankTransfer?: boolean
   bankTransferInstructions?: string
@@ -650,6 +653,7 @@ export interface CompanySettings {
   orderPaymentStripeConfigured?: boolean
   orderPaymentPaystackConfigured?: boolean
   orderPaymentPesapalConfigured?: boolean
+  orderPaymentFlutterwaveConfigured?: boolean
   /** Masked passkey/consumer_secret from GET /api/company/settings */
   orderPaymentMpesaConfig?: {
     type?: 'paybill' | 'till'
@@ -665,6 +669,8 @@ export interface CompanySettings {
   orderPaymentPaystackConfig?: { secret_key?: string; public_key?: string; currency?: string; env?: 'sandbox' | 'production' } | null
   /** Masked secret from GET /api/company/settings */
   orderPaymentPesapalConfig?: { consumer_key?: string; consumer_secret?: string; currency?: string; env?: 'sandbox' | 'production' } | null
+  /** Masked secret from GET /api/company/settings */
+  orderPaymentFlutterwaveConfig?: { secret_key?: string; public_key?: string; secret_hash?: string; currency?: string; env?: 'sandbox' | 'production' } | null
   /** ISO 4217 — catalog & chat price display (e.g. USD, KES) */
   displayCurrency?: string
   /** Optional override shown before amounts (e.g. KSh, €). Empty uses the ISO code. */

@@ -247,10 +247,10 @@ function SubscriptionPageContent() {
       '/api/company/subscription/checkout',
       {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           plan: planId,
           gateway: gatewayId,
-        }),
+        },
       }
     )
     setCheckoutPlanId(null)
@@ -618,6 +618,26 @@ function SubscriptionPageContent() {
                             </div>
                           )}
                         </>
+                      )}
+                      {plan.paymentMethods?.pesapal && (
+                        <Button
+                          className="w-full mt-2"
+                          variant="outline"
+                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
+                          onClick={() => handleGenericCheckout(plan.id, 'pesapal')}
+                        >
+                          Pay with Pesapal
+                        </Button>
+                      )}
+                      {plan.paymentMethods?.flutterwave && (
+                        <Button
+                          className="w-full mt-2"
+                          variant="outline"
+                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
+                          onClick={() => handleGenericCheckout(plan.id, 'flutterwave')}
+                        >
+                          Pay with Flutterwave
+                        </Button>
                       )}
                       {plan.paymentMethods?.manual && (
                         <Button

@@ -23,6 +23,8 @@ class Message extends Model
         'attachment_name',
         'attachment_mime',
         'attachment_size',
+        'voice_transcript',
+        'voice_duration',
     ];
 
     public function chat(): BelongsTo

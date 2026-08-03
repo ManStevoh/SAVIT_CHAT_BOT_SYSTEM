@@ -36,6 +36,8 @@ class CompanySetting extends Model
         'web_widget_token',
         'channel_ingest_secret',
         'agent_voice_reply_enabled',
+        'agent_voice_reply_mode',
+        'agent_voice_id',
         'agent_morning_brief_whatsapp_enabled',
         'owner_whatsapp_phone',
         'consciousness_last_sensed_at',
@@ -48,12 +50,14 @@ class CompanySetting extends Model
         'orders_accept_stripe',
         'orders_accept_paystack',
         'orders_accept_pesapal',
+        'orders_accept_flutterwave',
         'orders_accept_cod',
         'orders_collect_payment_enabled',
         'order_payment_mpesa_config',
         'order_payment_stripe_config',
         'order_payment_paystack_config',
         'order_payment_pesapal_config',
+        'order_payment_flutterwave_config',
         'order_payment_manual_instructions',
         'delivery_fees_enabled',
         'default_delivery_fee',
@@ -84,12 +88,14 @@ class CompanySetting extends Model
         'orders_accept_stripe' => 'boolean',
         'orders_accept_paystack' => 'boolean',
         'orders_accept_pesapal' => 'boolean',
+        'orders_accept_flutterwave' => 'boolean',
         'orders_accept_cod' => 'boolean',
         'orders_collect_payment_enabled' => 'boolean',
         'order_payment_mpesa_config' => 'array',
         'order_payment_stripe_config' => 'array',
         'order_payment_paystack_config' => 'array',
         'order_payment_pesapal_config' => 'array',
+        'order_payment_flutterwave_config' => 'array',
         'delivery_fees_enabled' => 'boolean',
         'default_delivery_fee' => 'decimal:2',
         'free_delivery_above' => 'decimal:2',
@@ -202,6 +208,13 @@ class CompanySetting extends Model
     public function aiModel(): BelongsTo
     {
         return $this->belongsTo(AiModel::class);
+    }
+
+    public function hasOrderPaymentFlutterwaveConfig(): bool
+    {
+        $c = $this->order_payment_flutterwave_config;
+
+        return is_array($c) && ! empty($c['secret_key']);
     }
 
     /** ISO 4217 code for catalog and chat price display (e.g. USD, KES, EGP). */

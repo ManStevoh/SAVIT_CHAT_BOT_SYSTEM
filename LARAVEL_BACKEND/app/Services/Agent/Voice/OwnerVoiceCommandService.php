@@ -22,17 +22,26 @@ final class OwnerVoiceCommandService
 
     public function isOwnerPhone(Company $company, string $phone): bool
     {
-        $normalized = $this->normalizePhone($phone);
-        if ($normalized === '') {
+        try {
+            $normalized = $this->normalizePhone($phone);
+            if ($normalized === '') {
+                return false;
+            }
+
+            return User::query()
+                ->where('company_id', $company->id)
+                ->where('role', 'company_owner')
+                ->whereNotNull('phone')
+                ->get()
+                ->contains(fn (User $u) => $this->normalizePhone((string) $u->phone) === $normalized);
+        } catch (\Throwable $e) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('OWNER_PHONE_CHECK_SKIPPED', [
+                'company_id' => $company->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return false;
         }
-
-        return User::query()
-            ->where('company_id', $company->id)
-            ->where('role', 'company_owner')
-            ->whereNotNull('phone')
-            ->get()
-            ->contains(fn (User $u) => $this->normalizePhone((string) $u->phone) === $normalized);
     }
 
     /**

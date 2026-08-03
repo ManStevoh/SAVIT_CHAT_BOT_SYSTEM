@@ -85,6 +85,7 @@ use App\Http\Controllers\Api\AppBrandingController;
 use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\CmsPageController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\FlutterwaveWebhookController;
 use App\Http\Controllers\Api\LandingController;
 use App\Http\Controllers\Api\MpesaCallbackController;
 use App\Http\Controllers\Api\PaystackWebhookController;
@@ -116,6 +117,10 @@ Route::post('paystack/webhook', PaystackWebhookController::class);
 // Pesapal callback & IPN (no auth; called by Pesapal API v3)
 Route::match(['get', 'post'], 'pesapal/callback', PesapalCallbackController::class);
 Route::match(['get', 'post'], 'pesapal/ipn', PesapalCallbackController::class);
+
+// Flutterwave webhook & callback (no auth; verified by verif-hash signature)
+Route::post('flutterwave/webhook', FlutterwaveWebhookController::class);
+Route::match(['get', 'post'], 'flutterwave/callback', FlutterwaveWebhookController::class);
 
 // WhatsApp webhook (no auth; Meta calls for verification and incoming messages)
 Route::get('whatsapp/webhook', [WhatsAppWebhookController::class, 'verify']);

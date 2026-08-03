@@ -77,6 +77,8 @@ class SettingsController extends Controller
             'digitalTwinFields' => config('agent.company.digital_twin_fields', []),
             'agentCouncilEnabled' => (bool) ($settings?->agent_council_enabled ?? false),
             'agentVoiceReplyEnabled' => (bool) ($settings?->agent_voice_reply_enabled ?? false),
+            'agentVoiceReplyMode' => $settings?->agent_voice_reply_mode ?? 'dual_text_and_voice',
+            'agentVoiceId' => $settings?->agent_voice_id ?? 'nova',
             'agentMorningBriefWhatsappEnabled' => (bool) ($settings?->agent_morning_brief_whatsapp_enabled ?? false),
             'ownerWhatsappPhone' => $settings?->owner_whatsapp_phone,
             'consciousnessLastSensedAt' => $settings?->consciousness_last_sensed_at?->toIso8601String(),
@@ -92,16 +94,19 @@ class SettingsController extends Controller
             'ordersAcceptStripe' => (bool) ($settings?->orders_accept_stripe ?? false),
             'ordersAcceptPaystack' => (bool) ($settings?->orders_accept_paystack ?? false),
             'ordersAcceptPesapal' => (bool) ($settings?->orders_accept_pesapal ?? false),
+            'ordersAcceptFlutterwave' => (bool) ($settings?->orders_accept_flutterwave ?? false),
             'ordersCollectPaymentEnabled' => ($settings?->orders_collect_payment_enabled ?? true) !== false,
             'orderPaymentManualInstructions' => $settings?->order_payment_manual_instructions ?? '',
             'orderPaymentMpesaConfigured' => $settings?->hasOrderPaymentMpesaConfig() ?? false,
             'orderPaymentStripeConfigured' => $settings?->hasOrderPaymentStripeConfig() ?? false,
             'orderPaymentPaystackConfigured' => $settings?->hasOrderPaymentPaystackConfig() ?? false,
             'orderPaymentPesapalConfigured' => $settings?->hasOrderPaymentPesapalConfig() ?? false,
+            'orderPaymentFlutterwaveConfigured' => $settings?->hasOrderPaymentFlutterwaveConfig() ?? false,
             'orderPaymentMpesaConfig' => $settings ? $this->maskOrderPaymentMpesaConfig($settings->order_payment_mpesa_config) : null,
             'orderPaymentStripeConfig' => $settings ? $this->maskOrderPaymentStripeConfig($settings->order_payment_stripe_config) : null,
             'orderPaymentPaystackConfig' => $settings ? $this->maskOrderPaymentPaystackConfig($settings->order_payment_paystack_config) : null,
             'orderPaymentPesapalConfig' => $settings ? $this->maskOrderPaymentPesapalConfig($settings->order_payment_pesapal_config) : null,
+            'orderPaymentFlutterwaveConfig' => $settings ? $this->maskOrderPaymentFlutterwaveConfig($settings->order_payment_flutterwave_config) : null,
             'displayCurrency' => $settings?->displayCurrencyCode() ?? 'USD',
             'currencySymbol' => $settings?->currency_symbol,
             'thousandsSeparator' => MoneyFormatter::normalizeThousands($settings?->thousands_separator),
@@ -187,6 +192,8 @@ class SettingsController extends Controller
             'agentCommerceEnabled' => 'sometimes|boolean',
             'agentProactiveEnabled' => 'sometimes|boolean',
             'agentVoiceReplyEnabled' => 'sometimes|boolean',
+            'agentVoiceReplyMode' => 'sometimes|string|in:voice_only,dual_text_and_voice,text_only',
+            'agentVoiceId' => 'sometimes|string|in:nova,alloy,echo,fable,onyx,shimmer',
             'agentMorningBriefWhatsappEnabled' => 'sometimes|boolean',
             'ownerWhatsappPhone' => 'sometimes|nullable|string|max:32',
             'agentBusinessGoals' => 'sometimes|nullable|array',
@@ -238,6 +245,13 @@ class SettingsController extends Controller
             'orderPaymentPesapalConfig.consumer_secret' => 'nullable|string|max:255',
             'orderPaymentPesapalConfig.currency' => 'nullable|string|max:10',
             'orderPaymentPesapalConfig.env' => 'nullable|string|in:sandbox,production',
+            'ordersAcceptFlutterwave' => 'sometimes|boolean',
+            'orderPaymentFlutterwaveConfig' => 'sometimes|nullable|array',
+            'orderPaymentFlutterwaveConfig.public_key' => 'nullable|string|max:255',
+            'orderPaymentFlutterwaveConfig.secret_key' => 'nullable|string|max:255',
+            'orderPaymentFlutterwaveConfig.secret_hash' => 'nullable|string|max:255',
+            'orderPaymentFlutterwaveConfig.currency' => 'nullable|string|max:10',
+            'orderPaymentFlutterwaveConfig.env' => 'nullable|string|in:sandbox,production',
             'displayCurrency' => 'sometimes|nullable|string|size:3',
             'currencySymbol' => 'sometimes|nullable|string|max:16',
             'thousandsSeparator' => ['sometimes', 'nullable', 'string', Rule::in([',', '.', ' ', "'"])],
@@ -418,6 +432,12 @@ class SettingsController extends Controller
         if (array_key_exists('agentVoiceReplyEnabled', $companyValidated)) {
             $settings->agent_voice_reply_enabled = $companyValidated['agentVoiceReplyEnabled'];
         }
+        if (array_key_exists('agentVoiceReplyMode', $companyValidated)) {
+            $settings->agent_voice_reply_mode = $companyValidated['agentVoiceReplyMode'];
+        }
+        if (array_key_exists('agentVoiceId', $companyValidated)) {
+            $settings->agent_voice_id = $companyValidated['agentVoiceId'];
+        }
         if (array_key_exists('agentMorningBriefWhatsappEnabled', $companyValidated)) {
             $settings->agent_morning_brief_whatsapp_enabled = $companyValidated['agentMorningBriefWhatsappEnabled'];
         }
@@ -487,6 +507,9 @@ class SettingsController extends Controller
         }
         if (array_key_exists('ordersAcceptPesapal', $companyValidated)) {
             $settings->orders_accept_pesapal = $companyValidated['ordersAcceptPesapal'];
+        }
+        if (array_key_exists('ordersAcceptFlutterwave', $companyValidated)) {
+            $settings->orders_accept_flutterwave = $companyValidated['ordersAcceptFlutterwave'];
         }
         if (array_key_exists('ordersCollectPaymentEnabled', $companyValidated)) {
             $settings->orders_collect_payment_enabled = $companyValidated['ordersCollectPaymentEnabled'];
@@ -684,6 +707,44 @@ class SettingsController extends Controller
                 }
             }
         }
+        if (array_key_exists('orderPaymentFlutterwaveConfig', $companyValidated)) {
+            $v = $companyValidated['orderPaymentFlutterwaveConfig'];
+            if ($v === null) {
+                $settings->order_payment_flutterwave_config = null;
+            } elseif (is_array($v)) {
+                $existing = $settings->order_payment_flutterwave_config ?? [];
+                $secretKey = isset($v['secret_key']) ? trim((string) $v['secret_key']) : '';
+                if ($secretKey === '' || $this->isMaskedSecretInput($secretKey)) {
+                    $secretKey = (string) ($existing['secret_key'] ?? '');
+                }
+                $publicKey = isset($v['public_key']) ? trim((string) $v['public_key']) : '';
+                if ($publicKey === '') {
+                    $publicKey = (string) ($existing['public_key'] ?? '');
+                }
+                $secretHash = isset($v['secret_hash']) ? trim((string) $v['secret_hash']) : '';
+                if ($secretHash === '' || $this->isMaskedSecretInput($secretHash)) {
+                    $secretHash = (string) ($existing['secret_hash'] ?? '');
+                }
+                $currency = isset($v['currency']) ? trim((string) $v['currency']) : '';
+                if ($currency === '') {
+                    $currency = (string) ($existing['currency'] ?? 'kes');
+                }
+                $env = in_array($v['env'] ?? null, ['sandbox', 'production'], true)
+                    ? $v['env']
+                    : ($existing['env'] ?? 'sandbox');
+                if ($secretKey !== '') {
+                    $settings->order_payment_flutterwave_config = [
+                        'public_key' => $publicKey,
+                        'secret_key' => $secretKey,
+                        'secret_hash' => $secretHash,
+                        'currency' => $currency !== '' ? $currency : 'kes',
+                        'env' => $env,
+                    ];
+                } else {
+                    $settings->order_payment_flutterwave_config = null;
+                }
+            }
+        }
         if (array_key_exists('ordersAcceptCod', $companyValidated)) {
             $settings->orders_accept_cod = $companyValidated['ordersAcceptCod'];
         }
@@ -816,6 +877,26 @@ class SettingsController extends Controller
         $out = $config;
         if (! empty($out['consumer_secret']) && is_string($out['consumer_secret'])) {
             $out['consumer_secret'] = $this->maskSecretString($out['consumer_secret']);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $config
+     * @return array<string, mixed>|null
+     */
+    protected function maskOrderPaymentFlutterwaveConfig(?array $config): ?array
+    {
+        if ($config === null || $config === []) {
+            return null;
+        }
+        $out = $config;
+        if (! empty($out['secret_key']) && is_string($out['secret_key'])) {
+            $out['secret_key'] = $this->maskSecretString($out['secret_key']);
+        }
+        if (! empty($out['secret_hash']) && is_string($out['secret_hash'])) {
+            $out['secret_hash'] = $this->maskSecretString($out['secret_hash']);
         }
 
         return $out;

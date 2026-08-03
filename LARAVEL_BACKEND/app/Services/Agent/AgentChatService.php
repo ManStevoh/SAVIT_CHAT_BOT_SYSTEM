@@ -44,6 +44,13 @@ class AgentChatService
             $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, $useCase);
         }
         if ($resolved === null) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AGENT_CHAT_RESOLVE_FAILED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'use_case' => $useCase,
+                'reason' => 'No AI provider configured for company',
+            ]);
+
             return new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -52,7 +59,20 @@ class AgentChatService
             );
         }
 
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('AGENT_CHAT_RESOLVED_MODEL', [
+            'company_id' => $company->id,
+            'chat_id' => $chatId,
+            'model_key' => $resolved->model->model_key,
+            'provider' => $resolved->provider->name,
+            'credential_source' => $resolved->credentialSource,
+        ]);
+
         if ($resolved->credentialSource === 'platform' && ! $this->billing->isWithinPlatformAiBudget($company)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AGENT_CHAT_BUDGET_EXCEEDED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+            ]);
+
             return new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -63,6 +83,11 @@ class AgentChatService
         }
 
         if (! $this->consumeRateLimit($company->id)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AGENT_CHAT_RATE_LIMIT_EXCEEDED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+            ]);
+
             return new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -74,6 +99,11 @@ class AgentChatService
 
         $driver = $this->driverFactory->driverFor($resolved->provider);
         if (! $driver instanceof SupportsToolCalling) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AGENT_CHAT_DRIVER_NO_TOOLS', [
+                'company_id' => $company->id,
+                'provider' => $resolved->provider->name,
+            ]);
+
             return new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -92,6 +122,23 @@ class AgentChatService
             $temperature,
             $timeoutSeconds,
         );
+
+        if ($result->success) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('AGENT_CHAT_COMPLETION_SUCCESS', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'model' => $result->model,
+                'tool_calls_count' => count($result->toolCalls),
+                'content_preview' => mb_substr((string) $result->content, 0, 150),
+            ]);
+        } else {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AGENT_CHAT_COMPLETION_FAILED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'model' => $result->model,
+                'error' => $result->error,
+            ]);
+        }
 
         $cost = $resolved->model->estimateCostUsd($result->promptTokens, $result->completionTokens);
         $result = new OpenAiChatResult(

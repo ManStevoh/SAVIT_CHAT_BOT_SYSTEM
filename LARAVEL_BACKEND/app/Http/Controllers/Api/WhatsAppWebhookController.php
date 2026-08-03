@@ -496,6 +496,16 @@ class WhatsAppWebhookController extends Controller
             'reply_to_message_id' => $replyToId,
         ]);
 
+        $dispatchMode = config('whatsapp.auto_reply_via_queue', false) ? 'queue' : (config('whatsapp.auto_reply_after_response', false) ? 'after_response' : 'sync');
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('WEBHOOK_DISPATCHING_AUTO_REPLY', [
+            'company_id' => $companyId,
+            'chat_id' => $chat->id,
+            'customer_phone' => $customerPhone,
+            'whatsapp_message_id' => $waMessageId,
+            'incoming_message_id' => $message->id,
+            'dispatch_mode' => $dispatchMode,
+        ]);
+
         ProcessIncomingWhatsAppMessage::dispatchIncoming(
             $companyId,
             (int) $chat->id,

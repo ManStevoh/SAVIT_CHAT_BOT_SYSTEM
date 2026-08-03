@@ -41,6 +41,12 @@ class AiGateway
     ): OpenAiChatResult {
         $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, $useCase);
         if ($resolved === null) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AI_GATEWAY_RESOLVE_FAILED', [
+                'use_case' => $useCase,
+                'company_id' => $company?->id,
+                'chat_id' => $chatId,
+                'reason' => 'No AI provider or model configured for chat capability',
+            ]);
             $result = new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -52,7 +58,20 @@ class AiGateway
             return $result;
         }
 
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('AI_GATEWAY_RESOLVED_MODEL', [
+            'use_case' => $useCase,
+            'company_id' => $company?->id,
+            'chat_id' => $chatId,
+            'model_key' => $resolved->model->model_key,
+            'provider' => $resolved->provider->name,
+            'credential_source' => $resolved->credentialSource,
+        ]);
+
         if ($company && $resolved->credentialSource === 'platform' && ! $this->billing->isWithinPlatformAiBudget($company)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AI_GATEWAY_BUDGET_EXCEEDED', [
+                'company_id' => $company->id,
+                'use_case' => $useCase,
+            ]);
             $result = new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -68,6 +87,10 @@ class AiGateway
         }
 
         if (! $this->consumeRateLimit($company?->id)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AI_GATEWAY_RATE_LIMIT_EXCEEDED', [
+                'company_id' => $company?->id,
+                'use_case' => $useCase,
+            ]);
             $result = new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -88,6 +111,28 @@ class AiGateway
         $result = $driver->chatCompletion($resolved, $messages, $maxTokens, $temperature, $jsonMode, $timeoutSeconds);
         $result = $this->withCost($resolved->model, $result);
         $logId = $this->persistLog($result, $useCase, $company?->id, $chatId, $resolved, $messages);
+
+        if ($result->success) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('AI_GATEWAY_COMPLETION_SUCCESS', [
+                'company_id' => $company?->id,
+                'chat_id' => $chatId,
+                'use_case' => $useCase,
+                'model' => $result->model,
+                'prompt_tokens' => $result->promptTokens,
+                'completion_tokens' => $result->completionTokens,
+                'latency_ms' => $result->latencyMs,
+                'content_preview' => mb_substr((string) $result->content, 0, 150),
+            ]);
+        } else {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AI_GATEWAY_COMPLETION_FAILED', [
+                'company_id' => $company?->id,
+                'chat_id' => $chatId,
+                'use_case' => $useCase,
+                'model' => $result->model,
+                'error' => $result->error,
+                'http_status' => $result->httpStatus,
+            ]);
+        }
 
         if ($logId !== null) {
             $result = new OpenAiChatResult(
@@ -213,7 +258,7 @@ class AiGateway
         return $result;
     }
 
-    public function transcribeAudio(string $filePath, string $filename, Company $company): TranscribeResult
+    public function transcribeAudio(string $filePath, string $filename, Company $company, ?string $prompt = null): TranscribeResult
     {
         $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_STT, AiUseCase::SPEECH_TO_TEXT);
         if ($resolved === null) {
@@ -262,7 +307,7 @@ class AiGateway
         }
 
         $started = microtime(true);
-        $result = $driver->transcribe($resolved, $filePath, $filename);
+        $result = $driver->transcribe($resolved, $filePath, $filename, $prompt);
         $latencyMs = (int) round((microtime(true) - $started) * 1000);
 
         $transcribe = new TranscribeResult(

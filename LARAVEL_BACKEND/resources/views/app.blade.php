@@ -13,14 +13,26 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-@if ($brandFavicon)
-    <link rel="icon" href="{{ $brandFavicon }}" type="image/png">
-    <link rel="apple-touch-icon" href="{{ $brandFavicon }}">
-@else
-    <link rel="icon" href="/images/branding/relaysiq-favicon.png" type="image/png">
-    <link rel="icon" href="/images/branding/relaysiq-mark.png" type="image/png" sizes="512x512">
-    <link rel="apple-touch-icon" href="/images/branding/relaysiq-app-icon.png">
-@endif
+    <link rel="icon" id="dynamic-favicon" href="/favicon-light.png?v=4" type="image/png">
+    <link rel="icon" href="/favicon-dark.png?v=4" type="image/png" media="(prefers-color-scheme: dark)">
+    <link rel="icon" href="/favicon-light.png?v=4" type="image/png" media="(prefers-color-scheme: light)">
+    <link rel="apple-touch-icon" href="/favicon-light.png?v=4">
+    <script>
+        (function() {
+            function updateFavicon() {
+                var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var href = isDark ? '/favicon-dark.png?v=4' : '/favicon-light.png?v=4';
+                var link = document.getElementById('dynamic-favicon');
+                if (link) { link.href = href; }
+            }
+            try {
+                updateFavicon();
+                if (window.matchMedia) {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateFavicon);
+                }
+            } catch (e) {}
+        })();
+    </script>
 @if ($seo)
     <title>{{ $seo['title'] ?? config('app.name', 'RelayIQ') }}</title>
     @if (!empty($seo['description']))

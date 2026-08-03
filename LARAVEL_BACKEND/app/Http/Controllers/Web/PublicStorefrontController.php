@@ -445,7 +445,7 @@ class PublicStorefrontController extends Controller
         $order = Order::where('pay_token', $token)->with(['company.settings'])->firstOrFail();
 
         $validated = $request->validate([
-            'method' => 'required|string|in:cod,stripe,paystack,mpesa,manual',
+            'method' => 'required|string|in:cod,stripe,paystack,mpesa,pesapal,flutterwave,manual',
             'phone' => 'nullable|string|max:40',
             'email' => 'nullable|email|max:255',
         ]);
@@ -497,6 +497,22 @@ class PublicStorefrontController extends Controller
                 }
 
                 return back()->withErrors(['method' => $result['error'] ?? 'Could not start payment.']);
+
+            case 'pesapal':
+                $result = $this->orderPayment->createPesapalPaymentLinkForOrder($order);
+                if ($result['success'] && ! empty($result['url'])) {
+                    return Inertia::location($result['url']);
+                }
+
+                return back()->withErrors(['method' => $result['error'] ?? 'Could not start Pesapal payment.']);
+
+            case 'flutterwave':
+                $result = $this->orderPayment->createFlutterwavePaymentLinkForOrder($order);
+                if ($result['success'] && ! empty($result['url'])) {
+                    return Inertia::location($result['url']);
+                }
+
+                return back()->withErrors(['method' => $result['error'] ?? 'Could not start Flutterwave payment.']);
 
             case 'mpesa':
                 $phone = $validated['phone'] ?? $order->customer_phone;
@@ -755,11 +771,13 @@ class PublicStorefrontController extends Controller
                 'category' => $driver->getCategory(),
                 'instructions' => $driver->getInstructions($company, $order),
                 'requiresPhone' => $driver->getId() === 'mpesa',
-                'requiresEmail' => in_array($driver->getId(), ['paystack', 'stripe'], true),
+                'requiresEmail' => in_array($driver->getId(), ['paystack', 'stripe', 'pesapal', 'flutterwave'], true),
             ], $drivers),
             'cod' => ! empty($activeMap['cod']),
             'stripe' => ! empty($activeMap['stripe']),
             'paystack' => ! empty($activeMap['paystack']),
+            'pesapal' => ! empty($activeMap['pesapal']),
+            'flutterwave' => ! empty($activeMap['flutterwave']),
             'mpesa' => ! empty($activeMap['mpesa']),
             'manual' => ! empty($activeMap['manual']),
         ];

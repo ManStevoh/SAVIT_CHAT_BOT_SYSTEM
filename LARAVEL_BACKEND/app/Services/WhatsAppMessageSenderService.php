@@ -50,6 +50,14 @@ class WhatsAppMessageSenderService
             $body['context'] = ['message_id' => $contextMessageId];
         }
 
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('META_API_SEND_REQUEST', [
+            'phone_number_id' => $account->phone_number_id,
+            'to' => $to,
+            'text_length' => strlen($text),
+            'has_token' => filled($account->access_token),
+            'context_message_id' => $contextMessageId,
+        ]);
+
         $response = Http::withToken($account->access_token)
             ->timeout(15)
             ->post($url, $body);
@@ -57,11 +65,23 @@ class WhatsAppMessageSenderService
         if ($response->successful()) {
             $data = $response->json();
             $messageId = $data['messages'][0]['id'] ?? null;
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('META_API_SEND_SUCCESS', [
+                'phone_number_id' => $account->phone_number_id,
+                'to' => $to,
+                'whatsapp_message_id' => $messageId,
+            ]);
             return ['success' => true, 'message_id' => $messageId];
         }
 
         $errorBody = $response->json();
         $errorMessage = $errorBody['error']['message'] ?? $response->body();
+        \App\Services\WhatsApp\WhatsAppDebugLogger::error('META_API_SEND_FAILED', [
+            'phone_number_id' => $account->phone_number_id,
+            'to' => $to,
+            'status' => $response->status(),
+            'error' => $errorMessage,
+            'response_body' => $errorBody,
+        ]);
         Log::warning('WhatsApp send message failed', [
             'phone_number_id' => $account->phone_number_id,
             'to' => $to,

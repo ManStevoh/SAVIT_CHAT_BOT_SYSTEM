@@ -5,6 +5,7 @@ namespace App\Services\PaymentGateways;
 use App\Models\Company;
 use App\Services\PaymentGateways\Contracts\PaymentGatewayDriverInterface;
 use App\Services\PaymentGateways\Drivers\CodGatewayDriver;
+use App\Services\PaymentGateways\Drivers\FlutterwaveGatewayDriver;
 use App\Services\PaymentGateways\Drivers\ManualGatewayDriver;
 use App\Services\PaymentGateways\Drivers\MpesaGatewayDriver;
 use App\Services\PaymentGateways\Drivers\PaystackGatewayDriver;
@@ -22,6 +23,7 @@ class PaymentGatewayRegistry
         $this->registerDriver(new StripeGatewayDriver());
         $this->registerDriver(new PaystackGatewayDriver());
         $this->registerDriver(new PesapalGatewayDriver());
+        $this->registerDriver(new FlutterwaveGatewayDriver());
         $this->registerDriver(new CodGatewayDriver());
         $this->registerDriver(new ManualGatewayDriver());
     }

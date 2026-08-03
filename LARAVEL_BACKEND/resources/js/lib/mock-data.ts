@@ -46,11 +46,13 @@ export interface Message {
   id: string
   chatId: string
   content: string
-  messageType?: 'text' | 'image' | 'file'
+  messageType?: 'text' | 'image' | 'file' | 'audio'
   attachmentUrl?: string | null
   attachmentName?: string | null
   attachmentMime?: string | null
   attachmentSize?: number | null
+  voiceTranscript?: string | null
+  voiceDuration?: number | null
   sender: 'customer' | 'bot' | 'agent'
   timestamp: string
   status: 'sent' | 'delivered' | 'read' | 'failed' | 'received'
@@ -234,7 +236,7 @@ export interface Plan {
   /** When true, user can start checkout for this plan (Stripe and/or M-Pesa) */
   checkoutAvailable?: boolean
   /** Which payment methods are available */
-  paymentMethods?: { stripe?: boolean; mpesa?: boolean; paystack?: boolean }
+  paymentMethods?: { stripe?: boolean; mpesa?: boolean; paystack?: boolean; pesapal?: boolean; flutterwave?: boolean; manual?: boolean }
   /** Plan is free (no payment required) */
   isFree?: boolean
   /** Paid plan offers a trial period */

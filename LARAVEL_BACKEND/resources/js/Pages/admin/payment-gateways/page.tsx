@@ -53,6 +53,15 @@ const PESAPAL_FIELDS: { key: string; label: string; type: string; placeholder?: 
   { key: "callback_url", label: "Callback URL (optional)", type: "text", placeholder: "https://..." },
 ]
 
+const FLUTTERWAVE_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
+  { key: "public_key", label: "Public Key", type: "text", placeholder: "FLWPUBK_TEST-..." },
+  { key: "secret_key", label: "Secret Key", type: "password", placeholder: "FLWSECK_TEST-... (leave blank to keep)" },
+  { key: "secret_hash", label: "Secret Hash / Verif Hash (optional)", type: "password", placeholder: "Webhook secret hash" },
+  { key: "currency", label: "Currency", type: "text", placeholder: "kes" },
+  { key: "env", label: "Environment Mode", type: "select", options: ["sandbox", "production"] },
+  { key: "callback_url", label: "Callback URL (optional)", type: "text", placeholder: "https://..." },
+]
+
 const MANUAL_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
   { key: "bank_name", label: "Bank Name", type: "text", placeholder: "e.g. Chase Bank / KCB Bank" },
   { key: "account_name", label: "Account Name", type: "text", placeholder: "e.g. EssemChat Platform Inc." },
@@ -177,9 +186,11 @@ export default function AdminPaymentGatewaysPage() {
                   ? PAYSTACK_FIELDS
                   : gateway.slug === "pesapal"
                     ? PESAPAL_FIELDS
-                    : gateway.slug === "manual"
-                      ? MANUAL_FIELDS
-                      : []
+                    : gateway.slug === "flutterwave"
+                      ? FLUTTERWAVE_FIELDS
+                      : gateway.slug === "manual"
+                        ? MANUAL_FIELDS
+                        : []
 
           return (
             <Card key={gateway.id}>

@@ -718,7 +718,7 @@ export default function ChatsPage() {
                           {msg.content}
                         </p>
                         {msg.attachmentUrl && (
-                          <div className="mt-2">
+                          <div className="mt-2 space-y-1.5">
                             {msg.messageType === 'image' ? (
                               <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer">
                                 <img
@@ -727,6 +727,16 @@ export default function ChatsPage() {
                                   className="max-h-52 max-w-full rounded-lg border border-border/50 object-contain"
                                 />
                               </a>
+                            ) : msg.messageType === 'audio' || (msg.attachmentMime && msg.attachmentMime.includes('audio')) ? (
+                              <div className="space-y-1.5 rounded-lg border border-border/50 p-2 bg-background/30 max-w-sm">
+                                <audio controls src={msg.attachmentUrl} className="w-full h-8" />
+                                {(msg.voiceTranscript || msg.content.includes('(transcribed):')) && (
+                                  <div className="rounded bg-muted/60 p-2 text-xs text-foreground font-sans">
+                                    <span className="font-semibold text-primary block text-[11px] mb-0.5">🎤 Transcribed Voice Note</span>
+                                    {msg.voiceTranscript ?? msg.content.replace(/^Owner\/customer voice note \(transcribed\):\s*/i, '')}
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <a
                                 href={msg.attachmentUrl}
@@ -813,7 +823,7 @@ export default function ChatsPage() {
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => downloadPromptLog(selectedChatId, msg.id, 'txt')}
+                                  onClick={() => selectedChatId && downloadPromptLog(selectedChatId, msg.id, 'txt')}
                                   className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 cursor-pointer"
                                 >
                                   <Download className="h-3 w-3" />
@@ -821,7 +831,7 @@ export default function ChatsPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => downloadPromptLog(selectedChatId, msg.id, 'json')}
+                                  onClick={() => selectedChatId && downloadPromptLog(selectedChatId, msg.id, 'json')}
                                   className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent cursor-pointer"
                                 >
                                   .json
