@@ -85,6 +85,8 @@ final class CommerceAgentReplyService
             'route' => $result['route'],
             'handoff' => $result['handoff'],
             'log_id' => $result['log_id'] ?? null,
+            'pay_url' => $result['pay_url'] ?? $result['cta_url'] ?? null,
+            'cta_button_text' => $result['cta_button_text'] ?? $result['button_text'] ?? null,
         ];
     }
 }

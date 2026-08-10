@@ -636,6 +636,17 @@ final class WorkflowEngine
         }
 
         $methodLabel = strtoupper((string) $selectedMethod);
+        $ctaButtonText = 'Shop Online';
+        if (! $isFallbackUrl) {
+            $ctaButtonText = match ($selectedMethod) {
+                'paystack' => 'Pay via Paystack',
+                'pesapal' => 'Pay via Pesapal',
+                'stripe' => 'Pay via Stripe',
+                'flutterwave' => 'Pay via Flutterwave',
+                default => 'Pay Online',
+            };
+        }
+
         if ($isFallbackUrl) {
             $errNote = $gatewayError ? "\n\n⚠️ _Note: {$gatewayError}_" : "";
             $reply = "💳 *{$methodLabel} Payment:* \nThank you! Your order #".($order?->order_number ?? $state->pendingOrderId)." has been recorded.{$errNote}\n\n🔗 *Click the link below to complete your order and payment online:*\n{$payUrl}\n\n_(Reply 'change payment' if you would like to switch payment method, e.g. to Cash on Delivery or M-Pesa)_";
@@ -643,7 +654,18 @@ final class WorkflowEngine
             $reply = "💳 *{$methodLabel} Payment Details:*\nThank you! Your order #".($order?->order_number ?? $state->pendingOrderId)." has been recorded.\n\n🔗 *Click the link below to complete your payment:*\n{$payUrl}";
         }
 
-        return new WorkflowTransitionResult($nextState, [], ResponseSpec::PAYMENT_INSTRUCTIONS->value, $reply);
+        return new WorkflowTransitionResult(
+            nextState: $nextState,
+            executedActions: [],
+            responseSpec: ResponseSpec::PAYMENT_INSTRUCTIONS->value,
+            customerReply: $reply,
+            payUrl: $payUrl,
+            ctaButtonText: $ctaButtonText,
+            extra: [
+                'cta_url' => $payUrl,
+                'cta_button_text' => $ctaButtonText,
+            ]
+        );
     }
 
     private function handleProvidingPhone(ConversationState $state, IntentResult $intent, Company $company): WorkflowTransitionResult

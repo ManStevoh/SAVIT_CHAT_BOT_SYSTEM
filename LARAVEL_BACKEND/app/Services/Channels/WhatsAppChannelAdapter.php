@@ -61,10 +61,20 @@ final class WhatsAppChannelAdapter implements ChannelAdapterInterface
             return false;
         }
 
+        $ctaUrl = $message->ctaUrl ?? $message->extra['cta_url'] ?? null;
+        $ctaButtonText = $message->ctaButtonText ?? $message->extra['cta_button_text'] ?? 'Shop Online';
         $imageUrl = $message->extra['image_url'] ?? $message->extra['media_url'] ?? null;
         $res = ['success' => false];
 
-        if (! empty($imageUrl) && filter_var($imageUrl, FILTER_VALIDATE_URL) && ! str_contains($imageUrl, 'localhost') && ! str_contains($imageUrl, '127.0.0.1')) {
+        if (! empty($ctaUrl) && filter_var($ctaUrl, FILTER_VALIDATE_URL)) {
+            $res = $this->senderService->sendInteractiveCtaUrl(
+                $account,
+                $message->recipientId,
+                $message->content,
+                $ctaButtonText,
+                $ctaUrl
+            );
+        } elseif (! empty($imageUrl) && filter_var($imageUrl, FILTER_VALIDATE_URL) && ! str_contains($imageUrl, 'localhost') && ! str_contains($imageUrl, '127.0.0.1')) {
             $res = $this->senderService->sendImage(
                 $account,
                 $message->recipientId,
@@ -73,7 +83,7 @@ final class WhatsAppChannelAdapter implements ChannelAdapterInterface
             );
         }
 
-        // Automatic Fallback: If image send failed or URL is local/invalid, send as text!
+        // Automatic Fallback: If interactive/image send failed or wasn't applicable, send as text!
         if (empty($res['success'])) {
             $res = $this->senderService->sendText(
                 $account,

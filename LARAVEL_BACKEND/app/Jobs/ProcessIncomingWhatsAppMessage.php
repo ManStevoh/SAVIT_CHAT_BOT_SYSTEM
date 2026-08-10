@@ -462,7 +462,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
                     $agentResult['reply'],
                     $agentResult['route'],
                     $agentResult['log_id'] ?? null,
-                    $agentResult['pay_url'] ?? null,
+                    $agentResult['pay_url'] ?? $agentResult['cta_url'] ?? null,
+                    $agentResult['cta_button_text'] ?? $agentResult['button_text'] ?? null,
                 );
                 $this->maybeSendVisionProductImage($waSender, $company, $chat);
                 $this->schedulePostConversationJobs($company, $chat);
@@ -632,6 +633,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         ?string $replySource = null,
         ?int $aiRequestLogId = null,
         ?string $ctaUrl = null,
+        ?string $ctaButtonText = null,
     ): void {
         $account = $company->whatsappAccount;
         if (! $account || ! $account->isActive()) {
@@ -663,6 +665,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             'should_voice' => $shouldVoice,
             'reply_text_preview' => mb_substr($replyText, 0, 150),
             'cta_url' => $ctaUrl,
+            'cta_button_text' => $ctaButtonText,
         ]);
 
         if ($shouldVoice && $voiceMode === 'voice_only') {
@@ -698,33 +701,8 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
 
         if ($cleanReplyText !== '') {
-            if (($ctaUrl === null || $ctaUrl === '') && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|/receipt|/orders/receipt|/s/|pesapaliframe)[^\s]*)~i', $cleanReplyText, $m)) {
-                $ctaUrl = trim($m[1], "().,;[]");
-            }
-
-            if ($ctaUrl !== null && $ctaUrl !== '') {
-                $lowerUrl = strtolower($ctaUrl);
-                $buttonText = 'Shop Online';
-                if (str_contains($lowerUrl, 'pesapal')) {
-                    $buttonText = 'Pay via Pesapal';
-                } elseif (str_contains($lowerUrl, 'paystack')) {
-                    $buttonText = 'Pay via Paystack';
-                } elseif (str_contains($lowerUrl, 'stripe')) {
-                    $buttonText = 'Pay via Stripe';
-                } elseif (str_contains($lowerUrl, '/pay/')) {
-                    $buttonText = 'Pay Online';
-                } elseif (str_contains($lowerUrl, '/invoice/')) {
-                    $buttonText = 'View Invoice';
-                } elseif (str_contains($lowerUrl, '/receipt')) {
-                    $buttonText = 'View Receipt';
-                } elseif (str_contains($lowerUrl, '/cart')) {
-                    $buttonText = 'View Cart';
-                } elseif (str_contains($lowerUrl, '/track')) {
-                    $buttonText = 'Track Order';
-                } elseif (str_contains($lowerUrl, '/s/')) {
-                    $buttonText = 'Shop Online';
-                }
-
+            if (! empty($ctaUrl)) {
+                $buttonText = $ctaButtonText ?: 'Shop Online';
                 $result = $waSender->sendInteractiveCtaUrl(
                     $account,
                     $this->customerPhone,

@@ -503,32 +503,21 @@ class WhatsAppMessageSenderService
      *
      * @return array{success: bool, message_id?: string, error?: string}
      */
-    public function sendSmartReply(WhatsAppAccount $account, string $to, string $text): array
-    {
-        if (preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|/receipt|/orders/receipt|/s/)[^\s]*)~i', $text, $match)) {
-            $url = trim($match[1], "().,;[]");
-            $lowerUrl = strtolower($url);
-            $buttonText = 'Shop Online';
-            if (str_contains($lowerUrl, '/pay/')) {
-                $buttonText = 'Pay Online';
-            } elseif (str_contains($lowerUrl, '/invoice/')) {
-                $buttonText = 'View Invoice';
-            } elseif (str_contains($lowerUrl, '/receipt')) {
-                $buttonText = 'View Receipt';
-            } elseif (str_contains($lowerUrl, '/cart')) {
-                $buttonText = 'View Cart';
-            } elseif (str_contains($lowerUrl, '/track')) {
-                $buttonText = 'Track Order';
-            } elseif (str_contains($lowerUrl, '/s/')) {
-                $buttonText = 'Shop Online';
-            }
-
+    public function sendSmartReply(
+        WhatsAppAccount $account,
+        string $to,
+        string $text,
+        ?string $ctaUrl = null,
+        ?string $ctaButtonText = null,
+    ): array {
+        if (! empty($ctaUrl)) {
+            $buttonText = $ctaButtonText ?: 'Shop Online';
             $ctaResult = $this->sendInteractiveCtaUrl(
                 $account,
                 $to,
                 $text,
                 $buttonText,
-                $url
+                $ctaUrl
             );
 
             if (! empty($ctaResult['success'])) {
