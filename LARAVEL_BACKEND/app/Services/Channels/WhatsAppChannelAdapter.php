@@ -62,11 +62,40 @@ final class WhatsAppChannelAdapter implements ChannelAdapterInterface
         }
 
         $ctaUrl = $message->ctaUrl ?? $message->extra['cta_url'] ?? null;
-        $ctaButtonText = $message->ctaButtonText ?? $message->extra['cta_button_text'] ?? 'Shop Online';
+        $ctaButtonText = $message->ctaButtonText ?? $message->extra['cta_button_text'] ?? null;
         $imageUrl = $message->extra['image_url'] ?? $message->extra['media_url'] ?? null;
         $res = ['success' => false];
 
+        if (empty($ctaUrl) && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|receipt|/orders/|/s/|pesapaliframe)[^\s]*)~i', $message->content, $m)) {
+            $ctaUrl = trim($m[1], "().,;[]");
+        }
+
         if (! empty($ctaUrl) && filter_var($ctaUrl, FILTER_VALIDATE_URL)) {
+            if (empty($ctaButtonText)) {
+                $lowerUrl = strtolower($ctaUrl);
+                if (str_contains($lowerUrl, 'pesapal')) {
+                    $ctaButtonText = 'Pay via Pesapal';
+                } elseif (str_contains($lowerUrl, 'paystack')) {
+                    $ctaButtonText = 'Pay via Paystack';
+                } elseif (str_contains($lowerUrl, 'stripe')) {
+                    $ctaButtonText = 'Pay via Stripe';
+                } elseif (str_contains($lowerUrl, 'flutterwave')) {
+                    $ctaButtonText = 'Pay via Flutterwave';
+                } elseif (str_contains($lowerUrl, '/pay/')) {
+                    $ctaButtonText = 'Pay Online';
+                } elseif (str_contains($lowerUrl, '/invoice/')) {
+                    $ctaButtonText = 'View Invoice';
+                } elseif (str_contains($lowerUrl, 'receipt')) {
+                    $ctaButtonText = 'View Receipt';
+                } elseif (str_contains($lowerUrl, '/cart')) {
+                    $ctaButtonText = 'View Cart';
+                } elseif (str_contains($lowerUrl, '/track')) {
+                    $ctaButtonText = 'Track Order';
+                } else {
+                    $ctaButtonText = 'Shop Online';
+                }
+            }
+
             $res = $this->senderService->sendInteractiveCtaUrl(
                 $account,
                 $message->recipientId,

@@ -701,13 +701,41 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
 
         if ($cleanReplyText !== '') {
+            if (empty($ctaUrl) && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|receipt|/orders/|/s/|pesapaliframe)[^\s]*)~i', $cleanReplyText, $m)) {
+                $ctaUrl = trim($m[1], "().,;[]");
+            }
+
             if (! empty($ctaUrl)) {
-                $buttonText = $ctaButtonText ?: 'Shop Online';
+                if (empty($ctaButtonText)) {
+                    $lowerUrl = strtolower($ctaUrl);
+                    if (str_contains($lowerUrl, 'pesapal')) {
+                        $ctaButtonText = 'Pay via Pesapal';
+                    } elseif (str_contains($lowerUrl, 'paystack')) {
+                        $ctaButtonText = 'Pay via Paystack';
+                    } elseif (str_contains($lowerUrl, 'stripe')) {
+                        $ctaButtonText = 'Pay via Stripe';
+                    } elseif (str_contains($lowerUrl, 'flutterwave')) {
+                        $ctaButtonText = 'Pay via Flutterwave';
+                    } elseif (str_contains($lowerUrl, '/pay/')) {
+                        $ctaButtonText = 'Pay Online';
+                    } elseif (str_contains($lowerUrl, '/invoice/')) {
+                        $ctaButtonText = 'View Invoice';
+                    } elseif (str_contains($lowerUrl, 'receipt')) {
+                        $ctaButtonText = 'View Receipt';
+                    } elseif (str_contains($lowerUrl, '/cart')) {
+                        $ctaButtonText = 'View Cart';
+                    } elseif (str_contains($lowerUrl, '/track')) {
+                        $ctaButtonText = 'Track Order';
+                    } else {
+                        $ctaButtonText = 'Shop Online';
+                    }
+                }
+
                 $result = $waSender->sendInteractiveCtaUrl(
                     $account,
                     $this->customerPhone,
                     $cleanReplyText,
-                    $buttonText,
+                    $ctaButtonText,
                     $ctaUrl
                 );
             } else {

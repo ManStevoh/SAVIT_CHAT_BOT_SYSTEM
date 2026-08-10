@@ -170,7 +170,9 @@ final class ConversationalOSPipeline
                 companyId: $company->id,
                 content: $transitionResult->customerReply,
                 responseSpec: $transitionResult->responseSpec,
-                extra: $transitionResult->extra
+                extra: $transitionResult->extra,
+                ctaUrl: $transitionResult->payUrl ?? $transitionResult->extra['cta_url'] ?? null,
+                ctaButtonText: $transitionResult->ctaButtonText ?? $transitionResult->extra['cta_button_text'] ?? null,
             );
 
             $channelAdapter->sendOutbound($outboundMessage);

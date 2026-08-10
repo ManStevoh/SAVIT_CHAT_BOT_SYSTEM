@@ -13,7 +13,7 @@ final readonly class WorkflowTransitionResult
         public ?string $responseSpec = null,
         public ?string $customerReply = null,
         public ?string $payUrl = null,
-        public ?string $ctaButtonText = null,
         public array $extra = [],
+        public ?string $ctaButtonText = null,
     ) {}
 }

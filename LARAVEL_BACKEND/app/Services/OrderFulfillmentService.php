@@ -30,6 +30,7 @@ class OrderFulfillmentService
 
         $lines = [];
         $hasDigital = false;
+        $primaryDownloadUrl = null;
 
         /** @var OrderProduct $line */
         foreach ($order->orderProducts as $line) {
@@ -68,57 +69,13 @@ class OrderFulfillmentService
             }
 
             $documentUrl = trim((string) ($data['digitalFileUrl'] ?? ''));
-            $documentPath = trim((string) ($data['digitalFilePath'] ?? ''));
-            $documentName = trim((string) ($data['digitalFileName'] ?? ''));
-            $documentMime = trim((string) ($data['digitalFileMime'] ?? ''));
-            $absolute = $documentPath !== ''
-                ? (string) ($this->digitalAccess->resolveAbsolutePath($documentPath) ?? '')
-                : '';
-
-            if ($documentUrl !== '' || $absolute !== '') {
-                if ($documentUrl !== '') {
-                    $lines[] = "  Download: {$documentUrl}";
-                }
-
-                $result = $absolute !== ''
-                    ? $this->waSender->sendDocumentFile(
-                        $account,
-                        $to,
-                        $absolute,
-                        $documentMime !== '' ? $documentMime : null,
-                        $documentName !== '' ? $documentName : basename($documentPath !== '' ? $documentPath : $absolute),
-                        $line->name
-                    )
-                    : $this->waSender->sendDocument(
-                        $account,
-                        $to,
-                        $documentUrl,
-                        $documentName !== '' ? $documentName : basename(parse_url($documentUrl, PHP_URL_PATH) ?: 'download'),
-                        $line->name
-                    );
-
-                Message::create([
-                    'chat_id' => $chat->id,
-                    'content' => $line->name,
-                    'message_type' => 'file',
-                    'attachment_url' => $documentUrl !== '' ? $documentUrl : null,
-                    'attachment_name' => $documentName !== '' ? $documentName : null,
-                    'attachment_mime' => $documentMime !== '' ? $documentMime : null,
-                    'attachment_size' => $data['digitalFileSize'] ?? null,
-                    'sender' => 'bot',
-                    'status' => $result['success'] ? 'sent' : 'failed',
-                    'whatsapp_message_id' => $result['message_id'] ?? null,
-                ]);
-
-                if (! $result['success']) {
-                    Log::warning('Order fulfillment document send failed', [
-                        'order_id' => $order->id,
-                        'order_product_id' => $line->id,
-                        'error' => $result['error'] ?? 'unknown',
-                    ]);
+            if ($documentUrl !== '') {
+                $lines[] = "  Download: {$documentUrl}";
+                if ($primaryDownloadUrl === null) {
+                    $primaryDownloadUrl = $documentUrl;
                 }
             } elseif ($fulfillmentType === 'download' || $fulfillmentType === 'link' || $type === 'digital' || $type === 'service') {
-                $lines[] = '  Delivery is available in your access portal and receipt.';
+                $lines[] = '  Delivery is available in your access portal.';
             }
         }
 
@@ -127,20 +84,69 @@ class OrderFulfillmentService
         }
 
         $portalUrl = $hasDigital ? $this->digitalAccess->signedAccessPortalUrl($order) : null;
-        $message = "Your purchase is ready for access:\n\n".implode("\n", $lines);
-        if ($portalUrl) {
-            $message .= "\n\nAccess portal:\n{$portalUrl}";
+        $deliveryMessage = "Your purchase is ready for access:\n\n".implode("\n", $lines);
+
+        if ($primaryDownloadUrl) {
+            $result = $this->waSender->sendInteractiveCtaUrl(
+                $account,
+                $to,
+                $deliveryMessage,
+                'Download File',
+                $primaryDownloadUrl
+            );
+
+            Message::create([
+                'chat_id' => $chat->id,
+                'content' => $deliveryMessage,
+                'sender' => 'bot',
+                'status' => ($result['success'] ?? false) ? 'sent' : 'failed',
+                'whatsapp_message_id' => $result['message_id'] ?? null,
+            ]);
+
+            if ($portalUrl) {
+                $portalMsg = '🔑 Access your customer portal anytime to manage your purchases:';
+                $portalRes = $this->waSender->sendInteractiveCtaUrl(
+                    $account,
+                    $to,
+                    $portalMsg,
+                    'Access Portal',
+                    $portalUrl
+                );
+
+                Message::create([
+                    'chat_id' => $chat->id,
+                    'content' => $portalMsg,
+                    'sender' => 'bot',
+                    'status' => ($portalRes['success'] ?? false) ? 'sent' : 'failed',
+                    'whatsapp_message_id' => $portalRes['message_id'] ?? null,
+                ]);
+            }
+        } elseif ($portalUrl) {
+            $portalRes = $this->waSender->sendInteractiveCtaUrl(
+                $account,
+                $to,
+                $deliveryMessage,
+                'Access Portal',
+                $portalUrl
+            );
+
+            Message::create([
+                'chat_id' => $chat->id,
+                'content' => $deliveryMessage,
+                'sender' => 'bot',
+                'status' => ($portalRes['success'] ?? false) ? 'sent' : 'failed',
+                'whatsapp_message_id' => $portalRes['message_id'] ?? null,
+            ]);
+        } else {
+            $result = $this->waSender->sendText($account, $to, $deliveryMessage);
+
+            Message::create([
+                'chat_id' => $chat->id,
+                'content' => $deliveryMessage,
+                'sender' => 'bot',
+                'status' => ($result['success'] ?? false) ? 'sent' : 'failed',
+                'whatsapp_message_id' => $result['message_id'] ?? null,
+            ]);
         }
-        $message .= "\n\nReceipt:\n".$order->publicReceiptUrl();
-
-        $result = $this->waSender->sendText($account, $to, $message);
-
-        Message::create([
-            'chat_id' => $chat->id,
-            'content' => $message,
-            'sender' => 'bot',
-            'status' => $result['success'] ? 'sent' : 'failed',
-            'whatsapp_message_id' => $result['message_id'] ?? null,
-        ]);
     }
 }

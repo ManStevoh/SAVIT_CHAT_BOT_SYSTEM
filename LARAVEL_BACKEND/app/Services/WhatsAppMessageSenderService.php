@@ -28,6 +28,7 @@ class WhatsAppMessageSenderService
         string $to,
         string $text,
         ?string $contextMessageId = null,
+        bool $bypassCtaConversion = false,
     ): array {
         $to = preg_replace('/\D/', '', $to);
         if ($to === '') {
@@ -35,6 +36,25 @@ class WhatsAppMessageSenderService
         }
 
         $text = self::cleanMarkdownLinksForWhatsApp($text);
+
+        // Auto-convert any outgoing message containing a valid HTTP/HTTPS link to native Meta CTA URL button
+        if (! $bypassCtaConversion && preg_match('~(https?://[^\s]+)~i', $text, $match)) {
+            $extractedUrl = trim($match[1], "().,;[]");
+            if (filter_var($extractedUrl, FILTER_VALIDATE_URL)) {
+                $ctaButtonText = $this->determineCtaButtonText($extractedUrl, $text);
+                $ctaResult = $this->sendInteractiveCtaUrl(
+                    $account,
+                    $to,
+                    $text,
+                    $ctaButtonText,
+                    $extractedUrl
+                );
+
+                if (! empty($ctaResult['success'])) {
+                    return $ctaResult;
+                }
+            }
+        }
 
         $url = $this->graphUrl() . '/' . $account->phone_number_id . '/messages';
 
@@ -494,7 +514,55 @@ class WhatsAppMessageSenderService
 
         // Fallback to sending formatted text with preview_url
         $fallbackText = rtrim($bodyText) . "\n\n" . ($buttonText ? "🔗 *{$buttonText}:*\n" : "") . $url;
-        return $this->sendText($account, $to, $fallbackText);
+        return $this->sendText($account, $to, $fallbackText, bypassCtaConversion: true);
+    }
+
+    /**
+     * Determine intelligent display label for Meta CTA URL button (max 20 chars).
+     */
+    public function determineCtaButtonText(string $url, string $contextText = ''): string
+    {
+        $lowerUrl = strtolower($url);
+        $lowerContext = strtolower($contextText);
+
+        if (str_contains($lowerUrl, 'pesapal')) {
+            return 'Pay via Pesapal';
+        }
+        if (str_contains($lowerUrl, 'paystack')) {
+            return 'Pay via Paystack';
+        }
+        if (str_contains($lowerUrl, 'stripe')) {
+            return 'Pay via Stripe';
+        }
+        if (str_contains($lowerUrl, 'flutterwave')) {
+            return 'Pay via Flutterwave';
+        }
+        if (str_contains($lowerUrl, '/download/') || str_contains($lowerContext, 'download')) {
+            return 'Download File';
+        }
+        if (str_contains($lowerUrl, '/access') || str_contains($lowerContext, 'access portal')) {
+            return 'Access Portal';
+        }
+        if (str_contains($lowerUrl, 'receipt') || str_contains($lowerContext, 'receipt')) {
+            return 'View Receipt';
+        }
+        if (str_contains($lowerUrl, '/invoice/') || str_contains($lowerContext, 'invoice')) {
+            return 'View Invoice';
+        }
+        if (str_contains($lowerUrl, '/pay/')) {
+            return 'Pay Online';
+        }
+        if (str_contains($lowerUrl, '/cart')) {
+            return 'View Cart';
+        }
+        if (str_contains($lowerUrl, '/track')) {
+            return 'Track Order';
+        }
+        if (str_contains($lowerUrl, '/s/')) {
+            return 'Shop Online';
+        }
+
+        return 'Open Link';
     }
 
     /**
@@ -510,13 +578,41 @@ class WhatsAppMessageSenderService
         ?string $ctaUrl = null,
         ?string $ctaButtonText = null,
     ): array {
+        if (empty($ctaUrl) && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|receipt|/orders/|/s/|pesapaliframe)[^\s]*)~i', $text, $match)) {
+            $ctaUrl = trim($match[1], "().,;[]");
+        }
+
         if (! empty($ctaUrl)) {
-            $buttonText = $ctaButtonText ?: 'Shop Online';
+            if (empty($ctaButtonText)) {
+                $lowerUrl = strtolower($ctaUrl);
+                if (str_contains($lowerUrl, 'pesapal')) {
+                    $ctaButtonText = 'Pay via Pesapal';
+                } elseif (str_contains($lowerUrl, 'paystack')) {
+                    $ctaButtonText = 'Pay via Paystack';
+                } elseif (str_contains($lowerUrl, 'stripe')) {
+                    $ctaButtonText = 'Pay via Stripe';
+                } elseif (str_contains($lowerUrl, 'flutterwave')) {
+                    $ctaButtonText = 'Pay via Flutterwave';
+                } elseif (str_contains($lowerUrl, '/pay/')) {
+                    $ctaButtonText = 'Pay Online';
+                } elseif (str_contains($lowerUrl, '/invoice/')) {
+                    $ctaButtonText = 'View Invoice';
+                } elseif (str_contains($lowerUrl, 'receipt')) {
+                    $ctaButtonText = 'View Receipt';
+                } elseif (str_contains($lowerUrl, '/cart')) {
+                    $ctaButtonText = 'View Cart';
+                } elseif (str_contains($lowerUrl, '/track')) {
+                    $ctaButtonText = 'Track Order';
+                } else {
+                    $ctaButtonText = 'Shop Online';
+                }
+            }
+
             $ctaResult = $this->sendInteractiveCtaUrl(
                 $account,
                 $to,
                 $text,
-                $buttonText,
+                $ctaButtonText,
                 $ctaUrl
             );
 
@@ -603,12 +699,25 @@ class WhatsAppMessageSenderService
 
         foreach ($lines as $line) {
             $trimmed = trim($line);
-            if (str_contains($line, $targetUrl) || preg_match('~https?://~i', $line)) {
+            if ($trimmed === '') {
+                $filtered[] = '';
                 continue;
             }
+
+            if (str_contains($line, $targetUrl)) {
+                $cleanedLine = str_replace($targetUrl, '', $line);
+                $cleanedLine = preg_replace('/(?:📄|💳|🛍️|🔗)?\s*\*?(?:View Invoice|View Receipt|Pay Online|Shop Online|Download|Access portal|Receipt|Invoice)\*?:?\s*$/iu', '', trim($cleanedLine));
+                $cleanedLine = trim($cleanedLine);
+                if ($cleanedLine !== '') {
+                    $filtered[] = $cleanedLine;
+                }
+                continue;
+            }
+
             if (preg_match('/^(?:📄\s*\*?(?:Invoice|Receipt|View Invoice|View Receipt)\*?:?|💳\s*\*?Pay Online\*?:?|Pay online:?|Invoice:?|View invoice \/ receipt:?|Instructions:\s*Pay online.*|Please complete payment here:?)$/iu', $trimmed)) {
                 continue;
             }
+
             $filtered[] = $line;
         }
 

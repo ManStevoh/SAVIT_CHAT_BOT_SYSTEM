@@ -13,8 +13,8 @@ final readonly class OutboundMessage
         public int $companyId,
         public string $content,
         public ?string $responseSpec = null,
+        public array $extra = [],
         public ?string $ctaUrl = null,
         public ?string $ctaButtonText = null,
-        public array $extra = [],
     ) {}
 }
