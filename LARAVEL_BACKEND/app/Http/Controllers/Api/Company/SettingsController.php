@@ -149,6 +149,10 @@ class SettingsController extends Controller
             'spamOrderProtectionEnabled' => (bool) ($settings?->spam_order_protection_enabled ?? false),
             'spamMaxOrdersPerHour' => $settings?->spam_max_orders_per_hour !== null ? (int) $settings->spam_max_orders_per_hour : 5,
             'spamMaxOrdersPerDay' => $settings?->spam_max_orders_per_day !== null ? (int) $settings->spam_max_orders_per_day : 20,
+            'storefrontTheme' => is_array($company->storefront_theme) ? $company->storefront_theme : [],
+            'storefrontAnnouncementBar' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['announcement_bar'] ?? '')
+                : '',
         ]);
     }
 
@@ -294,6 +298,12 @@ class SettingsController extends Controller
             'spamOrderProtectionEnabled' => 'sometimes|boolean',
             'spamMaxOrdersPerHour' => 'sometimes|nullable|integer|min:1|max:100',
             'spamMaxOrdersPerDay' => 'sometimes|nullable|integer|min:1|max:500',
+            'storefrontAnnouncementBar' => 'sometimes|nullable|string|max:200',
+            'storefrontTheme' => 'sometimes|nullable|array',
+            'storefrontTheme.primary_color' => 'sometimes|nullable|string|max:32',
+            'storefrontTheme.accent_color' => 'sometimes|nullable|string|max:32',
+            'storefrontTheme.announcement_bar' => 'sometimes|nullable|string|max:200',
+            'storefrontTheme.footer_text' => 'sometimes|nullable|string|max:255',
         ]);
 
         if (isset($companyValidated['companyName'])) {
@@ -327,6 +337,25 @@ class SettingsController extends Controller
                 ], 403);
             }
             $company->storefront_enabled = $companyValidated['storefrontEnabled'];
+        }
+        if (array_key_exists('storefrontAnnouncementBar', $companyValidated) || array_key_exists('storefrontTheme', $companyValidated)) {
+            $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+            if (array_key_exists('storefrontTheme', $companyValidated) && is_array($companyValidated['storefrontTheme'])) {
+                foreach (['primary_color', 'accent_color', 'announcement_bar', 'footer_text'] as $key) {
+                    if (array_key_exists($key, $companyValidated['storefrontTheme'])) {
+                        $val = $companyValidated['storefrontTheme'][$key];
+                        $theme[$key] = is_string($val) && trim($val) !== '' ? trim($val) : null;
+                    }
+                }
+            }
+            if (array_key_exists('storefrontAnnouncementBar', $companyValidated)) {
+                $bar = $companyValidated['storefrontAnnouncementBar'];
+                $theme['announcement_bar'] = is_string($bar) && trim($bar) !== '' ? trim($bar) : null;
+            }
+            $company->storefront_theme = array_filter(
+                $theme,
+                static fn ($v) => $v !== null && $v !== ''
+            ) ?: null;
         }
         if (array_key_exists('linkInBioEnabled', $companyValidated)) {
             if ($companyValidated['linkInBioEnabled'] && ! PlanLimitService::companyAllowsLinkInBio($company)) {

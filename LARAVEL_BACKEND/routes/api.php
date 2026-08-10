@@ -215,6 +215,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::delete('product-reviews/{productReview}', [ProductReviewController::class, 'destroy']);
     Route::get('storefront-coupons', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'index']);
     Route::post('storefront-coupons', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'store']);
+    Route::put('storefront-coupons/{storefrontCoupon}', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'update']);
+    Route::patch('storefront-coupons/{storefrontCoupon}', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'update']);
     Route::delete('storefront-coupons/{storefrontCoupon}', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'destroy']);
     Route::get('storefront/analytics', [\App\Http\Controllers\Api\Company\StorefrontAnalyticsController::class, 'show']);
     Route::get('analytics', [\App\Http\Controllers\Api\Company\AnalyticsController::class, 'index']);

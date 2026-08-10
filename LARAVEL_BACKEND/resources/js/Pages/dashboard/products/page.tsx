@@ -76,6 +76,7 @@ interface ProductFormData {
   name: string
   description: string
   price: string
+  compareAtPrice: string
   taxRateId: string
   category: string
   productType: 'physical' | 'digital' | 'service'
@@ -99,6 +100,7 @@ const initialFormData: ProductFormData = {
   name: '',
   description: '',
   price: '',
+  compareAtPrice: '',
   taxRateId: 'none',
   category: '',
   productType: 'physical',
@@ -275,6 +277,7 @@ export default function ProductsPage() {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
+        compareAtPrice: formData.compareAtPrice.trim() === '' ? null : parseFloat(formData.compareAtPrice),
         taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
         category: formData.category,
         productType: formData.productType,
@@ -321,6 +324,7 @@ export default function ProductsPage() {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
+        compareAtPrice: formData.compareAtPrice.trim() === '' ? null : parseFloat(formData.compareAtPrice),
         taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
         category: formData.category,
         productType: formData.productType,
@@ -386,6 +390,7 @@ export default function ProductsPage() {
       name: product.name,
       description: product.description,
       price: product.price.toString(),
+      compareAtPrice: product.compareAtPrice != null ? String(product.compareAtPrice) : '',
       taxRateId: product.taxRateId ?? 'none',
       category: product.category,
       productType: product.productType ?? 'physical',
@@ -734,6 +739,17 @@ export default function ProductsPage() {
           required
         />
         <InputField
+          label="Compare-at price (sale)"
+          name="compareAtPrice"
+          type="number"
+          value={formData.compareAtPrice}
+          onChange={(value) => handleFieldChange('compareAtPrice', value)}
+          placeholder="Optional — was price"
+          description="If higher than Price, storefront shows a Sale badge and strikethrough."
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <InputField
           label={formData.trackInventory ? 'Stock' : 'Stock'}
           name="stock"
           type="number"
@@ -743,6 +759,7 @@ export default function ProductsPage() {
           error={formErrors.stock}
           required
         />
+        <div />
       </div>
 
       <SelectField

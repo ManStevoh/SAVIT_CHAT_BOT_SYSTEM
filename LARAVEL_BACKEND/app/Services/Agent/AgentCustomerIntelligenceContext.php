@@ -102,6 +102,15 @@ final class AgentCustomerIntelligenceContext
         $productCount = Product::where('company_id', $company->id)->where('status', 'active')->count();
         $parts[] = "Catalog size: {$productCount} active products. Prefer tools search_products / get_catalog for precise stock and variants; never invent SKUs or prices.";
 
+        try {
+            $parts[] = app(\App\Services\Commerce\CommercePromotionsService::class)->agentPromptBlock($company);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('AgentCustomerIntelligenceContext: promotions snapshot failed', [
+                'company_id' => $company->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $parts[] = app(OrderPaymentDetailsService::class)->promptBlockForCompany($company);
 
         if ($incomingMessage !== null && trim($incomingMessage) !== '') {

@@ -14,6 +14,7 @@ type StoreProduct = {
   price: number
   compareAtPrice?: number | null
   onSale?: boolean
+  discountPercent?: number | null
   soldOut?: boolean
   lowStock?: boolean
   category?: string | null
@@ -76,7 +77,7 @@ function ProductCard({ slug, product, currency }: { slug: string; product: Store
     >
       {product.onSale && (
         <span className="absolute left-2 top-2 z-10 rounded bg-rose-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-          Sale
+          {product.discountPercent ? `-${product.discountPercent}%` : 'Sale'}
         </span>
       )}
       {product.soldOut && (

@@ -630,6 +630,7 @@ export interface CreateProductData {
   name: string
   description: string
   price: number
+  compareAtPrice?: number | null
   taxRateId?: string | null
   category: string
   productType?: 'physical' | 'digital' | 'service'
@@ -680,6 +681,11 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
       formData.append('name', data.name)
       formData.append('description', data.description)
       formData.append('price', String(data.price))
+      if (data.compareAtPrice != null && data.compareAtPrice !== undefined) {
+        formData.append('compareAtPrice', String(data.compareAtPrice))
+      } else if (data.compareAtPrice === null) {
+        formData.append('compareAtPrice', '')
+      }
       if (data.taxRateId) formData.append('taxRateId', data.taxRateId)
       formData.append('category', data.category)
       if (data.productType) formData.append('productType', data.productType)
@@ -710,6 +716,7 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
         name: data.name,
         description: data.description,
         price: data.price,
+        compareAtPrice: data.compareAtPrice ?? null,
         taxRateId: data.taxRateId ?? null,
         category: data.category,
         productType: data.productType,
@@ -4002,4 +4009,74 @@ export async function clearChatHistory(chatId: string): Promise<{ success: boole
       method: 'DELETE',
     }
   )
+}
+
+export type StorefrontCoupon = {
+  id: string
+  code: string
+  type: 'percent' | 'fixed'
+  value: number
+  minOrder?: number | null
+  maxRedemptions?: number | null
+  redeemedCount?: number
+  startsAt?: string | null
+  endsAt?: string | null
+  isActive: boolean
+  isCurrentlyValid?: boolean
+}
+
+export type StorefrontCouponPayload = {
+  code: string
+  type: 'percent' | 'fixed'
+  value: number
+  minOrder?: number | null
+  maxRedemptions?: number | null
+  startsAt?: string | null
+  endsAt?: string | null
+  isActive?: boolean
+}
+
+export async function listStorefrontCoupons(): Promise<StorefrontCoupon[]> {
+  try {
+    return await apiRequest<StorefrontCoupon[]>('/api/company/storefront-coupons')
+  } catch {
+    return []
+  }
+}
+
+export async function createStorefrontCoupon(
+  data: StorefrontCouponPayload
+): Promise<{ success: boolean; coupon?: StorefrontCoupon; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean; coupon: StorefrontCoupon }>('/api/company/storefront-coupons', {
+      method: 'POST',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateStorefrontCoupon(
+  id: string,
+  data: Partial<StorefrontCouponPayload>
+): Promise<{ success: boolean; coupon?: StorefrontCoupon; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean; coupon: StorefrontCoupon }>(`/api/company/storefront-coupons/${id}`, {
+      method: 'PUT',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteStorefrontCoupon(id: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/company/storefront-coupons/${id}`, {
+      method: 'DELETE',
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
 }

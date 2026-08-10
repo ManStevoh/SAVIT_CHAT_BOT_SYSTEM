@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\StorefrontCoupon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class StorefrontCouponController extends Controller
 {
@@ -34,7 +35,12 @@ class StorefrontCouponController extends Controller
         }
 
         $validated = $request->validate([
-            'code' => 'required|string|max:64',
+            'code' => [
+                'required',
+                'string',
+                'max:64',
+                Rule::unique('storefront_coupons', 'code')->where(fn ($q) => $q->where('company_id', $companyId)),
+            ],
             'type' => 'required|string|in:percent,fixed',
             'value' => 'required|numeric|min:0',
             'minOrder' => 'nullable|numeric|min:0',
@@ -58,6 +64,62 @@ class StorefrontCouponController extends Controller
         ]);
 
         return response()->json(['success' => true, 'coupon' => $this->toArray($coupon)], 201);
+    }
+
+    public function update(Request $request, StorefrontCoupon $storefrontCoupon): JsonResponse
+    {
+        if ($storefrontCoupon->company_id !== $request->user()->company_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $companyId = (int) $request->user()->company_id;
+        $validated = $request->validate([
+            'code' => [
+                'sometimes',
+                'string',
+                'max:64',
+                Rule::unique('storefront_coupons', 'code')
+                    ->where(fn ($q) => $q->where('company_id', $companyId))
+                    ->ignore($storefrontCoupon->id),
+            ],
+            'type' => 'sometimes|string|in:percent,fixed',
+            'value' => 'sometimes|numeric|min:0',
+            'minOrder' => 'nullable|numeric|min:0',
+            'maxRedemptions' => 'nullable|integer|min:1',
+            'startsAt' => 'nullable|date',
+            'endsAt' => 'nullable|date|after_or_equal:startsAt',
+            'isActive' => 'nullable|boolean',
+        ]);
+
+        $updates = [];
+        if (array_key_exists('code', $validated)) {
+            $updates['code'] = strtoupper(trim((string) $validated['code']));
+        }
+        if (array_key_exists('type', $validated)) {
+            $updates['type'] = $validated['type'];
+        }
+        if (array_key_exists('value', $validated)) {
+            $updates['value'] = $validated['value'];
+        }
+        if (array_key_exists('minOrder', $validated)) {
+            $updates['min_order'] = $validated['minOrder'];
+        }
+        if (array_key_exists('maxRedemptions', $validated)) {
+            $updates['max_redemptions'] = $validated['maxRedemptions'];
+        }
+        if (array_key_exists('startsAt', $validated)) {
+            $updates['starts_at'] = $validated['startsAt'];
+        }
+        if (array_key_exists('endsAt', $validated)) {
+            $updates['ends_at'] = $validated['endsAt'];
+        }
+        if (array_key_exists('isActive', $validated)) {
+            $updates['is_active'] = (bool) $validated['isActive'];
+        }
+
+        $storefrontCoupon->update($updates);
+
+        return response()->json(['success' => true, 'coupon' => $this->toArray($storefrontCoupon->fresh())]);
     }
 
     public function destroy(Request $request, StorefrontCoupon $storefrontCoupon): JsonResponse
@@ -85,6 +147,7 @@ class StorefrontCouponController extends Controller
             'startsAt' => $coupon->starts_at?->toIso8601String(),
             'endsAt' => $coupon->ends_at?->toIso8601String(),
             'isActive' => (bool) $coupon->is_active,
+            'isCurrentlyValid' => $coupon->isCurrentlyValid(),
         ];
     }
 }

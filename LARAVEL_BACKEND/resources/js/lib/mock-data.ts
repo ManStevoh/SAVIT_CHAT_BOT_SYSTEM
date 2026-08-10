@@ -146,6 +146,8 @@ export interface Product {
   name: string
   description: string
   price: number
+  compareAtPrice?: number | null
+  onSale?: boolean
   taxRateId?: string | null
   category: string
   productType?: 'physical' | 'digital' | 'service'

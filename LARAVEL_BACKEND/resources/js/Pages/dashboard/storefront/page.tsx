@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { apiRequest } from '@/lib/api-client'
 import { Copy, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
 import { Link } from '@inertiajs/react'
+import { StorefrontCouponsCard } from '@/components/dashboard/StorefrontCouponsCard'
 
 type BioLink = { label: string; url: string }
 
@@ -36,6 +37,7 @@ type SettingsResponse = {
   spamMaxOrdersPerHour?: number
   spamMaxOrdersPerDay?: number
   dineInEnabled?: boolean
+  storefrontAnnouncementBar?: string
 }
 
 export default function DashboardStorefrontPage() {
@@ -68,6 +70,7 @@ export default function DashboardStorefrontPage() {
   const [spamMaxOrdersPerHour, setSpamMaxOrdersPerHour] = useState('5')
   const [spamMaxOrdersPerDay, setSpamMaxOrdersPerDay] = useState('20')
   const [dineInEnabled, setDineInEnabled] = useState(false)
+  const [announcementBar, setAnnouncementBar] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -97,6 +100,7 @@ export default function DashboardStorefrontPage() {
       setSpamMaxOrdersPerHour(String(data.spamMaxOrdersPerHour ?? 5))
       setSpamMaxOrdersPerDay(String(data.spamMaxOrdersPerDay ?? 20))
       setDineInEnabled(!!data.dineInEnabled)
+      setAnnouncementBar(data.storefrontAnnouncementBar || '')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load settings')
     } finally {
@@ -137,6 +141,7 @@ export default function DashboardStorefrontPage() {
           spamMaxOrdersPerHour: parseInt(spamMaxOrdersPerHour, 10) || 5,
           spamMaxOrdersPerDay: parseInt(spamMaxOrdersPerDay, 10) || 20,
           dineInEnabled,
+          storefrontAnnouncementBar: announcementBar || null,
         },
       })
       if (data.success) {
@@ -346,6 +351,17 @@ export default function DashboardStorefrontPage() {
             />
             Abandoned cart recovery (WhatsApp cart link)
           </label>
+          <div>
+            <Label>Announcement bar (sales banner)</Label>
+            <Input
+              value={announcementBar}
+              onChange={(e) => setAnnouncementBar(e.target.value)}
+              placeholder="Black Friday — 30% off with code BF30"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shown at the top of your public storefront. Leave empty to hide.
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -443,6 +459,8 @@ export default function DashboardStorefrontPage() {
           </label>
         </CardContent>
       </Card>
+
+      <StorefrontCouponsCard />
     </div>
   )
 }

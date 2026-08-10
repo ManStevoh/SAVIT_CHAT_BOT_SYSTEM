@@ -1156,6 +1156,13 @@ class OrderFlowService
                 $priceLabel = 'from '.$this->formatMoney($company, $min);
             } else {
                 $priceLabel = $this->formatMoney($company, (float) $p->price);
+                $compare = $p->compare_at_price !== null ? (float) $p->compare_at_price : null;
+                if ($compare !== null && $compare > (float) $p->price) {
+                    $pct = (int) round((1 - ((float) $p->price / $compare)) * 100);
+                    $priceLabel = $this->formatMoney($company, (float) $p->price)
+                        .' ~~'.$this->formatMoney($company, $compare).'~~'
+                        .($pct > 0 ? " (-{$pct}%)" : '');
+                }
             }
             $line = "*{$i}. {$p->name}* — {$priceLabel}";
             if ($p->description) {

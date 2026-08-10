@@ -94,6 +94,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
+            'compareAtPrice' => 'nullable|numeric|min:0',
             'taxRateId' => 'nullable|integer|exists:tax_rates,id',
             'category' => 'nullable|string|max:255',
             'productType' => 'nullable|in:physical,digital,service',
@@ -283,6 +284,7 @@ class ProductController extends Controller
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'price' => 'sometimes|numeric|min:0',
+            'compareAtPrice' => 'nullable|numeric|min:0',
             'taxRateId' => 'nullable|integer|exists:tax_rates,id',
             'category' => 'nullable|string|max:255',
             'productType' => 'sometimes|in:physical,digital,service',
@@ -541,6 +543,9 @@ class ProductController extends Controller
             'name' => $product->name,
             'description' => $product->description ?? '',
             'price' => (float) $product->price,
+            'compareAtPrice' => $product->compare_at_price !== null ? (float) $product->compare_at_price : null,
+            'onSale' => $product->compare_at_price !== null
+                && (float) $product->compare_at_price > (float) $product->price,
             'taxRateId' => $product->tax_rate_id ? (string) $product->tax_rate_id : null,
             'category' => $product->category ?? '',
             'productType' => $product->product_type ?? 'physical',
@@ -610,6 +615,9 @@ class ProductController extends Controller
             'name' => (string) ($product->name ?? 'Product'),
             'description' => (string) ($product->description ?? ''),
             'price' => (float) ($product->price ?? 0),
+            'compareAtPrice' => $product->compare_at_price !== null ? (float) $product->compare_at_price : null,
+            'onSale' => $product->compare_at_price !== null
+                && (float) $product->compare_at_price > (float) ($product->price ?? 0),
             'taxRateId' => $product->tax_rate_id ? (string) $product->tax_rate_id : null,
             'category' => (string) ($product->category ?? ''),
             'productType' => (string) ($product->product_type ?? 'physical'),
@@ -880,6 +888,7 @@ class ProductController extends Controller
             'name' => $validated['name'] ?? $current?->name,
             'description' => $validated['description'] ?? $current?->description,
             'price' => $validated['price'] ?? $current?->price ?? 0,
+            'compare_at_price' => $this->resolveCompareAtPrice($validated, $current),
             'tax_rate_id' => $this->resolveTaxRateId($validated, $request, $current),
             'category' => $validated['category'] ?? $current?->category,
             'product_type' => $productType,
@@ -906,6 +915,25 @@ class ProductController extends Controller
             'stock' => $validated['stock'] ?? $current?->stock ?? 0,
             'status' => $validated['status'] ?? $current?->status ?? 'active',
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolveCompareAtPrice(array $validated, ?Product $current = null): ?float
+    {
+        if (! array_key_exists('compareAtPrice', $validated)) {
+            return $current?->compare_at_price !== null ? (float) $current->compare_at_price : null;
+        }
+
+        $raw = $validated['compareAtPrice'];
+        if ($raw === null || $raw === '' || $raw === 'none') {
+            return null;
+        }
+
+        $value = (float) $raw;
+
+        return $value > 0 ? $value : null;
     }
 
     private function resolveTaxRateId(array $validated, Request $request, ?Product $current = null): ?int
