@@ -66,6 +66,27 @@ final class CheckoutMessageComposer
             }
         }
 
+        // Handle swap or remove intent (e.g. "remove the cs book I want to order earphones instead")
+        if (preg_match('/\b(?:remove|delete|drop|swap|replace)\s+(.+?)(?:\s+(?:i want|instead|and|with)|$)/iu', $raw, $m)) {
+            $removeItem = trim($m[1]);
+            if (! empty($draft['items'])) {
+                foreach ($draft['items'] as $item) {
+                    $iName = mb_strtolower($item['name'] ?? '');
+                    if (str_contains(mb_strtolower($removeItem), $iName) || str_contains($iName, mb_strtolower($removeItem))) {
+                        $candidates[] = "remove {$item['name']}";
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Handle variant choice or product selection from message or thread
+        $productOrVariant = $this->resolveProductOrVariantFromMessage($context, $raw);
+        if ($productOrVariant !== null) {
+            $qty = $this->resolveQuantityFromThread($context, $raw) ?? 1;
+            $candidates[] = "{$qty} x {$productOrVariant}";
+        }
+
         // Qty-only shorthand while a product is pending ("10x" / "10 x").
         if ($step === OrderFlowService::STEP_PRODUCT_QTY) {
             $qty = $this->extractLeadingQuantity($raw);
@@ -120,7 +141,11 @@ final class CheckoutMessageComposer
             return true;
         }
 
-        return (bool) preg_match('/^(ok|okay|yes|sure|sawa|alright)\b/u', $lower);
+        if (preg_match('/^(ok|okay|yes|sure|sawa|alright)\b/u', $lower)) {
+            return true;
+        }
+
+        return (bool) preg_match('/(?:^|\b)(?:proceed|confirm|place order|ready to proceed|ready to order|go ahead|do it|finalize|finish|place it|i am ready|i\'m ready|want to proceed|proceed with order|confirm order|ready|yes proceed)\b/iu', $lower);
     }
 
     private function composeQtyProductLine(AgentToolContext $context, string $raw): ?string
@@ -230,6 +255,7 @@ final class CheckoutMessageComposer
         }
 
         $haystack = $context->chat->messages()
+            ->where('sender', 'customer')
             ->orderByDesc('id')
             ->limit(20)
             ->pluck('content')
@@ -248,7 +274,7 @@ final class CheckoutMessageComposer
             }
         }
 
-        // Bot recovery copy often quotes '10 x Headphones' — catch product after x.
+        // Bot recovery copy often quotes '10 x Headphones' — catch product after x from customer messages.
         if (preg_match_all('/\d+\s*[x×]\s*([A-Za-z][\w\s\-]{1,80})/u', $haystack, $matches)) {
             foreach (array_reverse($matches[1]) as $part) {
                 $part = trim($part, " \t\n\r\0\x0B'\"");
@@ -262,7 +288,63 @@ final class CheckoutMessageComposer
         }
 
         if ($products->count() === 1) {
-            return $products->first()->name;
+            $incoming = mb_strtolower($context->incomingMessage);
+            if (preg_match('/\b(?:add|buy|order|want|get|purchase)\b/iu', $incoming) && ! preg_match('/\b(?:help|how|what|where|why|can i|could i|do you)\b/iu', $incoming)) {
+                return $products->first()->name;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveProductOrVariantFromMessage(AgentToolContext $context, string $raw): ?string
+    {
+        $company = $context->company;
+        $products = Product::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'active')
+            ->with(['variants' => fn ($q) => $q->where('status', 'active')])
+            ->get();
+
+        if ($products->isEmpty()) {
+            return null;
+        }
+
+        $lowerRaw = mb_strtolower($raw);
+
+        $lastBotMsg = $context->chat->messages()
+            ->where('sender', 'bot')
+            ->orderByDesc('id')
+            ->first();
+
+        $botText = $lastBotMsg ? mb_strtolower((string) $lastBotMsg->content) : '';
+
+        foreach ($products as $p) {
+            $pName = mb_strtolower($p->name);
+            foreach ($p->variants as $v) {
+                $vName = mb_strtolower($v->name);
+                if ($vName !== '' && (str_contains($lowerRaw, $vName) || str_contains($lowerRaw, $pName . ' ' . $vName) || str_contains($lowerRaw, $vName . ' ' . $pName))) {
+                    return $p->name;
+                }
+            }
+            if ($pName !== '' && str_contains($lowerRaw, $pName)) {
+                return $p->name;
+            }
+        }
+
+        if ($this->looksLikeAffirm($lowerRaw) || (bool) preg_match('/\b(?:red|white|black|blue|green|yellow|small|medium|large|xl|them|it|this|that|order)\b/iu', $lowerRaw)) {
+            foreach ($products as $p) {
+                $pName = mb_strtolower($p->name);
+                foreach ($p->variants as $v) {
+                    $vName = mb_strtolower($v->name);
+                    if ($vName !== '' && (str_contains($lowerRaw, $vName) || (str_contains($botText, $vName) && (str_contains($lowerRaw, 'yes') || str_contains($lowerRaw, 'give me') || str_contains($lowerRaw, 'want') || str_contains($lowerRaw, 'order'))))) {
+                        return $p->name;
+                    }
+                }
+                if ($pName !== '' && str_contains($botText, $pName)) {
+                    return $p->name;
+                }
+            }
         }
 
         return null;

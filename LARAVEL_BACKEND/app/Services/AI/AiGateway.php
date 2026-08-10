@@ -158,6 +158,72 @@ class AiGateway
     }
 
     /**
+     * Complete prompt with strict JSON schema mode.
+     */
+    public function completeWithJson(
+        string $prompt,
+        array $schema,
+        ?Company $company = null,
+        string $useCase = 'intent_classification',
+        float $temperature = 0.0,
+        ?string $model = null,
+        ?int $chatId = null,
+    ): array {
+        $messages = [
+            ['role' => 'system', 'content' => $prompt],
+        ];
+
+        $result = $this->chatCompletion(
+            messages: $messages,
+            useCase: $useCase,
+            company: $company,
+            chatId: $chatId,
+            temperature: $temperature,
+            jsonMode: true,
+        );
+
+        return [
+            'content' => $result->content,
+            'success' => $result->success,
+            'model' => $result->model,
+            'error' => $result->error,
+        ];
+    }
+
+    public function chatCompletionWithTools(
+        array $messages,
+        array $tools,
+        string $useCase,
+        ?Company $company = null,
+        ?int $chatId = null,
+        ?int $maxTokens = null,
+        ?float $temperature = null,
+        int $timeoutSeconds = 30,
+    ): OpenAiChatResult {
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, $useCase);
+        if ($resolved === null) {
+            return new OpenAiChatResult(
+                content: null,
+                success: false,
+                model: 'unknown',
+                error: 'No AI provider or model configured',
+            );
+        }
+
+        $maxTokens ??= (int) ($resolved->model->max_output_tokens ?: 512);
+        $driver = $this->driverFactory->driverFor($resolved->provider);
+
+        if ($driver instanceof \App\Services\AI\Drivers\Contracts\SupportsToolCalling) {
+            $result = $driver->chatCompletionWithTools($resolved, $messages, $tools, $maxTokens, $temperature, $timeoutSeconds);
+        } else {
+            $result = $driver->chatCompletion($resolved, $messages, $maxTokens, $temperature, false, $timeoutSeconds);
+        }
+
+        return $this->withCost($resolved->model, $result);
+    }
+
+
+    /**
      * @return array<int, float>|null
      */
     public function embedText(string $text, ?int $companyId = null): ?array

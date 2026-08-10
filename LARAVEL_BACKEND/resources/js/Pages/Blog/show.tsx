@@ -23,7 +23,7 @@ export default function BlogShowPage({
 }) {
   const { data, isLoading, error } = useSWR<{ post: BlogPost }>(
     slug ? `/api/blog/posts/${slug}` : null,
-    (url: string) => apiRequest(url)
+    (url: string) => apiRequest<{ post: BlogPost }>(url)
   )
 
   const post = data?.post

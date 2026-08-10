@@ -56,7 +56,7 @@ export default function CognitivePage() {
   const workforceList = Array.isArray(cognitive?.workforce)
     ? cognitive.workforce
     : Array.isArray((cognitive?.workforce as unknown as { workforce?: unknown[] })?.workforce)
-      ? (cognitive.workforce as unknown as { workforce: unknown[] }).workforce
+      ? (cognitive?.workforce as unknown as { workforce: unknown[] }).workforce
       : []
 
   return (
@@ -133,7 +133,7 @@ export default function CognitivePage() {
                   <div>
                     <p className="text-xs font-medium uppercase text-muted-foreground mb-1">Hypotheses</p>
                     <ul className="list-disc pl-5 space-y-1">
-                      {reasoning.hypotheses.slice(0, 5).map((h, i) => (
+                      {reasoning.hypotheses.slice(0, 5).map((h: { hypothesis: string }, i: number) => (
                         <li key={i}>{h.hypothesis}</li>
                       ))}
                     </ul>
@@ -143,7 +143,7 @@ export default function CognitivePage() {
                   <div>
                     <p className="text-xs font-medium uppercase text-muted-foreground mb-1">Recommended actions</p>
                     <ul className="space-y-1">
-                      {reasoning.recommended_actions.slice(0, 5).map((a, i) => (
+                      {reasoning.recommended_actions.slice(0, 5).map((a: { action: string; requires_approval?: boolean }, i: number) => (
                         <li key={i} className="flex items-start gap-2">
                           <span>{a.action}</span>
                           {a.requires_approval && (

@@ -17,7 +17,7 @@ type BlogListItem = {
 export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
   const { data, isLoading } = useSWR<{ posts: BlogListItem[] }>(
     "/api/blog/posts",
-    (url: string) => apiRequest(url)
+    (url: string) => apiRequest<{ posts: BlogListItem[] }>(url)
   )
 
   const posts = data?.posts ?? []

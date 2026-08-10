@@ -13,6 +13,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Unified Intent Classifier Pre-Router Config (Phase 1)
+    |--------------------------------------------------------------------------
+    */
+    'ai_intent_routing_enabled' => (bool) env('AI_INTENT_ROUTING_ENABLED', false),
+    'ai_intent_shadow_mode' => (bool) env('AI_INTENT_SHADOW_MODE', true),
+    'ai_intent_min_confidence' => (float) env('AI_INTENT_MIN_CONFIDENCE', 0.82),
+    'ai_intent_model' => env('AI_INTENT_MODEL', 'gpt-5-mini'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | System Maintenance Mode Configuration
+    |--------------------------------------------------------------------------
+    | When enabled, all incoming customer messages receive an automatic
+    | maintenance notification reply, preventing pipeline execution.
+    | Set to false to disable maintenance mode and resume normal bot replies.
+    |--------------------------------------------------------------------------
+    */
+    'system_maintenance_enabled' => (bool) env('SYSTEM_MAINTENANCE_ENABLED', false),
+    'system_maintenance_message' => env(
+        'SYSTEM_MAINTENANCE_MESSAGE',
+        "🚧 *System Under Maintenance*\n\nOur service is currently undergoing scheduled system updates to improve performance and add new features. We will be back online shortly!\n\nThank you for your patience."
+    ),
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Default agent mode for new companies (overridden by company_settings)
     | Entitled plans auto-enable via AgentCommerceProvisioningService.
     |--------------------------------------------------------------------------

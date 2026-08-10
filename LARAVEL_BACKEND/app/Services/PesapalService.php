@@ -177,7 +177,7 @@ class PesapalService
 
         $ipnId = $orderData['notification_id'] ?? ($cfg['ipn_id'] ?? null);
         if (! $ipnId) {
-            $defaultIpnUrl = rtrim(config('app.url', 'http://localhost'), '/').'/api/pesapal/ipn';
+            $defaultIpnUrl = url('/api/pesapal/ipn');
             $ipnRes = $this->registerIpnUrl($defaultIpnUrl, $cfg);
             if (! $ipnRes['success'] || empty($ipnRes['ipn_id'])) {
                 return ['success' => false, 'error' => 'Could not register IPN: '.($ipnRes['error'] ?? 'Unknown error')];

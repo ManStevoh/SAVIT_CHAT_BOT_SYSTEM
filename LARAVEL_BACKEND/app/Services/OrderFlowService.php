@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\DTOs\IntentResult;
+use App\Enums\CommerceIntent;
 use App\Models\Chat;
 use App\Models\Company;
 use App\Models\Order;
@@ -174,14 +176,137 @@ class OrderFlowService
     }
 
     /**
+
+     * Execute a cart mutation callback under a Redis/Cache lock on the chat instance.
+     * Lock key: wa_chat_lock:{chat_id}, TTL: 10 seconds.
+     * Reloads a fresh Chat model from DB inside the lock to prevent stale state overwrites.
+     */
+    public function withChatLock(Chat $chat, callable $callback): mixed
+    {
+        $lockKey = "wa_chat_lock:{$chat->id}";
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 10);
+
+        return $lock->block(5, function () use ($chat, $callback) {
+            $freshChat = $chat->fresh() ?? $chat;
+
+            return $callback($freshChat);
+        });
+    }
+
+    /**
+     * Handle Phase 1 structured cart intents (ADD_TO_CART, REMOVE_FROM_CART, UPDATE_QUANTITY)
+     * directly without natural language parsing or regex keyword heuristics.
+     *
+     * @return array{success: bool, message: string}|null
+     */
+    public function handleStructuredCartIntent(IntentResult $intent, Chat $chat, Company $company): ?array
+    {
+        return $this->withChatLock($chat, function (Chat $freshChat) use ($intent, $company) {
+            $draft = $this->getDraft($freshChat);
+
+            // 1. ADD_TO_CART
+            if ($intent->intent === CommerceIntent::ADD_TO_CART) {
+                $productQuery = $intent->product ?? '';
+                if ($productQuery === '') {
+                    return null;
+                }
+
+                $parsed = $this->parseProductLine($company, "{$intent->quantity} x {$productQuery}");
+                if ($parsed) {
+                    if (! empty($parsed['has_variants'])) {
+                        $reply = $this->initVariantSelectionForProduct($freshChat, $company, $draft, $parsed['product_model'], $parsed['quantity']);
+
+                        return ['success' => true, 'message' => $reply];
+                    }
+
+                    $draft['items'] = $draft['items'] ?? [];
+                    $draft['items'][] = $parsed;
+                    $draft = $this->withCatalogIds($company, $draft);
+                    $this->setStep($freshChat, self::STEP_PRODUCT, $draft);
+
+                    $reply = $this->formatAddedToCartMessage($company, (string) $parsed['name'], (int) $parsed['quantity'], $draft, $freshChat);
+
+                    return ['success' => true, 'message' => $reply];
+                }
+            }
+
+            // 2. REMOVE_FROM_CART
+            if ($intent->intent === CommerceIntent::REMOVE_FROM_CART) {
+                $target = mb_strtolower(trim($intent->product ?? ''));
+                if ($target === '' || empty($draft['items'])) {
+                    return null;
+                }
+
+                $newItems = [];
+                $removedName = null;
+                foreach ($draft['items'] as $item) {
+                    $itemName = mb_strtolower($item['name'] ?? '');
+                    if ($removedName === null && (str_contains($itemName, $target) || str_contains($target, $itemName))) {
+                        $removedName = $item['name'];
+                        continue;
+                    }
+                    $newItems[] = $item;
+                }
+
+                if ($removedName !== null) {
+                    $draft['items'] = $newItems;
+                    $this->setStep($freshChat, empty($newItems) ? self::STEP_NONE : self::STEP_PRODUCT, $draft);
+                    app(\App\Services\Storefront\StorefrontService::class)->syncChatCartToStorefrontSession($company, $freshChat);
+
+                    $reply = empty($newItems)
+                        ? "🗑️ Removed *{$removedName}* from your cart.\n\n🛒 Your cart is now empty."
+                        : "🗑️ Removed *{$removedName}* from your cart.\n\n".$this->formatDraftSummary($company, $draft, $freshChat);
+
+                    return ['success' => true, 'message' => $reply];
+                }
+            }
+
+            // 3. UPDATE_QUANTITY
+            if ($intent->intent === CommerceIntent::UPDATE_QUANTITY) {
+                $target = mb_strtolower(trim($intent->product ?? ''));
+                if ($target === '' || empty($draft['items'])) {
+                    return null;
+                }
+
+                $updatedName = null;
+                $newQuantity = max(1, $intent->quantity);
+                foreach ($draft['items'] as &$item) {
+                    $itemName = mb_strtolower($item['name'] ?? '');
+                    if ($updatedName === null && (str_contains($itemName, $target) || str_contains($target, $itemName))) {
+                        $item['quantity'] = $newQuantity;
+                        $updatedName = $item['name'];
+                        break;
+                    }
+                }
+                unset($item);
+
+                if ($updatedName !== null) {
+                    $draft = $this->withCatalogIds($company, $draft);
+                    $this->setStep($freshChat, self::STEP_PRODUCT, $draft);
+                    app(\App\Services\Storefront\StorefrontService::class)->syncChatCartToStorefrontSession($company, $freshChat);
+
+                    $reply = "✏️ Updated *{$updatedName}* quantity to {$newQuantity}.\n\n".$this->formatDraftSummary($company, $draft, $freshChat);
+
+                    return ['success' => true, 'message' => $reply];
+                }
+            }
+
+            return null;
+        });
+    }
+
+    /**
      * Process customer message in order flow context.
      * Returns reply text to send, or null to fall through to normal AI reply.
      */
     public function processMessage(Chat $chat, Company $company, string $messageText, string $customerName, string $customerPhone): ?string
     {
-        $step = $chat->conversation_step;
-        $draft = $this->getDraft($chat);
-        $lower = mb_strtolower(trim($messageText));
+        return $this->withChatLock($chat, function (Chat $freshChat) use ($company, $messageText, $customerName, $customerPhone) {
+            $chat = $freshChat;
+            $step = $chat->conversation_step;
+            $draft = $this->getDraft($chat);
+            $lower = mb_strtolower(trim($messageText));
+
         $trimmed = trim($messageText);
 
         // Abandoned carts often leave conversation_step=product; a new "Hi"/"Hello" should restart at menu level.
@@ -538,8 +663,8 @@ class OrderFlowService
             }
 
             $address = trim($messageText);
-            if (strlen($address) < 3) {
-                return 'Please provide a valid delivery address (at least a few characters), or reply "pickup" / "dine-in".';
+            if (! $this->looksLikeDeliveryAddress($address)) {
+                return 'Please provide your delivery address (e.g., street, building, or area name), or reply "pickup" if you would like to pick up your order.';
             }
             $draft['delivery_address'] = $address;
             $draft['fulfillment_type'] = $draft['fulfillment_type'] ?? 'delivery';
@@ -701,8 +826,10 @@ class OrderFlowService
             return $this->withReceipt($order, "Order #{$order->order_number} confirmed.\n".$this->formatOrderMoneySummary($order)."\nWe couldn't send M-Pesa right now (".($result['error'] ?? 'please try again later')."). We'll contact you for payment.");
         }
 
-        return null;
+            return null;
+        });
     }
+
 
     /**
      * @param  array<string, mixed>  $draft
@@ -1362,8 +1489,11 @@ class OrderFlowService
 
     protected function wantsStartOrder(string $lower): bool
     {
-        return $lower === '2' || $lower === 'order' || $lower === 'place order'
-            || str_contains($lower, 'i want to order') || str_contains($lower, 'place an order');
+        if (preg_match('/\b(?:order|buy|get|want)\s+(?:the|a|an)?\s*[a-z0-9]/iu', $lower) || str_contains($lower, 'them') || str_contains($lower, 'this')) {
+            return false;
+        }
+
+        return $lower === '2' || $lower === 'order' || $lower === 'place order' || $lower === 'start order';
     }
 
     protected function wantsCatalogOrPrices(string $lower): bool
@@ -1446,10 +1576,11 @@ class OrderFlowService
         $patterns = [
             '/\b(thanks|thank you|thx|ty)\b/i',
             '/\b(do you|did you|are you|can you|could you|would you|will you|is there|can i|could i|should i)\b/i',
-            '/\b(contact|email|whatsapp|hours|opening|closed|open|refund)\b/i',
+            '/\b(contact|email|whatsapp|hours|opening|closed|open|refund|about|shop|store)\b/i',
             '/\b(help|support|agent|human|speak|representative)\b/i',
             '/\b(how do|how can|why|when|who)\b/i',
             '/\b(question|wondering|tell me|explain)\b/i',
+            '/\b(i want to add|add item|i want to order|i want to buy|want help|need help|help with)\b/i',
         ];
         foreach ($patterns as $p) {
             if (preg_match($p, $lower)) {
@@ -1517,7 +1648,14 @@ class OrderFlowService
 
     protected function wantsDone(string $lower): bool
     {
-        return in_array($lower, ['done', 'that\'s all', 'thats all', 'finish', 'next', '0'], true);
+        $lower = trim($lower);
+        if (in_array($lower, [
+            'done', 'that\'s all', 'thats all', 'finish', 'next', '0', 'ok', 'okay', 'k', 'yes', 'y', 'yeah', 'yep', 'yup', 'sure', 'sawa', 'proceed', 'go ahead', 'confirm',
+        ], true)) {
+            return true;
+        }
+
+        return (bool) preg_match('/(?:^|\b)(?:done|ok|okay|yes|sure|proceed|go ahead|confirm|place order|ready to proceed|i am ready|i\'m ready|want to proceed|proceed with|checkout|finish|done with order)\b/iu', $lower);
     }
 
     protected function wantsConfirm(string $lower): bool
@@ -1537,8 +1675,33 @@ class OrderFlowService
         if (preg_match('/\b(pay|payment|mpesa|m-pesa|till|paybill|invoice|receipt)\b/u', $lower)) {
             return true;
         }
+        if (preg_match('/(?:^|\b)(?:proceed|confirm|place order|ready to proceed|ready to order|go ahead|do it|finalize|finish|place it|i am ready|i\'m ready|want to proceed|proceed with order|confirm order|ready|yes proceed)\b/iu', $lower)) {
+            return true;
+        }
 
         return false;
+    }
+
+    protected function looksLikeDeliveryAddress(string $text): bool
+    {
+        $lower = mb_strtolower(trim($text));
+        if (strlen($lower) < 3) {
+            return false;
+        }
+        if (in_array($lower, ['yes', 'y', 'yeah', 'yep', 'yup', 'ok', 'okay', 'sure', 'proceed', 'confirm', 'go ahead', 'done', 'yes proceed', 'yes proceed with the order', 'i am ready', 'i am ready to proceed with the order', 'ready to proceed', 'have you finalized?'], true)) {
+            return false;
+        }
+        if (preg_match('/^(?:yes|okay|ok|sure|proceed|confirm|go ahead)\b(?:\s+(?:proceed|confirm|with|the|order|placement))*$/iu', $lower)) {
+            return false;
+        }
+        if (preg_match('/(?:^|\b)(?:have you|is it|can you|how do|what is|when will|ready to proceed|finalize)\b/iu', $lower)) {
+            return false;
+        }
+        if (str_contains($lower, '?')) {
+            return false;
+        }
+
+        return true;
     }
 
     protected function wantsDiscardConfirmOrder(string $lower): bool
