@@ -28,6 +28,11 @@ class PageController extends Controller
         return $this->marketing('About/page', 'about');
     }
 
+    public function solutions(): Response
+    {
+        return $this->marketing('Solutions/page', 'solutions');
+    }
+
     public function contact(): Response
     {
         return $this->marketing('Contact/page', 'contact');

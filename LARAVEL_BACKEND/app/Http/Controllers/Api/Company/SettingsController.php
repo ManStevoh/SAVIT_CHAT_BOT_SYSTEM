@@ -319,9 +319,23 @@ class SettingsController extends Controller
             $company->store_slug = is_string($slug) && trim($slug) !== '' ? Str::slug(trim($slug)) : null;
         }
         if (array_key_exists('storefrontEnabled', $companyValidated)) {
+            if ($companyValidated['storefrontEnabled'] && ! PlanLimitService::companyAllowsStorefront($company)) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'storefront_required',
+                    'message' => 'Web storefront is not available on your current plan. Upgrade to enable it.',
+                ], 403);
+            }
             $company->storefront_enabled = $companyValidated['storefrontEnabled'];
         }
         if (array_key_exists('linkInBioEnabled', $companyValidated)) {
+            if ($companyValidated['linkInBioEnabled'] && ! PlanLimitService::companyAllowsLinkInBio($company)) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'link_in_bio_required',
+                    'message' => 'Link-in-bio is not available on your current plan. Upgrade to enable it.',
+                ], 403);
+            }
             $company->link_in_bio_enabled = $companyValidated['linkInBioEnabled'];
         }
         if (array_key_exists('linkInBioHeadline', $companyValidated)) {
@@ -758,6 +772,13 @@ class SettingsController extends Controller
             $settings->free_delivery_above = $companyValidated['freeDeliveryAbove'];
         }
         if (array_key_exists('dineInEnabled', $companyValidated)) {
+            if ($companyValidated['dineInEnabled'] && ! PlanLimitService::companyAllowsDineIn($company)) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'dine_in_required',
+                    'message' => 'Dine-in table QR is not available on your current plan. Upgrade to Growth or Enterprise.',
+                ], 403);
+            }
             $settings->dine_in_enabled = $companyValidated['dineInEnabled'];
         }
         if (array_key_exists('paymentRecoveryEnabled', $companyValidated)) {

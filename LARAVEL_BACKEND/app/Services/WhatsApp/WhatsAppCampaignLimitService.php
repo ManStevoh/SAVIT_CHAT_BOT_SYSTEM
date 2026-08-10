@@ -11,6 +11,10 @@ final class WhatsAppCampaignLimitService
 {
     public static function getCampaignsLimit(Company $company): int
     {
+        if (! PlanLimitService::companyAllowsWhatsappCampaigns($company)) {
+            return 0;
+        }
+
         $plan = PlanLimitService::getCurrentPlanSlug($company);
         $limits = config('whatsapp.campaign.limits.'.$plan) ?? config('whatsapp.campaign.limits.starter');
 
@@ -19,6 +23,10 @@ final class WhatsAppCampaignLimitService
 
     public static function getRecipientsLimit(Company $company): int
     {
+        if (! PlanLimitService::companyAllowsWhatsappCampaigns($company)) {
+            return 0;
+        }
+
         $plan = PlanLimitService::getCurrentPlanSlug($company);
         $limits = config('whatsapp.campaign.limits.'.$plan) ?? config('whatsapp.campaign.limits.starter');
 
@@ -40,11 +48,15 @@ final class WhatsAppCampaignLimitService
 
     public static function canCreateCampaign(Company $company): bool
     {
+        if (! PlanLimitService::companyAllowsWhatsappCampaigns($company)) {
+            return false;
+        }
+
         return self::campaignsUsedThisMonth($company) < self::getCampaignsLimit($company);
     }
 
     /**
-     * @return array{campaignsUsed: int, campaignsLimit: int, recipientsLimit: int}
+     * @return array{campaignsUsed: int, campaignsLimit: int, recipientsLimit: int, allowed: bool}
      */
     public static function usageSummary(Company $company): array
     {
@@ -52,6 +64,7 @@ final class WhatsAppCampaignLimitService
             'campaignsUsed' => self::campaignsUsedThisMonth($company),
             'campaignsLimit' => self::getCampaignsLimit($company),
             'recipientsLimit' => self::getRecipientsLimit($company),
+            'allowed' => PlanLimitService::companyAllowsWhatsappCampaigns($company),
         ];
     }
 }

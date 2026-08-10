@@ -332,6 +332,10 @@ class CmsSeoService
                 'title' => 'About us — RelayIQ',
                 'description' => 'Learn how RelayIQ helps businesses sell and support customers on WhatsApp.',
             ],
+            'solutions' => [
+                'title' => 'Solutions — RelayIQ',
+                'description' => 'AI chats, catalog, payments, bookings, dine-in, storefront, and growth — one commerce OS for WhatsApp and the web.',
+            ],
             'contact' => [
                 'title' => 'Contact — RelayIQ',
                 'description' => 'Get in touch with the RelayIQ team.',

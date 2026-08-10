@@ -7,15 +7,22 @@ use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Services\Platform\EntitlementService;
 use App\Services\PlatformPayments\PlatformPaymentRegistry;
+use App\Services\RegionalPricingService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Cookie;
 
 class PlanController extends Controller
 {
     /**
      * List plans for public pricing page (no auth).
+     * Currency is resolved from ?currency=, cookie, Cloudflare CF-IPCountry, or default.
      */
-    public function index(PlatformPaymentRegistry $platformRegistry): JsonResponse
+    public function index(Request $request, PlatformPaymentRegistry $platformRegistry, RegionalPricingService $pricing): JsonResponse
     {
+        $context = $pricing->resolveFromRequest($request);
+        $currency = $context['currency'];
+
         $availableDrivers = $platformRegistry->getAvailableDrivers();
         $methodsMap = [];
         foreach ($availableDrivers as $driver) {
@@ -32,26 +39,35 @@ class PlanController extends Controller
             : null;
 
         $plans = Plan::orderBy('sort_order')->orderBy('id')->get();
-        $data = $plans->map(function (Plan $p) use ($availableDrivers, $paystackCurrency) {
+        $data = $plans->map(function (Plan $p) use ($availableDrivers, $paystackCurrency, $pricing, $currency) {
             $planMethods = [];
             foreach ($availableDrivers as $driver) {
                 if ($driver->getId() === 'stripe' && empty($p->stripe_price_id)) {
                     continue;
                 }
-                if (($driver->getId() === 'mpesa' || $driver->getId() === 'paystack' || $driver->getId() === 'manual') && ((float) $p->price_amount <= 0 || $p->is_free)) {
+                $amountForGateway = $pricing->amountForPlan(
+                    $p,
+                    strtoupper((string) ($driver->getMetadata()['currency'] ?? $currency))
+                );
+                $chargeable = $amountForGateway !== null ? (float) $amountForGateway : (float) ($p->price_amount ?? 0);
+                if (($driver->getId() === 'mpesa' || $driver->getId() === 'paystack' || $driver->getId() === 'manual'
+                    || $driver->getId() === 'pesapal' || $driver->getId() === 'flutterwave')
+                    && ($chargeable <= 0 || $p->is_free)) {
                     continue;
                 }
                 $planMethods[$driver->getId()] = true;
             }
 
             $limits = app(EntitlementService::class)->limitsForPlanSlug($p->slug);
+            $amount = $pricing->amountForPlan($p, $currency);
 
             return [
                 'id' => (string) $p->id,
                 'name' => $p->name,
                 'slug' => $p->slug,
-                'price' => $p->price_display,
-                'priceAmount' => $p->price_amount !== null ? (float) $p->price_amount : null,
+                'price' => $pricing->displayForPlan($p, $currency),
+                'priceAmount' => $amount,
+                'currency' => $currency,
                 'paystackCurrency' => ! empty($planMethods['paystack']) ? $paystackCurrency : null,
                 'description' => $p->description ?? '',
                 'features' => $p->features ?? [],
@@ -70,6 +86,10 @@ class PlanController extends Controller
                     'maxBookingsPerMonth' => array_key_exists('max_bookings_per_month', $limits)
                         ? ($limits['max_bookings_per_month'] === null ? null : (int) $limits['max_bookings_per_month'])
                         : 0,
+                    'allowStorefront' => (bool) ($limits['allow_storefront'] ?? true),
+                    'allowLinkInBio' => (bool) ($limits['allow_link_in_bio'] ?? true),
+                    'allowDineIn' => (bool) ($limits['allow_dine_in'] ?? false),
+                    'allowWhatsappCampaigns' => (bool) ($limits['allow_whatsapp_campaigns'] ?? true),
                 ],
                 'popular' => (bool) $p->popular,
                 'cta' => $p->cta ?? 'Start Free Trial',
@@ -81,6 +101,34 @@ class PlanController extends Controller
             ];
         });
 
-        return response()->json($data->values()->all());
+        $payload = [
+            'currency' => $currency,
+            'currencyLabel' => $context['label'],
+            'currencySymbol' => $context['symbol'],
+            'detectedCountry' => $context['country'],
+            'source' => $context['source'],
+            'availableCurrencies' => $context['available'],
+            'plans' => $data->values()->all(),
+        ];
+
+        $response = response()->json($payload);
+
+        if ($context['source'] === RegionalPricingService::SOURCE_QUERY) {
+            $cookieName = (string) config('pricing.cookie', 'pricing_currency');
+            $minutes = max(60, (int) config('pricing.cookie_days', 30) * 24 * 60);
+            $response->headers->setCookie(new Cookie(
+                $cookieName,
+                $currency,
+                now()->addMinutes($minutes),
+                '/',
+                null,
+                $request->isSecure(),
+                true,
+                false,
+                Cookie::SAMESITE_LAX
+            ));
+        }
+
+        return $response;
     }
 }

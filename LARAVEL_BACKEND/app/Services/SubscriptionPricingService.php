@@ -28,14 +28,16 @@ class SubscriptionPricingService
      */
     public function quote(Plan $plan, Company $company, ?string $couponCode = null, ?string $currency = null): array
     {
-        $original = (float) ($plan->price_amount ?? 0);
+        $currency = strtoupper($currency ?: (PaystackService::isEnabled()
+            ? app(PaystackService::class)->getCurrency()
+            : (string) config('pricing.default_currency', 'USD')));
+
+        $regional = app(RegionalPricingService::class);
+        $resolvedAmount = $regional->amountForPlan($plan, $currency);
+        $original = (float) ($resolvedAmount ?? $plan->price_amount ?? 0);
         if ($original <= 0 || $plan->is_free) {
             return ['success' => false, 'message' => 'This plan is not available for paid checkout.'];
         }
-
-        $currency = strtoupper($currency ?: (PaystackService::isEnabled()
-            ? app(PaystackService::class)->getCurrency()
-            : 'USD'));
 
         if ($couponCode === null || trim($couponCode) === '') {
             return [

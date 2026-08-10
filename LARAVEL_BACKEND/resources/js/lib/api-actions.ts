@@ -1357,6 +1357,24 @@ export async function updateSettings(data: UpdateSettingsData): Promise<{ succes
   }
 }
 
+/**
+ * Dismiss the Getting Started checklist on the company dashboard
+ * Laravel: POST /api/company/setup-status/dismiss
+ */
+export async function dismissSetupChecklist(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>('/api/company/setup-status/dismiss', {
+      method: 'POST',
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 /** Payload for connecting WhatsApp via Meta Cloud API */
 export interface ConnectWhatsAppPayload {
   phoneNumberId: string
@@ -1789,6 +1807,10 @@ export interface PlanEntitlements {
   allowService?: boolean
   allowBookings?: boolean
   maxBookingsPerMonth?: number | null
+  allowStorefront?: boolean
+  allowLinkInBio?: boolean
+  allowDineIn?: boolean
+  allowWhatsappCampaigns?: boolean
 }
 
 export interface CreatePlanData {

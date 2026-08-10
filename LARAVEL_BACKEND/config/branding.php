@@ -20,10 +20,10 @@ return [
 
     'product_tagline' => 'Every Conversation. Smarter.',
 
-    'powered_by' => 'Powered by Essem Digital Innovation Limited',
+    'powered_by' => 'Powered by Essem Digital',
 
-    'product_of' => 'RelayIQ is a product of Essem Digital Innovation Limited.',
+    'product_of' => 'A product of Essem Digital Innovation Limited',
 
-    'copyright' => '© '.date('Y').' Essem Digital Innovation Limited. RelayIQ is a product of Essem Digital Innovation Limited. All rights reserved.',
+    'copyright' => '© '.date('Y').' Essem Digital Innovation Limited. All rights reserved.',
 
 ];

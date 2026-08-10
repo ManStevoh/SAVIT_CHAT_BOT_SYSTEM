@@ -24,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
         $middleware->statefulApi();
+        $middleware->encryptCookies(except: [
+            'pricing_currency',
+        ]);
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,

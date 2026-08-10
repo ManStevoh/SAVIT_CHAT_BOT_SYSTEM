@@ -1,3 +1,4 @@
+import { AppErrorBoundary } from '@/components/AppErrorBoundary'
 import { AppBrandingProvider } from '@/components/providers/AppBrandingProvider'
 import { CookieConsentBanner } from '@/components/compliance/CookieConsentBanner'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -40,7 +41,15 @@ createInertiaApp({
     const pages = import.meta.glob('./Pages/**/*.tsx')
     const importPage = pages[`./Pages/${name}.tsx`]
     if (!importPage) {
-      throw new Error(`Page not found: ${name}`)
+      // After a deploy/rebuild, an open tab can still run an old bundle that
+      // doesn't know about newly added pages (e.g. Solutions). Force a full
+      // load so the browser picks up the current Vite manifest.
+      if (typeof window !== 'undefined') {
+        window.location.reload()
+      }
+      return new Promise(() => {}) as Promise<
+        React.ComponentType & { layout?: (page: ReactNode) => ReactNode }
+      >
     }
     const module = (await importPage()) as { default: React.ComponentType & { layout?: (page: ReactNode) => ReactNode } }
     const page = module.default
@@ -52,14 +61,16 @@ createInertiaApp({
   },
   setup({ el, App, props }) {
     createRoot(el).render(
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="essem-theme">
-        <AppBrandingProvider>
-          <App {...props} />
-          <CookieConsentBanner />
-          <Toaster />
-          <SonnerToaster position="top-right" richColors closeButton />
-        </AppBrandingProvider>
-      </ThemeProvider>,
+      <AppErrorBoundary>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="essem-theme">
+          <AppBrandingProvider>
+            <App {...props} />
+            <CookieConsentBanner />
+            <Toaster />
+            <SonnerToaster position="top-right" richColors closeButton />
+          </AppBrandingProvider>
+        </ThemeProvider>
+      </AppErrorBoundary>,
     )
   },
   progress: {

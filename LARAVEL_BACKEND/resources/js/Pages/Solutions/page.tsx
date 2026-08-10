@@ -1,0 +1,12 @@
+import { LandoCmsPage } from "@/components/lando/cms-page"
+import type { SeoPayload } from "@/components/seo/SeoHead"
+
+export default function SolutionsPage({ seo }: { seo?: SeoPayload | null }) {
+  return (
+    <LandoCmsPage
+      slug="solutions"
+      fallbackTitle="Solutions — RelayIQ"
+      initialSeo={seo}
+    />
+  )
+}

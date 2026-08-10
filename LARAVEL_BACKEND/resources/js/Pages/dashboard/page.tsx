@@ -13,6 +13,7 @@ import { useAnalytics, useOrders, useChats, useCompanySettings, useSubscription 
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import { CHART_ACCENT, CHART_PRIMARY } from '@/lib/chart-colors'
 import { MessageSquare, ShoppingCart, Users, Bot, ArrowRight } from 'lucide-react'
+import { GettingStartedChecklist } from '@/components/dashboard/GettingStartedChecklist'
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -70,6 +71,8 @@ function DashboardPageContent() {
 
   return (
     <div className="space-y-8">
+      <GettingStartedChecklist />
+
       {showTrialBanner && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
           <p className="font-medium">

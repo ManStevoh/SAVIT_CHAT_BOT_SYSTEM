@@ -7,6 +7,7 @@ use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Services\PesapalService;
 use App\Services\PlatformPayments\Contracts\PlatformPaymentDriverInterface;
+use App\Services\RegionalPricingService;
 
 class PlatformPesapalDriver implements PlatformPaymentDriverInterface
 {
@@ -46,16 +47,15 @@ class PlatformPesapalDriver implements PlatformPaymentDriverInterface
             return ['success' => false, 'error' => 'Pesapal platform payment is not available.'];
         }
 
-        $amount = (float) $plan->price_amount;
+        $cfg = PaymentGateway::getConfig('pesapal');
+        $currency = strtoupper((string) ($cfg['currency'] ?? 'KES'));
+        $amount = (float) (app(RegionalPricingService::class)->amountForPlan($plan, $currency) ?? $plan->price_amount ?? 0);
         if ($amount <= 0 || $plan->is_free) {
             return ['success' => false, 'error' => 'Selected plan does not require payment.'];
         }
 
         $reference = 'sub_pesapal_'.uniqid().'_'.$company->id;
         $callbackUrl = url('/api/pesapal/callback');
-
-        $cfg = PaymentGateway::getConfig('pesapal');
-        $currency = strtoupper((string) ($cfg['currency'] ?? 'KES'));
 
         $nameParts = explode(' ', trim((string) ($company->name ?? 'Company')), 2);
 

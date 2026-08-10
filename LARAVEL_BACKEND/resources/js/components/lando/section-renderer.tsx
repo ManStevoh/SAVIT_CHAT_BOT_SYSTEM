@@ -21,6 +21,12 @@ import {
   LandoTeam,
   LandoContactSection,
 } from "./content-sections"
+import {
+  LandoSolutionPillars,
+  LandoIndustries,
+  LandoDemoGallery,
+  LandoOutcomes,
+} from "./solution-sections"
 
 type Content = Record<string, unknown>
 
@@ -70,7 +76,7 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           />
         )
       }
-      if (pageSlug === "pricing") {
+      if (pageSlug === "pricing" || pageSlug === "solutions") {
         return <LandoPageHero title={str(content.title)} description={str(content.description)} />
       }
       return (
@@ -162,6 +168,42 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
           steps={arr(content.steps)}
+        />
+      )
+
+    case "solution_pillars":
+      return (
+        <LandoSolutionPillars
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
+        />
+      )
+
+    case "industries":
+      return (
+        <LandoIndustries
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
+        />
+      )
+
+    case "demos":
+      return (
+        <LandoDemoGallery
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
+        />
+      )
+
+    case "outcomes":
+      return (
+        <LandoOutcomes
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
         />
       )
 

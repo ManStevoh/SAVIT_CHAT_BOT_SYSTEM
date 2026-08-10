@@ -66,6 +66,7 @@ Route::get('/debug.txt', function () {
 
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');
+Route::get('/solutions', [PageController::class, 'solutions'])->name('solutions');
 Route::get('/pricing', [PageController::class, 'pricing'])->name('pricing');
 Route::get('/about', [PageController::class, 'about'])->name('about');
 Route::get('/contact', [PageController::class, 'contact'])->name('contact');

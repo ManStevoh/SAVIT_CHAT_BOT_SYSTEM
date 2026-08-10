@@ -75,6 +75,10 @@ class PlanController extends Controller
             'entitlements.allowService' => 'sometimes|boolean',
             'entitlements.allowBookings' => 'sometimes|boolean',
             'entitlements.maxBookingsPerMonth' => 'nullable|integer|min:0|max:1000000',
+            'entitlements.allowStorefront' => 'sometimes|boolean',
+            'entitlements.allowLinkInBio' => 'sometimes|boolean',
+            'entitlements.allowDineIn' => 'sometimes|boolean',
+            'entitlements.allowWhatsappCampaigns' => 'sometimes|boolean',
         ];
     }
 
@@ -110,6 +114,10 @@ class PlanController extends Controller
             'allow_service' => $e['allowService'] ?? null,
             'allow_bookings' => $e['allowBookings'] ?? null,
             'max_bookings_per_month' => $e['maxBookingsPerMonth'] ?? null,
+            'allow_storefront' => $e['allowStorefront'] ?? null,
+            'allow_link_in_bio' => $e['allowLinkInBio'] ?? null,
+            'allow_dine_in' => $e['allowDineIn'] ?? null,
+            'allow_whatsapp_campaigns' => $e['allowWhatsappCampaigns'] ?? null,
         ];
 
         // Drop nulls that mean "not provided" except messages (null = unlimited when messagesUnlimited).

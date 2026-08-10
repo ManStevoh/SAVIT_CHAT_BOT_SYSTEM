@@ -54,6 +54,7 @@ import {
   Copy,
 } from "lucide-react"
 import { OnboardingInterviewPanel } from "@/components/agent/OnboardingInterviewPanel"
+import { useSearchParams } from "next/navigation"
 
 function isMasked(val: unknown): boolean {
   return typeof val === "string" && val.startsWith("••••")
@@ -107,7 +108,18 @@ export default function SettingsPage() {
   const { data: settings } = useCompanySettings()
   const { data: teamMembers = [] } = useCompanyTeam()
   const { data: whatsappNumbers = [] } = useWhatsAppNumbers()
-  const [activeTab, setActiveTab] = useState("profile")
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab')
+  const allowedTabs = new Set(['profile', 'whatsapp', 'ai', 'team', 'notifications', 'order-payments'])
+  const [activeTab, setActiveTab] = useState(() =>
+    tabFromUrl && allowedTabs.has(tabFromUrl) ? tabFromUrl : 'profile'
+  )
+
+  useEffect(() => {
+    if (tabFromUrl && allowedTabs.has(tabFromUrl)) {
+      setActiveTab(tabFromUrl)
+    }
+  }, [tabFromUrl])
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [profileSuccess, setProfileSuccess] = useState(false)

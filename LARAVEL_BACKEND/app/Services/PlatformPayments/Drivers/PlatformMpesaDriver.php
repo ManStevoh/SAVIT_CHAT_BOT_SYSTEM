@@ -7,6 +7,7 @@ use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Services\MpesaService;
 use App\Services\PlatformPayments\Contracts\PlatformPaymentDriverInterface;
+use App\Services\RegionalPricingService;
 
 class PlatformMpesaDriver implements PlatformPaymentDriverInterface
 {
@@ -51,12 +52,13 @@ class PlatformMpesaDriver implements PlatformPaymentDriverInterface
             return ['success' => false, 'error' => 'M-Pesa phone number is required for STK push.'];
         }
 
-        $amount = (float) $plan->price_amount;
+        $cfg = PaymentGateway::getConfig('mpesa');
+        $currency = strtoupper((string) ($cfg['currency'] ?? 'KES'));
+        $amount = (float) (app(RegionalPricingService::class)->amountForPlan($plan, $currency) ?? $plan->price_amount ?? 0);
         if ($amount <= 0 || $plan->is_free) {
             return ['success' => false, 'error' => 'Selected plan does not require payment.'];
         }
 
-        $cfg = PaymentGateway::getConfig('mpesa');
         $callbackUrl = $cfg['callback_url'] ?? rtrim(config('app.url'), '/').'/api/mpesa/callback';
 
         $accountRef = 'SUB-'.$plan->slug.'-'.$company->id;

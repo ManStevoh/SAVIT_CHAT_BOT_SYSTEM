@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\DineInTable;
+use App\Services\PlanLimitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -12,18 +13,35 @@ class DineInTableController extends Controller
     public function index(Request $request): JsonResponse
     {
         $company = $request->user()->company;
+        if (! PlanLimitService::companyAllowsDineIn($company)) {
+            return response()->json([
+                'tables' => [],
+                'code' => 'dine_in_required',
+                'message' => 'Dine-in table QR is not available on your current plan.',
+                'allowed' => false,
+            ]);
+        }
+
         $tables = DineInTable::query()
             ->where('company_id', $company->id)
             ->orderBy('name')
             ->get()
             ->map(fn (DineInTable $t) => $this->serialize($t));
 
-        return response()->json(['tables' => $tables]);
+        return response()->json(['tables' => $tables, 'allowed' => true]);
     }
 
     public function store(Request $request): JsonResponse
     {
         $company = $request->user()->company;
+        if (! PlanLimitService::companyAllowsDineIn($company)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'dine_in_required',
+                'message' => 'Dine-in table QR is not available on your current plan. Upgrade to Growth or Enterprise.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'code' => 'nullable|string|max:40',
@@ -46,6 +64,13 @@ class DineInTableController extends Controller
     public function update(Request $request, DineInTable $dineInTable): JsonResponse
     {
         $company = $request->user()->company;
+        if (! PlanLimitService::companyAllowsDineIn($company)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'dine_in_required',
+                'message' => 'Dine-in table QR is not available on your current plan.',
+            ], 403);
+        }
         if ($dineInTable->company_id !== $company->id) {
             return response()->json(['message' => 'Not found.'], 404);
         }

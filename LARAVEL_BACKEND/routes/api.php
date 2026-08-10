@@ -74,6 +74,7 @@ use App\Http\Controllers\Api\Company\PaystackCheckoutController;
 use App\Http\Controllers\Api\Company\ProductController;
 use App\Http\Controllers\Api\Company\BookingController;
 use App\Http\Controllers\Api\Company\SettingsController;
+use App\Http\Controllers\Api\Company\SetupStatusController;
 use App\Http\Controllers\Api\Company\StripeCheckoutController;
 use App\Http\Controllers\Api\Company\SubscriptionController;
 use App\Http\Controllers\Api\Company\TaxRateController;
@@ -281,6 +282,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('settings', [SettingsController::class, 'show']);
     Route::put('settings', [SettingsController::class, 'update']);
     Route::post('settings', [SettingsController::class, 'update']); // multipart logo (PHP files require POST)
+    Route::get('setup-status', [SetupStatusController::class, 'show']);
+    Route::post('setup-status/dismiss', [SetupStatusController::class, 'dismiss']);
     Route::get('commerce-brief', [CommerceBriefController::class, 'today']);
     Route::get('executive-ai/dashboard', [ExecutiveAiController::class, 'dashboard']);
     Route::get('executive-ai/opportunities', [ExecutiveAiController::class, 'opportunities']);

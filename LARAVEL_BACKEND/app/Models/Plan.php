@@ -11,6 +11,7 @@ class Plan extends Model
         'slug',
         'price_display',
         'price_amount',
+        'regional_prices',
         'description',
         'features',
         'entitlements',
@@ -26,6 +27,7 @@ class Plan extends Model
 
     protected $casts = [
         'price_amount' => 'decimal:2',
+        'regional_prices' => 'array',
         'popular' => 'boolean',
         'features' => 'array',
         'entitlements' => 'array',

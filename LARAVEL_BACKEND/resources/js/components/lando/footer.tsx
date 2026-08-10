@@ -100,8 +100,7 @@ export function LandoFooter({
         <div>
           <AppLogoAndName variant="navbar" className="font-bold text-foreground" />
           <p className="mt-3 text-sm text-muted-foreground">{BRAND.productOf}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{BRAND.poweredBy}</p>
-          <p className="mt-4 text-sm text-muted-foreground">{copy}</p>
+          <p className="mt-3 text-sm text-muted-foreground">{copy}</p>
           <a
             href={BRAND.companyWebsite}
             target="_blank"

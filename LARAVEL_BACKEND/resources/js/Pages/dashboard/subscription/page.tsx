@@ -27,7 +27,8 @@ function SubscriptionPageContent() {
   const { data: subscription, error, isLoading, mutate } = useSubscription()
   const { data: billingHistory = [] } = useSubscriptionInvoices()
   const { data: usageData } = useSubscriptionUsage()
-  const { data: plansData = [] } = usePlans()
+  const { data: plansResponse } = usePlans()
+  const plansData = plansResponse?.plans ?? []
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<"success" | "cancelled" | null>(null)
@@ -56,10 +57,10 @@ function SubscriptionPageContent() {
     name: p.name,
     slug: p.slug,
     price: p.price ?? p.priceDisplay ?? "—",
-    features: p.features ?? [],
+    features: Array.isArray(p.features) ? p.features : [],
     current: p.slug === planSlug,
     checkoutAvailable: p.checkoutAvailable ?? false,
-    paymentMethods: p.paymentMethods ?? {},
+    paymentMethods: p.paymentMethods && typeof p.paymentMethods === "object" ? p.paymentMethods : {},
   }))
 
   useEffect(() => {

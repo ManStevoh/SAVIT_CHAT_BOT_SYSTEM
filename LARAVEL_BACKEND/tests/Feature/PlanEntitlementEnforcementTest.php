@@ -81,6 +81,10 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertFalse($starter->entitlements['allow_service']);
         $this->assertFalse($starter->entitlements['allow_bookings']);
         $this->assertSame(0, $starter->entitlements['max_bookings_per_month']);
+        $this->assertTrue($starter->entitlements['allow_storefront']);
+        $this->assertTrue($starter->entitlements['allow_link_in_bio']);
+        $this->assertFalse($starter->entitlements['allow_dine_in']);
+        $this->assertTrue($starter->entitlements['allow_whatsapp_campaigns']);
 
         $this->assertSame(50000, $growth->entitlements['messages']);
         $this->assertTrue($growth->entitlements['api_access']);
@@ -90,6 +94,9 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertTrue($growth->entitlements['allow_service']);
         $this->assertTrue($growth->entitlements['allow_bookings']);
         $this->assertSame(50, $growth->entitlements['max_bookings_per_month']);
+        $this->assertTrue($growth->entitlements['allow_storefront']);
+        $this->assertTrue($growth->entitlements['allow_dine_in']);
+        $this->assertTrue($growth->entitlements['allow_whatsapp_campaigns']);
 
         $this->assertNull($enterprise->entitlements['messages']);
         $this->assertSame(50, $enterprise->entitlements['team']);
@@ -97,7 +104,7 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertNull($enterprise->entitlements['max_bookings_per_month']);
 
         $response = $this->getJson('/api/plans')->assertOk();
-        $plans = collect($response->json());
+        $plans = collect($response->json('plans'));
         $this->assertFalse((bool) data_get($plans->firstWhere('slug', 'starter'), 'entitlements.apiAccess'));
         $this->assertTrue((bool) data_get($plans->firstWhere('slug', 'professional'), 'entitlements.apiAccess'));
         $this->assertFalse((bool) data_get($plans->firstWhere('slug', 'starter'), 'entitlements.allowService'));
@@ -249,5 +256,51 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertStringNotContainsString('3 whatsapp', $blob);
         $this->assertStringContainsString('api access', $blob);
         $this->assertStringContainsString('analytics', $blob);
+        $this->assertStringContainsString('dine-in', $blob);
+        $this->assertStringContainsString('bookings', $blob);
+
+        $starter = Plan::where('slug', 'starter')->firstOrFail();
+        $starterBlob = strtolower(implode(' ', $starter->features));
+        $this->assertStringContainsString('storefront', $starterBlob);
+        $this->assertStringContainsString('physical & digital', $starterBlob);
+        $this->assertStringNotContainsString('dine-in', $starterBlob);
+    }
+
+    public function test_dine_in_gated_by_plan(): void
+    {
+        ['owner' => $starterOwner] = $this->companyOnPlan('starter');
+        Sanctum::actingAs($starterOwner);
+
+        $this->postJson('/api/company/dine-in-tables', [
+            'name' => 'Table 1',
+        ])->assertStatus(403)
+            ->assertJsonPath('code', 'dine_in_required');
+
+        $this->putJson('/api/company/settings', [
+            'dineInEnabled' => true,
+        ])->assertStatus(403)
+            ->assertJsonPath('code', 'dine_in_required');
+
+        ['owner' => $growthOwner] = $this->companyOnPlan('professional');
+        Sanctum::actingAs($growthOwner);
+
+        $this->postJson('/api/company/dine-in-tables', [
+            'name' => 'Table 7',
+        ])->assertCreated()
+            ->assertJsonPath('success', true);
+    }
+
+    public function test_storefront_entitlement_allows_starter_enable(): void
+    {
+        ['company' => $company, 'owner' => $owner] = $this->companyOnPlan('starter');
+        Sanctum::actingAs($owner);
+
+        $this->assertTrue(PlanLimitService::companyAllowsStorefront($company));
+        $this->assertFalse(PlanLimitService::companyAllowsDineIn($company));
+
+        $this->putJson('/api/company/settings', [
+            'storefrontEnabled' => true,
+            'storeSlug' => 'starter-shop-'.uniqid(),
+        ])->assertOk();
     }
 }

@@ -169,14 +169,17 @@ class PaystackSubscriptionService
         $amountSubunit = (int) ($data['amount'] ?? 0);
         $amount = $amountSubunit > 0 ? $amountSubunit / 100 : 0;
 
+        $currency = strtoupper((string) ($data['currency'] ?? $this->paystack->getCurrency()));
         $pendingPayment = BillingPayment::where('gateway', 'paystack')
             ->where('external_payment_id', $reference)
             ->where('status', 'pending')
             ->first();
         $cached = Cache::get(PaystackService::CACHE_KEY_SUB_PREFIX.$reference);
+        $regionalExpected = app(RegionalPricingService::class)->amountForPlan($plan, $currency);
         $expected = (float) (
             $pendingPayment?->amount
             ?? (is_array($cached) ? ($cached['expected_amount'] ?? null) : null)
+            ?? $regionalExpected
             ?? $plan->price_amount
         );
 
@@ -190,7 +193,6 @@ class PaystackSubscriptionService
             return ['success' => false, 'message' => 'Payment amount does not match expected checkout amount.'];
         }
 
-        $currency = strtoupper((string) ($data['currency'] ?? $this->paystack->getCurrency()));
         $ledgerEventId = $eventId ?: (string) ($data['id'] ?? $reference);
 
         try {

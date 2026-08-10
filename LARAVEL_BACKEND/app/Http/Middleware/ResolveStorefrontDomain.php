@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Company;
+use App\Services\PlanLimitService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,7 +32,7 @@ class ResolveStorefrontDomain
             ->whereNotNull('store_slug')
             ->first();
 
-        if (! $company) {
+        if (! $company || ! PlanLimitService::companyAllowsStorefront($company)) {
             return $next($request);
         }
 
@@ -61,6 +62,7 @@ class ResolveStorefrontDomain
         foreach ([
             's/', 'pay/', 'invoice/', 'b/', 'api/', 'build/', 'storage/', 'sanctum/',
             'dashboard', 'admin', 'login', 'register', 'blog', 'pricing', 'about', 'contact',
+            'solutions',
         ] as $prefix) {
             if ($path === rtrim($prefix, '/') || str_starts_with($path, $prefix)) {
                 return true;

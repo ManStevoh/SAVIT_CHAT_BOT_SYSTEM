@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Services\PlatformPayments\Contracts\PlatformPaymentDriverInterface;
+use App\Services\RegionalPricingService;
 
 class PlatformManualDriver implements PlatformPaymentDriverInterface
 {
@@ -55,11 +56,15 @@ class PlatformManualDriver implements PlatformPaymentDriverInterface
             );
         }
 
+        $currency = strtoupper((string) ($cfg['currency'] ?? 'KES'));
+        $amount = (float) (app(RegionalPricingService::class)->amountForPlan($plan, $currency) ?? $plan->price_amount ?? 0);
+
         return [
             'success' => true,
             'gateway' => 'manual',
             'invoice_reference' => $invoiceRef,
-            'amount' => (float) $plan->price_amount,
+            'amount' => $amount,
+            'currency' => $currency,
             'instructions' => $instructions,
             'type' => 'manual_instructions',
         ];

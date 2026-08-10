@@ -227,6 +227,7 @@ export interface Plan {
   price?: string
   priceDisplay?: string
   priceAmount?: number | null
+  currency?: string
   description?: string
   features: string[]
   popular: boolean

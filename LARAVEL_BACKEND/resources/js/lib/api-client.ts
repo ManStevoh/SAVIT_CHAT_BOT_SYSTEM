@@ -132,8 +132,13 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   if (!response.ok) {
     const code = (data as { code?: string })?.code
     if (response.status === 403 && code === 'subscription_expired' && typeof window !== 'undefined') {
-      window.location.href = '/dashboard/subscription?expired=1'
-      return new Promise(() => {}) as T
+      // Avoid reload loop: dashboard shell (navbar notifications, etc.) still calls APIs
+      // while the user is already on the renew page after an expired redirect.
+      const onSubscriptionPage = window.location.pathname.startsWith('/dashboard/subscription')
+      if (!onSubscriptionPage) {
+        window.location.assign('/dashboard/subscription?expired=1')
+        return new Promise(() => {}) as T
+      }
     }
     const message = (data as { message?: string })?.message ?? data?.errors ?? response.statusText
     const err = new Error(typeof message === 'string' ? message : JSON.stringify(message)) as Error & { code?: string; responseData?: unknown }

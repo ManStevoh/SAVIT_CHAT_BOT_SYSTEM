@@ -50,22 +50,85 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 // ============================================
 
 /**
- * Fetch plans for public pricing page
+ * Public pricing payload (geo / manual currency aware)
  * API Endpoint: GET /api/plans
  */
-export function usePlans() {
-  return useSWR<Plan[]>(
-    'plans',
+export interface PricingCurrencyOption {
+  code: string
+  label: string
+  symbol: string
+}
+
+export interface PlansResponse {
+  currency: string
+  currencyLabel: string
+  currencySymbol: string
+  detectedCountry: string | null
+  source: string
+  availableCurrencies: PricingCurrencyOption[]
+  plans: Plan[]
+}
+
+function normalizePlansResponse(data: PlansResponse | Plan[]): PlansResponse {
+  if (Array.isArray(data)) {
+    return {
+      currency: 'USD',
+      currencyLabel: 'US Dollar',
+      currencySymbol: '$',
+      detectedCountry: null,
+      source: 'default',
+      availableCurrencies: [
+        { code: 'KES', label: 'Kenyan Shilling', symbol: 'KSh' },
+        { code: 'USD', label: 'US Dollar', symbol: '$' },
+        { code: 'NGN', label: 'Nigerian Naira', symbol: '₦' },
+      ],
+      plans: data,
+    }
+  }
+  return {
+    currency: data.currency ?? 'USD',
+    currencyLabel: data.currencyLabel ?? data.currency ?? 'USD',
+    currencySymbol: data.currencySymbol ?? '$',
+    detectedCountry: data.detectedCountry ?? null,
+    source: data.source ?? 'default',
+    availableCurrencies: data.availableCurrencies ?? [],
+    plans: data.plans ?? [],
+  }
+}
+
+/**
+ * Fetch plans for public pricing page
+ * API Endpoint: GET /api/plans?currency=KES
+ */
+export function usePlans(currency?: string | null) {
+  const key = currency ? (['plans', currency] as const) : ('plans' as const)
+  return useSWR<PlansResponse>(
+    key,
     async () => {
       if (!useMockApi()) {
-        return apiRequest<Plan[]>(('/api/plans'))
+        const query = currency ? `?currency=${encodeURIComponent(currency)}` : ''
+        const data = await apiRequest<PlansResponse | Plan[]>(`/api/plans${query}`)
+        return normalizePlansResponse(data)
       }
       await delay(400)
-      return [
-        { id: '1', name: 'Starter', slug: 'starter', price: '$29', description: 'Perfect for small businesses just getting started', features: ['1 WhatsApp number', '1,000 messages/month', 'Basic AI chatbot', 'Order management', 'Email support'], popular: false, cta: 'Start Free Trial', checkoutAvailable: true },
-        { id: '2', name: 'Growth', slug: 'professional', price: '$99', description: 'For growing businesses with higher volume', features: ['3 WhatsApp numbers', '10,000 messages/month', 'Advanced AI with GPT-4', 'Multi-agent inbox', 'Analytics dashboard', 'Priority support', 'API access'], popular: true, cta: 'Start Free Trial', checkoutAvailable: true },
-        { id: '3', name: 'Enterprise', slug: 'enterprise', price: 'Custom', description: 'For large organizations with custom needs', features: ['Unlimited WhatsApp numbers', 'Unlimited messages', 'Custom AI training', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee', 'On-premise option'], popular: false, cta: 'Contact Sales', checkoutAvailable: false },
+      const mockPlans: Plan[] = [
+        { id: '1', name: 'Starter', slug: 'starter', price: currency === 'KES' ? 'KSh 3,799' : currency === 'NGN' ? '₦ 45,000' : '$29', priceAmount: currency === 'KES' ? 3799 : currency === 'NGN' ? 45000 : 29, currency: currency ?? 'USD', description: 'Perfect for small businesses just getting started', features: ['1 WhatsApp number', '1,000 messages/month', 'Basic AI chatbot', 'Order management', 'Email support'], popular: false, cta: 'Start Free Trial', checkoutAvailable: true },
+        { id: '2', name: 'Growth', slug: 'professional', price: currency === 'KES' ? 'KSh 12,999' : currency === 'NGN' ? '₦ 155,000' : '$99', priceAmount: currency === 'KES' ? 12999 : currency === 'NGN' ? 155000 : 99, currency: currency ?? 'USD', description: 'For growing businesses with higher volume', features: ['3 WhatsApp numbers', '10,000 messages/month', 'Advanced AI with GPT-4', 'Multi-agent inbox', 'Analytics dashboard', 'Priority support', 'API access'], popular: true, cta: 'Start Free Trial', checkoutAvailable: true },
+        { id: '3', name: 'Enterprise', slug: 'enterprise', price: 'Custom', currency: currency ?? 'USD', description: 'For large organizations with custom needs', features: ['Unlimited WhatsApp numbers', 'Unlimited messages', 'Custom AI training', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee', 'On-premise option'], popular: false, cta: 'Contact Sales', checkoutAvailable: false },
       ]
+      return normalizePlansResponse({
+        currency: currency ?? 'USD',
+        currencyLabel: currency === 'KES' ? 'Kenyan Shilling' : currency === 'NGN' ? 'Nigerian Naira' : 'US Dollar',
+        currencySymbol: currency === 'KES' ? 'KSh' : currency === 'NGN' ? '₦' : '$',
+        detectedCountry: null,
+        source: currency ? 'query' : 'default',
+        availableCurrencies: [
+          { code: 'KES', label: 'Kenyan Shilling', symbol: 'KSh' },
+          { code: 'USD', label: 'US Dollar', symbol: '$' },
+          { code: 'NGN', label: 'Nigerian Naira', symbol: '₦' },
+        ],
+        plans: mockPlans,
+      })
     },
     { revalidateOnFocus: false }
   )
@@ -746,6 +809,84 @@ export function useCompanySettings() {
       }
     },
     { revalidateOnFocus: false }
+  )
+}
+
+export type SetupStatusStep = {
+  id: string
+  title: string
+  description: string
+  href: string
+  done: boolean
+}
+
+export type SetupStatus = {
+  steps: SetupStatusStep[]
+  completedCount: number
+  totalCount: number
+  percent: number
+  dismissed: boolean
+  isComplete: boolean
+}
+
+/**
+ * Getting Started checklist for the company dashboard
+ * API Endpoint: GET /api/company/setup-status
+ */
+export function useSetupStatus() {
+  return useSWR<SetupStatus>(
+    'company-setup-status',
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<SetupStatus>('/api/company/setup-status')
+      }
+      await delay(200)
+      return {
+        steps: [
+          {
+            id: 'whatsapp',
+            title: 'Connect WhatsApp',
+            description: 'Link your WhatsApp Business number so the AI can reply to customers.',
+            href: '/dashboard/settings?tab=whatsapp',
+            done: false,
+          },
+          {
+            id: 'product',
+            title: 'Add your first product',
+            description: 'Add a physical, digital, or service item to your catalog.',
+            href: '/dashboard/products',
+            done: false,
+          },
+          {
+            id: 'payments',
+            title: 'Turn on a payment method',
+            description: 'Enable M-Pesa, Paystack, Stripe, or cash on delivery for orders.',
+            href: '/dashboard/settings?tab=order-payments',
+            done: false,
+          },
+          {
+            id: 'business',
+            title: 'Set business basics',
+            description: 'Add your business phone and timezone so customers get accurate replies.',
+            href: '/dashboard/settings?tab=profile',
+            done: false,
+          },
+          {
+            id: 'storefront',
+            title: 'Enable your storefront',
+            description: 'Turn on the web shop and choose a store slug customers can visit.',
+            href: '/dashboard/storefront',
+            done: false,
+          },
+        ],
+        completedCount: 0,
+        totalCount: 5,
+        percent: 0,
+        dismissed: false,
+        isComplete: false,
+      }
+    },
+    { revalidateOnFocus: true }
   )
 }
 

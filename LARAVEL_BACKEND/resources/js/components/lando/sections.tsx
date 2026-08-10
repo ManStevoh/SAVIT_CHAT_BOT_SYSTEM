@@ -11,6 +11,9 @@ import {
   MessagesSquare,
   Smartphone,
   Sparkles,
+  Store,
+  QrCode,
+  Truck,
   type LucideIcon,
 } from "lucide-react"
 
@@ -70,7 +73,7 @@ export function LandoHeroSection({
                 <Button
                   asChild
                   variant="outline"
-                  className="h-11 rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted"
+                  className="h-11 rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted hover:text-foreground"
                 >
                   <Link href={secondaryCtaHref}>{secondaryCtaText}</Link>
                 </Button>
@@ -122,6 +125,9 @@ const CAPABILITY_ICONS: Record<string, LucideIcon> = {
   inbox: MessagesSquare,
   mobile: Smartphone,
   sparkles: Sparkles,
+  store: Store,
+  dinein: QrCode,
+  delivery: Truck,
 }
 
 export function LandoCapabilities({
@@ -243,7 +249,7 @@ export function LandoFeatureBlock({
               <Button
                 asChild
                 variant="outline"
-                className="mt-8 h-11 rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted"
+                className="mt-8 h-11 rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted hover:text-foreground"
               >
                 <Link href={ctaHref}>{ctaText}</Link>
               </Button>

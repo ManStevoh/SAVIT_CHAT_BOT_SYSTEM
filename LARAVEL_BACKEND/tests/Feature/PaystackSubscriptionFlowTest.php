@@ -164,7 +164,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'gateway' => 'paystack',
             'external_payment_id' => 'essem_sub_'.$company->id.'_fixedref',
             'status' => 'pending',
-            'amount' => 99,
+            'amount' => 12999,
             'currency' => 'KES',
         ]);
     }
@@ -216,7 +216,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'gateway' => 'paystack',
             'external_event_id' => 'paystack_pending:'.$reference,
             'external_payment_id' => $reference,
-            'amount' => 99,
+            'amount' => 12999,
             'currency' => 'KES',
             'status' => 'pending',
             'payment_type' => 'subscription',
@@ -228,7 +228,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'data' => [
                 'id' => 555001,
                 'reference' => $reference,
-                'amount' => 9900,
+                'amount' => 1299900,
                 'currency' => 'KES',
                 'status' => 'success',
                 'metadata' => [
@@ -245,7 +245,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'status' => 'active',
             'payment_method' => 'paystack',
             'external_payment_id' => $reference,
-            'amount' => 99,
+            'amount' => 12999,
         ]);
 
         $this->assertSame(
@@ -286,7 +286,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'data' => [
                 'id' => 555002,
                 'reference' => $reference,
-                'amount' => 9900,
+                'amount' => 1299900,
                 'currency' => 'KES',
                 'metadata' => [
                     'type' => 'subscription',
@@ -317,7 +317,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'data' => [
                 'id' => 555003,
                 'reference' => $reference,
-                'amount' => 100, // 1.00 instead of 99.00
+                'amount' => 100, // 1.00 instead of expected plan amount
                 'currency' => 'KES',
                 'metadata' => [
                     'type' => 'subscription',
@@ -343,7 +343,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'gateway' => 'paystack',
             'external_event_id' => 'paystack_pending:'.$reference,
             'external_payment_id' => $reference,
-            'amount' => 99,
+            'amount' => 12999,
             'currency' => 'KES',
             'status' => 'pending',
             'payment_type' => 'subscription',
@@ -355,7 +355,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'data' => [
                 'id' => 555004,
                 'reference' => $reference,
-                'amount' => 9900,
+                'amount' => 1299900,
                 'currency' => 'KES',
                 'metadata' => ['type' => 'subscription'],
             ],
@@ -379,7 +379,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'gateway' => 'paystack',
             'external_event_id' => 'paystack_pending:'.$reference,
             'external_payment_id' => $reference,
-            'amount' => 99,
+            'amount' => 12999,
             'currency' => 'KES',
             'status' => 'pending',
             'payment_type' => 'subscription',
@@ -392,7 +392,7 @@ class PaystackSubscriptionFlowTest extends TestCase
                 'data' => [
                     'id' => 555005,
                     'reference' => $reference,
-                    'amount' => 9900,
+                    'amount' => 1299900,
                     'currency' => 'KES',
                     'status' => 'success',
                     'metadata' => [
@@ -438,7 +438,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'data' => [
                 'id' => 555006,
                 'reference' => $reference,
-                'amount' => 9900,
+                'amount' => 1299900,
                 'currency' => 'KES',
                 'metadata' => [
                     'type' => 'subscription',
@@ -473,7 +473,7 @@ class PaystackSubscriptionFlowTest extends TestCase
             'status' => 'active',
             'start_date' => now(),
             'end_date' => now()->addMonth(),
-            'amount' => 99,
+            'amount' => 12999,
             'billing_cycle' => 'monthly',
             'payment_method' => 'paystack',
             'external_payment_id' => 'cancel_ref',

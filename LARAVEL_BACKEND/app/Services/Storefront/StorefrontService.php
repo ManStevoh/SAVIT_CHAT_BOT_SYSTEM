@@ -17,6 +17,7 @@ use App\Models\StorefrontCustomer;
 use App\Models\StorefrontEvent;
 use App\Models\StorefrontSession;
 use App\Services\Orders\TaxCalculationService;
+use App\Services\PlanLimitService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -34,9 +35,15 @@ class StorefrontService
 
     public function resolveCompanyBySlug(string $slug): Company
     {
-        return Company::where('store_slug', $slug)
+        $company = Company::where('store_slug', $slug)
             ->where('storefront_enabled', true)
             ->firstOrFail();
+
+        if (! PlanLimitService::companyAllowsStorefront($company)) {
+            abort(404);
+        }
+
+        return $company;
     }
 
     /** @return Collection<int, Product> */

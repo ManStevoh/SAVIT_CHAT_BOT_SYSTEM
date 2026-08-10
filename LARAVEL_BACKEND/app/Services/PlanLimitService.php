@@ -72,6 +72,26 @@ final class PlanLimitService
         return self::entitlements()->allowsBookings($company);
     }
 
+    public static function companyAllowsStorefront(Company $company): bool
+    {
+        return self::entitlements()->allowsStorefront($company);
+    }
+
+    public static function companyAllowsLinkInBio(Company $company): bool
+    {
+        return self::entitlements()->allowsLinkInBio($company);
+    }
+
+    public static function companyAllowsDineIn(Company $company): bool
+    {
+        return self::entitlements()->allowsDineIn($company);
+    }
+
+    public static function companyAllowsWhatsappCampaigns(Company $company): bool
+    {
+        return self::entitlements()->allowsWhatsappCampaigns($company);
+    }
+
     public static function getMaxBookingsPerMonth(Company $company): ?int
     {
         return self::entitlements()->maxBookingsPerMonth($company);

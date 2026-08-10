@@ -82,5 +82,33 @@
 </head>
 <body class="font-sans antialiased">
     @inertia
+    <script>
+        (function () {
+            function showBootFailure(message) {
+                var app = document.getElementById('app');
+                if (!app || app.dataset.bootFailed === '1') return;
+                if (app.childElementCount > 0 && (app.innerText || '').trim().length > 0) return;
+                app.dataset.bootFailed = '1';
+                app.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;font-family:system-ui,sans-serif;color:#111">' +
+                    '<strong style="font-size:18px">App failed to load</strong>' +
+                    '<p style="max-width:28rem;text-align:center;color:#555;margin:0">' + message + '</p>' +
+                    '<button type="button" style="padding:8px 14px;border-radius:8px;border:1px solid #ccc;background:#fff;cursor:pointer" onclick="location.reload(true)">Hard refresh</button>' +
+                    '</div>';
+            }
+            window.addEventListener('error', function (event) {
+                var target = event && event.target;
+                if (target && target.tagName === 'SCRIPT' && target.src) {
+                    showBootFailure('A required script could not be loaded (often after a rebuild). Press Ctrl+Shift+R.');
+                }
+            }, true);
+            setTimeout(function () {
+                var app = document.getElementById('app');
+                if (!app) return;
+                if (app.childElementCount === 0 || !(app.innerText || '').trim()) {
+                    showBootFailure('The dashboard did not start. Press Ctrl+Shift+R to load the latest assets.');
+                }
+            }, 12000);
+        })();
+    </script>
 </body>
 </html>

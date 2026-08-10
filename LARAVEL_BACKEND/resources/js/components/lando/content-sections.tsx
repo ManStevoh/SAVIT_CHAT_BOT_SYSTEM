@@ -86,7 +86,8 @@ export function LandoTestimonials({
 }
 
 export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBadge?: string }) {
-  const { data: plans, isLoading } = usePlans()
+  const [currency, setCurrency] = useState<string | null>(null)
+  const { data, isLoading } = usePlans(currency)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
 
@@ -94,7 +95,15 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
     setIsLoggedIn(!!getAuthToken())
   }, [])
 
-  const list = plans ?? []
+  const list = data?.plans ?? []
+  const activeCurrency = data?.currency ?? currency ?? "USD"
+  const currencies = data?.availableCurrencies?.length
+    ? data.availableCurrencies
+    : [
+        { code: "KES", label: "Kenyan Shilling", symbol: "KSh" },
+        { code: "USD", label: "US Dollar", symbol: "$" },
+        { code: "NGN", label: "Nigerian Naira", symbol: "₦" },
+      ]
 
   const handleSubscribe = async (planId: string) => {
     setBusy(planId)
@@ -118,6 +127,31 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
   return (
     <section className="bg-muted pb-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="inline-flex rounded-lg border border-border bg-card p-1">
+            {currencies.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => setCurrency(c.code)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  activeCurrency === c.code
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {c.code}
+              </button>
+            ))}
+          </div>
+          <p className="text-center text-xs text-muted-foreground">
+            {data?.source === "cloudflare" || data?.source === "forced"
+              ? `Showing ${activeCurrency} based on your location${data?.detectedCountry ? ` (${data.detectedCountry})` : ""}.`
+              : `Showing prices in ${activeCurrency}.`}{" "}
+            Switch anytime.
+          </p>
+        </div>
         <div className="grid gap-6 lg:grid-cols-3">
           {list.map((plan) => (
             <div
@@ -134,9 +168,12 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
               )}
               <h3 className="text-xl font-bold text-card-foreground">{plan.name}</h3>
               <p className="mt-4 text-4xl font-bold text-card-foreground">{plan.price}</p>
+              {(plan.price ?? "") !== "Custom" && (
+                <p className="text-sm text-muted-foreground">per month</p>
+              )}
               <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
               <ul className="mt-6 space-y-3">
-                {plan.features.map((f) => (
+                {(plan.features ?? []).map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     {f}
@@ -148,7 +185,7 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                   "mt-8 w-full rounded-lg",
                   plan.popular
                     ? "bg-primary text-white hover:bg-primary/90"
-                    : "border-border bg-card text-foreground hover:bg-muted"
+                    : "border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
                 )}
                 variant={plan.popular ? "default" : "outline"}
                 disabled={busy !== null}

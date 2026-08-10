@@ -7,6 +7,7 @@ use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Services\PaystackService;
 use App\Services\PlatformPayments\Contracts\PlatformPaymentDriverInterface;
+use App\Services\RegionalPricingService;
 
 class PlatformPaystackDriver implements PlatformPaymentDriverInterface
 {
@@ -46,7 +47,9 @@ class PlatformPaystackDriver implements PlatformPaymentDriverInterface
             return ['success' => false, 'error' => 'Paystack platform payment is not available.'];
         }
 
-        $amount = (float) $plan->price_amount;
+        $cfg = PaymentGateway::getConfig('paystack');
+        $currency = strtoupper((string) ($cfg['currency'] ?? 'KES'));
+        $amount = (float) (app(RegionalPricingService::class)->amountForPlan($plan, $currency) ?? $plan->price_amount ?? 0);
         if ($amount <= 0 || $plan->is_free) {
             return ['success' => false, 'error' => 'Selected plan does not require payment.'];
         }
@@ -64,6 +67,7 @@ class PlatformPaystackDriver implements PlatformPaymentDriverInterface
                 'plan_id' => $plan->id,
                 'plan_slug' => $plan->slug,
                 'type' => 'subscription',
+                'currency' => $currency,
             ]
         );
 

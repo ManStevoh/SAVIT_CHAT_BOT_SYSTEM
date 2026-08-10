@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\DineInTable;
+use App\Services\PlanLimitService;
 use App\Services\Storefront\StorefrontService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,11 @@ class PublicDineInController extends Controller
             ->firstOrFail();
 
         $company = $table->company;
-        if ($company?->storefront_enabled && $company->store_slug) {
+        if (! $company || ! PlanLimitService::companyAllowsDineIn($company)) {
+            abort(404);
+        }
+
+        if ($company->storefront_enabled && $company->store_slug && PlanLimitService::companyAllowsStorefront($company)) {
             return redirect()->route('storefront.table', [
                 'slug' => $company->store_slug,
                 'qrToken' => $table->qr_token,
@@ -40,14 +45,18 @@ class PublicDineInController extends Controller
                 'name' => $table->name,
                 'qrToken' => $table->qr_token,
             ],
-            'products' => $company ? $this->storefront->catalog($company) : [],
-            'slug' => $company?->store_slug,
+            'products' => $this->storefront->catalog($company),
+            'slug' => $company->store_slug,
         ]);
     }
 
     public function storeTable(string $slug, string $qrToken, Request $request): Response
     {
         $company = $this->storefront->resolveCompanyBySlug($slug);
+        if (! PlanLimitService::companyAllowsDineIn($company)) {
+            abort(404);
+        }
+
         $table = DineInTable::query()
             ->where('company_id', $company->id)
             ->where('qr_token', $qrToken)

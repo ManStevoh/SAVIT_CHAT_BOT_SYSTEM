@@ -385,7 +385,7 @@ function SectionEditor({
           {items.map((item, i) => (
             <div key={i} className="rounded border p-3 space-y-2">
               <Field
-                label={`Item ${i + 1} icon (bot, package, payment, booking, growth, inbox, mobile, sparkles)`}
+                label={`Item ${i + 1} icon (bot, package, payment, booking, growth, inbox, store, dinein, delivery, mobile, sparkles)`}
                 value={item.icon ?? ""}
                 onChange={(v) => {
                   const next = [...items]
@@ -484,6 +484,30 @@ function SectionEditor({
               />
             </div>
           ))}
+        </div>
+      )
+    }
+
+    if (key === "solution_pillars" || key === "industries" || key === "demos" || key === "outcomes") {
+      return (
+        <div className="space-y-3">
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          <Field
+            label={`${key} items (JSON)`}
+            value={JSON.stringify(content.items ?? [], null, 2)}
+            onChange={(v) => {
+              try {
+                set("items", JSON.parse(v))
+              } catch {
+                /* ignore invalid json while typing */
+              }
+            }}
+            multiline
+          />
+          <p className="text-xs text-muted-foreground">
+            Edit structured items as JSON. Re-run the CMS seeder to restore conversion-ready defaults.
+          </p>
         </div>
       )
     }

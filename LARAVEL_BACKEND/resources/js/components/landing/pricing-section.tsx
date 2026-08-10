@@ -13,7 +13,8 @@ import { FadeIn } from "@/components/shared/fade-in"
 import { cn } from "@/lib/utils"
 
 export function PricingSection() {
-  const { data: plans, error, isLoading } = usePlans()
+  const [currency, setCurrency] = useState<string | null>(null)
+  const { data, error, isLoading } = usePlans(currency)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
 
@@ -21,7 +22,15 @@ export function PricingSection() {
     setIsLoggedIn(!!getAuthToken())
   }, [])
 
-  const list = plans ?? []
+  const list = data?.plans ?? []
+  const activeCurrency = data?.currency ?? currency ?? "USD"
+  const currencies = data?.availableCurrencies?.length
+    ? data.availableCurrencies
+    : [
+        { code: "KES", label: "Kenyan Shilling", symbol: "KSh" },
+        { code: "USD", label: "US Dollar", symbol: "$" },
+        { code: "NGN", label: "Nigerian Naira", symbol: "₦" },
+      ]
 
   const handleSubscribe = async (planId: string) => {
     setCheckoutPlanId(planId)
@@ -44,6 +53,32 @@ export function PricingSection() {
             description="14-day free trial on every plan. Pick what fits your volume."
           />
         </FadeIn>
+
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="inline-flex rounded-lg border border-border/70 bg-card p-1">
+            {currencies.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => setCurrency(c.code)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  activeCurrency === c.code
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {c.code}
+              </button>
+            ))}
+          </div>
+          <p className="text-center text-xs text-muted-foreground">
+            {data?.source === "cloudflare" || data?.source === "forced"
+              ? `Showing ${activeCurrency} based on your location${data?.detectedCountry ? ` (${data.detectedCountry})` : ""}.`
+              : `Showing prices in ${activeCurrency}.`}{" "}
+            You can switch currency anytime.
+          </p>
+        </div>
 
         {isLoading && list.length === 0 ? (
           <div className="flex justify-center py-12">

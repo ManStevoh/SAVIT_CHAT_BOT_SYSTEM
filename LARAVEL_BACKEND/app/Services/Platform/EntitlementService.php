@@ -38,6 +38,10 @@ final class EntitlementService
             'allow_service' => false,
             'allow_bookings' => false,
             'max_bookings_per_month' => 0,
+            'allow_storefront' => true,
+            'allow_link_in_bio' => true,
+            'allow_dine_in' => false,
+            'allow_whatsapp_campaigns' => true,
         ],
         'professional' => [
             'messages' => 50000,
@@ -60,6 +64,10 @@ final class EntitlementService
             'allow_service' => true,
             'allow_bookings' => true,
             'max_bookings_per_month' => 50,
+            'allow_storefront' => true,
+            'allow_link_in_bio' => true,
+            'allow_dine_in' => true,
+            'allow_whatsapp_campaigns' => true,
         ],
         'enterprise' => [
             'messages' => null, // unlimited
@@ -82,6 +90,10 @@ final class EntitlementService
             'allow_service' => true,
             'allow_bookings' => true,
             'max_bookings_per_month' => null,
+            'allow_storefront' => true,
+            'allow_link_in_bio' => true,
+            'allow_dine_in' => true,
+            'allow_whatsapp_campaigns' => true,
         ],
     ];
 
@@ -113,6 +125,10 @@ final class EntitlementService
             'allow_service' => false,
             'allow_bookings' => false,
             'max_bookings_per_month' => 0,
+            'allow_storefront' => true,
+            'allow_link_in_bio' => true,
+            'allow_dine_in' => false,
+            'allow_whatsapp_campaigns' => true,
         ];
     }
 
@@ -172,6 +188,10 @@ final class EntitlementService
             'allow_digital',
             'allow_service',
             'allow_bookings',
+            'allow_storefront',
+            'allow_link_in_bio',
+            'allow_dine_in',
+            'allow_whatsapp_campaigns',
         ] as $boolKey) {
             if (array_key_exists($boolKey, $input)) {
                 $out[$boolKey] = (bool) $input[$boolKey];
@@ -229,6 +249,10 @@ final class EntitlementService
             'maxBookingsPerMonth' => array_key_exists('max_bookings_per_month', $e)
                 ? ($e['max_bookings_per_month'] === null ? null : (int) $e['max_bookings_per_month'])
                 : 0,
+            'allowStorefront' => (bool) ($e['allow_storefront'] ?? true),
+            'allowLinkInBio' => (bool) ($e['allow_link_in_bio'] ?? true),
+            'allowDineIn' => (bool) ($e['allow_dine_in'] ?? false),
+            'allowWhatsappCampaigns' => (bool) ($e['allow_whatsapp_campaigns'] ?? true),
         ];
     }
 
@@ -367,6 +391,26 @@ final class EntitlementService
     public function allowsBookings(Company $company): bool
     {
         return (bool) ($this->limitsForCompany($company)['allow_bookings'] ?? false);
+    }
+
+    public function allowsStorefront(Company $company): bool
+    {
+        return (bool) ($this->limitsForCompany($company)['allow_storefront'] ?? true);
+    }
+
+    public function allowsLinkInBio(Company $company): bool
+    {
+        return (bool) ($this->limitsForCompany($company)['allow_link_in_bio'] ?? true);
+    }
+
+    public function allowsDineIn(Company $company): bool
+    {
+        return (bool) ($this->limitsForCompany($company)['allow_dine_in'] ?? false);
+    }
+
+    public function allowsWhatsappCampaigns(Company $company): bool
+    {
+        return (bool) ($this->limitsForCompany($company)['allow_whatsapp_campaigns'] ?? true);
     }
 
     public function maxBookingsPerMonth(Company $company): ?int

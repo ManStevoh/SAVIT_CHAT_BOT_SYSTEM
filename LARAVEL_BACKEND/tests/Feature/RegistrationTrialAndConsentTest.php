@@ -142,6 +142,6 @@ class RegistrationTrialAndConsentTest extends TestCase
     {
         $this->getJson('/api/plans')
             ->assertOk()
-            ->assertJsonStructure([['id', 'hasTrial', 'trialDays']]);
+            ->assertJsonStructure(['plans' => [['id', 'hasTrial', 'trialDays']]]);
     }
 }

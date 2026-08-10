@@ -11,6 +11,7 @@ use App\Services\WhatsApp\WhatsAppCampaignDispatchService;
 use App\Services\WhatsApp\WhatsAppCampaignLimitService;
 use App\Services\WhatsApp\WhatsAppCampaignSegmentService;
 use App\Services\WhatsAppMessageSenderService;
+use App\Services\PlanLimitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -55,6 +56,14 @@ class WhatsAppCampaignController extends Controller
         $company = $request->user()->company;
         if (! $company) {
             return response()->json(['success' => false, 'message' => 'No company.'], 403);
+        }
+
+        if (! PlanLimitService::companyAllowsWhatsappCampaigns($company)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'whatsapp_campaigns_required',
+                'message' => 'WhatsApp campaigns are not available on your current plan.',
+            ], 403);
         }
 
         $validated = $request->validate([

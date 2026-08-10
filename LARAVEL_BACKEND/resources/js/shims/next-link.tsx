@@ -7,11 +7,23 @@ type NextLinkProps = Omit<InertiaLinkProps, 'href'> & {
 } & AnchorHTMLAttributes<HTMLAnchorElement>
 
 const Link = forwardRef<HTMLAnchorElement, NextLinkProps>(function Link(
-  { href, children, prefetch, ...props },
+  { href, children, prefetch, onError, ...props },
   ref,
 ) {
   return (
-    <InertiaLink ref={ref} href={href} prefetch={prefetch} {...props}>
+    <InertiaLink
+      ref={ref}
+      href={href}
+      prefetch={prefetch}
+      onError={(errors) => {
+        onError?.(errors)
+        // Network / version mismatch: fall back to a full document load.
+        if (typeof window !== 'undefined' && href.startsWith('/')) {
+          window.location.assign(href)
+        }
+      }}
+      {...props}
+    >
       {children}
     </InertiaLink>
   )

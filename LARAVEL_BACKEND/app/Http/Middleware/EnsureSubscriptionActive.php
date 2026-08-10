@@ -11,11 +11,16 @@ class EnsureSubscriptionActive
 {
     /**
      * Routes that are always allowed even when subscription is expired (so user can resubscribe).
+     * Dashboard shell endpoints (e.g. notifications) must be allowed so the renew page does not
+     * trip a client-side redirect loop on every navbar fetch.
      */
     protected array $allowedRoutes = [
         'GET company/subscription',
         'GET company/subscription/invoices',
         'GET company/subscription/usage',
+        'GET company/subscription/payment-methods',
+        'GET company/notifications',
+        'POST company/subscription/checkout',
         'POST company/checkout',
         'POST company/billing-portal',
         'POST company/mpesa/initiate',

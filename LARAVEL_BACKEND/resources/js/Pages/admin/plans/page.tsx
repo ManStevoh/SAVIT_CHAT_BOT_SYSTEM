@@ -72,6 +72,10 @@ const defaultEntitlements: PlanEntitlements = {
   allowService: false,
   allowBookings: false,
   maxBookingsPerMonth: 0,
+  allowStorefront: true,
+  allowLinkInBio: true,
+  allowDineIn: false,
+  allowWhatsappCampaigns: true,
 }
 
 const defaultForm: CreatePlanData & { featuresText: string; entitlements: PlanEntitlements } = {
@@ -125,6 +129,10 @@ function entitlementsFromPlan(plan: Plan): PlanEntitlements {
     allowService: !!e.allowService,
     allowBookings: !!e.allowBookings,
     maxBookingsPerMonth: e.maxBookingsPerMonth ?? 0,
+    allowStorefront: e.allowStorefront !== false,
+    allowLinkInBio: e.allowLinkInBio !== false,
+    allowDineIn: !!e.allowDineIn,
+    allowWhatsappCampaigns: e.allowWhatsappCampaigns !== false,
   }
 }
 
@@ -636,6 +644,10 @@ export default function AdminPlansPage() {
                     ["allowDigital", "Allow digital products"],
                     ["allowService", "Allow service products"],
                     ["allowBookings", "Allow bookings"],
+                    ["allowStorefront", "Allow web storefront"],
+                    ["allowLinkInBio", "Allow link-in-bio"],
+                    ["allowDineIn", "Allow dine-in table QR"],
+                    ["allowWhatsappCampaigns", "Allow WhatsApp campaigns"],
                   ] as const
                 ).map(([key, label]) => (
                   <label key={key} className="flex items-center gap-2 text-sm">

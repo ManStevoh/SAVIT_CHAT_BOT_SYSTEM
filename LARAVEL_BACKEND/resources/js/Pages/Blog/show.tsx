@@ -31,20 +31,25 @@ export default function BlogShowPage({
   return (
     <>
       <SeoHead seo={seo} fallbackTitle={post?.title || "Blog — RelayIQ"} />
-      <LegalLayout title={post?.title || "Blog"} activePath="/blog">
-        <p className="!mt-0">
-          <Link href="/blog" className="text-sm font-medium text-primary hover:underline">
-            ← All posts
-          </Link>
-        </p>
-
-        {isLoading && <p className="mt-6 text-sm text-gray-500">Loading…</p>}
-        {error && <p className="mt-6 text-sm text-red-600">Post not found.</p>}
+      <LegalLayout
+        title={post?.title || "Blog"}
+        activePath="/blog"
+        plain={!post}
+        intro={
+          <p className="!mt-4">
+            <Link href="/blog" className="text-sm font-medium text-primary hover:underline">
+              ← All posts
+            </Link>
+          </p>
+        }
+      >
+        {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {error && <p className="text-sm text-destructive">Post not found.</p>}
 
         {post && (
-          <>
+          <article>
             {post.publishedAt ? (
-              <time className="mt-2 block text-xs text-muted-foreground" dateTime={post.publishedAt}>
+              <time className="block text-xs font-medium text-muted-foreground" dateTime={post.publishedAt}>
                 {new Date(post.publishedAt).toLocaleDateString(undefined, {
                   year: "numeric",
                   month: "long",
@@ -52,17 +57,23 @@ export default function BlogShowPage({
                 })}
               </time>
             ) : null}
+            {post.excerpt ? (
+              <p className="mt-3 text-lg leading-relaxed text-muted-foreground">{post.excerpt}</p>
+            ) : null}
             {post.coverImage ? (
               <img
                 src={post.coverImage}
                 alt=""
                 loading="eager"
                 decoding="async"
-                className="mt-6 aspect-[2/1] w-full rounded-xl object-cover not-prose"
+                className="mt-6 aspect-[2/1] w-full rounded-2xl border border-border object-cover shadow-sm"
               />
             ) : null}
-            <div className="mt-8" dangerouslySetInnerHTML={{ __html: post.body }} />
-          </>
+            <div
+              className="prose prose-sm dark:prose-invert mt-8 max-w-none text-muted-foreground prose-headings:font-semibold prose-headings:text-foreground prose-a:text-primary"
+              dangerouslySetInnerHTML={{ __html: post.body }}
+            />
+          </article>
         )}
       </LegalLayout>
     </>
