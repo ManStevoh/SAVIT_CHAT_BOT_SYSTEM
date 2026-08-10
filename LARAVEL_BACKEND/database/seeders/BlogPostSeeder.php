@@ -9,7 +9,8 @@ class BlogPostSeeder extends Seeder
 {
     public function run(): void
     {
-        $cover = '/images/lando/lando-inbox.png';
+        $whatsappCover = '/images/blog/whatsapp-ai-sales.jpg';
+        $catalogCover = '/images/blog/catalog-storefront.jpg';
 
         BlogPost::updateOrCreate(
             ['slug' => 'sell-more-on-whatsapp-with-ai'],
@@ -25,10 +26,10 @@ class BlogPostSeeder extends Seeder
 <h2>Keep humans in the loop</h2>
 <p>The best systems are hybrid: AI for speed, people for trust. RelayIQ is built for that balance.</p>
 HTML,
-                'cover_image' => $cover,
+                'cover_image' => $whatsappCover,
                 'meta_title' => 'How to sell more on WhatsApp with AI — RelayIQ',
                 'meta_description' => 'Practical tips to automate WhatsApp sales with AI while keeping human agents in control. Orders, payments, and team inbox in one flow.',
-                'og_image' => $cover,
+                'og_image' => $whatsappCover,
                 'is_published' => true,
                 'published_at' => now()->subDays(17),
             ]
@@ -53,10 +54,10 @@ HTML,
 <h2>Start simple, unlock more on Growth</h2>
 <p>Starter covers AI chat, physical &amp; digital catalog, and storefront. Growth adds bookings and dine-in when you are ready.</p>
 HTML,
-                'cover_image' => '/images/lando/lando-intro.png',
+                'cover_image' => $catalogCover,
                 'meta_title' => 'WhatsApp + storefront + bookings + dine-in — RelayIQ',
                 'meta_description' => 'Run WhatsApp sales, a web storefront, service bookings, and dine-in QR from one RelayIQ catalog.',
-                'og_image' => '/images/lando/lando-intro.png',
+                'og_image' => $catalogCover,
                 'is_published' => true,
                 'published_at' => now()->subDays(5),
             ]
