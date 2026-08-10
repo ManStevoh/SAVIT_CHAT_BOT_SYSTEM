@@ -262,6 +262,12 @@ export interface Plan {
     aiImagesPerMonth?: number
     socialPlatforms?: number
     growthEnabled?: boolean
+    agentCommerce?: boolean
+    allowPhysical?: boolean
+    allowDigital?: boolean
+    allowService?: boolean
+    allowBookings?: boolean
+    maxBookingsPerMonth?: number | null
   }
 }
 

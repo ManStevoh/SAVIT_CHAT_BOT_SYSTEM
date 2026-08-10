@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\EmailOtp;
 use App\Models\Plan;
 use App\Models\PlatformSetting;
 use App\Models\Subscription;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Services\MailService;
 use App\Services\Platform\NotificationDispatcher;
 use App\Services\RecaptchaService;
+use App\Services\WhatsApp\WhatsAppDebugLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -91,7 +93,214 @@ class AuthController extends Controller
         ]);
     }
 
+    public function sendLoginOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $user = User::where('email', $validated['email'])->first();
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'email' => ['No account found with this email address.'],
+            ]);
+        }
+
+        $code = (string) rand(100000, 999999);
+        EmailOtp::updateOrCreate(
+            ['email' => $validated['email'], 'purpose' => 'login'],
+            [
+                'code' => $code,
+                'attempts' => 0,
+                'expires_at' => now()->addMinutes(10),
+                'verified_at' => null,
+            ]
+        );
+
+        WhatsAppDebugLogger::info('AUTH_OTP_SENT', [
+            'email' => $validated['email'],
+            'purpose' => 'login',
+            'otp_code' => $code,
+            'expires_at' => now()->addMinutes(10)->toIso8601String(),
+        ]);
+
+        $mailSent = false;
+        $mailError = null;
+
+        try {
+            app(MailService::class)->sendOtpEmail($user->email, $user->name, $code);
+            $mailSent = true;
+        } catch (\Throwable $e) {
+            $mailError = $e->getMessage();
+            Log::warning('Send login OTP email failed: ' . $e->getMessage());
+            WhatsAppDebugLogger::error('AUTH_OTP_MAIL_EXCEPT', [
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ], $e);
+        }
+
+        $resPayload = [
+            'success' => true,
+            'message' => 'Verification code sent to your email.',
+        ];
+
+        if (config('app.debug') || config('app.env') !== 'production' || ! $mailSent) {
+            $resPayload['dev_otp_code'] = $code;
+            $resPayload['mail_sent'] = $mailSent;
+            if ($mailError) {
+                $resPayload['mail_error'] = $mailError;
+            }
+        }
+
+        return response()->json($resPayload);
+    }
+
+    public function verifyLoginOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string',
+        ]);
+
+        $otp = EmailOtp::where('email', $validated['email'])
+            ->where('purpose', 'login')
+            ->where('code', trim($validated['code']))
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (! $otp) {
+            throw ValidationException::withMessages([
+                'code' => ['Invalid or expired verification code.'],
+            ]);
+        }
+
+        $otp->update(['verified_at' => now()]);
+
+        $user = User::where('email', $validated['email'])->first();
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'email' => ['No account found for this email address.'],
+            ]);
+        }
+
+        if (is_null($user->email_verified_at)) {
+            $user->update(['email_verified_at' => now()]);
+        }
+
+        $user->update(['last_login_at' => now()]);
+        $user->load('company');
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'token' => $token,
+            'user' => $this->userToArray($user),
+        ]);
+    }
+
+    public function sendRegisterOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|unique:users,email',
+        ]);
+
+        $code = (string) rand(100000, 999999);
+        EmailOtp::updateOrCreate(
+            ['email' => $validated['email'], 'purpose' => 'register'],
+            [
+                'code' => $code,
+                'attempts' => 0,
+                'expires_at' => now()->addMinutes(10),
+                'verified_at' => null,
+            ]
+        );
+
+        $mailSent = false;
+        $mailError = null;
+
+        try {
+            app(MailService::class)->sendOtpEmail($validated['email'], 'New Member', $code);
+            $mailSent = true;
+        } catch (\Throwable $e) {
+            $mailError = $e->getMessage();
+            Log::warning('Send register OTP email failed: ' . $e->getMessage());
+        }
+
+        $resPayload = [
+            'success' => true,
+            'message' => 'Verification code sent to your email.',
+        ];
+
+        if (config('app.debug') || config('app.env') !== 'production' || ! $mailSent) {
+            $resPayload['dev_otp_code'] = $code;
+            $resPayload['mail_sent'] = $mailSent;
+            if ($mailError) {
+                $resPayload['mail_error'] = $mailError;
+            }
+        }
+
+        return response()->json($resPayload);
+    }
+
+    public function verifyRegisterOtp(Request $request): JsonResponse
+    {
+        $request->merge([
+            'acceptTerms' => filter_var($request->input('acceptTerms', false), FILTER_VALIDATE_BOOLEAN),
+        ]);
+
+        $validated = $request->validate([
+            'companyName' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string|max:50',
+            'password' => ['required', 'string'],
+            'code' => 'required|string',
+        ]);
+
+        $otp = EmailOtp::where('email', $validated['email'])
+            ->where('purpose', 'register')
+            ->where('code', trim($validated['code']))
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (! $otp) {
+            throw ValidationException::withMessages([
+                'code' => ['Invalid or expired verification code.'],
+            ]);
+        }
+
+        $otp->update(['verified_at' => now()]);
+
+        $company = Company::create([
+            'name' => $validated['companyName'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'status' => 'active',
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'role' => 'company_admin',
+            'company_id' => $company->id,
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+
+        $user->load('company');
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'token' => $token,
+            'user' => $this->userToArray($user),
+        ]);
+    }
+
     public function register(Request $request, RecaptchaService $recaptcha): JsonResponse
+
     {
         if (! PlatformSetting::allowsNewRegistrations()) {
             return response()->json([

@@ -131,6 +131,11 @@ Route::prefix('auth')->group(function () {
     Route::get('verify-email', EmailVerificationController::class)->name('api.verification.verify');
     Route::middleware('throttle:auth-login')->post('login', [AuthController::class, 'login']);
     Route::middleware('throttle:auth-register')->post('register', [AuthController::class, 'register']);
+    Route::post('send-login-otp', [AuthController::class, 'sendLoginOtp']);
+    Route::post('verify-login-otp', [AuthController::class, 'verifyLoginOtp']);
+    Route::post('send-register-otp', [AuthController::class, 'sendRegisterOtp']);
+    Route::post('verify-register-otp', [AuthController::class, 'verifyRegisterOtp']);
+
     Route::middleware('throttle:auth-password')->group(function () {
         Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('reset-password', [AuthController::class, 'resetPassword']);

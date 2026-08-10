@@ -121,7 +121,7 @@ class OrderPaymentService
     }
 
     /**
-     * Create a Paystack payment link for an order (platform config).
+     * Create a Paystack payment link for an order (requires company credentials).
      *
      * @return array{success: bool, url?: string, reference?: string, error?: string}
      */
@@ -131,15 +131,15 @@ class OrderPaymentService
         $companyPaystack = $settings?->order_payment_paystack_config;
         $useCompanyConfig = is_array($companyPaystack) && ! empty($companyPaystack['secret_key']);
 
-        if (! PaystackService::isEnabled()) {
-            return ['success' => false, 'error' => 'Paystack is disabled systemwide.'];
+        if (! PaystackService::isEnabled() && ! $useCompanyConfig) {
+            return ['success' => false, 'error' => 'Paystack is disabled systemwide and not configured for this business.'];
         }
 
         if (! $useCompanyConfig) {
             return ['success' => false, 'error' => 'Storefront Paystack payment credentials not configured for this business.'];
         }
 
-        $callbackUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')).'/orders/payment-complete';
+        $callbackUrl = url('/orders/payment-complete');
         $result = $this->paystack->createPaymentLinkForOrder($order, $callbackUrl, $companyPaystack);
         if (! $result['success'] || empty($result['url'])) {
             return ['success' => false, 'error' => $result['error'] ?? 'Could not create payment link.'];
@@ -230,7 +230,7 @@ class OrderPaymentService
     }
 
     /**
-     * Create a Pesapal payment link for an order. Uses merchant config if set, otherwise systemwide config.
+     * Create a Pesapal payment link for an order (requires company credentials).
      *
      * @return array{success: bool, url?: string, reference?: string, order_tracking_id?: string, error?: string}
      */
@@ -244,8 +244,12 @@ class OrderPaymentService
             return ['success' => false, 'error' => 'Pesapal is disabled systemwide and not configured for this business.'];
         }
 
+        if (! $useCompanyConfig) {
+            return ['success' => false, 'error' => 'Storefront Pesapal payment credentials not configured for this business.'];
+        }
+
         $callbackUrl = url('/api/pesapal/callback');
-        $result = $this->pesapal->createPaymentLinkForOrder($order, $callbackUrl, $useCompanyConfig ? $companyPesapal : null);
+        $result = $this->pesapal->createPaymentLinkForOrder($order, $callbackUrl, $companyPesapal);
         if (! $result['success'] || empty($result['url'])) {
             return ['success' => false, 'error' => $result['error'] ?? 'Could not create Pesapal payment link.'];
         }

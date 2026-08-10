@@ -144,4 +144,22 @@ class AgentAutonomousDoActionTest extends TestCase
         $this->assertTrue($method->invoke($menuJob, $chat, true), 'legacy menu 3 still escalates');
         $this->assertFalse($method->invoke($menuJob, $chat, false), 'agent commerce routes menu 3 to AI too');
     }
+
+    public function test_catalog_step_does_not_force_order_tool_for_questions_or_ambiguous_phrases(): void
+    {
+        $orch = app(\App\Services\Agent\CommerceAgentOrchestrator::class);
+        $force = new ReflectionMethod(\App\Services\Agent\CommerceAgentOrchestrator::class, 'shouldForceDoActionTool');
+        $force->setAccessible(true);
+
+        $chat = new \App\Models\Chat(['conversation_step' => \App\Services\OrderFlowService::STEP_PRODUCT]);
+
+        // Non-selection phrases during catalog step must NOT force process_order_message
+        $this->assertFalse($force->invoke($orch, false, 'inquiry', [], false, $chat, 'What about your shop'));
+        $this->assertFalse($force->invoke($orch, false, 'inquiry', [], false, $chat, 'I want to add'));
+        $this->assertFalse($force->invoke($orch, false, 'inquiry', [], false, $chat, 'Can I rubber shoe on your shop'));
+
+        // Pure digits or explicit choices SHOULD force process_order_message if not run
+        $this->assertTrue($force->invoke($orch, false, 'create_order', [], false, $chat, '1'));
+        $this->assertTrue($force->invoke($orch, false, 'create_order', [], false, $chat, '2 x Headphones'));
+    }
 }

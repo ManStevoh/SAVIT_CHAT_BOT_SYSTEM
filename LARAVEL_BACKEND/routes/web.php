@@ -142,6 +142,26 @@ Route::get('/order/{order}/receipt', function (Order $order) {
     return response()->view('order-receipt', ['order' => $order]);
 })->middleware('signed')->name('orders.receipt');
 
+// Direct order payment URL from WhatsApp bot
+Route::get('/order/{order}/pay', function (Order $order) {
+    $company = $order->company;
+    if ($company && $company->slug) {
+        return redirect()->route('storefront.confirmation', ['slug' => $company->slug, 'order' => $order->id]);
+    }
+
+    return redirect('/');
+})->name('orders.pay');
+
+// Clear Laravel application cache, config, routes, and views on cPanel
+Route::get('/clear-cache', function () {
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    \Illuminate\Support\Facades\Artisan::call('route:clear');
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+
+    return response('✅ Laravel Application Cache Cleared Successfully!', 200);
+});
+
 // Paid digital access portal + private downloads (signed URLs)
 Route::get('/order/{order}/access', [OrderDigitalAccessController::class, 'portal'])
     ->middleware('signed')

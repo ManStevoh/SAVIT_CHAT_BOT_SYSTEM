@@ -230,6 +230,23 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // System Maintenance Mode Interceptor
+        if (config('agent.system_maintenance_enabled', false)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('SYSTEM_MAINTENANCE_MODE_ACTIVE', [
+                'company_id' => $company->id,
+                'chat_id' => $chat->id,
+            ]);
+
+            $maintenanceMsg = (string) config(
+                'agent.system_maintenance_message',
+                "🚧 *System Under Maintenance*\n\nOur service is currently undergoing scheduled system updates to improve performance and add new features. We will be back online shortly!\n\nThank you for your patience."
+            );
+
+            $this->sendReplyAndSave($waSender, $company, $chat, $maintenanceMsg, 'system_maintenance');
+
+            return;
+        }
+
         $this->updateChatLanguage($company, $chat);
 
         if ($this->tryHandleCustomerLearningFeedback($chat)) {
@@ -351,6 +368,42 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
             return;
         }
+
+        // Authoritative Cutover Switch (CONVERSATIONAL_OS_ENABLED=true)
+        $conversationalOsEnabled = (bool) config('agent.conversational_os_enabled', env('CONVERSATIONAL_OS_ENABLED', true));
+
+        if ($conversationalOsEnabled) {
+            Log::info('PIPELINE_STARTUP', [
+                'active_pipeline' => 'ConversationalOSPipeline',
+                'workflow_version' => \App\Services\Workflow\WorkflowEngine::WORKFLOW_VERSION,
+                'renderer_version' => \App\Services\Workflow\ResponseSpecRenderer::RENDERER_VERSION,
+                'company_id' => $company->id,
+                'chat_id' => $chat->id,
+            ]);
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('CONVERSATIONAL_OS_PIPELINE_EXECUTING', [
+                'active_pipeline' => 'ConversationalOSPipeline',
+                'workflow_version' => \App\Services\Workflow\WorkflowEngine::WORKFLOW_VERSION,
+                'renderer_version' => \App\Services\Workflow\ResponseSpecRenderer::RENDERER_VERSION,
+            ]);
+
+            $channelAdapter = new \App\Services\Channels\WhatsAppChannelAdapter($waSender);
+            $envelope = $channelAdapter->normalizeInbound([
+                'customer_phone' => $this->customerPhone,
+                'customer_name' => $this->customerName,
+                'message_text' => $this->messageText,
+                'whatsapp_message_id' => $this->whatsappMessageId,
+            ], (int) $company->id);
+
+            $pipeline = app(\App\Services\Workflow\ConversationalOSPipeline::class);
+            $pipeline->processTurn($company, $chat, $envelope, $channelAdapter);
+
+            return;
+        }
+
+        Log::warning('PIPELINE_ROLLBACK_ACTIVE: Routing to legacy pipeline', [
+            'company_id' => $company->id,
+            'chat_id' => $chat->id,
+        ]);
 
         if (CommerceAgentReplyService::isEnabledForCompany($company)) {
             $agentResult = null;
@@ -1095,23 +1148,31 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         $images = [];
 
         // 1. Markdown images: ![alt](url)
-        if (preg_match_all('/!\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all('/!\[(.*?)\]\(([^"\'\s\)]+)\)/i', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
+                $url = trim($m[2]);
+                if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+                    $url = url($url);
+                }
                 $images[] = [
                     'raw' => $m[0],
                     'caption' => trim($m[1]),
-                    'url' => trim($m[2]),
+                    'url' => $url,
                 ];
             }
         }
 
         // 2. Tag images: [IMAGE_URL: url CAPTION: caption] or [IMAGE_URL: url]
-        if (preg_match_all('/\[IMAGE_URL:\s*(https?:\/\/[^\s\]]+)(?:\s+CAPTION:\s*([^\]]+))?\]/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all('/\[IMAGE_URL:\s*([^\s\]]+)(?:\s+CAPTION:\s*([^\]]+))?\]/i', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
+                $url = trim($m[1]);
+                if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+                    $url = url($url);
+                }
                 $images[] = [
                     'raw' => $m[0],
                     'caption' => isset($m[2]) ? trim($m[2]) : '',
-                    'url' => trim($m[1]),
+                    'url' => $url,
                 ];
             }
         }

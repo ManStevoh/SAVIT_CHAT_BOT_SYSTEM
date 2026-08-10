@@ -90,10 +90,69 @@ final class CommerceAgentOrchestrator
         } catch (\Throwable) {
         }
 
+        // Phase 1 Unified Intent Classifier Pre-Router
+        $intentLogId = null;
+        $isEnabled = (bool) config('agent.ai_intent_routing_enabled', false);
+        $isShadowMode = (bool) config('agent.ai_intent_shadow_mode', true);
+        $minConfidence = (float) config('agent.ai_intent_min_confidence', 0.82);
+
         $cognitiveContext = $this->cognitive->processTurn(
             $company, $chat, $customerPhone, $customerName, $incomingMessage,
         );
         $reasoning = $cognitiveContext['reasoning'];
+
+        try {
+            $classifier = app(\App\Services\AI\UnifiedIntentClassifierService::class);
+            $intentResult = $classifier->classify($company, $chat, $incomingMessage);
+
+            $intentLogId = \Illuminate\Support\Facades\DB::table('ai_intent_logs')->insertGetId([
+                'company_id' => $company->id,
+                'chat_id' => $chat->id,
+                'conversation_step' => $chat->conversation_step,
+                'incoming_message' => $incomingMessage,
+                'predicted_intent' => $intentResult->intent->value,
+                'confidence' => $intentResult->confidence,
+                'entities' => json_encode([
+                    'product' => $intentResult->product,
+                    'variant' => $intentResult->variant,
+                    'quantity' => $intentResult->quantity,
+                ], JSON_UNESCAPED_UNICODE),
+                'requires_clarification' => $intentResult->requiresClarification,
+                'short_circuited' => false,
+                'shadow_mode' => $isShadowMode || ! $isEnabled,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            if ($isEnabled && ! $isShadowMode) {
+                if ($intentResult->isHighConfidence($minConfidence) && $intentResult->intent->isPhase1Eligible()) {
+                    $orderFlow = app(\App\Services\OrderFlowService::class);
+                    $cartResult = $orderFlow->handleStructuredCartIntent($intentResult, $chat, $company);
+                    if ($cartResult !== null && ! empty($cartResult['message'])) {
+                        \Illuminate\Support\Facades\DB::table('ai_intent_logs')
+                            ->where('id', $intentLogId)
+                            ->update([
+                                'executed_intent' => $intentResult->intent->value,
+                                'short_circuited' => true,
+                                'updated_at' => now(),
+                            ]);
+
+                        $reply = $this->finalizeReply($company, trim($cartResult['message']), $cognitiveContext, true);
+
+                        return [
+                            'reply' => $reply,
+                            'route' => 'intent_fast_path_' . $intentResult->intent->value,
+                            'handoff' => false,
+                            'order_flow_reply' => $cartResult['message'],
+                            'log_id' => null,
+                        ];
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('CommerceAgentOrchestrator: Pre-router execution error', ['error' => $e->getMessage()]);
+        }
+
 
         try {
             $logger->info("Inferred Reasoning:", [
@@ -205,14 +264,14 @@ final class CommerceAgentOrchestrator
                 }
 
                 if ($result->content !== null && trim($result->content) !== '') {
-                    // Detect circular stalling replies ("let me know", "just let me know")
-                    $isCircularReply = preg_match('/\b(?:let me know|just let me know|feel free to|whenever you\'re ready)\b/iu', trim($result->content));
+                    // Detect circular stalling replies ("let me know", "just let me know", "finalize the details")
+                    $isCircularReply = preg_match('/\b(?:let me know|just let me know|feel free to|whenever you\'re ready|just a moment while|finalize the details|ready to finalize)\b/iu', trim($result->content));
 
                     if (($forcedToolNudgeCount < $maxForcedNudges) && ($isCircularReply || $this->shouldForceDoActionTool($actionRequired, $actionKind, $toolsUsed, $wantsHuman, $chat, $incomingMessage))) {
                         $forcedToolNudgeCount++;
                         $messages[] = ['role' => 'assistant', 'content' => trim($result->content)];
                         $nudgeText = $isCircularReply
-                            ? 'SYSTEM: Do NOT repeat the offer or ask the customer to confirm again. The customer already said yes. Execute the action NOW with the appropriate tool. If they want to order, call process_order_message. If they want to pay, call share_payment_details.'
+                            ? 'SYSTEM: Do NOT output generic stalling filler (e.g. "feel free to ask", "let me know"). Answer the customer\'s specific question directly, or execute the appropriate capability tool (search_products, get_catalog, get_business_info, process_order_message, share_payment_details).'
                             : $this->forcedDoActionNudge($actionKind);
                         $messages[] = [
                             'role' => 'system',
@@ -358,17 +417,38 @@ final class CommerceAgentOrchestrator
             ];
         }
 
+        $finalRoute = 'agent_os_failed';
+        $this->updateIntentLogLegacyRoute($intentLogId, $finalRoute, $intentResult->intent->value ?? 'unknown');
         $this->cognitive->finalizeEpisode((int) $cognitiveContext['episode_id'], [], 'failed');
         $logger->info("Ending turn: failed.");
 
         return [
             'reply' => null,
-            'route' => 'agent_os_failed',
+            'route' => $finalRoute,
             'handoff' => false,
             'order_flow_reply' => null,
             'log_id' => $lastLogId,
         ];
     }
+
+    private function updateIntentLogLegacyRoute(?int $logId, ?string $route, string $predictedIntent): void
+    {
+        if (! $logId || ! $route) {
+            return;
+        }
+
+        try {
+            \Illuminate\Support\Facades\DB::table('ai_intent_logs')
+                ->where('id', $logId)
+                ->update([
+                    'legacy_route' => $route,
+                    'agreed_with_legacy' => str_contains(mb_strtolower($route), mb_strtolower($predictedIntent)),
+                    'updated_at' => now(),
+                ]);
+        } catch (\Throwable) {
+        }
+    }
+
 
     /**
      * Force a tool turn from AI-classified intent only (no customer phrase lists).
@@ -387,11 +467,28 @@ final class CommerceAgentOrchestrator
             return false;
         }
 
-        // If conversation step is active or incoming message is a digit/order selection, force process_order_message if not run
-        if (($chat && filled($chat->conversation_step)) || ($incomingMessage && preg_match('/^\d+$|^\d+\s*[a-z0-9]/i', trim($incomingMessage)))) {
-            if (! in_array('process_order_message', $toolsUsed, true)) {
-                return true;
-            }
+        // Active single-input data collection steps (quantity, address, confirm, payment choice) expect user input
+        $activeDataStep = $chat && in_array($chat->conversation_step, [
+            \App\Services\OrderFlowService::STEP_VARIANT,
+            \App\Services\OrderFlowService::STEP_PRODUCT_QTY,
+            \App\Services\OrderFlowService::STEP_ADDRESS,
+            \App\Services\OrderFlowService::STEP_CONFIRM,
+            \App\Services\OrderFlowService::STEP_PAYMENT_METHOD,
+            \App\Services\OrderFlowService::STEP_MPESA_PHONE,
+        ], true);
+
+        $lowerMsg = mb_strtolower(trim($incomingMessage ?? ''));
+        $isAmbiguousAdd = in_array($lowerMsg, ['i want to add', 'add', 'add item', 'i want to buy', 'i want to order'], true);
+
+        $isCartOrOrderActionIntent = $incomingMessage && ! $isAmbiguousAdd && preg_match(
+            '/\b(?:remove|delete|drop|clear|swap|replace|change)\s+[a-z0-9]|\b(?:give me|i want)\s+[a-z0-9]|\b(?:yes|yep|yeah|ok|sure|proceed|confirm|go ahead)\b|^\d+$|^\d+\s*[x×]?\s*[a-z0-9]/iu',
+            trim($incomingMessage)
+        );
+
+        $askedConfirmation = $this->lastBotMessageAskedConfirmationOrSelection($chat);
+
+        if (($activeDataStep || $isCartOrOrderActionIntent || $askedConfirmation) && ! in_array('process_order_message', $toolsUsed, true)) {
+            return true;
         }
 
         if (! $actionRequired) {
@@ -415,6 +512,26 @@ final class CommerceAgentOrchestrator
         }
 
         return true;
+    }
+
+    private function lastBotMessageAskedConfirmationOrSelection(?Chat $chat): bool
+    {
+        if (! $chat) {
+            return false;
+        }
+
+        $lastBot = $chat->messages()
+            ->where('sender', 'bot')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $lastBot || ! $lastBot->content) {
+            return false;
+        }
+
+        $text = mb_strtolower($lastBot->content);
+
+        return str_contains($text, '?') || (bool) preg_match('/\b(?:confirm|proceed|would you like|do you want|which|color|options|select|choose|add|order|cart)\b/iu', $text);
     }
 
     private function forcedDoActionNudge(string $actionKind): string
@@ -510,7 +627,8 @@ You are this business's conversational operating system — the main front line 
 
 Understand intent from meaning in any language or style — never wait for fixed keywords.
 Read the full thread: if you asked a question or offered a next step, interpret the customer's reply as a response to that offer (affirmations, slang, short replies all count).
-CRITICAL - CATALOG: When the customer asks to see your catalog, products, menu, or says "show me your catalog", "what do you sell", call process_order_message or get_catalog immediately and present the numbered catalog items to the customer.
+CRITICAL - CATALOG: Only call get_catalog or output the full product catalog list if the customer explicitly asks to see the catalog, menu, products list, or asks "what do you sell?". DO NOT dump the full catalog list when answering questions (such as store location, hours, help with ordering, or product availability).
+CRITICAL - QUESTIONS & AMBIGUOUS STATEMENTS: If the customer asks a question (e.g., "where is your shop located?", "how do I order?"), answer their specific question directly. If they say "I want to add", politely ask which product number or name they want to add without dumping the catalog list.
 CRITICAL - IMAGES: When the customer asks to see images or photos of items in their cart or products (e.g. "can I get an image of the item in my cart?"), output [IMAGE_URL: <url> CAPTION: <caption_text>] or call process_order_message with "images". NEVER output broken raw markdown like ![alt](url).
 CRITICAL: When the customer says "yes", "ok", "proceed", "sure", "go ahead", "I want to", or any affirmative — execute the action immediately with the appropriate tool. NEVER reply with "let me know if you're ready" or "just let me know" after a customer has already confirmed. Act, don't ask again.
 CUSTOMER STOREFRONT LINK: {$storefrontUrl}

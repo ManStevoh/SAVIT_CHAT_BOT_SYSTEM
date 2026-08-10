@@ -34,6 +34,8 @@ class WhatsAppMessageSenderService
             return ['success' => false, 'error' => 'Invalid recipient phone number'];
         }
 
+        $text = self::cleanMarkdownLinksForWhatsApp($text);
+
         $url = $this->graphUrl() . '/' . $account->phone_number_id . '/messages';
 
         $textPayload = [
@@ -551,33 +553,55 @@ class WhatsAppMessageSenderService
             CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
         ];
 
-        try {
-            return Http::withToken($token)
-                ->withOptions([
-                    'force_ip_resolve' => 'v4',
-                    'curl' => $curlOpts,
-                ])
-                ->timeout($timeoutSeconds)
-                ->post($url, $body);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            if (! str_contains($e->getMessage(), 'getaddrinfo') && ! str_contains($e->getMessage(), 'cURL error 6')) {
-                throw $e;
-            }
+        $execPost = function () use ($url, $token, $body, &$curlOpts, $timeoutSeconds, $host, $port) {
+            try {
+                return Http::withToken($token)
+                    ->withOptions([
+                        'force_ip_resolve' => 'v4',
+                        'curl' => $curlOpts,
+                    ])
+                    ->timeout($timeoutSeconds)
+                    ->post($url, $body);
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                if (! str_contains($e->getMessage(), 'getaddrinfo') && ! str_contains($e->getMessage(), 'cURL error 6')) {
+                    throw $e;
+                }
 
-            // Perform single-threaded PHP DNS resolution to bypass cURL getaddrinfo worker thread spawning
-            $ip = gethostbyname($host);
-            if ($ip && $ip !== $host) {
-                $curlOpts[CURLOPT_RESOLVE] = ["{$host}:{$port}:{$ip}"];
-            }
+                // Perform single-threaded PHP DNS resolution to bypass cURL getaddrinfo worker thread spawning
+                $ip = gethostbyname($host);
+                if ($ip && $ip !== $host) {
+                    $curlOpts[CURLOPT_RESOLVE] = ["{$host}:{$port}:{$ip}"];
+                }
 
-            return Http::withToken($token)
-                ->withOptions([
-                    'force_ip_resolve' => 'v4',
-                    'curl' => $curlOpts,
-                ])
-                ->timeout($timeoutSeconds)
-                ->post($url, $body);
+                return Http::withToken($token)
+                    ->withOptions([
+                        'force_ip_resolve' => 'v4',
+                        'curl' => $curlOpts,
+                    ])
+                    ->timeout($timeoutSeconds)
+                    ->post($url, $body);
+            }
+        };
+
+        $response = $execPost();
+
+        // Retry automatically on Meta API Pair Rate Limit (#131056) or transient HTTP 429 / 5xx error
+        if (! $response->successful()) {
+            $json = $response->json();
+            $errCode = $json['error']['code'] ?? null;
+
+            if ($errCode === 131056 || $response->status() === 429 || $response->status() >= 500) {
+                Log::warning('Meta API pair rate limit (#131056) or status '.$response->status().' hit. Pausing 1.5s before retry...', [
+                    'to' => $body['to'] ?? null,
+                    'error_code' => $errCode,
+                ]);
+
+                usleep(1500000); // Pause 1.5 seconds for Meta rate limit burst window to clear
+                $response = $execPost();
+            }
         }
+
+        return $response;
     }
 
     /**
@@ -603,5 +627,13 @@ class WhatsAppMessageSenderService
         $clean = trim(preg_replace('/\n{3,}/', "\n\n", $clean));
 
         return $clean !== '' ? $clean : $text;
+    }
+
+    /**
+     * Clean markdown links [label](url) into plain URLs so WhatsApp renders them cleanly without raw markdown brackets.
+     */
+    public static function cleanMarkdownLinksForWhatsApp(string $text): string
+    {
+        return preg_replace('/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/i', '$2', $text);
     }
 }

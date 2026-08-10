@@ -14,11 +14,11 @@ import type {
   Subscription,
   GrowthPost,
 } from './mock-data'
-import type { BusinessDnaSettings } from './api-hooks'
-import type { IntelligenceReasoningResult } from './api-hooks'
+import type { BusinessDnaSettings, IntelligenceReasoningResult } from './api-hooks'
 import { mockSubscriptions } from './mock-data'
 import { useMockApi, apiRequest, apiUrl, getAuthToken } from './api-client'
 
+export type { IntelligenceReasoningResult } from './api-hooks'
 export { apiRequest, apiUrl, getAuthToken, resolveBackendMediaUrl } from './api-client'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))

@@ -103,9 +103,41 @@ class MailService
     }
 
     /**
+     * Send OTP security verification code to user email.
+     */
+    public function sendOtpEmail(string $to, string $name, string $code): void
+    {
+        $appName = self::applicationName();
+        $subject = "[{$appName}] Your security verification code: {$code}";
+        $html = '<p>Hi ' . e($name) . ',</p>';
+        $html .= '<p>Your security verification code is:</p>';
+        $html .= '<div style="margin:20px 0;padding:16px 24px;background:#f3f4f6;border-radius:8px;display:inline-block;font-size:24px;font-weight:bold;letter-spacing:4px;color:#111827;">' . e($code) . '</div>';
+        $html .= '<p>This code will expire in 10 minutes. If you did not request this code, please secure your account immediately.</p>';
+        $html = self::wrapEmailBody($html, self::getEmailLogoUrl());
+
+        try {
+            $this->send($to, $subject, $html, strip_tags($html));
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('MAIL_OTP_DISPATCH_SUCCESS', [
+                'to' => $to,
+                'subject' => $subject,
+                'otp_code' => $code,
+            ]);
+        } catch (\Throwable $e) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('MAIL_OTP_DISPATCH_FAILED', [
+                'to' => $to,
+                'otp_code' => $code,
+                'error' => $e->getMessage(),
+            ], $e);
+            throw $e;
+        }
+    }
+
+
+    /**
      * Send a test email (e.g. from Admin Settings). Uses platform SMTP if configured.
      */
     public function sendTestEmail(string $to): void
+
     {
         $appName = self::applicationName();
         $subject = '[' . $appName . '] Test email';

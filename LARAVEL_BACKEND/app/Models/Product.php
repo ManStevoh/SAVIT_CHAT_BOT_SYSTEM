@@ -59,6 +59,24 @@ class Product extends Model
         'catalog_embedding' => 'array',
     ];
 
+    public function getImageUrlAttribute(): ?string
+    {
+        if (empty($this->image)) {
+            return null;
+        }
+
+        if (filter_var($this->image, FILTER_VALIDATE_URL)) {
+            return $this->image;
+        }
+
+        $cleanPath = ltrim($this->image, '/');
+        if (! str_starts_with($cleanPath, 'storage/')) {
+            $cleanPath = 'storage/' . $cleanPath;
+        }
+
+        return url($cleanPath);
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Product $product): void {
