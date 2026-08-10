@@ -131,12 +131,8 @@ class OrderPaymentService
         $companyPaystack = $settings?->order_payment_paystack_config;
         $useCompanyConfig = is_array($companyPaystack) && ! empty($companyPaystack['secret_key']);
 
-        if (! PaystackService::isEnabled() && ! $useCompanyConfig) {
-            return ['success' => false, 'error' => 'Paystack is disabled systemwide and not configured for this business.'];
-        }
-
         if (! $useCompanyConfig) {
-            return ['success' => false, 'error' => 'Storefront Paystack payment credentials not configured for this business.'];
+            return ['success' => false, 'error' => 'Storefront Paystack payment credentials not configured for this business. Please add your Paystack secret key in Business Settings.'];
         }
 
         $callbackUrl = url('/orders/payment-complete');
@@ -240,12 +236,8 @@ class OrderPaymentService
         $companyPesapal = $settings?->order_payment_pesapal_config;
         $useCompanyConfig = is_array($companyPesapal) && ! empty($companyPesapal['consumer_key']) && ! empty($companyPesapal['consumer_secret']);
 
-        if (! PesapalService::isEnabled() && ! $useCompanyConfig) {
-            return ['success' => false, 'error' => 'Pesapal is disabled systemwide and not configured for this business.'];
-        }
-
         if (! $useCompanyConfig) {
-            return ['success' => false, 'error' => 'Storefront Pesapal payment credentials not configured for this business.'];
+            return ['success' => false, 'error' => 'Storefront Pesapal payment credentials not configured for this business. Please add your Pesapal credentials in Business Settings.'];
         }
 
         $callbackUrl = url('/api/pesapal/callback');

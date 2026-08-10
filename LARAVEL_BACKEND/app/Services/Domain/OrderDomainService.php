@@ -33,7 +33,7 @@ final class OrderDomainService
             'status' => 'pending',
             'payment_status' => 'unpaid',
             'payment_method' => $state->selectedPaymentMethod,
-            'total_amount' => $totalAmount,
+            'total' => $totalAmount,
             'subtotal' => $totalAmount,
         ]);
 

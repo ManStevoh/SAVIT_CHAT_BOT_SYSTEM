@@ -62,6 +62,11 @@ class Order extends Model
         'agent_proactive_follow_up_at' => 'datetime',
     ];
 
+    public function getTotalAmountAttribute(): float
+    {
+        return (float) ($this->attributes['total'] ?? 0);
+    }
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
