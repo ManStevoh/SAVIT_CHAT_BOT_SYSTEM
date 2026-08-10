@@ -114,6 +114,7 @@ class AuthController extends Controller
             'acceptTerms' => 'accepted',
             'marketingConsent' => 'sometimes|boolean',
             'planId' => 'sometimes|nullable|string',
+            'intent' => 'sometimes|nullable|string|in:trial,subscribe',
             'recaptchaToken' => 'nullable|string|max:4000',
         ], [
             'acceptTerms.accepted' => 'You must accept the terms and conditions.',
@@ -125,6 +126,11 @@ class AuthController extends Controller
         if (! empty($validated['planId'])) {
             $selectedPlan = Plan::find($validated['planId']);
         }
+
+        $subscribeIntent = ($validated['intent'] ?? null) === 'subscribe'
+            && $selectedPlan
+            && ! $selectedPlan->is_free
+            && (float) ($selectedPlan->price_amount ?? 0) > 0;
 
         $company = Company::create([
             'name' => $validated['companyName'],
@@ -146,6 +152,7 @@ class AuthController extends Controller
             'marketing_consent' => $marketingConsent,
             'marketing_consent_at' => $marketingConsent ? now() : null,
             'selected_plan_id' => $selectedPlan?->id,
+            'wants_immediate_payment' => $subscribeIntent,
         ]);
         $user->role = 'company_owner';
         $user->save();
@@ -153,10 +160,12 @@ class AuthController extends Controller
         $trial = $this->createTrialSubscriptionForRegistration($company, $selectedPlan);
         app(\App\Services\Agent\AgentCommerceProvisioningService::class)->syncForCompany($company);
 
-        $requiresPayment = $selectedPlan
+        $requiresPayment = $subscribeIntent || (
+            $selectedPlan
             && ! $selectedPlan->is_free
             && ! (bool) $selectedPlan->has_trial
-            && (float) ($selectedPlan->price_amount ?? 0) > 0;
+            && (float) ($selectedPlan->price_amount ?? 0) > 0
+        );
 
         $requireVerification = PlatformSetting::requiresEmailVerification();
 

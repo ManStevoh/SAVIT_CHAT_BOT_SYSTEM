@@ -91,9 +91,10 @@ export function PricingSection() {
         ) : (
           <div className="grid gap-5 lg:grid-cols-3">
             {list.map((plan, i) => {
+              const showSubscribeActions = !plan.isFree && (plan.price ?? plan.priceDisplay) !== "Custom"
               const canCheckout = plan.checkoutAvailable && isLoggedIn
-              const showContactSales = !plan.checkoutAvailable
-              const ctaText = plan.cta ?? "Start free trial"
+              const ctaText =
+                plan.cta && !/contact/i.test(plan.cta) ? plan.cta : "Start Free Trial"
 
               return (
                 <FadeIn key={plan.id} delay={i * 80}>
@@ -135,19 +136,10 @@ export function PricingSection() {
                       ))}
                     </ul>
 
-                    {canCheckout ? (
-                      <Button
-                        className="w-full rounded-lg"
-                        variant={plan.popular ? "default" : "outline"}
-                        disabled={checkoutPlanId !== null}
-                        onClick={() => handleSubscribe(plan.id)}
-                      >
-                        {checkoutPlanId === plan.id ? "Redirecting…" : ctaText}
-                      </Button>
-                    ) : showContactSales ? (
+                    {!showSubscribeActions ? (
                       <div className="space-y-2">
                         <Button asChild className="w-full rounded-lg" variant={plan.popular ? "default" : "outline"}>
-                          <Link href={`/register?plan=${plan.id}`}>{ctaText}</Link>
+                          <Link href={`/register?plan=${plan.id}`}>{plan.cta ?? "Contact Sales"}</Link>
                         </Button>
                         <p className="text-center text-xs text-muted-foreground">
                           Already have an account?{" "}
@@ -158,15 +150,43 @@ export function PricingSection() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Button asChild className="w-full rounded-lg" variant={plan.popular ? "default" : "outline"}>
-                          <Link href={`/register?plan=${plan.id}`}>{ctaText}</Link>
-                        </Button>
-                        <p className="text-center text-xs text-muted-foreground">
-                          Already have an account?{" "}
-                          <Link href={`/login?plan=${plan.id}`} className="text-primary hover:underline">
-                            Sign in
-                          </Link>
-                        </p>
+                        {(plan.hasTrial ?? true) && (
+                          <Button asChild className="w-full rounded-lg" variant={plan.popular ? "default" : "outline"}>
+                            <Link href={isLoggedIn ? "/dashboard/subscription" : `/register?plan=${plan.id}`}>
+                              {ctaText}
+                            </Link>
+                          </Button>
+                        )}
+                        {canCheckout ? (
+                          <Button
+                            className="w-full rounded-lg"
+                            variant={plan.hasTrial === false && plan.popular ? "default" : "outline"}
+                            disabled={checkoutPlanId !== null}
+                            onClick={() => handleSubscribe(plan.id)}
+                          >
+                            {checkoutPlanId === plan.id ? "Redirecting…" : "Subscribe"}
+                          </Button>
+                        ) : (
+                          <Button asChild className="w-full rounded-lg" variant="outline">
+                            <Link
+                              href={
+                                isLoggedIn
+                                  ? `/dashboard/subscription?subscribe=${plan.id}`
+                                  : `/register?plan=${plan.id}&intent=subscribe`
+                              }
+                            >
+                              Subscribe
+                            </Link>
+                          </Button>
+                        )}
+                        {!isLoggedIn && (
+                          <p className="text-center text-xs text-muted-foreground">
+                            Already have an account?{" "}
+                            <Link href={`/login?plan=${plan.id}&pay=1`} className="text-primary hover:underline">
+                              Sign in to pay
+                            </Link>
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

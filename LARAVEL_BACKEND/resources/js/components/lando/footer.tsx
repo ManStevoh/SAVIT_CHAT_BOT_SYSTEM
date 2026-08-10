@@ -1,7 +1,10 @@
 import Link from "next/link"
+import type { ReactNode } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { BRAND } from "@/lib/branding"
+import { cn } from "@/lib/utils"
 import type { CmsLink } from "./types"
+import { WhatsAppPartnerBadge } from "./whatsapp-partner-badge"
 
 export interface FooterMobileApp {
   enabled?: boolean
@@ -52,26 +55,51 @@ function AppleIcon() {
 function StoreBadge({
   href,
   kind,
+  comingSoon = false,
 }: {
-  href: string
+  href?: string
   kind: "play" | "apple"
+  comingSoon?: boolean
 }) {
   const isPlay = kind === "play"
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex min-w-[9.75rem] items-center gap-2.5 rounded-lg bg-black px-3 py-2 text-white transition hover:bg-gray-900"
-    >
+  const labelTop = comingSoon ? "Coming soon" : isPlay ? "Get it on" : "Download on the"
+  const labelBottom = isPlay ? "Google Play" : "App Store"
+  const className = cn(
+    "inline-flex min-w-[9.5rem] items-center gap-2.5 rounded-lg bg-black px-3 py-2 text-white",
+    comingSoon ? "cursor-default opacity-90" : "transition hover:bg-gray-900"
+  )
+
+  const inner = (
+    <>
       {isPlay ? <GooglePlayIcon /> : <AppleIcon />}
       <span className="flex flex-col leading-tight">
-        <span className="text-[10px] uppercase tracking-wide text-gray-300">
-          {isPlay ? "Get it on" : "Download on the"}
-        </span>
-        <span className="text-sm font-semibold">{isPlay ? "Google Play" : "App Store"}</span>
+        <span className="text-[10px] uppercase tracking-wide text-gray-300">{labelTop}</span>
+        <span className="text-sm font-semibold">{labelBottom}</span>
       </span>
+    </>
+  )
+
+  if (comingSoon || !href) {
+    return (
+      <span className={className} aria-label={`${labelBottom} — coming soon`}>
+        {inner}
+      </span>
+    )
+  }
+
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {inner}
     </a>
+  )
+}
+
+function FooterLinkColumn({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">{title}</p>
+      <div className="mt-3 flex flex-col gap-2">{children}</div>
+    </div>
   )
 }
 
@@ -86,77 +114,98 @@ export function LandoFooter({
   const showApp = Boolean(mobileApp?.enabled)
   const playUrl = mobileApp?.playStoreUrl?.trim() || ""
   const appUrl = mobileApp?.appStoreUrl?.trim() || ""
-  const hasStoreLinks = playUrl !== "" || appUrl !== ""
-  const appTitle = mobileApp?.title?.trim() || "Get the mobile app"
+  const appTitle = mobileApp?.title?.trim() || "iOS & Android apps"
   const appDescription =
     mobileApp?.description?.trim() ||
-    (hasStoreLinks
+    (playUrl || appUrl
       ? "Manage chats, orders, and growth on the go."
-      : "Coming soon on Google Play and the App Store.")
+      : "Launching soon on iOS and Android.")
 
   return (
     <footer className="lando-footer border-t border-border bg-muted">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 lg:grid-cols-4 sm:px-6 lg:px-8">
-        <div>
-          <AppLogoAndName variant="navbar" className="font-bold text-foreground" />
-          <p className="mt-3 text-sm text-muted-foreground">{BRAND.productOf}</p>
-          <p className="mt-3 text-sm text-muted-foreground">{copy}</p>
-          <a
-            href={BRAND.companyWebsite}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-          >
-            essemdigital.com
-          </a>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium text-foreground hover:text-primary">
-              {link.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          {socialLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-foreground hover:text-primary"
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          {legalLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium text-foreground hover:text-primary">
-              {link.label}
-            </Link>
-          ))}
-
-          {showApp && (
-            <div className="mt-4 space-y-3 border-t border-border pt-4">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{appTitle}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{appDescription}</p>
-              </div>
-              {hasStoreLinks ? (
-                <div className="flex flex-wrap gap-2">
-                  {playUrl !== "" && <StoreBadge href={playUrl} kind="play" />}
-                  {appUrl !== "" && <StoreBadge href={appUrl} kind="apple" />}
-                </div>
-              ) : (
-                <p className="text-xs font-medium text-muted-foreground">Coming soon</p>
-              )}
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.85fr)] lg:gap-12">
+          <div className="min-w-0">
+            <AppLogoAndName variant="navbar" className="font-bold text-foreground" />
+            <div className="mt-3">
+              <WhatsAppPartnerBadge variant="plain" />
             </div>
-          )}
+            <p className="mt-3 max-w-sm text-sm text-muted-foreground">{BRAND.productOf}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 sm:gap-8">
+            {navLinks.length > 0 && (
+              <FooterLinkColumn title="Platform">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm font-medium text-foreground hover:text-primary"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </FooterLinkColumn>
+            )}
+            {socialLinks.length > 0 && (
+              <FooterLinkColumn title="Social">
+                {socialLinks.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-foreground hover:text-primary"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </FooterLinkColumn>
+            )}
+            {legalLinks.length > 0 && (
+              <FooterLinkColumn title="Legal">
+                {legalLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm font-medium text-foreground hover:text-primary"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </FooterLinkColumn>
+            )}
+          </div>
         </div>
+
+        {(showApp || copy) && (
+          <div className="mt-8 flex flex-col gap-5 border-t border-border pt-6 sm:flex-row sm:items-end sm:justify-between">
+            {showApp ? (
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">{appTitle}</p>
+                <p className="mt-1 max-w-md text-xs text-muted-foreground">{appDescription}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <StoreBadge kind="apple" href={appUrl || undefined} comingSoon={!appUrl} />
+                  <StoreBadge kind="play" href={playUrl || undefined} comingSoon={!playUrl} />
+                </div>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            <div className="shrink-0 text-sm text-muted-foreground sm:text-right">
+              <p>{copy}</p>
+              <a
+                href={BRAND.companyWebsite}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block font-medium text-primary hover:underline"
+              >
+                essemdigital.com
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     </footer>
   )

@@ -36,6 +36,7 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'marketing_consent',
         'marketing_consent_at',
         'selected_plan_id',
+        'wants_immediate_payment',
     ];
 
     /**
@@ -61,6 +62,7 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
             'terms_accepted_at' => 'datetime',
             'marketing_consent_at' => 'datetime',
             'marketing_consent' => 'boolean',
+            'wants_immediate_payment' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -97,10 +99,21 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
      */
     public function sendEmailVerificationNotification(): void
     {
+        $params = [
+            'id' => $this->id,
+            'hash' => sha1($this->email),
+        ];
+
+        // Preserve Subscribe intent so verify → login lands on plan payment.
+        if ($this->wants_immediate_payment && $this->selected_plan_id) {
+            $params['plan'] = (string) $this->selected_plan_id;
+            $params['pay'] = '1';
+        }
+
         $verificationUrl = URL::temporarySignedRoute(
             'api.verification.verify',
             now()->addMinutes(60),
-            ['id' => $this->id, 'hash' => sha1($this->email)]
+            $params
         );
         App::make(MailService::class)->sendWelcomeVerificationEmail($this, $verificationUrl);
     }

@@ -20,6 +20,8 @@ return [
 
     'product_tagline' => 'Every Conversation. Smarter.',
 
+    'whatsapp_partner' => 'Official WhatsApp Business Partner',
+
     'powered_by' => 'Powered by Essem Digital',
 
     'product_of' => 'A product of Essem Digital Innovation Limited',

@@ -29,8 +29,8 @@ export function LandoNavbar({
 
   return (
     <nav className="lando-nav fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-muted/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" onClick={() => setOpen(false)}>
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <Link href="/" onClick={() => setOpen(false)} className="min-w-0 shrink">
           <AppLogoAndName variant="navbar" className="font-bold text-foreground" />
         </Link>
 
@@ -55,13 +55,13 @@ export function LandoNavbar({
         <div className="flex items-center gap-2">
           <Link
             href={loginHref}
-            className="hidden text-sm font-medium text-foreground/90 hover:text-primary sm:inline"
+            className="hidden text-sm font-medium text-foreground/90 transition-colors hover:text-primary sm:inline"
           >
             {loginLabel}
           </Link>
           <Button
             asChild
-            className="hidden h-9 rounded-lg bg-primary px-5 text-sm font-medium text-white hover:bg-primary/90 sm:inline-flex"
+            className="hidden h-9 rounded-lg bg-primary px-5 text-sm font-medium text-white transition-transform hover:bg-primary/90 hover:-translate-y-0.5 sm:inline-flex"
           >
             <Link href={signupHref}>{signupLabel}</Link>
           </Button>

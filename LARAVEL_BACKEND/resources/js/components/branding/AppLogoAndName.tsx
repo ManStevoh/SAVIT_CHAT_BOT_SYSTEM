@@ -13,8 +13,8 @@ type Variant = "sidebar" | "navbar" | "footer" | "admin"
 
 const sizeMap: Record<Variant, { imgClass: string; markClass: string }> = {
   sidebar: { imgClass: "h-9 w-auto object-contain max-w-[170px]", markClass: "h-7 w-auto object-contain" },
-  navbar: { imgClass: "h-9 w-auto object-contain max-w-[180px]", markClass: "h-8 w-auto object-contain" },
-  footer: { imgClass: "h-9 w-auto object-contain max-w-[180px]", markClass: "h-8 w-auto object-contain" },
+  navbar: { imgClass: "h-8 w-auto object-contain max-w-[140px] sm:h-9 sm:max-w-[180px]", markClass: "h-8 w-auto object-contain" },
+  footer: { imgClass: "h-8 w-auto object-contain max-w-[160px] sm:h-9 sm:max-w-[180px]", markClass: "h-8 w-auto object-contain" },
   admin: { imgClass: "h-8 w-auto object-contain max-w-[160px]", markClass: "h-7 w-auto object-contain" },
 }
 

@@ -19,6 +19,7 @@ function RegisterPageContent() {
   const searchParams = useSearchParams()
   const branding = useAppBranding()
   const planId = searchParams.get("plan")
+  const intent = searchParams.get("intent") === "subscribe" ? "subscribe" : "trial"
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -27,7 +28,12 @@ function RegisterPageContent() {
   const [marketingConsent, setMarketingConsent] = useState(false)
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
 
-  const loginHref = planId ? `/login?plan=${encodeURIComponent(planId)}` : "/login"
+  const loginHref = (() => {
+    if (!planId) return "/login"
+    const params = new URLSearchParams({ plan: planId })
+    if (intent === "subscribe") params.set("pay", "1")
+    return `/login?${params.toString()}`
+  })()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -63,6 +69,7 @@ function RegisterPageContent() {
       acceptTerms: true,
       marketingConsent,
       planId: planId || undefined,
+      intent: planId ? intent : undefined,
       recaptchaToken: recaptchaToken || undefined,
     }
     const result = await registerApi(data)
@@ -76,17 +83,29 @@ function RegisterPageContent() {
 
     const params = new URLSearchParams({ registered: "1" })
     if (planId) params.set("plan", planId)
-    if (result.trialStarted) params.set("trial", "1")
-    if (result.requiresPayment && planId) params.set("pay", "1")
-    if (result.postLoginPath) {
-      sessionStorage.setItem("post_login_path", result.postLoginPath)
+    if (result.trialStarted && intent !== "subscribe") params.set("trial", "1")
+    if ((result.requiresPayment || intent === "subscribe") && planId) params.set("pay", "1")
+    const payPath =
+      result.postLoginPath ||
+      (intent === "subscribe" && planId
+        ? `/dashboard/subscription?subscribe=${encodeURIComponent(planId)}`
+        : null)
+    if (payPath) {
+      sessionStorage.setItem("post_login_path", payPath)
     }
     router.push(`/login?${params.toString()}`)
   }
 
   return (
     <div className="w-full">
-      <LandoAuthHeader title="Create your account" description="Start your free trial — pick a plan on Pricing, or begin with our starter trial." />
+      <LandoAuthHeader
+        title="Create your account"
+        description={
+          intent === "subscribe" && planId
+            ? "Create your account, then complete payment for the plan you selected."
+            : "Start your free trial — pick a plan on Pricing, or begin with our starter trial."
+        }
+      />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <LandoAuthError>{error}</LandoAuthError>}

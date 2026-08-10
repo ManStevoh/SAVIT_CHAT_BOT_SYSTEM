@@ -4,6 +4,8 @@ export const BRAND = {
   legalEntity: "Essem Digital Innovation Limited",
   companyWebsite: "https://essemdigital.com",
   tagline: "Every Conversation. Smarter.",
+  /** Official channel partnership trust line (public marketing). */
+  whatsappPartner: "Official WhatsApp Business Partner",
   /** Short credit for compact UI (auth shells, badges). */
   poweredBy: "Powered by Essem Digital",
   /** One-line product attribution for footers. */

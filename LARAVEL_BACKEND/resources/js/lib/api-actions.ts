@@ -86,6 +86,8 @@ export interface RegisterData {
   acceptTerms: boolean
   marketingConsent?: boolean
   planId?: string
+  /** trial (default) | subscribe — subscribe forces post-login payment for the selected plan */
+  intent?: "trial" | "subscribe"
   recaptchaToken?: string
 }
 
@@ -183,6 +185,7 @@ export async function register(data: RegisterData): Promise<{
       acceptTerms: data.acceptTerms,
       marketingConsent: !!data.marketingConsent,
       planId: data.planId || undefined,
+      intent: data.intent || undefined,
     }
     return await apiRequest('/api/auth/register', {
       method: 'POST',

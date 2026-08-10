@@ -211,7 +211,7 @@ function SectionEditor({
               <div>
                 <p className="text-sm font-medium">Mobile app section</p>
                 <p className="text-xs text-muted-foreground">
-                  Show Google Play / App Store links in the site footer. Turn off until your apps are live.
+                  Show App Store / Google Play badges in the footer. Leave store URLs empty to show “Coming soon” for the launch announcement.
                 </p>
               </div>
               <Switch
@@ -225,7 +225,7 @@ function SectionEditor({
                   label="Section title"
                   value={str("mobileAppTitle")}
                   onChange={(v) => set("mobileAppTitle", v)}
-                  hint='Default: "Get the mobile app"'
+                  hint='Default: "iOS & Android apps"'
                 />
                 <Field
                   label="Short description"
@@ -237,13 +237,13 @@ function SectionEditor({
                   label="Google Play URL"
                   value={str("playStoreUrl")}
                   onChange={(v) => set("playStoreUrl", v)}
-                  hint="Leave empty to hide the Play badge (shows Coming soon if both empty)."
+                  hint="Optional. Empty = Coming soon on Google Play."
                 />
                 <Field
                   label="App Store URL"
                   value={str("appStoreUrl")}
                   onChange={(v) => set("appStoreUrl", v)}
-                  hint="Leave empty to hide the App Store badge."
+                  hint="Optional. Empty = Coming soon on the App Store."
                 />
               </div>
             )}

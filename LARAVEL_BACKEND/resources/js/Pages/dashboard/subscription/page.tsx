@@ -51,6 +51,13 @@ function SubscriptionPageContent() {
   const [couponChecking, setCouponChecking] = useState(false)
 
   const planSlug = subscription?.plan ?? "starter"
+  const status = subscription?.status ?? "active"
+  const daysRemaining = subscription?.daysRemaining
+  const expiredBanner = searchParams.get("expired") === "1"
+  const needsPaidActivation =
+    expiredBanner ||
+    ["trial", "expired", "cancelled"].includes(status) ||
+    (typeof daysRemaining === "number" && daysRemaining <= 0)
 
   const plans = plansData.map((p) => ({
     id: p.id,
@@ -62,6 +69,7 @@ function SubscriptionPageContent() {
     checkoutAvailable: p.checkoutAvailable ?? false,
     paymentMethods: p.paymentMethods && typeof p.paymentMethods === "object" ? p.paymentMethods : {},
   }))
+  const anyCheckoutAvailable = plans.some((p) => p.checkoutAvailable && p.price !== "Custom")
 
   useEffect(() => {
     const q = searchParams.get("checkout")
@@ -94,9 +102,12 @@ function SubscriptionPageContent() {
     const subscribePlanId = searchParams.get("subscribe")
     if (!subscribePlanId || autoSubscribeDone || !plansData.length) return
     const plan = plansData.find((p) => p.id === subscribePlanId)
-    if (!plan?.checkoutAvailable) return
     setAutoSubscribeDone(true)
     if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
+    if (!plan?.checkoutAvailable) {
+      toast.error("No payment method is enabled for this plan. Ask an admin to enable a payment gateway.")
+      return
+    }
     const start = async () => {
       if (plan.paymentMethods?.paystack) {
         const callbackUrl =
@@ -192,8 +203,6 @@ function SubscriptionPageContent() {
     : "—"
   const renewalDate = subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"
   const accessLabel = subscription?.accessEndsLabel ?? "Renews on"
-  const daysRemaining = subscription?.daysRemaining
-  const status = subscription?.status ?? "active"
   const isStripeManaged = subscription?.paymentMethod === "stripe"
   const canCancelLocal =
     !!subscription &&
@@ -337,6 +346,129 @@ function SubscriptionPageContent() {
     return "outline"
   }
 
+  const checkoutLabel = (plan: (typeof plans)[number], payingCurrent: boolean) => {
+    if (payingCurrent) {
+      if (status === "trial") return "Subscribe now"
+      if (status === "expired" || expiredBanner) return "Renew plan"
+      if (status === "cancelled") return "Re-subscribe"
+      return "Pay now"
+    }
+    return status === "trial" || status === "active" ? "Upgrade" : "Subscribe"
+  }
+
+  const renderCheckoutButtons = (plan: (typeof plans)[number], payingCurrent = false) => {
+    const busy = checkoutPlanId !== null && checkoutPlanId !== plan.id
+    const primaryLabel = checkoutLabel(plan, payingCurrent)
+
+    return (
+      <>
+        {plan.paymentMethods?.stripe && (
+          <Button
+            className="w-full"
+            variant="default"
+            disabled={busy}
+            onClick={() => handleSubscribe(plan.id)}
+          >
+            {checkoutPlanId === plan.id
+              ? "Redirecting…"
+              : plan.paymentMethods?.mpesa || plan.paymentMethods?.paystack
+                ? `${primaryLabel} with Card`
+                : primaryLabel}
+          </Button>
+        )}
+        {plan.paymentMethods?.paystack && (
+          <Button
+            className="w-full"
+            variant={plan.paymentMethods?.stripe ? "outline" : "default"}
+            disabled={busy}
+            onClick={() => handlePaystackSubscribe(plan.id)}
+          >
+            {checkoutPlanId === plan.id ? "Redirecting…" : `${primaryLabel} with Paystack`}
+          </Button>
+        )}
+        {plan.paymentMethods?.mpesa && (
+          <>
+            {mpesaPlanId !== plan.id && !mpesaWaiting ? (
+              <Button
+                className="w-full mt-2"
+                variant="outline"
+                disabled={!!checkoutPlanId}
+                onClick={() => setMpesaPlanId(plan.id)}
+              >
+                <Smartphone className="h-4 w-4 mr-2" />
+                Pay with M-Pesa
+              </Button>
+            ) : mpesaWaiting === plan.id ? (
+              <p className="text-sm text-center text-muted-foreground py-2">
+                Check your phone and enter PIN. We&apos;ll update when payment is received…
+              </p>
+            ) : null}
+            {mpesaPlanId === plan.id && !mpesaWaiting && (
+              <div className="mt-3 space-y-2 rounded-lg border p-3 bg-muted/30">
+                <Label htmlFor={`mpesa-phone-${plan.id}`}>M-Pesa phone number</Label>
+                <Input
+                  id={`mpesa-phone-${plan.id}`}
+                  placeholder="254712345678 or 0712345678"
+                  value={mpesaPhone}
+                  onChange={(e) => setMpesaPhone(e.target.value)}
+                  className="bg-background"
+                />
+                {mpesaError && <p className="text-xs text-destructive">{mpesaError}</p>}
+                <div className="flex gap-2">
+                  <Button size="sm" className="w-full" onClick={() => handleMpesaSubmit(plan.id)}>
+                    Send M-Pesa prompt
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setMpesaPlanId(null)
+                      setMpesaError(null)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {plan.paymentMethods?.pesapal && (
+          <Button
+            className="w-full mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() => handleGenericCheckout(plan.id, "pesapal")}
+          >
+            Pay with Pesapal
+          </Button>
+        )}
+        {plan.paymentMethods?.flutterwave && (
+          <Button
+            className="w-full mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() => handleGenericCheckout(plan.id, "flutterwave")}
+          >
+            Pay with Flutterwave
+          </Button>
+        )}
+        {plan.paymentMethods?.manual && (
+          <Button
+            className="w-full mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() => handleGenericCheckout(plan.id, "manual")}
+          >
+            Bank Transfer / Invoice
+          </Button>
+        )}
+      </>
+    )
+  }
+
+  const currentPlan = plans.find((p) => p.current)
+
   return (
     <div className="space-y-6">
       <div>
@@ -344,9 +476,21 @@ function SubscriptionPageContent() {
         <p className="text-muted-foreground">Manage your subscription and billing</p>
       </div>
 
-      {searchParams.get("expired") === "1" && (
+      {expiredBanner && (
         <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-          Your subscription has expired or was cancelled. Choose a plan below to continue using the service.
+          Your subscription has expired or was cancelled. Choose a plan below to renew or upgrade.
+        </div>
+      )}
+      {needsPaidActivation && status === "trial" && !expiredBanner && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+          You&apos;re on a free trial. You can subscribe to your current plan or upgrade to a different plan anytime —
+          payment starts immediately and replaces the trial.
+        </div>
+      )}
+      {!anyCheckoutAvailable && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          No payment methods are enabled on this platform, so Subscribe / Renew buttons stay unavailable. An admin must
+          enable Stripe, Paystack, M-Pesa, Pesapal, or Flutterwave under Admin → Payment Gateways.
         </div>
       )}
       {checkoutMessage === "success" && (
@@ -390,17 +534,29 @@ function SubscriptionPageContent() {
                 </p>
               </div>
             </div>
-            <div className="flex w-full gap-2 sm:w-auto">
-              {isStripeManaged && (
-                <Button className="w-full sm:w-auto" variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
-                  {portalLoading ? "Opening…" : "Manage billing"}
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+              {needsPaidActivation && currentPlan?.checkoutAvailable && (
+                <div className="flex w-full flex-col gap-2 sm:min-w-[220px]">
+                  {renderCheckoutButtons(currentPlan, true)}
+                </div>
+              )}
+              {needsPaidActivation && currentPlan && !currentPlan.checkoutAvailable && (
+                <Button asChild className="w-full sm:w-auto" variant="default">
+                  <Link href="#plans">Choose a plan below</Link>
                 </Button>
               )}
-              {canCancelLocal && (
-                <Button className="w-full sm:w-auto" variant="outline" onClick={handleCancel} disabled={cancelLoading}>
-                  {cancelLoading ? "Cancelling…" : "Cancel subscription"}
-                </Button>
-              )}
+              <div className="flex w-full gap-2 sm:w-auto">
+                {isStripeManaged && (
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
+                    {portalLoading ? "Opening…" : "Manage billing"}
+                  </Button>
+                )}
+                {canCancelLocal && (
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={handleCancel} disabled={cancelLoading}>
+                    {cancelLoading ? "Cancelling…" : "Cancel subscription"}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -484,9 +640,10 @@ function SubscriptionPageContent() {
               <Button
                 type="button"
                 variant="outline"
-                disabled={couponChecking || !couponCode.trim() || !plans.find((p) => !p.current && p.checkoutAvailable)}
+                disabled={couponChecking || !couponCode.trim() || !plans.find((p) => p.checkoutAvailable)}
                 onClick={() => {
-                  const target = plans.find((p) => !p.current && p.checkoutAvailable)
+                  const target = plans.find((p) => p.current && p.checkoutAvailable)
+                    ?? plans.find((p) => p.checkoutAvailable)
                   if (target) void applyCoupon(target.id)
                 }}
               >
@@ -535,122 +692,20 @@ function SubscriptionPageContent() {
                   ))}
                 </ul>
                 <div className="space-y-2">
-                  {plan.current ? (
+                  {plan.price === "Custom" ? (
+                    <Button asChild className="w-full" variant="outline">
+                      <Link href="/contact">Contact Sales</Link>
+                    </Button>
+                  ) : !plan.checkoutAvailable ? (
+                    <Button className="w-full" variant="secondary" disabled>
+                      Payments unavailable
+                    </Button>
+                  ) : plan.current && !needsPaidActivation ? (
                     <Button className="w-full" variant="secondary" disabled>
                       Current Plan
                     </Button>
-                  ) : plan.price === "Custom" || !plan.checkoutAvailable ? (
-                    <Button className="w-full" variant="secondary" disabled>
-                      Contact Sales
-                    </Button>
                   ) : (
-                    <>
-                      {plan.paymentMethods?.stripe && (
-                        <Button
-                          className="w-full"
-                          variant="default"
-                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
-                          onClick={() => handleSubscribe(plan.id)}
-                        >
-                          {checkoutPlanId === plan.id
-                            ? "Redirecting…"
-                            : plan.paymentMethods?.mpesa || plan.paymentMethods?.paystack
-                              ? "Subscribe with Card"
-                              : "Subscribe"}
-                        </Button>
-                      )}
-                      {plan.paymentMethods?.paystack && (
-                        <Button
-                          className="w-full"
-                          variant={plan.paymentMethods?.stripe ? "outline" : "default"}
-                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
-                          onClick={() => handlePaystackSubscribe(plan.id)}
-                        >
-                          {checkoutPlanId === plan.id ? "Redirecting…" : "Pay with Paystack"}
-                        </Button>
-                      )}
-                      {plan.paymentMethods?.mpesa && (
-                        <>
-                          {mpesaPlanId !== plan.id && !mpesaWaiting ? (
-                            <Button
-                              className="w-full mt-2"
-                              variant="outline"
-                              disabled={!!checkoutPlanId}
-                              onClick={() => setMpesaPlanId(mpesaPlanId === plan.id ? null : plan.id)}
-                            >
-                              <Smartphone className="h-4 w-4 mr-2" />
-                              Pay with M-Pesa
-                            </Button>
-                          ) : mpesaWaiting === plan.id ? (
-                            <p className="text-sm text-center text-muted-foreground py-2">
-                              Check your phone and enter PIN. We&apos;ll update when payment is received…
-                            </p>
-                          ) : null}
-                          {mpesaPlanId === plan.id && !mpesaWaiting && (
-                            <div className="mt-3 space-y-2 rounded-lg border p-3 bg-muted/30">
-                              <Label htmlFor={`mpesa-phone-${plan.id}`}>M-Pesa phone number</Label>
-                              <Input
-                                id={`mpesa-phone-${plan.id}`}
-                                placeholder="254712345678 or 0712345678"
-                                value={mpesaPhone}
-                                onChange={(e) => setMpesaPhone(e.target.value)}
-                                className="bg-background"
-                              />
-                              {mpesaError && <p className="text-xs text-destructive">{mpesaError}</p>}
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  className="w-full"
-                                  onClick={() => handleMpesaSubmit(plan.id)}
-                                >
-                                  Send M-Pesa prompt
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setMpesaPlanId(null)
-                                    setMpesaError(null)
-                                  }}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      {plan.paymentMethods?.pesapal && (
-                        <Button
-                          className="w-full mt-2"
-                          variant="outline"
-                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
-                          onClick={() => handleGenericCheckout(plan.id, 'pesapal')}
-                        >
-                          Pay with Pesapal
-                        </Button>
-                      )}
-                      {plan.paymentMethods?.flutterwave && (
-                        <Button
-                          className="w-full mt-2"
-                          variant="outline"
-                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
-                          onClick={() => handleGenericCheckout(plan.id, 'flutterwave')}
-                        >
-                          Pay with Flutterwave
-                        </Button>
-                      )}
-                      {plan.paymentMethods?.manual && (
-                        <Button
-                          className="w-full mt-2"
-                          variant="outline"
-                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
-                          onClick={() => handleGenericCheckout(plan.id, 'manual')}
-                        >
-                          Bank Transfer / Invoice
-                        </Button>
-                      )}
-                    </>
+                    renderCheckoutButtons(plan, !!plan.current)
                   )}
                 </div>
               </div>

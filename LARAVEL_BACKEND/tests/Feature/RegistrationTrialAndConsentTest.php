@@ -111,6 +111,78 @@ class RegistrationTrialAndConsentTest extends TestCase
         ]);
     }
 
+    public function test_register_with_subscribe_intent_forces_payment_path_even_with_trial(): void
+    {
+        $growth = Plan::where('slug', 'professional')->firstOrFail();
+        $growth->update(['has_trial' => true, 'trial_days' => 14, 'is_free' => false, 'price_amount' => 99]);
+
+        $res = $this->postJson('/api/auth/register', [
+            'companyName' => 'Subscribe Co',
+            'name' => 'Owner',
+            'email' => 'subscribe-now@test.local',
+            'phone' => '254700000010',
+            'password' => 'Password1!',
+            'password_confirmation' => 'Password1!',
+            'acceptTerms' => true,
+            'planId' => (string) $growth->id,
+            'intent' => 'subscribe',
+        ])->assertOk()
+            ->assertJsonPath('requiresPayment', true)
+            ->assertJsonPath('postLoginPath', '/dashboard/subscription?subscribe='.$growth->id);
+
+        $user = User::where('email', 'subscribe-now@test.local')->firstOrFail();
+        $this->assertTrue($user->wants_immediate_payment);
+        $this->assertSame($growth->id, $user->selected_plan_id);
+    }
+
+    public function test_email_verify_redirects_to_login_with_plan_pay_for_subscribe_intent(): void
+    {
+        PlatformSetting::query()->delete();
+        PlatformSetting::create([
+            'platform_name' => 'RelayIQ',
+            'allow_new_registrations' => true,
+            'require_email_verification' => true,
+        ]);
+
+        $growth = Plan::where('slug', 'professional')->firstOrFail();
+        $growth->update(['has_trial' => true, 'trial_days' => 14, 'is_free' => false, 'price_amount' => 99]);
+
+        $this->postJson('/api/auth/register', [
+            'companyName' => 'Verify Pay Co',
+            'name' => 'Owner',
+            'email' => 'verify-pay@test.local',
+            'phone' => '254700000011',
+            'password' => 'Password1!',
+            'password_confirmation' => 'Password1!',
+            'acceptTerms' => true,
+            'planId' => (string) $growth->id,
+            'intent' => 'subscribe',
+        ])->assertOk();
+
+        $user = User::where('email', 'verify-pay@test.local')->firstOrFail();
+        $this->assertNull($user->email_verified_at);
+        $this->assertTrue($user->wants_immediate_payment);
+
+        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'api.verification.verify',
+            now()->addMinutes(60),
+            [
+                'id' => $user->id,
+                'hash' => sha1($user->email),
+                'plan' => (string) $growth->id,
+                'pay' => '1',
+            ]
+        );
+
+        $response = $this->get($url);
+        $response->assertRedirect();
+        $location = (string) $response->headers->get('Location');
+        $this->assertStringContainsString('verified=1', $location);
+        $this->assertStringContainsString('plan='.$growth->id, $location);
+        $this->assertStringContainsString('pay=1', $location);
+        $this->assertNotNull($user->fresh()->email_verified_at);
+    }
+
     public function test_admin_users_api_exposes_consent_fields(): void
     {
         $this->postJson('/api/auth/register', [

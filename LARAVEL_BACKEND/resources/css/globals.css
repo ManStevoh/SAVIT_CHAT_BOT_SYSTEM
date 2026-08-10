@@ -211,6 +211,8 @@
   }
   .lando-page {
     font-family: var(--font-sans);
+    overflow-x: hidden;
+    width: 100%;
   }
   .lando-nav a, .lando-footer a {
     text-decoration: none;

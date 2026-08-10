@@ -38,7 +38,12 @@ function LoginPageContent() {
   const trialParam = searchParams.get('trial') === '1'
   const registeredParam = searchParams.get('registered') === '1'
   const verifiedParam = searchParams.get('verified') === '1'
-  const registerHref = planId ? `/register?plan=${encodeURIComponent(planId)}` : '/register'
+  const registerHref = (() => {
+    if (!planId) return '/register'
+    const params = new URLSearchParams({ plan: planId })
+    if (forcePay) params.set('intent', 'subscribe')
+    return `/register?${params.toString()}`
+  })()
 
   const resolvePostLoginPath = (role: string): string => {
     if (redirectTo) return redirectTo
@@ -172,16 +177,24 @@ function LoginPageContent() {
       <LandoAuthHeader title="Welcome back" description="Sign in to your account to continue" />
 
       {verifiedParam && (
-        <LandoAuthSuccess>Email verified successfully. You can now sign in.</LandoAuthSuccess>
+        <LandoAuthSuccess>
+          {forcePay && planId
+            ? 'Email verified successfully. Sign in to complete payment for your plan.'
+            : 'Email verified successfully. You can now sign in.'}
+        </LandoAuthSuccess>
       )}
 
       {registeredParam && !verifiedParam && (
         <LandoAuthSuccess>
           {branding.requireEmailVerification
-            ? 'Account created. Please check your email to verify your account, then sign in below.'
-            : trialParam
-              ? 'Account created — your free trial has started. Sign in to open your dashboard.'
-              : 'Account created successfully. You can sign in below.'}
+            ? forcePay
+              ? 'Account created. Verify your email, then sign in to complete payment for your plan.'
+              : 'Account created. Please check your email to verify your account, then sign in below.'
+            : forcePay
+              ? 'Account created. Sign in to complete payment for your plan.'
+              : trialParam
+                ? 'Account created — your free trial has started. Sign in to open your dashboard.'
+                : 'Account created successfully. You can sign in below.'}
         </LandoAuthSuccess>
       )}
 
