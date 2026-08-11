@@ -38,6 +38,8 @@ type SettingsResponse = {
   spamMaxOrdersPerDay?: number
   dineInEnabled?: boolean
   storefrontAnnouncementBar?: string
+  storefrontSeoTitle?: string
+  storefrontSeoDescription?: string
 }
 
 export default function DashboardStorefrontPage() {
@@ -71,6 +73,8 @@ export default function DashboardStorefrontPage() {
   const [spamMaxOrdersPerDay, setSpamMaxOrdersPerDay] = useState('20')
   const [dineInEnabled, setDineInEnabled] = useState(false)
   const [announcementBar, setAnnouncementBar] = useState('')
+  const [storefrontSeoTitle, setStorefrontSeoTitle] = useState('')
+  const [storefrontSeoDescription, setStorefrontSeoDescription] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -101,6 +105,8 @@ export default function DashboardStorefrontPage() {
       setSpamMaxOrdersPerDay(String(data.spamMaxOrdersPerDay ?? 20))
       setDineInEnabled(!!data.dineInEnabled)
       setAnnouncementBar(data.storefrontAnnouncementBar || '')
+      setStorefrontSeoTitle(data.storefrontSeoTitle || '')
+      setStorefrontSeoDescription(data.storefrontSeoDescription || '')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load settings')
     } finally {
@@ -142,6 +148,8 @@ export default function DashboardStorefrontPage() {
           spamMaxOrdersPerDay: parseInt(spamMaxOrdersPerDay, 10) || 20,
           dineInEnabled,
           storefrontAnnouncementBar: announcementBar || null,
+          storefrontSeoTitle: storefrontSeoTitle || null,
+          storefrontSeoDescription: storefrontSeoDescription || null,
         },
       })
       if (data.success) {
@@ -237,6 +245,29 @@ export default function DashboardStorefrontPage() {
               </Button>
             </div>
           )}
+          <div>
+            <Label>SEO title</Label>
+            <Input
+              value={storefrontSeoTitle}
+              onChange={(e) => setStorefrontSeoTitle(e.target.value)}
+              placeholder="My Shop — Buy online"
+              maxLength={70}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">Shown in Google as the shop page title.</p>
+          </div>
+          <div>
+            <Label>SEO description</Label>
+            <Textarea
+              value={storefrontSeoDescription}
+              onChange={(e) => setStorefrontSeoDescription(e.target.value)}
+              rows={3}
+              maxLength={320}
+              placeholder="Describe what you sell and why shoppers should buy from you."
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Unique shop description beats generic “Shop online” copy for rankings and CTR.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

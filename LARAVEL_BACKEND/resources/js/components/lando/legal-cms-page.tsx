@@ -2,6 +2,7 @@
 
 import { LegalLayout } from "./legal-layout"
 import { useCmsPage } from "@/lib/api-hooks"
+import type { CmsPageData } from "./types"
 import { SeoHead, buildSeoFromCmsPage, type SeoPayload } from "@/components/seo/SeoHead"
 
 interface LegalCmsPageProps {
@@ -9,10 +10,17 @@ interface LegalCmsPageProps {
   fallbackTitle: string
   fallbackBody: React.ReactNode
   initialSeo?: SeoPayload | null
+  initialCms?: CmsPageData | null
 }
 
-export function LegalCmsPage({ slug, fallbackTitle, fallbackBody, initialSeo }: LegalCmsPageProps) {
-  const { data, isLoading } = useCmsPage(slug)
+export function LegalCmsPage({
+  slug,
+  fallbackTitle,
+  fallbackBody,
+  initialSeo,
+  initialCms,
+}: LegalCmsPageProps) {
+  const { data, isLoading } = useCmsPage(slug, initialCms)
 
   const section = data?.sections?.find((s) => s.key === "legal_content" && s.isEnabled)
   const content = (section?.content ?? {}) as {

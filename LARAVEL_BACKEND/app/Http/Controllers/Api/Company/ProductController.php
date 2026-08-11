@@ -111,6 +111,9 @@ class ProductController extends Controller
             'bookable' => 'sometimes|boolean',
             'bookingDurationMinutes' => 'nullable|integer|min:5|max:480',
             'licenseKeys' => 'nullable|string',
+            'metaTitle' => 'nullable|string|max:255',
+            'metaDescription' => 'nullable|string|max:500',
+            'slug' => 'nullable|string|max:255',
             'stock' => 'required|integer|min:0',
             'image' => 'nullable|image|max:5120',
             'digitalFile' => 'nullable|file|max:20480|mimetypes:application/pdf,application/epub+zip,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -301,6 +304,9 @@ class ProductController extends Controller
             'bookable' => 'sometimes|boolean',
             'bookingDurationMinutes' => 'nullable|integer|min:5|max:480',
             'licenseKeys' => 'nullable|string',
+            'metaTitle' => 'nullable|string|max:255',
+            'metaDescription' => 'nullable|string|max:500',
+            'slug' => 'nullable|string|max:255',
             'clearDigitalFile' => 'sometimes|boolean',
             'stock' => 'sometimes|integer|min:0',
             'status' => 'sometimes|in:active,inactive',
@@ -541,7 +547,10 @@ class ProductController extends Controller
         return [
             'id' => (string) $product->id,
             'name' => $product->name,
+            'slug' => $product->slug,
             'description' => $product->description ?? '',
+            'metaTitle' => $product->meta_title,
+            'metaDescription' => $product->meta_description,
             'price' => (float) $product->price,
             'compareAtPrice' => $product->compare_at_price !== null ? (float) $product->compare_at_price : null,
             'onSale' => $product->compare_at_price !== null
@@ -887,6 +896,15 @@ class ProductController extends Controller
         return [
             'name' => $validated['name'] ?? $current?->name,
             'description' => $validated['description'] ?? $current?->description,
+            'meta_title' => array_key_exists('metaTitle', $validated)
+                ? (($validated['metaTitle'] ?? '') !== '' ? trim((string) $validated['metaTitle']) : null)
+                : $current?->meta_title,
+            'meta_description' => array_key_exists('metaDescription', $validated)
+                ? (($validated['metaDescription'] ?? '') !== '' ? trim((string) $validated['metaDescription']) : null)
+                : $current?->meta_description,
+            'slug' => array_key_exists('slug', $validated)
+                ? (($validated['slug'] ?? '') !== '' ? \Illuminate\Support\Str::slug((string) $validated['slug']) : $current?->slug)
+                : $current?->slug,
             'price' => $validated['price'] ?? $current?->price ?? 0,
             'compare_at_price' => $this->resolveCompareAtPrice($validated, $current),
             'tax_rate_id' => $this->resolveTaxRateId($validated, $request, $current),

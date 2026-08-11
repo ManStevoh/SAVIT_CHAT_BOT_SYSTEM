@@ -1,9 +1,10 @@
 'use client'
 
 import { FormEvent, useMemo, useState } from 'react'
-import { Head, Link, router } from '@inertiajs/react'
+import { Link, router } from '@inertiajs/react'
 import { ArrowLeft, Heart, MessageCircle, Minus, Plus, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { SeoHead, type SeoPayload } from '@/components/seo/SeoHead'
 
 type Variant = { id: string; label: string; price: number; stock: number | null; soldOut?: boolean }
 type Review = { id: string; authorName: string; rating: number; body?: string | null }
@@ -38,7 +39,7 @@ type Props = {
   cartCount: number
   wishlist?: string[]
   shareUrl?: string
-  seo?: { title?: string; description?: string; image?: string | null }
+  seo?: SeoPayload | null
 }
 
 function formatPrice(amount: number, currency: string): string {
@@ -127,23 +128,27 @@ export default function StoreProductPage({
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      <Head>
-        <title>{seo?.title || product.name}</title>
-        {seo?.description ? <meta head-key="description" name="description" content={seo.description} /> : null}
-        {seo?.image ? <meta head-key="og:image" property="og:image" content={seo.image} /> : null}
-      </Head>
+      <SeoHead seo={seo} fallbackTitle={product.name} />
 
       <header className="border-b border-slate-200">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <Link href={`/s/${slug}`} className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" /> {company.name}
           </Link>
-          <Link href={`/s/${slug}/cart`}>
-            <Button variant="outline" className="gap-2">
-              <ShoppingBag className="h-4 w-4" />
-              Cart{cartCount > 0 ? ` (${cartCount})` : ''}
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href={`/s/${slug}/wishlist`}>
+              <Button variant="outline" className="gap-2">
+                <Heart className={`h-4 w-4 ${wishlistIds.length > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
+                Wishlist{wishlistIds.length > 0 ? ` (${wishlistIds.length})` : ''}
+              </Button>
+            </Link>
+            <Link href={`/s/${slug}/cart`}>
+              <Button variant="outline" className="gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Cart{cartCount > 0 ? ` (${cartCount})` : ''}
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 

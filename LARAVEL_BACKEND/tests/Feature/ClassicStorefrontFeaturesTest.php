@@ -220,6 +220,15 @@ class ClassicStorefrontFeaturesTest extends TestCase
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('wishlist.0', (string) $latte->id);
+
+        $this->get("/s/{$slug}/wishlist")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('store/wishlist')
+                ->has('products', 1)
+                ->where('products.0.id', (string) $latte->id)
+                ->where('wishlist.0', (string) $latte->id)
+            );
     }
 
     public function test_approved_reviews_show_unapproved_hidden(): void

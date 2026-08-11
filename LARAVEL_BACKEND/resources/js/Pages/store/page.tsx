@@ -1,10 +1,11 @@
 'use client'
 
 import { FormEvent, useMemo, useState } from 'react'
-import { Head, Link, router } from '@inertiajs/react'
-import { MessageCircle, ShoppingBag } from 'lucide-react'
+import { Link, router } from '@inertiajs/react'
+import { Heart, MessageCircle, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SeoHead, type SeoPayload } from '@/components/seo/SeoHead'
 
 type StoreProduct = {
   id: string
@@ -56,8 +57,9 @@ type Props = {
   filters?: Filters
   sections?: Section[]
   cartCount: number
-  chrome?: { cart?: string; search?: string; trackOrder?: string }
-  seo?: { title?: string; description?: string }
+  wishlist?: string[]
+  chrome?: { cart?: string; wishlist?: string; search?: string; trackOrder?: string }
+  seo?: SeoPayload | null
 }
 
 function formatPrice(amount: number, currency: string): string {
@@ -122,6 +124,7 @@ export default function StorePage({
   filters = {},
   sections,
   cartCount,
+  wishlist = [],
   chrome,
   seo,
 }: Props) {
@@ -167,10 +170,7 @@ export default function StorePage({
 
   return (
     <div className="min-h-screen bg-white text-slate-900" style={style}>
-      <Head>
-        <title>{seo?.title || `${company.name} — Shop`}</title>
-        {seo?.description ? <meta head-key="description" name="description" content={seo.description} /> : null}
-      </Head>
+      <SeoHead seo={seo} fallbackTitle={`${company.name} — Shop`} />
 
       {theme.announcement_bar ? (
         <div className="bg-[var(--sf-accent)] px-4 py-2 text-center text-xs font-medium text-white">
@@ -196,6 +196,13 @@ export default function StorePage({
           <div className="flex items-center gap-2">
             <Link href={`/s/${slug}/track`} className="hidden text-xs text-slate-500 hover:text-slate-900 sm:inline">
               {chrome?.trackOrder || 'Track order'}
+            </Link>
+            <Link href={`/s/${slug}/wishlist`}>
+              <Button variant="outline" className="gap-2" style={{ borderColor: 'var(--sf-primary)', color: 'var(--sf-primary)' }}>
+                <Heart className={`h-4 w-4 ${wishlist.length > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
+                <span className="hidden sm:inline">{chrome?.wishlist || 'Wishlist'}</span>
+                {wishlist.length > 0 ? ` (${wishlist.length})` : ''}
+              </Button>
             </Link>
             <Link href={`/s/${slug}/cart`}>
               <Button variant="outline" className="gap-2" style={{ borderColor: 'var(--sf-primary)', color: 'var(--sf-primary)' }}>

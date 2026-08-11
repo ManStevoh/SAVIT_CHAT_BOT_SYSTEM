@@ -61,6 +61,20 @@ const FALLBACK = (
   </>
 )
 
-export default function TermsPage({ seo }: { seo?: import("@/components/seo/SeoHead").SeoPayload | null }) {
-  return <LegalCmsPage slug="terms" fallbackTitle="Terms of Service" fallbackBody={FALLBACK} initialSeo={seo} />
+export default function TermsPage({
+  seo,
+  cms,
+}: {
+  seo?: import("@/components/seo/SeoHead").SeoPayload | null
+  cms?: import("@/components/lando/types").CmsPageData | null
+}) {
+  return (
+    <LegalCmsPage
+      slug="terms"
+      fallbackTitle="Terms of Service"
+      fallbackBody={FALLBACK}
+      initialSeo={seo}
+      initialCms={cms}
+    />
+  )
 }

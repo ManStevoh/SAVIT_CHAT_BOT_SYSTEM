@@ -14,13 +14,25 @@ type BlogListItem = {
   publishedAt?: string | null
 }
 
-export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
+export default function BlogIndexPage({
+  seo,
+  initialPosts,
+}: {
+  seo?: SeoPayload | null
+  initialPosts?: BlogListItem[] | null
+}) {
   const { data, isLoading } = useSWR<{ posts: BlogListItem[] }>(
     "/api/blog/posts",
-    (url: string) => apiRequest<{ posts: BlogListItem[] }>(url)
+    (url: string) => apiRequest<{ posts: BlogListItem[] }>(url),
+    {
+      fallbackData: initialPosts ? { posts: initialPosts } : undefined,
+      revalidateOnMount: !initialPosts?.length,
+      revalidateOnFocus: false,
+    }
   )
 
-  const posts = data?.posts ?? []
+  const posts = data?.posts ?? initialPosts ?? []
+  const showLoading = isLoading && posts.length === 0
 
   return (
     <>
@@ -32,13 +44,13 @@ export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
         plain
         intro={
           <p className="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Guides on WhatsApp commerce, AI sales, storefronts, bookings, and growing with RelayIQ.
+            Guides on WhatsApp commerce, AI sales, M-Pesa checkout, storefronts, bookings, and growing with RelayIQ.
           </p>
         }
       >
-        {isLoading && <p className="text-sm text-muted-foreground">Loading posts…</p>}
+        {showLoading && <p className="text-sm text-muted-foreground">Loading posts…</p>}
 
-        {!isLoading && posts.length === 0 && (
+        {!showLoading && posts.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center">
             <Newspaper className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
             <p className="mt-4 text-sm text-muted-foreground">No posts published yet. Check back soon.</p>
@@ -55,7 +67,7 @@ export default function BlogIndexPage({ seo }: { seo?: SeoPayload | null }) {
                 {post.coverImage ? (
                   <img
                     src={post.coverImage}
-                    alt=""
+                    alt={post.title}
                     loading="lazy"
                     decoding="async"
                     className="aspect-[16/9] w-full object-cover transition duration-300 group-hover:scale-[1.02]"

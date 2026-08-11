@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import { Toaster } from '@/components/ui/toaster'
 import '../css/globals.css'
-import { createInertiaApp } from '@inertiajs/react'
+import { createInertiaApp, router } from '@inertiajs/react'
 import { createRoot } from 'react-dom/client'
 import type { ReactNode } from 'react'
 import type React from 'react'
@@ -23,6 +23,26 @@ function resolveLayout(name: string) {
   return undefined
 }
 
+function shouldSkipAppTitleSuffix(title: string): boolean {
+  try {
+    const seo = (router.page?.props as { seo?: { skipAppTitleSuffix?: boolean } } | undefined)?.seo
+    if (seo?.skipAppTitleSuffix) return true
+  } catch {
+    // ignore
+  }
+
+  try {
+    const path = typeof window !== 'undefined' ? window.location.pathname : ''
+    if (/^\/(s|b)\//.test(path) || path.startsWith('/pay/') || path.startsWith('/invoice/')) {
+      return true
+    }
+  } catch {
+    // ignore
+  }
+
+  return false
+}
+
 createInertiaApp({
   title: (title) => {
     if (!title) return appName
@@ -35,6 +55,11 @@ createInertiaApp({
     ) {
       return normalized
     }
+
+    if (shouldSkipAppTitleSuffix(normalized)) {
+      return normalized
+    }
+
     return `${normalized} - ${appName}`
   },
   resolve: async (name) => {

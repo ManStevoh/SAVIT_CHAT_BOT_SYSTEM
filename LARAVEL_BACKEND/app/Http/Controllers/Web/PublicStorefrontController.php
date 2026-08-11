@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\ProductReview;
 use App\Models\StorefrontSession;
+use App\Services\Cms\CmsSeoService;
 use App\Services\OrderPaymentService;
 use App\Services\PaymentGateways\PaymentGatewayRegistry;
 use App\Services\Storefront\StorefrontService;
@@ -23,13 +24,14 @@ class PublicStorefrontController extends Controller
 {
     /** Chrome/UI string sets for the storefront locale switcher (feature 18, en + sw stubs). */
     protected const CHROME_STRINGS = [
-        'en' => ['cart' => 'Cart', 'checkout' => 'Checkout', 'search' => 'Search', 'trackOrder' => 'Track order'],
-        'sw' => ['cart' => 'Kikapu', 'checkout' => 'Malipo', 'search' => 'Tafuta', 'trackOrder' => 'Fuatilia Oda'],
+        'en' => ['cart' => 'Cart', 'wishlist' => 'Wishlist', 'checkout' => 'Checkout', 'search' => 'Search', 'trackOrder' => 'Track order'],
+        'sw' => ['cart' => 'Kikapu', 'wishlist' => 'Orodha ya matakwa', 'checkout' => 'Malipo', 'search' => 'Tafuta', 'trackOrder' => 'Fuatilia Oda'],
     ];
 
     public function __construct(
         protected StorefrontService $storefront,
         protected OrderPaymentService $orderPayment,
+        protected CmsSeoService $seo,
     ) {}
 
     public function show(string $slug, Request $request): Response
@@ -73,10 +75,7 @@ class PublicStorefrontController extends Controller
             'wishlist' => $this->currentWishlist($company),
             'locale' => $locale,
             'chrome' => self::CHROME_STRINGS[$locale] ?? self::CHROME_STRINGS['en'],
-            'seo' => [
-                'title' => $company->name.' — Shop',
-                'description' => 'Shop '.$company->name.' online.',
-            ],
+            'seo' => $this->seo->forStorefrontCatalog($company),
         ]);
     }
 
@@ -93,24 +92,22 @@ class PublicStorefrontController extends Controller
         $this->storefront->recordEvent($company, 'view_product', $session->session_token, $productModel->id);
 
         $productPath = $productModel->slug ?: (string) $productModel->id;
-        $shareUrl = url("/s/{$slug}/p/{$productPath}");
+        $serialized = $this->storefront->serializeProduct($productModel);
+        $shareUrl = $this->seo->forStorefrontProduct($company, $productModel, $serialized)['canonical']
+            ?? url("/s/{$slug}/p/{$productPath}");
         $waPrefill = "Hi, I'm interested in {$productModel->name} from {$company->name}.\n{$shareUrl}";
 
         return Inertia::render('store/product', [
             'slug' => $slug,
             'company' => $this->companyPayload($company, $request, $waPrefill),
-            'product' => $this->storefront->serializeProduct($productModel),
+            'product' => $serialized,
             'related' => $this->storefront->relatedProducts($company, $productModel),
             'cartCount' => $this->currentCartCount($company),
             'wishlist' => $this->currentWishlist($company),
             'shareUrl' => $shareUrl,
             'locale' => $locale,
             'chrome' => self::CHROME_STRINGS[$locale] ?? self::CHROME_STRINGS['en'],
-            'seo' => [
-                'title' => $productModel->meta_title ?: ($productModel->name.' — '.$company->name),
-                'description' => $productModel->meta_description ?: \Illuminate\Support\Str::limit(strip_tags((string) $productModel->description), 160),
-                'image' => $this->storefront->serializeProduct($productModel)['image'] ?? null,
-            ],
+            'seo' => $this->seo->forStorefrontProduct($company, $productModel, $serialized),
         ]);
     }
 
@@ -132,6 +129,27 @@ class PublicStorefrontController extends Controller
         return response()->json([
             'success' => true,
             'wishlist' => array_map('strval', $wishlist),
+        ]);
+    }
+
+    public function wishlist(string $slug, Request $request): Response
+    {
+        $company = $this->storefront->resolveCompanyBySlug($slug);
+        $locale = $this->resolveLocale($company, $request);
+        $session = $this->storefront->getSession($company, $this->cartToken($company, $request));
+        $this->persistCartToken($company, $session->session_token);
+
+        $wishlistIds = $session->wishlistIds();
+
+        return Inertia::render('store/wishlist', [
+            'slug' => $slug,
+            'company' => $this->companyPayload($company, $request),
+            'products' => $this->storefront->wishlistProducts($company, $wishlistIds),
+            'wishlist' => array_map('strval', $wishlistIds),
+            'cartCount' => $this->currentCartCount($company),
+            'locale' => $locale,
+            'chrome' => self::CHROME_STRINGS[$locale] ?? self::CHROME_STRINGS['en'],
+            'seo' => $this->seo->noindex('Wishlist — '.$company->name, 'Saved items from '.$company->name.'.'),
         ]);
     }
 
@@ -204,6 +222,7 @@ class PublicStorefrontController extends Controller
             'slug' => $slug,
             'company' => $this->companyPayload($company, $request, $waPrefill),
             'cart' => $cart,
+            'seo' => $this->seo->noindex('Cart — '.$company->name),
         ]);
     }
 
@@ -300,6 +319,7 @@ class PublicStorefrontController extends Controller
             'suggestedAddress' => $this->storefront->suggestedAddressForPhone($company, is_string($phone) ? $phone : null),
             'locale' => $locale,
             'chrome' => self::CHROME_STRINGS[$locale] ?? self::CHROME_STRINGS['en'],
+            'seo' => $this->seo->noindex('Checkout — '.$company->name),
         ]);
     }
 
@@ -389,6 +409,7 @@ class PublicStorefrontController extends Controller
             'order' => null,
             'defaultPhone' => is_string($phone) ? $phone : '',
             'notFound' => false,
+            'seo' => $this->seo->noindex('Track order — '.$company->name),
         ]);
     }
 
@@ -407,6 +428,7 @@ class PublicStorefrontController extends Controller
             'company' => $this->companyPayload($company),
             'order' => $order ? $this->orderPayload($order) : null,
             'notFound' => $order === null,
+            'seo' => $this->seo->noindex('Track order — '.$company->name),
         ]);
     }
 
@@ -427,6 +449,7 @@ class PublicStorefrontController extends Controller
             'slug' => $slug,
             'company' => $this->companyPayload($company),
             'order' => $this->orderPayload($orderModel),
+            'seo' => $this->seo->noindex('Order confirmation — '.$company->name),
         ]);
     }
 
@@ -439,17 +462,36 @@ class PublicStorefrontController extends Controller
 
         $company->loadMissing('settings');
 
+        $title = trim((string) ($company->link_in_bio_headline ?: $company->name));
+        $description = trim((string) ($company->link_in_bio_bio ?: ('Links and contact for '.$company->name.'.')));
+        $canonical = rtrim((string) config('app.url'), '/').'/b/'.$slug;
+        $ogImage = $company->logo ? asset('storage/'.$company->logo) : null;
+
         return Inertia::render('bio/page', [
             'slug' => $slug,
             'company' => [
                 'name' => $company->name,
                 'headline' => $company->link_in_bio_headline,
                 'bio' => $company->link_in_bio_bio,
-                'logo' => $company->logo ? asset('storage/'.$company->logo) : null,
+                'logo' => $ogImage,
                 'links' => is_array($company->link_in_bio_links) ? array_values($company->link_in_bio_links) : [],
                 'whatsappNumber' => $company->settings?->whatsapp_number,
                 'storefrontEnabled' => (bool) $company->storefront_enabled,
                 'storeSlug' => $company->store_slug,
+            ],
+            'seo' => [
+                'title' => $title.' — '.$company->name,
+                'description' => \Illuminate\Support\Str::limit(strip_tags($description), 160),
+                'canonical' => $canonical,
+                'robots' => 'index, follow',
+                'ogTitle' => $title,
+                'ogDescription' => \Illuminate\Support\Str::limit(strip_tags($description), 160),
+                'ogImage' => $ogImage,
+                'ogType' => 'profile',
+                'ogUrl' => $canonical,
+                'siteName' => $company->name,
+                'twitterCard' => 'summary',
+                'skipAppTitleSuffix' => true,
             ],
         ]);
     }
@@ -465,6 +507,7 @@ class PublicStorefrontController extends Controller
                 'company' => $this->companyPayload($order->company),
                 'paymentOptions' => $this->paymentOptions($order),
                 'initialMethod' => $request->query('method') ?? $request->query('gateway') ?? $order->payment_method,
+                'seo' => $this->seo->noindex('Pay — '.($order->company?->name ?: 'Order')),
             ]);
         }
 
@@ -550,6 +593,7 @@ class PublicStorefrontController extends Controller
             'company' => $this->companyPayload($order->company),
             'paymentOptions' => $this->paymentOptions($order),
             'initialMethod' => $targetMethod,
+            'seo' => $this->seo->noindex('Pay — '.($order->company?->name ?: 'Order')),
         ]);
     }
 
@@ -680,6 +724,7 @@ class PublicStorefrontController extends Controller
             'token' => $token,
             'order' => $this->orderPayload($order),
             'company' => $this->companyPayload($order->company),
+            'seo' => $this->seo->noindex('Invoice — '.($order->company?->name ?: 'Order')),
         ]);
     }
 

@@ -13,10 +13,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" id="dynamic-favicon" href="/favicon-light.png?v=4" type="image/png">
+    <link rel="icon" id="dynamic-favicon" href="{{ $brandFavicon ?: '/favicon-light.png?v=4' }}" type="image/png">
     <link rel="icon" href="/favicon-dark.png?v=4" type="image/png" media="(prefers-color-scheme: dark)">
-    <link rel="icon" href="/favicon-light.png?v=4" type="image/png" media="(prefers-color-scheme: light)">
-    <link rel="apple-touch-icon" href="/favicon-light.png?v=4">
+    <link rel="icon" href="{{ $brandFavicon ?: '/favicon-light.png?v=4' }}" type="image/png" media="(prefers-color-scheme: light)">
+    <link rel="apple-touch-icon" href="{{ $brandFavicon ?: '/favicon-light.png?v=4' }}">
     <script>
         (function() {
             function updateFavicon() {
@@ -33,6 +33,9 @@
             } catch (e) {}
         })();
     </script>
+@php
+    $ogImage = $seo['ogImage'] ?? $seo['image'] ?? null;
+@endphp
 @if ($seo)
     <title>{{ $seo['title'] ?? config('app.name', 'RelayIQ') }}</title>
     @if (!empty($seo['description']))
@@ -46,6 +49,9 @@
     @endif
     <meta property="og:type" content="{{ $seo['ogType'] ?? 'website' }}">
     <meta property="og:site_name" content="{{ $seo['siteName'] ?? config('app.name') }}">
+    @if (!empty($seo['ogLocale']))
+    <meta property="og:locale" content="{{ $seo['ogLocale'] }}">
+    @endif
     @if (!empty($seo['ogTitle']))
     <meta property="og:title" content="{{ $seo['ogTitle'] }}">
     @endif
@@ -55,18 +61,33 @@
     @if (!empty($seo['ogUrl']))
     <meta property="og:url" content="{{ $seo['ogUrl'] }}">
     @endif
-    @if (!empty($seo['ogImage']))
-    <meta property="og:image" content="{{ $seo['ogImage'] }}">
+    @if (!empty($ogImage))
+    <meta property="og:image" content="{{ $ogImage }}">
+    @endif
+    @if (!empty($ogImage) && !empty($seo['ogImageWidth']))
+    <meta property="og:image:width" content="{{ $seo['ogImageWidth'] }}">
+    @endif
+    @if (!empty($ogImage) && !empty($seo['ogImageHeight']))
+    <meta property="og:image:height" content="{{ $seo['ogImageHeight'] }}">
+    @endif
+    @if (!empty($seo['articlePublishedTime']))
+    <meta property="article:published_time" content="{{ $seo['articlePublishedTime'] }}">
+    @endif
+    @if (!empty($seo['articleModifiedTime']))
+    <meta property="article:modified_time" content="{{ $seo['articleModifiedTime'] }}">
     @endif
     <meta name="twitter:card" content="{{ $seo['twitterCard'] ?? 'summary_large_image' }}">
+    @if (!empty($seo['twitterSite']))
+    <meta name="twitter:site" content="{{ $seo['twitterSite'] }}">
+    @endif
     @if (!empty($seo['ogTitle']))
     <meta name="twitter:title" content="{{ $seo['ogTitle'] }}">
     @endif
     @if (!empty($seo['ogDescription']))
     <meta name="twitter:description" content="{{ $seo['ogDescription'] }}">
     @endif
-    @if (!empty($seo['ogImage']))
-    <meta name="twitter:image" content="{{ $seo['ogImage'] }}">
+    @if (!empty($ogImage))
+    <meta name="twitter:image" content="{{ $ogImage }}">
     @endif
     @if (!empty($seo['jsonLd']))
     <script type="application/ld+json">{!! json_encode($seo['jsonLd'], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) !!}</script>

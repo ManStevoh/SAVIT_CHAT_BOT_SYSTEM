@@ -144,7 +144,10 @@ export interface ProductImage {
 export interface Product {
   id: string
   name: string
+  slug?: string | null
   description: string
+  metaTitle?: string | null
+  metaDescription?: string | null
   price: number
   compareAtPrice?: number | null
   onSale?: boolean

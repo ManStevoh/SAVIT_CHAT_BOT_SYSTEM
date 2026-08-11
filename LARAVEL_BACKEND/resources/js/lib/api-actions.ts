@@ -629,6 +629,9 @@ export async function createOrderFromChat(
 export interface CreateProductData {
   name: string
   description: string
+  metaTitle?: string | null
+  metaDescription?: string | null
+  slug?: string | null
   price: number
   compareAtPrice?: number | null
   taxRateId?: string | null
@@ -680,6 +683,9 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
       const formData = new FormData()
       formData.append('name', data.name)
       formData.append('description', data.description)
+      if (data.metaTitle != null) formData.append('metaTitle', data.metaTitle)
+      if (data.metaDescription != null) formData.append('metaDescription', data.metaDescription)
+      if (data.slug != null) formData.append('slug', data.slug)
       formData.append('price', String(data.price))
       if (data.compareAtPrice != null && data.compareAtPrice !== undefined) {
         formData.append('compareAtPrice', String(data.compareAtPrice))
@@ -715,6 +721,9 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
       body: {
         name: data.name,
         description: data.description,
+        metaTitle: data.metaTitle ?? null,
+        metaDescription: data.metaDescription ?? null,
+        slug: data.slug ?? null,
         price: data.price,
         compareAtPrice: data.compareAtPrice ?? null,
         taxRateId: data.taxRateId ?? null,

@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Route;
 
 // SEO
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+Route::get('/sitemap-{section}.xml', [SitemapController::class, 'section'])
+    ->where('section', 'pages|blog|stores')
+    ->name('sitemap.section');
 Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/whatsapp-debug-log', function () {
     $storageLog = storage_path('logs/whatsapp_debug.log');
@@ -29,6 +32,7 @@ Route::get('/whatsapp-debug-log', function () {
 
     return response($content !== '' ? $content : "No WhatsApp debug logs recorded yet.\nSend a message on WhatsApp and refresh this URL to see step-by-step pipeline execution.", 200, [
         'Content-Type' => 'text/plain; charset=UTF-8',
+        'X-Robots-Tag' => 'noindex, nofollow',
     ]);
 });
 
@@ -45,6 +49,7 @@ Route::get('/whatsapp_debug.txt', function () {
 
     return response($content !== '' ? $content : "No WhatsApp debug logs recorded yet.\nSend a message on WhatsApp and refresh this URL.", 200, [
         'Content-Type' => 'text/plain; charset=UTF-8',
+        'X-Robots-Tag' => 'noindex, nofollow',
     ]);
 });
 
@@ -61,6 +66,7 @@ Route::get('/debug.txt', function () {
 
     return response($content !== '' ? $content : "No WhatsApp debug logs recorded yet.\nSend a message on WhatsApp and refresh this URL.", 200, [
         'Content-Type' => 'text/plain; charset=UTF-8',
+        'X-Robots-Tag' => 'noindex, nofollow',
     ]);
 });
 
@@ -193,6 +199,7 @@ Route::post('/s/{slug}/checkout', [PublicStorefrontController::class, 'checkoutS
 Route::get('/s/{slug}/order/{order}', [PublicStorefrontController::class, 'confirmation'])->name('storefront.confirmation');
 Route::get('/s/{slug}/track', [PublicStorefrontController::class, 'track'])->name('storefront.track');
 Route::post('/s/{slug}/track', [PublicStorefrontController::class, 'trackLookup'])->name('storefront.track.lookup');
+Route::get('/s/{slug}/wishlist', [PublicStorefrontController::class, 'wishlist'])->name('storefront.wishlist');
 Route::post('/s/{slug}/wishlist/toggle', [PublicStorefrontController::class, 'wishlistToggle'])->name('storefront.wishlist.toggle');
 Route::post('/s/{slug}/p/{product}/reviews', [PublicStorefrontController::class, 'reviewStore'])->name('storefront.product.reviews.store');
 

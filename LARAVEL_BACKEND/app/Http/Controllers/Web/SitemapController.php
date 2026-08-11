@@ -10,9 +10,24 @@ class SitemapController extends Controller
 {
     public function __invoke(CmsSeoService $seo): Response
     {
-        $entries = $seo->sitemapEntries();
+        if ($seo->shouldUseSitemapIndex()) {
+            $xml = view('sitemap-index', ['entries' => $seo->sitemapIndexEntries()])->render();
 
-        $xml = view('sitemap', ['entries' => $entries])->render();
+            return response($xml, 200)->header('Content-Type', 'application/xml; charset=UTF-8');
+        }
+
+        $xml = view('sitemap', ['entries' => $seo->sitemapEntries()])->render();
+
+        return response($xml, 200)->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    public function section(string $section, CmsSeoService $seo): Response
+    {
+        if (! in_array($section, ['pages', 'blog', 'stores'], true)) {
+            abort(404);
+        }
+
+        $xml = view('sitemap', ['entries' => $seo->sitemapEntries($section)])->render();
 
         return response($xml, 200)->header('Content-Type', 'application/xml; charset=UTF-8');
     }

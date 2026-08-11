@@ -5,23 +5,31 @@ import { LandoNavbar } from "./navbar"
 import { LandoFooter, mobileAppFromFooterContent } from "./footer"
 import { LandoSectionRenderer } from "./section-renderer"
 import { useCmsPage, useCmsGlobal } from "@/lib/api-hooks"
-import type { CmsLink, CmsSection } from "./types"
+import type { CmsLink, CmsPageData, CmsSection } from "./types"
 import { SeoHead, buildSeoFromCmsPage, type SeoPayload } from "@/components/seo/SeoHead"
 
 interface LandoCmsPageProps {
   slug: string
   fallbackTitle?: string
   initialSeo?: SeoPayload | null
+  initialCms?: CmsPageData | null
+  initialCmsGlobal?: CmsPageData | null
 }
 
 function getSectionContent(sections: CmsSection[], key: string) {
   return sections.find((s) => s.key === key)?.content ?? {}
 }
 
-export function LandoCmsPage({ slug, fallbackTitle, initialSeo }: LandoCmsPageProps) {
+export function LandoCmsPage({
+  slug,
+  fallbackTitle,
+  initialSeo,
+  initialCms,
+  initialCmsGlobal,
+}: LandoCmsPageProps) {
   const pathname = usePathname()
-  const { data: pageData, isLoading } = useCmsPage(slug)
-  const { data: globalData } = useCmsGlobal()
+  const { data: pageData, isLoading } = useCmsPage(slug, initialCms)
+  const { data: globalData } = useCmsGlobal(initialCmsGlobal)
 
   const globalSections = globalData?.sections ?? []
   const navbarContent = getSectionContent(globalSections, "navbar")
@@ -34,6 +42,8 @@ export function LandoCmsPage({ slug, fallbackTitle, initialSeo }: LandoCmsPagePr
     pageData?.sections
       .filter((s) => s.isEnabled)
       .sort((a, b) => a.sortOrder - b.sortOrder) ?? []
+
+  const showSpinner = isLoading && !pageData
 
   return (
     <>
@@ -49,13 +59,13 @@ export function LandoCmsPage({ slug, fallbackTitle, initialSeo }: LandoCmsPagePr
           activePath={pathname}
         />
 
-        {isLoading && (
+        {showSpinner && (
           <div className="flex min-h-[50vh] items-center justify-center pt-28">
             <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         )}
 
-        {!isLoading &&
+        {!showSpinner &&
           pageData &&
           enabledSections.map((section) => (
             <LandoSectionRenderer

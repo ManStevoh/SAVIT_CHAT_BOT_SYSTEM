@@ -264,9 +264,19 @@ class CmsPageSeeder extends Seeder
                         ],
                     ],
                     [
+                        'section_key' => 'faq',
+                        'label' => 'FAQ',
+                        'sort_order' => 12,
+                        'is_enabled' => true,
+                        'content' => [
+                            'title' => 'Frequently asked questions',
+                            'description' => 'Straight answers about WhatsApp AI sales, payments, storefront, and plans.',
+                        ],
+                    ],
+                    [
                         'section_key' => 'cta',
                         'label' => 'Call to action',
-                        'sort_order' => 12,
+                        'sort_order' => 13,
                         'content' => [
                             'title' => 'Put an AI employee on your WhatsApp today',
                             'description' => '14-day free trial on Starter and Growth. No credit card required to start. Explore solutions first if you want the full picture.',

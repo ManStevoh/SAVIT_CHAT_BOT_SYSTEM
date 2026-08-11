@@ -4,10 +4,14 @@ namespace App\Services\Cms;
 
 use App\Models\BlogPost;
 use App\Models\CmsPage;
+use App\Models\Company;
 use App\Models\LandingFaq;
+use App\Models\Plan;
 use App\Models\PlatformSetting;
+use App\Models\Product;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CmsSeoService
 {
@@ -38,7 +42,7 @@ class CmsSeoService
      */
     public function toPayload(CmsPage $page): array
     {
-        $base = rtrim((string) config('app.url'), '/');
+        $base = $this->appBaseUrl();
         $path = $this->pathForSlug($page->slug);
         $canonical = $page->canonical_url
             ? $this->absoluteUrl($page->canonical_url)
@@ -50,6 +54,13 @@ class CmsSeoService
         $ogDescription = trim((string) ($page->og_description ?: $description));
         $ogImage = $this->absoluteUrl($page->og_image) ?: $this->defaultOgImage();
         $siteName = (string) config('app.name', 'RelayIQ');
+
+        $breadcrumbs = [
+            ['name' => 'Home', 'url' => $base.'/'],
+        ];
+        if ($page->slug !== 'home') {
+            $breadcrumbs[] = ['name' => $page->title ?: Str::title($page->slug), 'url' => $canonical];
+        }
 
         $jsonLd = [
             '@context' => 'https://schema.org',
@@ -77,12 +88,13 @@ class CmsSeoService
                     'isPartOf' => ['@id' => $base.'/#website'],
                     'about' => ['@id' => $base.'/#organization'],
                 ],
+                $this->breadcrumbNode($breadcrumbs),
                 $this->softwareApplicationNode($base, $siteName, $description),
                 $this->faqNode($page),
             ])),
         ];
 
-        return [
+        return $this->decoratePayload([
             'title' => $title,
             'description' => $description,
             'canonical' => $canonical,
@@ -95,15 +107,243 @@ class CmsSeoService
             'siteName' => $siteName,
             'twitterCard' => 'summary_large_image',
             'jsonLd' => $jsonLd,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function noindex(string $title, ?string $description = null): array
+    {
+        return $this->decoratePayload([
+            'title' => $title,
+            'description' => $description,
+            'robots' => 'noindex, nofollow',
+            'ogTitle' => $title,
+            'ogDescription' => $description,
+            'ogType' => 'website',
+            'siteName' => (string) config('app.name', 'RelayIQ'),
+            'twitterCard' => 'summary',
+            'jsonLd' => null,
+        ]);
+    }
+
+    /**
+     * Catalog / shop SEO for a tenant storefront.
+     *
+     * @return array<string, mixed>
+     */
+    public function forStorefrontCatalog(Company $company, ?string $forcedBase = null): array
+    {
+        if ($company->custom_domain && $company->custom_domain_verified_at) {
+            $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+            $canonical = $scheme.'://'.$company->custom_domain;
+        } else {
+            $canonical = $this->appBaseUrl().'/s/'.$company->store_slug;
+        }
+
+        if ($forcedBase) {
+            $canonical = rtrim($forcedBase, '/');
+        }
+
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        $title = trim((string) ($theme['seo_title'] ?? '')) ?: ($company->name.' — Shop');
+        $description = trim((string) ($theme['seo_description'] ?? ''))
+            ?: ('Shop '.$company->name.' online. Browse products and order for delivery or pickup.');
+        $ogImage = $company->logo ? asset('storage/'.$company->logo) : $this->defaultOgImage();
+        $siteName = $company->name;
+
+        $jsonLd = [
+            '@context' => 'https://schema.org',
+            '@graph' => array_values(array_filter([
+                [
+                    '@type' => 'OnlineStore',
+                    '@id' => $canonical.'#store',
+                    'name' => $company->name,
+                    'url' => $canonical,
+                    'image' => $ogImage,
+                    'description' => $description,
+                ],
+                $this->breadcrumbNode([
+                    ['name' => 'Home', 'url' => $canonical],
+                ]),
+            ])),
         ];
+
+        return $this->decoratePayload([
+            'title' => $title,
+            'description' => $description,
+            'canonical' => $canonical,
+            'robots' => 'index, follow',
+            'ogTitle' => $title,
+            'ogDescription' => $description,
+            'ogImage' => $ogImage,
+            'ogType' => 'website',
+            'ogUrl' => $canonical,
+            'siteName' => $siteName,
+            'twitterCard' => 'summary_large_image',
+            'jsonLd' => $jsonLd,
+            'skipAppTitleSuffix' => true,
+        ]);
+    }
+
+    /**
+     * Product detail page SEO + Product/Offer JSON-LD.
+     *
+     * @param  array<string, mixed>  $serializedProduct
+     * @return array<string, mixed>
+     */
+    public function forStorefrontProduct(Company $company, Product $product, array $serializedProduct): array
+    {
+        $productPath = $product->slug ?: (string) $product->id;
+        if ($company->custom_domain && $company->custom_domain_verified_at) {
+            $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+            $canonical = $scheme.'://'.$company->custom_domain.'/p/'.$productPath;
+        } else {
+            $canonical = $this->appBaseUrl().'/s/'.$company->store_slug.'/p/'.$productPath;
+        }
+
+        $title = trim((string) ($product->meta_title ?: '')) ?: ($product->name.' — '.$company->name);
+        $description = trim((string) ($product->meta_description ?: ''))
+            ?: Str::limit(strip_tags((string) $product->description), 160);
+        $ogImage = $serializedProduct['image'] ?? null;
+        if (is_string($ogImage) && $ogImage !== '' && ! str_starts_with($ogImage, 'http')) {
+            $ogImage = url($ogImage);
+        }
+        $ogImage = $ogImage ?: ($company->logo ? asset('storage/'.$company->logo) : $this->defaultOgImage());
+
+        $currency = 'USD';
+        try {
+            $company->loadMissing('settings');
+            $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
+        } catch (\Throwable) {
+            // ignore
+        }
+
+        $availability = 'https://schema.org/InStock';
+        $stock = (int) ($serializedProduct['stock'] ?? $product->stock ?? 0);
+        $trackInventory = (bool) ($serializedProduct['trackInventory'] ?? $product->track_inventory ?? true);
+        if ($trackInventory && $stock <= 0) {
+            $availability = 'https://schema.org/OutOfStock';
+        }
+
+        $offer = [
+            '@type' => 'Offer',
+            'url' => $canonical,
+            'priceCurrency' => $currency,
+            'price' => (string) ($serializedProduct['price'] ?? $product->price ?? 0),
+            'availability' => $availability,
+            'itemCondition' => 'https://schema.org/NewCondition',
+        ];
+
+        $productNode = [
+            '@type' => 'Product',
+            '@id' => $canonical.'#product',
+            'name' => $product->name,
+            'description' => $description ?: null,
+            'image' => array_values(array_filter([
+                $ogImage,
+                ...array_map(function ($img) {
+                    if (! is_string($img) || $img === '') {
+                        return null;
+                    }
+
+                    return str_starts_with($img, 'http') ? $img : url($img);
+                }, $serializedProduct['images'] ?? []),
+            ])),
+            'sku' => (string) $product->id,
+            'brand' => [
+                '@type' => 'Brand',
+                'name' => $company->name,
+            ],
+            'offers' => $offer,
+        ];
+
+        $avgRating = $serializedProduct['ratingAvg'] ?? $serializedProduct['averageRating'] ?? null;
+        $ratingCount = $serializedProduct['ratingCount'] ?? $serializedProduct['reviewCount'] ?? null;
+        if ($avgRating !== null && $ratingCount !== null && (int) $ratingCount > 0) {
+            $productNode['aggregateRating'] = [
+                '@type' => 'AggregateRating',
+                'ratingValue' => (string) $avgRating,
+                'reviewCount' => (string) (int) $ratingCount,
+            ];
+        }
+
+        $shopUrl = $company->custom_domain && $company->custom_domain_verified_at
+            ? ((parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https').'://'.$company->custom_domain)
+            : ($this->appBaseUrl().'/s/'.$company->store_slug);
+
+        $jsonLd = [
+            '@context' => 'https://schema.org',
+            '@graph' => array_values(array_filter([
+                $productNode,
+                $this->breadcrumbNode([
+                    ['name' => $company->name, 'url' => $shopUrl],
+                    ['name' => $product->name, 'url' => $canonical],
+                ]),
+            ])),
+        ];
+
+        return $this->decoratePayload([
+            'title' => $title,
+            'description' => $description,
+            'canonical' => $canonical,
+            'robots' => 'index, follow',
+            'ogTitle' => $title,
+            'ogDescription' => $description,
+            'ogImage' => $ogImage,
+            'ogType' => 'product',
+            'ogUrl' => $canonical,
+            'siteName' => $company->name,
+            'twitterCard' => 'summary_large_image',
+            'jsonLd' => $jsonLd,
+            'skipAppTitleSuffix' => true,
+        ]);
     }
 
     /**
      * @return list<array{loc: string, lastmod?: string, changefreq: string, priority: string}>
      */
-    public function sitemapEntries(): array
+    public function sitemapEntries(?string $section = null): array
     {
-        $base = rtrim((string) config('app.url'), '/');
+        return match ($section) {
+            'pages' => $this->sitemapMarketingEntries(),
+            'blog' => $this->sitemapBlogEntries(),
+            'stores' => $this->sitemapStoreEntries(),
+            default => array_merge(
+                $this->sitemapMarketingEntries(),
+                $this->sitemapBlogEntries(),
+                $this->sitemapStoreEntries(),
+            ),
+        };
+    }
+
+    /**
+     * @return list<array{loc: string, lastmod?: string}>
+     */
+    public function sitemapIndexEntries(): array
+    {
+        $base = $this->appBaseUrl();
+        $now = now()->toAtomString();
+
+        return [
+            ['loc' => $base.'/sitemap-pages.xml', 'lastmod' => $now],
+            ['loc' => $base.'/sitemap-blog.xml', 'lastmod' => $now],
+            ['loc' => $base.'/sitemap-stores.xml', 'lastmod' => $now],
+        ];
+    }
+
+    public function shouldUseSitemapIndex(): bool
+    {
+        return count($this->sitemapEntries()) > 400;
+    }
+
+    /**
+     * @return list<array{loc: string, lastmod?: string, changefreq: string, priority: string}>
+     */
+    private function sitemapMarketingEntries(): array
+    {
+        $base = $this->appBaseUrl();
         $entries = [];
 
         if (Schema::hasTable('cms_pages')) {
@@ -124,22 +364,31 @@ class CmsSeoService
                     ];
                 }
             } catch (\Throwable) {
-                // fall through with empty CMS entries
+                // fall through
             }
         }
 
-        $entries[] = [
+        return $entries;
+    }
+
+    /**
+     * @return list<array{loc: string, lastmod?: string, changefreq: string, priority: string}>
+     */
+    private function sitemapBlogEntries(): array
+    {
+        $base = $this->appBaseUrl();
+        $entries = [[
             'loc' => $base.'/blog',
             'lastmod' => now()->toAtomString(),
             'changefreq' => 'weekly',
             'priority' => '0.7',
-        ];
+        ]];
 
         if (Schema::hasTable('blog_posts')) {
             try {
                 $latest = BlogPost::published()->orderByDesc('updated_at')->value('updated_at');
                 if ($latest) {
-                    $entries[array_key_last($entries)]['lastmod'] = optional($latest)->toAtomString() ?? now()->toAtomString();
+                    $entries[0]['lastmod'] = optional($latest)->toAtomString() ?? now()->toAtomString();
                 }
 
                 foreach (BlogPost::published()->orderByDesc('published_at')->get() as $post) {
@@ -151,46 +400,71 @@ class CmsSeoService
                     ];
                 }
             } catch (\Throwable) {
-                // ignore blog sitemap errors
+                // ignore
             }
         }
 
-        // Classic storefront (features 1–20): public shops + product PDP URLs
-        if (Schema::hasTable('companies') && Schema::hasTable('products')) {
-            try {
-                $stores = \App\Models\Company::query()
-                    ->where('storefront_enabled', true)
-                    ->whereNotNull('store_slug')
-                    ->orderBy('id')
-                    ->get(['id', 'store_slug', 'updated_at']);
+        return $entries;
+    }
 
-                foreach ($stores as $store) {
+    /**
+     * @return list<array{loc: string, lastmod?: string, changefreq: string, priority: string}>
+     */
+    private function sitemapStoreEntries(): array
+    {
+        $base = $this->appBaseUrl();
+        $entries = [];
+
+        if (! Schema::hasTable('companies') || ! Schema::hasTable('products')) {
+            return $entries;
+        }
+
+        try {
+            $stores = Company::query()
+                ->where('storefront_enabled', true)
+                ->whereNotNull('store_slug')
+                ->orderBy('id')
+                ->get(['id', 'store_slug', 'custom_domain', 'custom_domain_verified_at', 'updated_at']);
+
+            foreach ($stores as $store) {
+                if ($store->custom_domain && $store->custom_domain_verified_at) {
+                    $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+                    $storeBase = $scheme.'://'.$store->custom_domain;
+                    $entries[] = [
+                        'loc' => $storeBase,
+                        'lastmod' => optional($store->updated_at)?->toAtomString(),
+                        'changefreq' => 'daily',
+                        'priority' => '0.8',
+                    ];
+                    $productLocPrefix = $storeBase.'/p/';
+                } else {
                     $entries[] = [
                         'loc' => $base.'/s/'.$store->store_slug,
                         'lastmod' => optional($store->updated_at)?->toAtomString(),
                         'changefreq' => 'daily',
                         'priority' => '0.8',
                     ];
-
-                    $products = \App\Models\Product::query()
-                        ->where('company_id', $store->id)
-                        ->where('status', 'active')
-                        ->orderBy('id')
-                        ->get(['id', 'slug', 'updated_at']);
-
-                    foreach ($products as $product) {
-                        $path = $product->slug ?: (string) $product->id;
-                        $entries[] = [
-                            'loc' => $base.'/s/'.$store->store_slug.'/p/'.$path,
-                            'lastmod' => optional($product->updated_at)?->toAtomString(),
-                            'changefreq' => 'weekly',
-                            'priority' => '0.6',
-                        ];
-                    }
+                    $productLocPrefix = $base.'/s/'.$store->store_slug.'/p/';
                 }
-            } catch (\Throwable) {
-                // ignore storefront sitemap errors
+
+                $products = Product::query()
+                    ->where('company_id', $store->id)
+                    ->where('status', 'active')
+                    ->orderBy('id')
+                    ->get(['id', 'slug', 'updated_at']);
+
+                foreach ($products as $product) {
+                    $path = $product->slug ?: (string) $product->id;
+                    $entries[] = [
+                        'loc' => $productLocPrefix.$path,
+                        'lastmod' => optional($product->updated_at)?->toAtomString(),
+                        'changefreq' => 'weekly',
+                        'priority' => '0.6',
+                    ];
+                }
             }
+        } catch (\Throwable) {
+            // ignore
         }
 
         return $entries;
@@ -201,13 +475,13 @@ class CmsSeoService
      */
     public function forBlogIndex(): array
     {
-        $base = rtrim((string) config('app.url'), '/');
+        $base = $this->appBaseUrl();
         $canonical = $base.'/blog';
         $siteName = (string) config('app.name', 'RelayIQ');
         $title = 'Blog — '.$siteName;
-        $description = 'Guides and updates on WhatsApp commerce, AI sales, and growing with '.$siteName.'.';
+        $description = 'Guides and updates on WhatsApp commerce, AI sales, M-Pesa checkout, and growing with '.$siteName.'.';
 
-        return [
+        return $this->decoratePayload([
             'title' => $title,
             'description' => $description,
             'canonical' => $canonical,
@@ -221,17 +495,25 @@ class CmsSeoService
             'twitterCard' => 'summary_large_image',
             'jsonLd' => [
                 '@context' => 'https://schema.org',
-                '@type' => 'Blog',
-                'name' => $title,
-                'url' => $canonical,
-                'description' => $description,
-                'publisher' => [
-                    '@type' => 'Organization',
-                    'name' => $siteName,
-                    'url' => $base,
-                ],
+                '@graph' => array_values(array_filter([
+                    [
+                        '@type' => 'Blog',
+                        'name' => $title,
+                        'url' => $canonical,
+                        'description' => $description,
+                        'publisher' => [
+                            '@type' => 'Organization',
+                            'name' => $siteName,
+                            'url' => $base,
+                        ],
+                    ],
+                    $this->breadcrumbNode([
+                        ['name' => 'Home', 'url' => $base.'/'],
+                        ['name' => 'Blog', 'url' => $canonical],
+                    ]),
+                ])),
             ],
-        ];
+        ]);
     }
 
     /**
@@ -253,14 +535,14 @@ class CmsSeoService
             return null;
         }
 
-        $base = rtrim((string) config('app.url'), '/');
+        $base = $this->appBaseUrl();
         $canonical = $base.'/blog/'.$post->slug;
         $siteName = (string) config('app.name', 'RelayIQ');
         $title = trim((string) ($post->meta_title ?: $post->title));
         $description = trim((string) ($post->meta_description ?: $post->excerpt ?: ''));
         $ogImage = $post->absoluteImage($post->og_image ?: $post->cover_image) ?: $this->defaultOgImage();
 
-        return [
+        return $this->decoratePayload([
             'title' => $title,
             'description' => $description,
             'canonical' => $canonical,
@@ -272,34 +554,45 @@ class CmsSeoService
             'ogUrl' => $canonical,
             'siteName' => $siteName,
             'twitterCard' => 'summary_large_image',
+            'articlePublishedTime' => $post->published_at?->toAtomString(),
+            'articleModifiedTime' => $post->updated_at?->toAtomString(),
             'jsonLd' => [
                 '@context' => 'https://schema.org',
-                '@type' => 'BlogPosting',
-                'headline' => $post->title,
-                'description' => $description ?: null,
-                'image' => $ogImage,
-                'datePublished' => $post->published_at?->toAtomString(),
-                'dateModified' => $post->updated_at?->toAtomString(),
-                'mainEntityOfPage' => $canonical,
-                'author' => [
-                    '@type' => 'Organization',
-                    'name' => $siteName,
-                ],
-                'publisher' => [
-                    '@type' => 'Organization',
-                    'name' => $siteName,
-                    'url' => $base,
-                    'logo' => $this->defaultOgImage(),
-                ],
+                '@graph' => array_values(array_filter([
+                    [
+                        '@type' => 'BlogPosting',
+                        'headline' => $post->title,
+                        'description' => $description ?: null,
+                        'image' => $ogImage,
+                        'datePublished' => $post->published_at?->toAtomString(),
+                        'dateModified' => $post->updated_at?->toAtomString(),
+                        'mainEntityOfPage' => $canonical,
+                        'author' => [
+                            '@type' => 'Organization',
+                            'name' => $siteName,
+                        ],
+                        'publisher' => [
+                            '@type' => 'Organization',
+                            'name' => $siteName,
+                            'url' => $base,
+                            'logo' => $this->defaultOgImage(),
+                        ],
+                    ],
+                    $this->breadcrumbNode([
+                        ['name' => 'Home', 'url' => $base.'/'],
+                        ['name' => 'Blog', 'url' => $base.'/blog'],
+                        ['name' => $post->title, 'url' => $canonical],
+                    ]),
+                ])),
             ],
-        ];
+        ]);
     }
 
     public function faviconUrl(): ?string
     {
-        $settings = \App\Models\PlatformSetting::query()->first();
+        $settings = PlatformSetting::query()->first();
         $path = $settings?->app_favicon;
-        if (is_string($path) && $path !== '' && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+        if (is_string($path) && $path !== '' && Storage::disk('public')->exists($path)) {
             return asset('storage/'.$path);
         }
 
@@ -312,6 +605,35 @@ class CmsSeoService
             'home', 'global' => '/',
             default => '/'.$slug,
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function decoratePayload(array $payload): array
+    {
+        $ogImage = $payload['ogImage'] ?? null;
+        $payload['ogLocale'] = $payload['ogLocale'] ?? str_replace('-', '_', (string) config('app.locale', 'en'));
+        $payload['twitterSite'] = $payload['twitterSite'] ?? $this->twitterSiteHandle();
+        if (is_string($ogImage) && $ogImage !== '') {
+            $payload['ogImageWidth'] = $payload['ogImageWidth'] ?? 1200;
+            $payload['ogImageHeight'] = $payload['ogImageHeight'] ?? 630;
+        }
+
+        return $payload;
+    }
+
+    private function twitterSiteHandle(): ?string
+    {
+        $handle = config('services.twitter.site');
+        if (is_string($handle) && trim($handle) !== '') {
+            $handle = trim($handle);
+
+            return str_starts_with($handle, '@') ? $handle : '@'.$handle;
+        }
+
+        return null;
     }
 
     /**
@@ -354,12 +676,12 @@ class CmsSeoService
             return null;
         }
 
-        $base = rtrim((string) config('app.url'), '/');
+        $base = $this->appBaseUrl();
         $path = $this->pathForSlug($slug);
         $canonical = $base.$path;
         $siteName = (string) config('app.name', 'RelayIQ');
 
-        return [
+        return $this->decoratePayload([
             'title' => $defaults[$slug]['title'],
             'description' => $defaults[$slug]['description'],
             'canonical' => $canonical,
@@ -372,7 +694,7 @@ class CmsSeoService
             'siteName' => $siteName,
             'twitterCard' => 'summary_large_image',
             'jsonLd' => null,
-        ];
+        ]);
     }
 
     /**
@@ -380,6 +702,8 @@ class CmsSeoService
      */
     private function softwareApplicationNode(string $base, string $siteName, string $description): ?array
     {
+        $offers = $this->planOffers($base);
+
         return [
             '@type' => 'SoftwareApplication',
             'name' => $siteName,
@@ -387,12 +711,87 @@ class CmsSeoService
             'operatingSystem' => 'Web',
             'url' => $base,
             'description' => $description ?: null,
-            'offers' => [
+            'offers' => $offers,
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>|array<string, mixed>
+     */
+    private function planOffers(string $base): array
+    {
+        if (! Schema::hasTable('plans')) {
+            return [[
                 '@type' => 'Offer',
+                'url' => $base.'/pricing',
                 'price' => '0',
                 'priceCurrency' => 'USD',
                 'description' => 'Free trial available',
-            ],
+            ]];
+        }
+
+        try {
+            $plans = Plan::query()->orderBy('sort_order')->orderBy('id')->get();
+        } catch (\Throwable) {
+            $plans = collect();
+        }
+
+        if ($plans->isEmpty()) {
+            return [[
+                '@type' => 'Offer',
+                'url' => $base.'/pricing',
+                'price' => '0',
+                'priceCurrency' => 'USD',
+                'description' => 'Free trial available',
+            ]];
+        }
+
+        return $plans->map(function (Plan $plan) use ($base) {
+            $isCustom = ! $plan->is_free && (float) $plan->price_amount <= 0;
+            $offer = [
+                '@type' => 'Offer',
+                'name' => $plan->name,
+                'url' => $base.'/pricing',
+                'description' => $plan->description ?: ($plan->is_free ? 'Free plan' : null),
+                'priceCurrency' => 'USD',
+            ];
+            if ($isCustom) {
+                $offer['priceSpecification'] = [
+                    '@type' => 'PriceSpecification',
+                    'priceCurrency' => 'USD',
+                    'description' => 'Custom pricing',
+                ];
+            } else {
+                $offer['price'] = $plan->is_free ? '0' : (string) $plan->price_amount;
+            }
+
+            return $offer;
+        })->values()->all();
+    }
+
+    /**
+     * @param  list<array{name: string, url: string}>  $crumbs
+     * @return array<string, mixed>|null
+     */
+    private function breadcrumbNode(array $crumbs): ?array
+    {
+        if ($crumbs === []) {
+            return null;
+        }
+
+        $items = [];
+        foreach (array_values($crumbs) as $index => $crumb) {
+            $items[] = [
+                '@type' => 'ListItem',
+                'position' => $index + 1,
+                'name' => $crumb['name'],
+                'item' => $crumb['url'],
+            ];
+        }
+
+        return [
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $items,
         ];
     }
 
@@ -457,14 +856,14 @@ class CmsSeoService
         }
 
         if (str_starts_with($url, '/')) {
-            return rtrim((string) config('app.url'), '/').$url;
+            return $this->appBaseUrl().$url;
         }
 
         if (Storage::disk('public')->exists($url)) {
             return asset('storage/'.$url);
         }
 
-        return rtrim((string) config('app.url'), '/').'/'.ltrim($url, '/');
+        return $this->appBaseUrl().'/'.ltrim($url, '/');
     }
 
     private function defaultOgImage(): ?string
@@ -484,5 +883,21 @@ class CmsSeoService
         }
 
         return null;
+    }
+
+    private function appBaseUrl(): string
+    {
+        return rtrim((string) config('app.url'), '/');
+    }
+
+    private function storefrontBaseUrl(Company $company): string
+    {
+        if ($company->custom_domain && $company->custom_domain_verified_at) {
+            $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+
+            return $scheme.'://'.$company->custom_domain;
+        }
+
+        return $this->appBaseUrl().'/s/'.$company->store_slug;
     }
 }

@@ -452,6 +452,37 @@ class StorefrontService
     }
 
     /**
+     * Active products currently on the shopper wishlist, in wishlist order.
+     *
+     * @param  list<int>  $productIds
+     * @return list<array<string, mixed>>
+     */
+    public function wishlistProducts(Company $company, array $productIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $productIds)));
+        if ($ids === []) {
+            return [];
+        }
+
+        $products = Product::where('company_id', $company->id)
+            ->where('status', 'active')
+            ->whereIn('id', $ids)
+            ->with(['activeVariants', 'images'])
+            ->get()
+            ->keyBy('id');
+
+        $serialized = [];
+        foreach ($ids as $id) {
+            $product = $products->get($id);
+            if ($product) {
+                $serialized[] = $this->serializeProduct($product);
+            }
+        }
+
+        return $serialized;
+    }
+
+    /**
      * Find or create a lightweight storefront customer identity from a phone number,
      * used to speed up return-visitor checkout (feature 15, v1 light — no auth).
      */

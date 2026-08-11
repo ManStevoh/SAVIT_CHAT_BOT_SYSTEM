@@ -65,6 +65,20 @@ const FALLBACK = (
   </>
 )
 
-export default function PrivacyPage({ seo }: { seo?: import("@/components/seo/SeoHead").SeoPayload | null }) {
-  return <LegalCmsPage slug="privacy" fallbackTitle="Privacy Policy" fallbackBody={FALLBACK} initialSeo={seo} />
+export default function PrivacyPage({
+  seo,
+  cms,
+}: {
+  seo?: import("@/components/seo/SeoHead").SeoPayload | null
+  cms?: import("@/components/lando/types").CmsPageData | null
+}) {
+  return (
+    <LegalCmsPage
+      slug="privacy"
+      fallbackTitle="Privacy Policy"
+      fallbackBody={FALLBACK}
+      initialSeo={seo}
+      initialCms={cms}
+    />
+  )
 }

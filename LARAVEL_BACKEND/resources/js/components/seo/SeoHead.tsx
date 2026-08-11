@@ -8,11 +8,18 @@ export type SeoPayload = {
   ogTitle?: string | null
   ogDescription?: string | null
   ogImage?: string | null
+  ogImageWidth?: number | null
+  ogImageHeight?: number | null
+  ogLocale?: string | null
   ogType?: string | null
   ogUrl?: string | null
   siteName?: string | null
   twitterCard?: string | null
+  twitterSite?: string | null
+  articlePublishedTime?: string | null
+  articleModifiedTime?: string | null
   jsonLd?: Record<string, unknown> | null
+  skipAppTitleSuffix?: boolean | null
 }
 
 type SeoHeadProps = {
@@ -32,6 +39,7 @@ export function SeoHead({ seo, fallbackTitle }: SeoHeadProps) {
       {seo?.canonical ? <link head-key="canonical" rel="canonical" href={seo.canonical} /> : null}
       <meta head-key="og:type" property="og:type" content={seo?.ogType || "website"} />
       {seo?.siteName ? <meta head-key="og:site_name" property="og:site_name" content={seo.siteName} /> : null}
+      {seo?.ogLocale ? <meta head-key="og:locale" property="og:locale" content={seo.ogLocale} /> : null}
       {(seo?.ogTitle || title) ? (
         <meta head-key="og:title" property="og:title" content={seo?.ogTitle || title || ""} />
       ) : null}
@@ -44,7 +52,14 @@ export function SeoHead({ seo, fallbackTitle }: SeoHeadProps) {
       ) : null}
       {seo?.ogUrl ? <meta head-key="og:url" property="og:url" content={seo.ogUrl} /> : null}
       {seo?.ogImage ? <meta head-key="og:image" property="og:image" content={seo.ogImage} /> : null}
+      {seo?.ogImage && seo?.ogImageWidth ? (
+        <meta head-key="og:image:width" property="og:image:width" content={String(seo.ogImageWidth)} />
+      ) : null}
+      {seo?.ogImage && seo?.ogImageHeight ? (
+        <meta head-key="og:image:height" property="og:image:height" content={String(seo.ogImageHeight)} />
+      ) : null}
       <meta head-key="twitter:card" name="twitter:card" content={seo?.twitterCard || "summary_large_image"} />
+      {seo?.twitterSite ? <meta head-key="twitter:site" name="twitter:site" content={seo.twitterSite} /> : null}
       {(seo?.ogTitle || title) ? (
         <meta head-key="twitter:title" name="twitter:title" content={seo?.ogTitle || title || ""} />
       ) : null}
@@ -56,6 +71,12 @@ export function SeoHead({ seo, fallbackTitle }: SeoHeadProps) {
         />
       ) : null}
       {seo?.ogImage ? <meta head-key="twitter:image" name="twitter:image" content={seo.ogImage} /> : null}
+      {seo?.articlePublishedTime ? (
+        <meta head-key="article:published_time" property="article:published_time" content={seo.articlePublishedTime} />
+      ) : null}
+      {seo?.articleModifiedTime ? (
+        <meta head-key="article:modified_time" property="article:modified_time" content={seo.articleModifiedTime} />
+      ) : null}
       {seo?.jsonLd ? (
         <script
           head-key="ld-json"
@@ -95,10 +116,17 @@ export function buildSeoFromCmsPage(
     ogTitle: page?.ogTitle || title,
     ogDescription: page?.ogDescription || description,
     ogImage: page?.ogImage || initialSeo?.ogImage || undefined,
+    ogImageWidth: initialSeo?.ogImageWidth,
+    ogImageHeight: initialSeo?.ogImageHeight,
+    ogLocale: initialSeo?.ogLocale,
     ogType: initialSeo?.ogType || "website",
     ogUrl: page?.canonicalUrl || initialSeo?.ogUrl || undefined,
     siteName: initialSeo?.siteName || "RelayIQ",
     twitterCard: initialSeo?.twitterCard || "summary_large_image",
+    twitterSite: initialSeo?.twitterSite,
+    articlePublishedTime: initialSeo?.articlePublishedTime,
+    articleModifiedTime: initialSeo?.articleModifiedTime,
     jsonLd: initialSeo?.jsonLd || null,
+    skipAppTitleSuffix: initialSeo?.skipAppTitleSuffix,
   }
 }

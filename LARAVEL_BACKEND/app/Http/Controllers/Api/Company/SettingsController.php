@@ -153,6 +153,12 @@ class SettingsController extends Controller
             'storefrontAnnouncementBar' => is_array($company->storefront_theme)
                 ? (string) ($company->storefront_theme['announcement_bar'] ?? '')
                 : '',
+            'storefrontSeoTitle' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['seo_title'] ?? '')
+                : '',
+            'storefrontSeoDescription' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['seo_description'] ?? '')
+                : '',
         ]);
     }
 
@@ -299,11 +305,15 @@ class SettingsController extends Controller
             'spamMaxOrdersPerHour' => 'sometimes|nullable|integer|min:1|max:100',
             'spamMaxOrdersPerDay' => 'sometimes|nullable|integer|min:1|max:500',
             'storefrontAnnouncementBar' => 'sometimes|nullable|string|max:200',
+            'storefrontSeoTitle' => 'sometimes|nullable|string|max:70',
+            'storefrontSeoDescription' => 'sometimes|nullable|string|max:320',
             'storefrontTheme' => 'sometimes|nullable|array',
             'storefrontTheme.primary_color' => 'sometimes|nullable|string|max:32',
             'storefrontTheme.accent_color' => 'sometimes|nullable|string|max:32',
             'storefrontTheme.announcement_bar' => 'sometimes|nullable|string|max:200',
             'storefrontTheme.footer_text' => 'sometimes|nullable|string|max:255',
+            'storefrontTheme.seo_title' => 'sometimes|nullable|string|max:70',
+            'storefrontTheme.seo_description' => 'sometimes|nullable|string|max:320',
         ]);
 
         if (isset($companyValidated['companyName'])) {
@@ -338,10 +348,15 @@ class SettingsController extends Controller
             }
             $company->storefront_enabled = $companyValidated['storefrontEnabled'];
         }
-        if (array_key_exists('storefrontAnnouncementBar', $companyValidated) || array_key_exists('storefrontTheme', $companyValidated)) {
+        if (
+            array_key_exists('storefrontAnnouncementBar', $companyValidated)
+            || array_key_exists('storefrontTheme', $companyValidated)
+            || array_key_exists('storefrontSeoTitle', $companyValidated)
+            || array_key_exists('storefrontSeoDescription', $companyValidated)
+        ) {
             $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
             if (array_key_exists('storefrontTheme', $companyValidated) && is_array($companyValidated['storefrontTheme'])) {
-                foreach (['primary_color', 'accent_color', 'announcement_bar', 'footer_text'] as $key) {
+                foreach (['primary_color', 'accent_color', 'announcement_bar', 'footer_text', 'seo_title', 'seo_description'] as $key) {
                     if (array_key_exists($key, $companyValidated['storefrontTheme'])) {
                         $val = $companyValidated['storefrontTheme'][$key];
                         $theme[$key] = is_string($val) && trim($val) !== '' ? trim($val) : null;
@@ -351,6 +366,14 @@ class SettingsController extends Controller
             if (array_key_exists('storefrontAnnouncementBar', $companyValidated)) {
                 $bar = $companyValidated['storefrontAnnouncementBar'];
                 $theme['announcement_bar'] = is_string($bar) && trim($bar) !== '' ? trim($bar) : null;
+            }
+            if (array_key_exists('storefrontSeoTitle', $companyValidated)) {
+                $seoTitle = $companyValidated['storefrontSeoTitle'];
+                $theme['seo_title'] = is_string($seoTitle) && trim($seoTitle) !== '' ? trim($seoTitle) : null;
+            }
+            if (array_key_exists('storefrontSeoDescription', $companyValidated)) {
+                $seoDesc = $companyValidated['storefrontSeoDescription'];
+                $theme['seo_description'] = is_string($seoDesc) && trim($seoDesc) !== '' ? trim($seoDesc) : null;
             }
             $company->storefront_theme = array_filter(
                 $theme,

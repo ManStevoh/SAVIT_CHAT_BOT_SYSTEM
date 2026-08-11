@@ -75,6 +75,9 @@ import {
 interface ProductFormData {
   name: string
   description: string
+  metaTitle: string
+  metaDescription: string
+  slug: string
   price: string
   compareAtPrice: string
   taxRateId: string
@@ -99,6 +102,9 @@ interface ProductFormData {
 const initialFormData: ProductFormData = {
   name: '',
   description: '',
+  metaTitle: '',
+  metaDescription: '',
+  slug: '',
   price: '',
   compareAtPrice: '',
   taxRateId: 'none',
@@ -276,6 +282,9 @@ export default function ProductsPage() {
       const result = await createProduct({
         name: formData.name,
         description: formData.description,
+        metaTitle: formData.metaTitle || null,
+        metaDescription: formData.metaDescription || null,
+        slug: formData.slug || null,
         price: parseFloat(formData.price),
         compareAtPrice: formData.compareAtPrice.trim() === '' ? null : parseFloat(formData.compareAtPrice),
         taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
@@ -323,6 +332,9 @@ export default function ProductsPage() {
       const result = await updateProduct(selectedProduct.id, {
         name: formData.name,
         description: formData.description,
+        metaTitle: formData.metaTitle || null,
+        metaDescription: formData.metaDescription || null,
+        slug: formData.slug || null,
         price: parseFloat(formData.price),
         compareAtPrice: formData.compareAtPrice.trim() === '' ? null : parseFloat(formData.compareAtPrice),
         taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
@@ -389,6 +401,9 @@ export default function ProductsPage() {
     setFormData({
       name: product.name,
       description: product.description,
+      metaTitle: product.metaTitle ?? '',
+      metaDescription: product.metaDescription ?? '',
+      slug: product.slug ?? '',
       price: product.price.toString(),
       compareAtPrice: product.compareAtPrice != null ? String(product.compareAtPrice) : '',
       taxRateId: product.taxRateId ?? 'none',
@@ -805,6 +820,31 @@ export default function ProductsPage() {
         onChange={(value) => handleFieldChange('description', value)}
         placeholder="Enter product description"
         description="This will be shown to customers and used by AI for responses"
+      />
+
+      <InputField
+        label="URL slug"
+        name="slug"
+        value={formData.slug}
+        onChange={(value) => handleFieldChange('slug', value)}
+        placeholder="auto-from-name"
+        description="Optional. Used in the storefront product URL."
+      />
+      <InputField
+        label="SEO title"
+        name="metaTitle"
+        value={formData.metaTitle}
+        onChange={(value) => handleFieldChange('metaTitle', value)}
+        placeholder="Leave blank to use product name"
+        description="Recommended 50–60 characters for Google titles."
+      />
+      <TextareaField
+        label="SEO description"
+        name="metaDescription"
+        value={formData.metaDescription}
+        onChange={(value) => handleFieldChange('metaDescription', value)}
+        placeholder="Leave blank to use product description"
+        description="Recommended ~155 characters. Shown in search results."
       />
 
       {(formData.productType === 'digital' || formData.productType === 'service') && (

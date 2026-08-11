@@ -17,16 +17,24 @@ type BlogPost = {
 export default function BlogShowPage({
   slug,
   seo,
+  initialPost,
 }: {
   slug: string
   seo?: SeoPayload | null
+  initialPost?: BlogPost | null
 }) {
   const { data, isLoading, error } = useSWR<{ post: BlogPost }>(
     slug ? `/api/blog/posts/${slug}` : null,
-    (url: string) => apiRequest<{ post: BlogPost }>(url)
+    (url: string) => apiRequest<{ post: BlogPost }>(url),
+    {
+      fallbackData: initialPost ? { post: initialPost } : undefined,
+      revalidateOnMount: !initialPost,
+      revalidateOnFocus: false,
+    }
   )
 
-  const post = data?.post
+  const post = data?.post ?? initialPost ?? undefined
+  const showLoading = isLoading && !post
 
   return (
     <>
@@ -43,8 +51,8 @@ export default function BlogShowPage({
           </p>
         }
       >
-        {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-        {error && <p className="text-sm text-destructive">Post not found.</p>}
+        {showLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {error && !post && <p className="text-sm text-destructive">Post not found.</p>}
 
         {post && (
           <article>
@@ -63,7 +71,7 @@ export default function BlogShowPage({
             {post.coverImage ? (
               <img
                 src={post.coverImage}
-                alt=""
+                alt={post.title}
                 loading="eager"
                 decoding="async"
                 className="mt-6 aspect-[2/1] w-full rounded-2xl border border-border object-cover shadow-sm"

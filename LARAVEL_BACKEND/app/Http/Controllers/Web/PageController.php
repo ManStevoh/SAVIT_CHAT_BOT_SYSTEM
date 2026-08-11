@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlogPost;
+use App\Services\Cms\CmsPagePayloadBuilder;
 use App\Services\Cms\CmsSeoService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PageController extends Controller
 {
-    public function __construct(private readonly CmsSeoService $seo)
-    {
+    public function __construct(
+        private readonly CmsSeoService $seo,
+        private readonly CmsPagePayloadBuilder $cmsPayloads,
+    ) {
     }
 
     public function home(): Response
@@ -60,8 +64,22 @@ class PageController extends Controller
 
     public function blog(): Response
     {
+        $posts = [];
+        try {
+            $posts = BlogPost::published()
+                ->orderByDesc('published_at')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (BlogPost $post) => $post->toPublicArray())
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            $posts = [];
+        }
+
         return Inertia::render('Blog/page', [
             'seo' => $this->seo->forBlogIndex(),
+            'initialPosts' => $posts,
         ]);
     }
 
@@ -72,9 +90,18 @@ class PageController extends Controller
             abort(404);
         }
 
+        $post = null;
+        try {
+            $model = BlogPost::published()->where('slug', $slug)->first();
+            $post = $model?->toPublicArray();
+        } catch (\Throwable) {
+            $post = null;
+        }
+
         return Inertia::render('Blog/show', [
             'slug' => $slug,
             'seo' => $seo,
+            'initialPost' => $post,
         ]);
     }
 
@@ -82,32 +109,44 @@ class PageController extends Controller
     {
         return Inertia::render($component, [
             'seo' => $this->seo->forSlug($slug),
+            'cms' => $this->cmsPayloads->forSlug($slug),
+            'cmsGlobal' => $this->cmsPayloads->forSlug('global'),
         ]);
     }
 
     public function orderPaid(): Response
     {
-        return Inertia::render('order-paid/page');
+        return Inertia::render('order-paid/page', [
+            'seo' => $this->seo->noindex('Order paid — '.config('app.name', 'RelayIQ')),
+        ]);
     }
 
     public function login(): Response
     {
-        return Inertia::render('Auth/login/page');
+        return Inertia::render('Auth/login/page', [
+            'seo' => $this->seo->noindex('Log in — '.config('app.name', 'RelayIQ')),
+        ]);
     }
 
     public function register(): Response
     {
-        return Inertia::render('Auth/register/page');
+        return Inertia::render('Auth/register/page', [
+            'seo' => $this->seo->noindex('Sign up — '.config('app.name', 'RelayIQ')),
+        ]);
     }
 
     public function forgotPassword(): Response
     {
-        return Inertia::render('Auth/forgot-password/page');
+        return Inertia::render('Auth/forgot-password/page', [
+            'seo' => $this->seo->noindex('Forgot password — '.config('app.name', 'RelayIQ')),
+        ]);
     }
 
     public function resetPassword(): Response
     {
-        return Inertia::render('Auth/reset-password/page');
+        return Inertia::render('Auth/reset-password/page', [
+            'seo' => $this->seo->noindex('Reset password — '.config('app.name', 'RelayIQ')),
+        ]);
     }
 
     public function dashboard(): Response

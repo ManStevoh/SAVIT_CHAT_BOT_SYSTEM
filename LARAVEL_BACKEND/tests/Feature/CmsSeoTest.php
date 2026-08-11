@@ -68,6 +68,7 @@ class CmsSeoTest extends TestCase
         $response->assertOk();
         $response->assertSee('Disallow: /dashboard', false);
         $response->assertSee('Disallow: /admin', false);
+        $response->assertSee('Disallow: /login', false);
         $response->assertSee('Sitemap:', false);
         $response->assertSee('/sitemap.xml', false);
     }

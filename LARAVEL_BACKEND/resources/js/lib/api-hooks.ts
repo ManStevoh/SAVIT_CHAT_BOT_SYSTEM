@@ -185,7 +185,7 @@ import type { CmsPageData, CmsGlobalData, AdminCmsPage } from '@/components/land
  * Fetch CMS page content for public pages
  * API Endpoint: GET /api/cms/pages/{slug}
  */
-export function useCmsPage(slug: string) {
+export function useCmsPage(slug: string, initialData?: CmsPageData | null) {
   return useSWR<CmsPageData>(
     slug ? `cms-page-${slug}` : null,
     async () => {
@@ -198,11 +198,15 @@ export function useCmsPage(slug: string) {
         sections: [],
       }
     },
-    { revalidateOnFocus: false }
+    {
+      revalidateOnFocus: false,
+      fallbackData: initialData ?? undefined,
+      revalidateOnMount: !initialData,
+    }
   )
 }
 
-export function useCmsGlobal() {
+export function useCmsGlobal(initialData?: CmsGlobalData | CmsPageData | null) {
   return useSWR<CmsGlobalData>(
     'cms-global',
     async () => {
@@ -215,7 +219,11 @@ export function useCmsGlobal() {
         sections: [],
       }
     },
-    { revalidateOnFocus: false }
+    {
+      revalidateOnFocus: false,
+      fallbackData: initialData ?? undefined,
+      revalidateOnMount: !initialData,
+    }
   )
 }
 
