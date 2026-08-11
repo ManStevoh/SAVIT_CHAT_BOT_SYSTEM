@@ -136,12 +136,12 @@ RULES & ANAPHORA RESOLUTION:
 1. NEVER output SQL IDs. Use ONLY option tokens (o1, o2), product tokens (p1, p2), or variant tokens (v_red, v_white) provided above.
 2. AMBIGUITY RESOLUTION:
    - If user replies "1", "option 1", "first one", "red", "the cheaper one", map selected_token to "o1" or "v_red".
-   - If user says "I don't want [item]", "cancel", "nevermind", "stop", "why did you send me this", set intent="cancel", action_directive="CANCEL_FLOW".
+   - If user says "I don't want [item]", "cancel", "nevermind", "stop", "don't want to buy", "why did you send me this", set intent="cancel_order", action_directive="CANCEL_FLOW".
    - If user asks location ("where are you", "where is your shop"), set intent="ask_store_location", action_directive="SWITCH_TOPIC".
 3. Place resolved tokens into selected_token, target_product_token, or target_variant_token.
 
 INTENTS:
-- add_to_cart / remove_from_cart / update_quantity / view_cart / start_checkout / select_option / cancel
+- add_to_cart / remove_from_cart / update_quantity / view_cart / start_checkout / select_option / cancel_order
 - provide_address / choose_pickup / choose_dine_in / confirm_order / choose_payment_method / provide_phone
 - ask_delivery_fee / ask_store_location / ask_faq / ask_product_info / ask_order_status / request_human / general_chat / unknown.
 

@@ -63,18 +63,9 @@ class ConversationalOSPipelineTest extends TestCase
         [$company, $chat, $product] = $this->seedFullEnvironment();
 
         $senderMock = $this->createMock(WhatsAppMessageSenderService::class);
-        $senderMock->method('sendMessage')->willReturn(['success' => true]);
-
         $channelAdapter = new WhatsAppChannelAdapter($senderMock);
 
-        $pipeline = new ConversationalOSPipeline(
-            new \App\Services\Conversation\ConversationStateHydrator(),
-            app(\App\Services\AI\UnifiedIntentClassifierService::class),
-            new WorkflowEngine(
-                new DomainServiceDispatcher(app(OrderFlowService::class)),
-                new ResponseSpecRenderer()
-            )
-        );
+        $pipeline = app(ConversationalOSPipeline::class);
 
         // Turn 1: Customer adds item to cart
         $envelope1 = new InboundEnvelope(
@@ -127,5 +118,61 @@ class ConversationalOSPipelineTest extends TestCase
 
         $this->assertEquals('payment_method', $chat->fresh()->conversation_step);
         $this->assertTrue(Order::where('company_id', $company->id)->exists());
+    }
+
+    public function test_numeric_catalog_product_selection(): void
+    {
+        $company = Company::create([
+            'name' => 'Multi Item Store',
+            'email' => 'multi@test.local',
+            'status' => 'active',
+        ]);
+
+        CompanySetting::create([
+            'company_id' => $company->id,
+            'orders_collect_payment_enabled' => true,
+        ]);
+
+        // Create 5 products (alphabetical order: Black Sneakers, CS Book, Earphones, Headphones, Shoerack)
+        $p1 = Product::create(['company_id' => $company->id, 'name' => 'Black Sneakers', 'price' => 350.0, 'stock' => 10, 'status' => 'active']);
+        $p2 = Product::create(['company_id' => $company->id, 'name' => 'CS Book', 'price' => 100.0, 'stock' => 10, 'status' => 'active']);
+        $p3 = Product::create(['company_id' => $company->id, 'name' => 'Earphones', 'price' => 100.0, 'stock' => 10, 'status' => 'active']);
+        $p4 = Product::create(['company_id' => $company->id, 'name' => 'Headphones', 'price' => 200.0, 'stock' => 10, 'status' => 'active']);
+        $p5 = Product::create(['company_id' => $company->id, 'name' => 'Shoerack', 'price' => 600.0, 'stock' => 10, 'status' => 'active']);
+
+        $chat = Chat::create([
+            'company_id' => $company->id,
+            'customer_phone' => '254799887766',
+            'customer_name' => 'Alice',
+            'status' => 'active',
+        ]);
+
+        $senderMock = $this->createMock(WhatsAppMessageSenderService::class);
+        $channelAdapter = new WhatsAppChannelAdapter($senderMock);
+
+        $pipeline = app(ConversationalOSPipeline::class);
+
+        // Turn 1: Customer asks for prices / catalog
+        $envCatalog = new InboundEnvelope('whatsapp', '254799887766', $company->id, 'prices');
+        $resCatalog = $pipeline->processTurn($company, $chat, $envCatalog, $channelAdapter);
+        $this->assertStringContainsString('Black Sneakers', $resCatalog->customerReply);
+        $this->assertStringContainsString('Shoerack', $resCatalog->customerReply);
+
+        // Turn 2: Customer replies "1" -> should add Black Sneakers (item #1), NOT re-dump catalog
+        $env1 = new InboundEnvelope('whatsapp', '254799887766', $company->id, '1');
+        $res1 = $pipeline->processTurn($company, $chat, $env1, $channelAdapter);
+        $this->assertStringContainsString('Black Sneakers', $res1->customerReply);
+        $this->assertStringNotContainsString('Here\'s our product catalog:', $res1->customerReply);
+
+        // Turn 3: Customer replies "5" -> should add Shoerack (item #5)
+        $env5 = new InboundEnvelope('whatsapp', '254799887766', $company->id, '5');
+        $res5 = $pipeline->processTurn($company, $chat, $env5, $channelAdapter);
+        $this->assertStringContainsString('Shoerack', $res5->customerReply);
+
+        // Turn 4: Customer replies "3" -> should add Earphones (item #3), NOT connect to human agent
+        $env3 = new InboundEnvelope('whatsapp', '254799887766', $company->id, '3');
+        $res3 = $pipeline->processTurn($company, $chat, $env3, $channelAdapter);
+        $this->assertStringContainsString('Earphones', $res3->customerReply);
+        $this->assertStringNotContainsString('Connecting you with a support representative', $res3->customerReply);
     }
 }

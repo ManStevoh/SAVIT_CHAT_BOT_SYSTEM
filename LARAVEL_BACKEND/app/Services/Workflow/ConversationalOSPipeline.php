@@ -39,9 +39,16 @@ final class ConversationalOSPipeline
             // Step 1: Hydrate immutable ConversationState from database Chat record
             $currentState = $this->hydrator->hydrateFromChat($chat);
 
-            // Fast-Path Cost Optimization: Single-digit numeric choice for variant or product selection
+            // Fast-Path Cost Optimization: Numeric choice for variant or product selection
             $trimmedMsg = trim($envelope->messageText);
-            if (is_numeric($trimmedMsg) && (int) $trimmedMsg >= 1 && (int) $trimmedMsg <= 9) {
+
+            $lastBotMessage = \App\Models\Message::where('chat_id', $chat->id)
+                ->where('sender', 'bot')
+                ->latest('id')
+                ->value('content') ?? '';
+            $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent') || str_contains($lastBotMessage, '1. Prices');
+
+            if (is_numeric($trimmedMsg) && (int) $trimmedMsg >= 1 && (int) $trimmedMsg <= 99 && ! $lastWasQuickMenu) {
                 $fastToken = ($currentState->step === \App\Enums\CheckoutStep::SELECTING_VARIANT) ? ('o' . $trimmedMsg) : ('p' . $trimmedMsg);
                 $resolvedFast = $this->candidateRetrievalService->resolveToken($company->id, $chat->id, $fastToken, $currentState, $company);
                 

@@ -30,6 +30,9 @@ final class IntentResult
     public static function fromArray(array $data, ?string $messageText = null): self
     {
         $intentValue = $data['intent'] ?? 'unknown';
+        if ($intentValue === 'cancel') {
+            $intentValue = 'cancel_order';
+        }
         $intent = CommerceIntent::tryFrom($intentValue) ?? CommerceIntent::UNKNOWN;
         $entities = is_array($data['entities'] ?? null) ? $data['entities'] : [];
 

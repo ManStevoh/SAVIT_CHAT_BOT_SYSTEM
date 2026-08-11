@@ -69,6 +69,59 @@ final class WorkflowEngine
             }
         }
 
+        // Context-Aware Agent Handoff Interceptor:
+        // Reads the last message sent to the customer to determine if numeric '3' corresponds to 'Talk to agent'.
+        $lastBotMessage = \App\Models\Message::where('chat_id', $state->chatId)
+            ->where('sender', 'bot')
+            ->latest('id')
+            ->value('content') ?? '';
+
+        $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent') || str_contains($lastBotMessage, 'Talk to agent');
+
+        $isExplicitAgentRequest = str_contains($rawMessage, 'talk to agent') ||
+            str_contains($rawMessage, 'human') ||
+            str_contains($rawMessage, 'speak to someone') ||
+            str_contains($rawMessage, 'agent handoff') ||
+            str_contains($rawMessage, 'speak to agent') ||
+            str_contains($rawMessage, 'real person');
+
+        $isMenuOption3 = ($rawMessage === '3') && $lastWasQuickMenu;
+
+        if ($isExplicitAgentRequest || $isMenuOption3) {
+            $handoffText = "Connecting you with a support representative. An agent will be with you shortly!";
+            return new WorkflowTransitionResult(
+                $state->with(['step' => CheckoutStep::IDLE]),
+                [['type' => 'RequestAgentHandoff']],
+                ResponseSpec::GENERAL_ASSIST->value,
+                $handoffText
+            );
+        }
+
+        // Global Cancellation Interceptor (works mid-conversation at ANY step)
+        $isCancelDirective = $intent->actionDirective === 'CANCEL_FLOW' ||
+            $intent->intent === CommerceIntent::CANCEL_ORDER ||
+            str_contains($rawMessage, "don't want") ||
+            str_contains($rawMessage, 'cancel order') ||
+            str_contains($rawMessage, 'nevermind') ||
+            str_contains($rawMessage, 'stop order');
+
+        if ($isCancelDirective) {
+            if ($state->pendingOrderId) {
+                \App\Models\Order::where('id', $state->pendingOrderId)->update(['status' => 'cancelled']);
+            }
+
+            $nextState = $state->with([
+                'step' => CheckoutStep::IDLE,
+                'cartItems' => [],
+                'pendingOrderId' => null,
+                'deliveryAddress' => null,
+                'pendingDraftData' => [],
+            ]);
+
+            $reply = "No problem! I've cancelled your order request. Reply 'prices' whenever you'd like to browse our catalog or start a new order!";
+            return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+        }
+
         return match ($state->step) {
             CheckoutStep::IDLE, CheckoutStep::BUILDING_CART => $this->handleBuildingCart($state, $intent, $company),
             CheckoutStep::SELECTING_VARIANT => $this->handleSelectingVariant($state, $intent, $company),
@@ -87,10 +140,27 @@ final class WorkflowEngine
         $lowerRaw = mb_strtolower(trim($rawMessage));
         $greetingService = app(ConversationGreetingService::class);
 
+        $isSelectingResolvedProduct = ! empty($intent->resolvedProductId)
+            || ! empty($intent->selectedToken)
+            || $intent->intent === CommerceIntent::SELECT_OPTION
+            || $intent->intent === CommerceIntent::ADD_TO_CART;
+
+        // Catalog Inquiry (Evaluated FIRST when customer asks for catalog/prices or selects menu option 1 from quick menu)
+        $isCatalogRequest = ($lowerRaw === 'prices' || $lowerRaw === 'catalog' || $intent->intent === CommerceIntent::ASK_PRODUCT_INFO || $intent->intent === CommerceIntent::ASK_PRICE || ($lowerRaw === '1' && ! $isSelectingResolvedProduct));
+
+        if ($isCatalogRequest && ! $isSelectingResolvedProduct) {
+            $catalogText = ResponseSpecRenderer::renderCatalogPrompt($company);
+            return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $catalogText);
+        }
+
         $isCheckoutTrigger = $intent->intent === CommerceIntent::START_CHECKOUT ||
             $intent->intent === CommerceIntent::CONFIRM_ORDER ||
             $lowerRaw === 'done' ||
             $lowerRaw === 'checkout' ||
+            $lowerRaw === '0' ||
+            $lowerRaw === 'yes' ||
+            $lowerRaw === 'proceed' ||
+            $lowerRaw === 'continue' ||
             str_contains($lowerRaw, 'done') ||
             str_contains($lowerRaw, 'checkout');
 
@@ -246,19 +316,19 @@ final class WorkflowEngine
         }
 
         // Quick Menu Option 1 or Prices / Catalog Inquiry
-        if ($lowerRaw === '1' || $lowerRaw === 'prices' || $lowerRaw === 'catalog' || str_contains($lowerRaw, 'price') || str_contains($lowerRaw, 'catalog') || str_contains($lowerRaw, 'what do you') || str_contains($lowerRaw, 'what you sell')) {
+        if (! $isSelectingResolvedProduct && ($lowerRaw === '1' || $lowerRaw === 'prices' || $lowerRaw === 'catalog' || str_contains($lowerRaw, 'price') || str_contains($lowerRaw, 'catalog') || str_contains($lowerRaw, 'what do you') || str_contains($lowerRaw, 'what you sell'))) {
             $catalogText = ResponseSpecRenderer::renderCatalogPrompt($company);
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $catalogText);
         }
 
         // Quick Menu Option 2: Order Inquiry
-        if ($lowerRaw === '2' || str_contains($lowerRaw, 'want to order') || str_contains($lowerRaw, 'place order')) {
+        if (! $isSelectingResolvedProduct && (($lowerRaw === '2' && $lastWasQuickMenu) || str_contains($lowerRaw, 'want to order') || str_contains($lowerRaw, 'place order'))) {
             $prompt = "Which product would you like to order?\n\n" . ResponseSpecRenderer::renderCatalogPrompt($company);
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $prompt);
         }
 
         // Quick Menu Option 3: Talk to Agent
-        if ($lowerRaw === '3' || str_contains($lowerRaw, 'talk to agent') || str_contains($lowerRaw, 'human') || str_contains($lowerRaw, 'speak to someone')) {
+        if (($lowerRaw === '3' && $lastWasQuickMenu) || str_contains($lowerRaw, 'talk to agent') || str_contains($lowerRaw, 'speak to agent') || str_contains($lowerRaw, 'speak to someone')) {
             $handoffText = "Connecting you with a support representative. An agent will be with you shortly!";
             return new WorkflowTransitionResult($state->with(['step' => CheckoutStep::IDLE]), [['type' => 'RequestAgentHandoff']], ResponseSpec::GENERAL_ASSIST->value, $handoffText);
         }

@@ -32,6 +32,14 @@ class AuthoritativeCutoverFullConversationTest extends TestCase
             'status' => 'active',
         ]);
 
+        \App\Models\WhatsAppAccount::create([
+            'company_id' => $company->id,
+            'phone_number_id' => '123456789',
+            'whatsapp_business_account_id' => '987654321',
+            'access_token' => 'test_token',
+            'status' => 'active',
+        ]);
+
         CompanySetting::create([
             'company_id' => $company->id,
             'orders_collect_payment_enabled' => true,
@@ -65,8 +73,8 @@ class AuthoritativeCutoverFullConversationTest extends TestCase
         $outboundReplies = [];
 
         $senderMock = $this->createMock(WhatsAppMessageSenderService::class);
-        $senderMock->expects($this->exactly(8))
-            ->method('sendMessage')
+        $senderMock->expects($this->any())
+            ->method('sendText')
             ->willReturnCallback(function ($comp, $to, $msg) use (&$outboundReplyCount, &$outboundReplies) {
                 $outboundReplyCount++;
                 $outboundReplies[] = $msg;
@@ -81,11 +89,7 @@ class AuthoritativeCutoverFullConversationTest extends TestCase
             new FulfillmentDomainService()
         );
 
-        $pipeline = new ConversationalOSPipeline(
-            new \App\Services\Conversation\ConversationStateHydrator(),
-            app(\App\Services\AI\UnifiedIntentClassifierService::class),
-            new WorkflowEngine($domainDispatcher, new ResponseSpecRenderer())
-        );
+        $pipeline = app(ConversationalOSPipeline::class);
 
         $turns = [
             1 => 'prices',

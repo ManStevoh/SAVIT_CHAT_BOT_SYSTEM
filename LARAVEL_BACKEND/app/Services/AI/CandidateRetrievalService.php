@@ -119,44 +119,37 @@ final class CandidateRetrievalService
             }
         }
 
-        // 3. Fallback: load popular products if still under 3
-        if (count($candidateProducts) < 3) {
-            $fallbacks = Product::where('company_id', $tenantId)
-                ->where('status', 'active')
-                ->limit(4)
-                ->get();
+        // 3. Load all active catalog products in alphabetical order (matching ResponseSpecRenderer::renderCatalogPrompt)
+        $catalogProducts = Product::where('company_id', $tenantId)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
 
-            $pCount = count($candidateProducts) + 1;
-            foreach ($fallbacks as $fp) {
-                if (in_array($fp->id, array_values($tokenMap['products']))) {
-                    continue;
-                }
+        foreach ($catalogProducts as $idx => $cp) {
+            $pToken = 'p' . ($idx + 1);
+            if (! isset($tokenMap['products'][$pToken])) {
+                $tokenMap['products'][$pToken] = $cp->id;
+            }
 
-                $pToken = 'p' . $pCount++;
-                $tokenMap['products'][$pToken] = $fp->id;
+            $cVariants = $cp->activeVariants()->get()->values();
+            $vFormatted = [];
+            foreach ($cVariants as $cv) {
+                $vLabel = $cv->label ?? $cv->name ?? 'Option';
+                $vToken = 'v_' . str_replace(' ', '_', mb_strtolower($vLabel));
+                $tokenMap['variants'][$vToken] = $cv->id;
+                $vFormatted[] = [
+                    'token' => $vToken,
+                    'label' => $vLabel,
+                    'price' => (float) ($cv->price ?? $cp->price),
+                ];
+            }
 
-                $fVariants = $fp->activeVariants()->get()->values();
-                $vFormatted = [];
-                foreach ($fVariants as $fv) {
-                    $vLabel = $fv->label ?? $fv->name ?? 'Option';
-                    $vToken = 'v_' . str_replace(' ', '_', mb_strtolower($vLabel));
-                    $tokenMap['variants'][$vToken] = $fv->id;
-                    $vFormatted[] = [
-                        'token' => $vToken,
-                        'label' => $vLabel,
-                        'price' => (float) ($fv->price ?? $fp->price),
-                    ];
-                }
-
+            if (! array_filter($candidateProducts, fn ($cand) => ($cand['token'] ?? '') === $pToken)) {
                 $candidateProducts[] = [
                     'token' => $pToken,
-                    'name' => $fp->name,
+                    'name' => $cp->name,
                     'variants' => $vFormatted,
                 ];
-
-                if (count($candidateProducts) >= 4) {
-                    break;
-                }
             }
         }
 
