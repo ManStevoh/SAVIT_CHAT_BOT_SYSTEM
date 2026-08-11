@@ -194,6 +194,7 @@ export function LandoIntroCard({
   ctaHref,
   imageUrl,
   imageAlt = "",
+  imagePosition = "right",
 }: {
   title: string
   description?: string
@@ -201,14 +202,33 @@ export function LandoIntroCard({
   ctaHref?: string
   imageUrl?: string
   imageAlt?: string
+  imagePosition?: "left" | "right"
 }) {
+  const imageOnRight = imagePosition === "right"
+
   return (
     <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <div className="overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-sm transition-shadow duration-300 hover:shadow-md lg:p-12">
-            <div className="grid items-center gap-10 lg:grid-cols-2">
-              <div>
+            <div
+              className={cn(
+                "flex flex-col items-center gap-10 lg:flex-row lg:gap-16",
+                imageOnRight && "lg:flex-row-reverse"
+              )}
+            >
+              {imageUrl && (
+                <div className="w-full shrink-0 lg:w-1/2">
+                  <img
+                    src={imageUrl}
+                    alt={imageAlt}
+                    loading="lazy"
+                    decoding="async"
+                    className="mx-auto max-h-72 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
+                  />
+                </div>
+              )}
+              <div className="w-full lg:w-1/2">
                 <h2 className="text-3xl font-bold text-card-foreground sm:text-4xl">{title}</h2>
                 {description && <p className="mt-4 text-base text-muted-foreground sm:text-lg">{description}</p>}
                 {ctaText && ctaHref && (
@@ -217,15 +237,6 @@ export function LandoIntroCard({
                   </Button>
                 )}
               </div>
-              {imageUrl && (
-                <img
-                  src={imageUrl}
-                  alt={imageAlt}
-                  loading="lazy"
-                  decoding="async"
-                  className="mx-auto max-h-72 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
-                />
-              )}
             </div>
           </div>
         </Reveal>
@@ -253,23 +264,30 @@ export function LandoFeatureBlock({
   imageAlt?: string
   imagePosition?: "left" | "right"
 }) {
-  const image = imageUrl ? (
-    <img
-      src={imageUrl}
-      alt={imageAlt}
-      loading="lazy"
-      decoding="async"
-      className="mx-auto max-h-80 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
-    />
-  ) : null
+  const imageOnRight = imagePosition === "right"
 
   return (
     <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-            {imagePosition === "left" && image}
-            <div className={cn(imagePosition === "right" ? "lg:order-1" : "lg:order-2")}>
+          <div
+            className={cn(
+              "flex flex-col items-center gap-10 lg:flex-row lg:gap-16",
+              imageOnRight && "lg:flex-row-reverse"
+            )}
+          >
+            {imageUrl && (
+              <div className="w-full shrink-0 lg:w-1/2">
+                <img
+                  src={imageUrl}
+                  alt={imageAlt}
+                  loading="lazy"
+                  decoding="async"
+                  className="mx-auto max-h-80 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
+                />
+              </div>
+            )}
+            <div className="w-full lg:w-1/2">
               {label && (
                 <p className="mb-3 text-xs font-bold tracking-widest text-muted-foreground uppercase">{label}</p>
               )}
@@ -285,7 +303,6 @@ export function LandoFeatureBlock({
                 </Button>
               )}
             </div>
-            {imagePosition === "right" && image}
           </div>
         </Reveal>
       </div>
@@ -302,6 +319,7 @@ export function LandoGrowthEngine({
   ctaHref,
   imageUrl,
   imageAlt = "",
+  imagePosition = "left",
 }: {
   label?: string
   title: string
@@ -311,14 +329,33 @@ export function LandoGrowthEngine({
   ctaHref?: string
   imageUrl?: string
   imageAlt?: string
+  imagePosition?: "left" | "right"
 }) {
+  const imageOnRight = imagePosition === "right"
+
   return (
     <section className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <div className="overflow-hidden rounded-3xl border border-border bg-card px-8 py-10 text-card-foreground shadow-sm transition-shadow duration-300 hover:shadow-md lg:px-12 lg:py-14">
-            <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-              <div>
+            <div
+              className={cn(
+                "flex flex-col items-center gap-10 lg:flex-row lg:gap-16",
+                imageOnRight && "lg:flex-row-reverse"
+              )}
+            >
+              {imageUrl && (
+                <div className="w-full shrink-0 lg:w-1/2">
+                  <img
+                    src={imageUrl}
+                    alt={imageAlt}
+                    loading="lazy"
+                    decoding="async"
+                    className="mx-auto max-h-80 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
+                  />
+                </div>
+              )}
+              <div className="w-full lg:w-1/2">
                 {label && (
                   <p className="mb-3 text-xs font-bold tracking-widest text-primary uppercase">{label}</p>
                 )}
@@ -340,15 +377,6 @@ export function LandoGrowthEngine({
                   </Button>
                 )}
               </div>
-              {imageUrl && (
-                <img
-                  src={imageUrl}
-                  alt={imageAlt}
-                  loading="lazy"
-                  decoding="async"
-                  className="mx-auto max-h-80 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
-                />
-              )}
             </div>
           </div>
         </Reveal>
@@ -365,6 +393,7 @@ export function LandoHowToJoin({
   imageUrl,
   imageAlt = "",
   steps = [],
+  imagePosition = "right",
 }: {
   title: string
   description?: string
@@ -373,12 +402,31 @@ export function LandoHowToJoin({
   imageUrl?: string
   imageAlt?: string
   steps?: Array<{ title: string; description?: string }>
+  imagePosition?: "left" | "right"
 }) {
+  const imageOnRight = imagePosition === "right"
+
   return (
     <section id="how-to-join" className="bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          <Reveal>
+        <div
+          className={cn(
+            "flex flex-col items-center gap-10 lg:flex-row lg:gap-16",
+            imageOnRight && "lg:flex-row-reverse"
+          )}
+        >
+          {imageUrl && (
+            <Reveal delayMs={100} className="w-full shrink-0 lg:w-1/2">
+              <img
+                src={imageUrl}
+                alt={imageAlt}
+                loading="lazy"
+                decoding="async"
+                className="mx-auto max-h-80 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
+              />
+            </Reveal>
+          )}
+          <Reveal className="w-full lg:w-1/2">
             <div>
               <h2 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h2>
               {description && <p className="mt-4 text-base text-muted-foreground">{description}</p>}
@@ -404,17 +452,6 @@ export function LandoHowToJoin({
               )}
             </div>
           </Reveal>
-          {imageUrl && (
-            <Reveal delayMs={100}>
-              <img
-                src={imageUrl}
-                alt={imageAlt}
-                loading="lazy"
-                decoding="async"
-                className="mx-auto max-h-80 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
-              />
-            </Reveal>
-          )}
         </div>
       </div>
     </section>

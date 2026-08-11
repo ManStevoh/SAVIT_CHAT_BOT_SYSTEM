@@ -6,7 +6,7 @@ return [
     | Default / fallback currency
     |--------------------------------------------------------------------------
     */
-    'default_currency' => strtoupper((string) env('PRICING_DEFAULT_CURRENCY', 'USD')),
+    'default_currency' => strtoupper((string) env('PRICING_DEFAULT_CURRENCY', 'KES')),
 
     /*
     |--------------------------------------------------------------------------

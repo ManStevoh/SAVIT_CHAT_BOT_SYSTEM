@@ -18,12 +18,15 @@ class PaymentGatewayController extends Controller
         $data = $gateways->map(function (PaymentGateway $g) {
             $config = $g->config ?? [];
             $masked = $this->maskSecrets($g->slug, $config);
+            $readiness = PaymentGateway::readiness($g->slug);
 
             return [
                 'id' => (string) $g->id,
                 'slug' => $g->slug,
                 'name' => $g->name,
                 'isEnabled' => (bool) $g->is_enabled,
+                'isReady' => (bool) $g->is_enabled && $readiness['ready'],
+                'missingFields' => $readiness['missing'],
                 'isSystemwideMasterSwitch' => true,
                 'purpose' => 'Platform Subscriptions Billing (How tenant companies pay Super Admin)',
                 'config' => $masked,
@@ -69,6 +72,7 @@ class PaymentGatewayController extends Controller
 
         $config = $gateway->config ?? [];
         $masked = $this->maskSecrets($gateway->slug, $config);
+        $readiness = PaymentGateway::readiness($slug);
 
         return response()->json([
             'success' => true,
@@ -77,8 +81,13 @@ class PaymentGatewayController extends Controller
                 'slug' => $gateway->slug,
                 'name' => $gateway->name,
                 'isEnabled' => (bool) $gateway->is_enabled,
+                'isReady' => (bool) $gateway->is_enabled && $readiness['ready'],
+                'missingFields' => $readiness['missing'],
                 'config' => $masked,
             ],
+            'warning' => ((bool) $gateway->is_enabled && ! $readiness['ready'])
+                ? 'Gateway is enabled but not ready for checkout. Missing: '.implode(', ', $readiness['missing'])
+                : null,
         ]);
     }
 

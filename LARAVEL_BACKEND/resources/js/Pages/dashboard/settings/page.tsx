@@ -475,7 +475,9 @@ export default function SettingsPage() {
         whatsappBusinessAccountId: finishData?.whatsappBusinessAccountId,
       })
       setWaMessage(result.message ?? (result.success ? "WhatsApp connected via embedded signup." : "Failed to connect."))
+      setWaMessageError(!result.success)
       if (result.success) {
+        setWaStep(4)
         await loadWhatsAppStatus()
         await loadWhatsAppTemplates()
       }
@@ -1615,37 +1617,51 @@ export default function SettingsPage() {
               ) : (
                 /* DISCONNECTED: STEP-BY-STEP ONBOARDING WIZARD */
                 <div className="space-y-6">
-                  {/* Stepper Header Navigation Bar */}
+                  {/* Stepper adapts: Embedded skips Meta Developer prerequisites */}
                   <div className="rounded-lg border bg-muted/20 p-4">
                     <div className="flex items-center justify-between">
-                      {[
-                        { step: 1, title: "Select Method", desc: "OAuth vs Manual" },
-                        { step: 2, title: "Prerequisites", desc: "Readiness Check" },
-                        { step: 3, title: "Configuration", desc: "Credentials / Login" },
-                        { step: 4, title: "Finish & Verify", desc: "Finalize Setup" },
-                      ].map((s, idx) => (
+                      {(waMethod === "embedded"
+                        ? [
+                            { step: 1 as const, title: "Choose method", desc: "Recommended path" },
+                            { step: 3 as const, title: "Connect Facebook", desc: "Authorize WhatsApp" },
+                            { step: 4 as const, title: "Done", desc: "You're live" },
+                          ]
+                        : [
+                            { step: 1 as const, title: "Select Method", desc: "OAuth vs Manual" },
+                            { step: 2 as const, title: "Prerequisites", desc: "Readiness Check" },
+                            { step: 3 as const, title: "Configuration", desc: "Credentials" },
+                            { step: 4 as const, title: "Finish & Verify", desc: "Finalize Setup" },
+                          ]
+                      ).map((s, idx, arr) => {
+                        const stepOrder = arr.map((x) => x.step)
+                        const currentIdx = stepOrder.indexOf(waStep)
+                        const thisIdx = idx
+                        const isDone = currentIdx > thisIdx
+                        const isActive = waStep === s.step
+                        return (
                         <div key={s.step} className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => s.step < waStep && setWaStep(s.step as 1 | 2 | 3 | 4)}
-                            disabled={s.step > waStep}
+                            onClick={() => isDone && setWaStep(s.step)}
+                            disabled={!isDone && !isActive}
                             className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-colors ${
-                              waStep === s.step
+                              isActive
                                 ? "border-foreground bg-foreground text-background"
-                                : waStep > s.step
+                                : isDone
                                 ? "border-muted-foreground bg-muted/40 text-foreground cursor-pointer"
                                 : "border-border text-muted-foreground cursor-not-allowed opacity-60"
                             }`}
                           >
-                            {waStep > s.step ? <Check className="h-4 w-4" /> : s.step}
+                            {isDone ? <Check className="h-4 w-4" /> : thisIdx + 1}
                           </button>
                           <div className="hidden sm:block text-left">
-                            <p className={`text-xs font-medium ${waStep === s.step ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{s.title}</p>
+                            <p className={`text-xs font-medium ${isActive ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{s.title}</p>
                             <p className="text-[10px] text-muted-foreground">{s.desc}</p>
                           </div>
-                          {idx < 3 && <ChevronRight className="h-4 w-4 text-muted-foreground/60 hidden md:block mx-1" />}
+                          {idx < arr.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground/60 hidden md:block mx-1" />}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
 
@@ -1653,9 +1669,9 @@ export default function SettingsPage() {
                   {waStep === 1 && (
                     <div className="space-y-5">
                       <div>
-                        <h3 className="text-base font-semibold text-foreground">Step 1: Choose Connection Method</h3>
+                        <h3 className="text-base font-semibold text-foreground">Choose how to connect WhatsApp</h3>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Select how you want to link your WhatsApp Business account to the platform.
+                          Most businesses should use Facebook Embedded Signup — no Meta Developer account needed.
                         </p>
                       </div>
 
@@ -1700,7 +1716,7 @@ export default function SettingsPage() {
                               <Settings2 className="h-5 w-5 text-foreground" />
                               <p className="text-sm font-semibold text-foreground">Manual Meta Developer Setup</p>
                             </div>
-                            <Badge variant="outline" className="text-[10px]">Custom App</Badge>
+                            <Badge variant="outline" className="text-[10px]">Advanced</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             For existing Meta Developer apps. Connect using your own System User Permanent Access Token, Phone Number ID, App Secret, and Webhook Verify Token.
@@ -1713,23 +1729,57 @@ export default function SettingsPage() {
                         </div>
                       </div>
 
+                      {waMethod === "embedded" ? (
+                        <div className="rounded-lg border border-dashed bg-muted/10 p-4 text-xs text-muted-foreground space-y-2">
+                          <p className="font-medium text-foreground">Before you continue</p>
+                          <ul className="list-disc pl-4 space-y-1">
+                            <li>Have a phone that can receive SMS / voice OTP</li>
+                            <li>Use a Facebook account with admin access to your Business Portfolio</li>
+                            <li>The number should not be logged into the regular WhatsApp mobile app</li>
+                          </ul>
+                        </div>
+                      ) : null}
+
                       <div className="flex justify-end pt-3 border-t">
-                        <Button type="button" onClick={() => setWaStep(2)} className="gap-1">
-                          <span>Next: Prerequisites</span>
+                        <Button
+                          type="button"
+                          onClick={() => setWaStep(waMethod === "embedded" ? 3 : 2)}
+                          className="gap-1"
+                        >
+                          <span>
+                            {waMethod === "embedded" ? "Continue with Facebook" : "Next: Prerequisites"}
+                          </span>
                           <ChevronRight className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                   )}
 
-                  {/* STEP 2: PREREQUISITES & READINESS CHECKLIST */}
+                  {/* STEP 2: PREREQUISITES — Manual path only */}
                   {waStep === 2 && (
                     <div className="space-y-5">
                       <div>
-                        <h3 className="text-base font-semibold text-foreground">Step 2: Prerequisites & Readiness Checklist</h3>
+                        <h3 className="text-base font-semibold text-foreground">Prerequisites & Readiness Checklist</h3>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Review requirements before proceeding to connect your number.
+                          Manual setup needs a Meta Developer account and API credentials. Embedded Signup customers can skip this.
                         </p>
+                      </div>
+
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <p className="text-foreground">
+                          Prefer the easy path? Switch to <strong>Facebook Embedded Signup</strong> — no developer account required.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setWaMethod("embedded")
+                            setWaStep(3)
+                          }}
+                        >
+                          Use Embedded Signup
+                        </Button>
                       </div>
 
                       {/* Explicit Guide on How to Register a Free Meta Developer Account */}
@@ -1809,9 +1859,7 @@ export default function SettingsPage() {
                             <div>
                               <p className="font-medium text-foreground">Meta Account Admin Access</p>
                               <p className="text-xs text-muted-foreground">
-                                {waMethod === "embedded"
-                                  ? "I have login credentials for a Facebook account with admin rights to our Meta Business Portfolio."
-                                  : "I have registered a free Meta Developer account using my Facebook login."}
+                                I have registered a free Meta Developer account using my Facebook login.
                               </p>
                             </div>
                           </label>
@@ -1849,14 +1897,15 @@ export default function SettingsPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b">
                         <div>
                           <h3 className="text-base font-semibold text-foreground">
-                            Step 3: {waMethod === "embedded" ? "Facebook OAuth Connection" : "Enter Meta API Credentials"}
+                            {waMethod === "embedded" ? "Connect with Facebook" : "Enter Meta API Credentials"}
                           </h3>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {waMethod === "embedded"
-                              ? "Launch the Facebook pop-up window to authorize your WhatsApp Business account."
+                              ? "One click opens Meta’s official window — sign in, pick your WhatsApp number, and verify with SMS."
                               : "Input your custom Meta Developer app credentials below."}
                           </p>
                         </div>
+                        {waMethod === "manual" ? (
                         <div className="inline-flex rounded-md border bg-muted/30 p-1 shrink-0 self-start sm:self-auto">
                           <button
                             type="button"
@@ -1881,25 +1930,26 @@ export default function SettingsPage() {
                             Manual Setup
                           </button>
                         </div>
+                        ) : null}
                       </div>
 
                       {waMethod === "embedded" ? (
                         <div className="rounded-lg border p-5 space-y-4 bg-muted/10">
                           <div className="space-y-2">
-                            <p className="text-sm font-medium text-foreground">Meta Embedded Signup Overview</p>
-                            <p className="text-xs text-muted-foreground">
-                              Clicking below will open Meta&apos;s official authorization window. You will be prompted to:
-                            </p>
+                            <p className="text-sm font-medium text-foreground">What happens next</p>
                             <ol className="text-xs text-muted-foreground list-decimal pl-5 space-y-1">
                               <li>Log in with your Facebook account.</li>
                               <li>Select your Business Portfolio and WhatsApp Business Profile.</li>
                               <li>Enter your phone number and verify via 6-digit SMS OTP.</li>
                             </ol>
+                            <p className="text-xs text-muted-foreground pt-1">
+                              Tip: allow pop-ups for this site. After Meta finishes, we connect automatically — no tokens to copy.
+                            </p>
                           </div>
 
                           <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t">
                             <div className="flex items-center gap-2">
-                              <Button type="button" variant="outline" onClick={() => setWaStep(2)} className="gap-1">
+                              <Button type="button" variant="outline" onClick={() => setWaStep(1)} className="gap-1">
                                 <ChevronLeft className="h-4 w-4" />
                                 <span>Back</span>
                               </Button>
@@ -1910,15 +1960,18 @@ export default function SettingsPage() {
                                 className="gap-2"
                               >
                                 <Smartphone className="h-4 w-4" />
-                                {waEmbeddedLoading ? "Opening Meta Window…" : "Launch Facebook Connection"}
+                                {waEmbeddedLoading ? "Opening Meta Window…" : "Continue with Facebook"}
                               </Button>
                             </div>
                             <button
                               type="button"
-                              onClick={() => setWaMethod("manual")}
+                              onClick={() => {
+                                setWaMethod("manual")
+                                setWaStep(2)
+                              }}
                               className="text-xs text-muted-foreground underline hover:text-foreground text-left sm:text-right"
                             >
-                              Want to use custom Meta Developer app? Switch to Manual Setup →
+                              Need a custom Meta Developer app? Use Manual Setup →
                             </button>
                           </div>
                         </div>

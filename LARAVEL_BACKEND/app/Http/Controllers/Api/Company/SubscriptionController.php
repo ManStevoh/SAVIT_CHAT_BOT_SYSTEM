@@ -12,6 +12,7 @@ use App\Services\PaystackService;
 use App\Services\PaystackSubscriptionService;
 use App\Services\PlanLimitService;
 use App\Services\StripeService;
+use App\Services\PlatformPayments\ManualSubscriptionPaymentService;
 use App\Services\PlatformPayments\PlatformPaymentRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -254,12 +255,12 @@ class SubscriptionController extends Controller
         }
 
         $validated = $request->validate([
-            'plan' => 'required|string',
+            'plan' => 'required',
             'gateway' => 'required|string',
             'phone' => 'nullable|string',
         ]);
 
-        $plan = Plan::where('slug', $validated['plan'])->orWhere('id', $validated['plan'])->first();
+        $plan = Plan::where('slug', (string) $validated['plan'])->orWhere('id', $validated['plan'])->first();
         if (! $plan) {
             return response()->json(['success' => false, 'message' => 'Plan not found.'], 404);
         }
@@ -278,5 +279,49 @@ class SubscriptionController extends Controller
         }
 
         return response()->json($result);
+    }
+
+    /**
+     * List this company's manual bank-transfer subscription payments.
+     * GET /api/company/subscription/manual-payments
+     */
+    public function manualPayments(Request $request, ManualSubscriptionPaymentService $manual): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'payments' => $manual->listForCompany($company),
+        ]);
+    }
+
+    /**
+     * Upload proof of bank transfer for a pending manual subscription payment.
+     * POST /api/company/subscription/manual-payments/proof
+     */
+    public function submitManualProof(Request $request, ManualSubscriptionPaymentService $manual): JsonResponse
+    {
+        $company = $request->user()->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $validated = $request->validate([
+            'reference' => 'required|string|max:120',
+            'note' => 'nullable|string|max:1000',
+            'proof' => 'required|file|max:10240|mimes:jpg,jpeg,png,webp,pdf',
+        ]);
+
+        $result = $manual->submitProof(
+            $company,
+            $validated['reference'],
+            $validated['proof'],
+            $validated['note'] ?? null,
+        );
+
+        return response()->json($result, ($result['success'] ?? false) ? 200 : 422);
     }
 }

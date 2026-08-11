@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Admin\LandingFaqController;
 use App\Http\Controllers\Api\Admin\LogController;
 use App\Http\Controllers\Api\Admin\OverviewController;
 use App\Http\Controllers\Api\Admin\PaymentGatewayController;
+use App\Http\Controllers\Api\Admin\ManualBillingPaymentController;
 use App\Http\Controllers\Api\Admin\PlatformSettingsController;
 use App\Http\Controllers\Api\Admin\RevenueController;
 use App\Http\Controllers\Api\Admin\TestimonialController;
@@ -280,6 +281,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('subscription/usage', [SubscriptionController::class, 'usage']);
     Route::get('subscription/payment-methods', [SubscriptionController::class, 'paymentMethods']);
     Route::post('subscription/checkout', [SubscriptionController::class, 'checkout']);
+    Route::get('subscription/manual-payments', [SubscriptionController::class, 'manualPayments']);
+    Route::post('subscription/manual-payments/proof', [SubscriptionController::class, 'submitManualProof']);
     Route::post('subscription/cancel', [SubscriptionController::class, 'cancel']);
     Route::get('team', [TeamController::class, 'index']);
     Route::post('team', [TeamController::class, 'store']);
@@ -438,6 +441,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::get('logs', [LogController::class, 'index']);
     Route::get('payment-gateways', [PaymentGatewayController::class, 'index']);
     Route::put('payment-gateways/{slug}', [PaymentGatewayController::class, 'update']);
+    Route::get('manual-payments', [ManualBillingPaymentController::class, 'index']);
+    Route::post('manual-payments/{id}/approve', [ManualBillingPaymentController::class, 'approve']);
+    Route::post('manual-payments/{id}/reject', [ManualBillingPaymentController::class, 'reject']);
+    Route::get('manual-payments/{id}/proof', [ManualBillingPaymentController::class, 'proof']);
     Route::get('settings', [PlatformSettingsController::class, 'show']);
     Route::put('settings', [PlatformSettingsController::class, 'update']);
     Route::post('settings', [PlatformSettingsController::class, 'update']);

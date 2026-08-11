@@ -222,6 +222,8 @@ export interface PaymentGateway {
   slug: string
   name: string
   isEnabled: boolean
+  isReady?: boolean
+  missingFields?: string[]
   config: Record<string, string | number>
 }
 

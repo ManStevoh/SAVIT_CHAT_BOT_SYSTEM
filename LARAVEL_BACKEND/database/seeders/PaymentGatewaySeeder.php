@@ -91,7 +91,7 @@ class PaymentGatewaySeeder extends Seeder
         ];
 
         foreach ($gateways as $data) {
-            PaymentGateway::updateOrCreate(
+            PaymentGateway::firstOrCreate(
                 ['slug' => $data['slug']],
                 $data
             );

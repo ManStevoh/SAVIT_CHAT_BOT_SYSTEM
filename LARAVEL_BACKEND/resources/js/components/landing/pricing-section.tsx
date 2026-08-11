@@ -23,7 +23,7 @@ export function PricingSection() {
   }, [])
 
   const list = data?.plans ?? []
-  const activeCurrency = data?.currency ?? currency ?? "USD"
+  const activeCurrency = data?.currency ?? currency ?? "KES"
   const currencies = data?.availableCurrencies?.length
     ? data.availableCurrencies
     : [

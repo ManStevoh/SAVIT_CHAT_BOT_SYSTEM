@@ -77,8 +77,13 @@ export function LandoSolutionPillars({
                   id={item.id}
                   className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                 >
-                  <div className={cn("grid gap-0 lg:grid-cols-2", reversed && "lg:[&>*:first-child]:order-2")}>
-                    <div className="p-8 lg:p-10">
+                  <div
+                    className={cn(
+                      "flex flex-col lg:flex-row",
+                      reversed && "lg:flex-row-reverse"
+                    )}
+                  >
+                    <div className="p-8 lg:w-1/2 lg:p-10">
                       {item.label && (
                         <p className="mb-3 text-xs font-bold tracking-widest text-primary uppercase">{item.label}</p>
                       )}
@@ -112,7 +117,12 @@ export function LandoSolutionPillars({
                       )}
                     </div>
 
-                    <div className="border-t border-border bg-muted/60 p-6 lg:border-t-0 lg:border-l lg:p-8">
+                    <div
+                      className={cn(
+                        "border-t border-border bg-muted/60 p-6 lg:w-1/2 lg:border-t-0 lg:p-8",
+                        reversed ? "lg:border-r" : "lg:border-l"
+                      )}
+                    >
                       <p className="mb-4 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                         {item.sampleTitle ?? "Sample flow"}
                       </p>

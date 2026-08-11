@@ -124,13 +124,17 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           ctaHref={str(content.ctaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
+          imagePosition="right"
         />
       )
 
     case "feature_1":
     case "feature_2":
     case "feature_3":
-    case "feature_4":
+    case "feature_4": {
+      // Always zigzag: feature_1/3 image-left, feature_2/4 image-right.
+      const featureNum = Number(sectionKey.replace("feature_", "")) || 1
+      const imagePosition = featureNum % 2 === 0 ? "right" : "left"
       return (
         <LandoFeatureBlock
           label={str(content.label)}
@@ -140,9 +144,10 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           ctaHref={str(content.ctaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
-          imagePosition={content.imagePosition === "right" ? "right" : "left"}
+          imagePosition={imagePosition}
         />
       )
+    }
 
     case "growth_engine":
       return (
@@ -155,6 +160,7 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           ctaHref={str(content.ctaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
+          imagePosition="left"
         />
       )
 
@@ -168,6 +174,7 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
           steps={arr(content.steps)}
+          imagePosition="right"
         />
       )
 

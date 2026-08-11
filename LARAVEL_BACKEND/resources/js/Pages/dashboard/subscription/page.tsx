@@ -18,17 +18,27 @@ import {
 } from "@/components/ui/table"
 import { Check, CreditCard, Download, MessageSquare, Smartphone, Users, Zap } from "lucide-react"
 import { useSubscription, useSubscriptionInvoices, useSubscriptionUsage, usePlans, type BillingInvoice } from "@/lib/api-hooks"
-import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout, verifyPaystackCheckout, cancelSubscription, previewCoupon, apiRequest } from "@/lib/api-actions"
+import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout, verifyPaystackCheckout, cancelSubscription, previewCoupon, apiRequest, submitManualPaymentProof } from "@/lib/api-actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 
 function SubscriptionPageContent() {
   const searchParams = useSearchParams()
   const { data: subscription, error, isLoading, mutate } = useSubscription()
   const { data: billingHistory = [] } = useSubscriptionInvoices()
   const { data: usageData } = useSubscriptionUsage()
-  const { data: plansResponse } = usePlans()
+  const [pricingCurrency, setPricingCurrency] = useState<string | null>(null)
+  const { data: plansResponse } = usePlans(pricingCurrency)
   const plansData = plansResponse?.plans ?? []
+  const activeCurrency = plansResponse?.currency ?? pricingCurrency ?? "KES"
+  const currencies = plansResponse?.availableCurrencies?.length
+    ? plansResponse.availableCurrencies
+    : [
+        { code: "KES", label: "Kenyan Shilling", symbol: "KSh" },
+        { code: "USD", label: "US Dollar", symbol: "$" },
+        { code: "NGN", label: "Nigerian Naira", symbol: "₦" },
+      ]
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<"success" | "cancelled" | null>(null)
@@ -49,6 +59,18 @@ function SubscriptionPageContent() {
   } | null>(null)
   const [couponError, setCouponError] = useState<string | null>(null)
   const [couponChecking, setCouponChecking] = useState(false)
+  const [manualCheckout, setManualCheckout] = useState<{
+    reference: string
+    instructions: string
+    amount: number
+    currency: string
+    bankName?: string | null
+    accountName?: string | null
+    accountNumber?: string | null
+  } | null>(null)
+  const [proofFile, setProofFile] = useState<File | null>(null)
+  const [proofNote, setProofNote] = useState("")
+  const [proofSubmitting, setProofSubmitting] = useState(false)
 
   const planSlug = subscription?.plan ?? "starter"
   const status = subscription?.status ?? "active"
@@ -219,7 +241,7 @@ function SubscriptionPageContent() {
     }
     setCouponChecking(true)
     setCouponError(null)
-    const result = await previewCoupon(planId, code)
+    const result = await previewCoupon(planId, code, activeCurrency)
     setCouponChecking(false)
     if (!result.success) {
       setCouponPreview(null)
@@ -231,7 +253,7 @@ function SubscriptionPageContent() {
       originalAmount: result.originalAmount ?? 0,
       discountAmount: result.discountAmount ?? 0,
       finalAmount: result.finalAmount ?? 0,
-      currency: result.currency ?? "",
+      currency: result.currency ?? activeCurrency,
     })
   }
 
@@ -253,20 +275,40 @@ function SubscriptionPageContent() {
 
   const handleGenericCheckout = async (planId: string, gatewayId: string) => {
     setCheckoutPlanId(planId)
-    const result = await apiRequest<{ success: boolean; checkout_url?: string; instructions?: string; message?: string }>(
-      '/api/company/subscription/checkout',
-      {
-        method: 'POST',
-        body: {
-          plan: planId,
-          gateway: gatewayId,
-        },
-      }
-    )
+    const result = await apiRequest<{
+      success: boolean
+      checkout_url?: string
+      instructions?: string
+      invoice_reference?: string
+      amount?: number
+      currency?: string
+      bank_name?: string | null
+      account_name?: string | null
+      account_number?: string | null
+      message?: string
+    }>("/api/company/subscription/checkout", {
+      method: "POST",
+      body: {
+        plan: planId,
+        gateway: gatewayId,
+      },
+    })
     setCheckoutPlanId(null)
     if (result.success) {
       if (result.checkout_url) {
         window.location.href = result.checkout_url
+      } else if (gatewayId === "manual" && result.invoice_reference) {
+        setManualCheckout({
+          reference: result.invoice_reference,
+          instructions: result.instructions ?? "",
+          amount: result.amount ?? 0,
+          currency: result.currency ?? "KES",
+          bankName: result.bank_name,
+          accountName: result.account_name,
+          accountNumber: result.account_number,
+        })
+        setProofFile(null)
+        setProofNote("")
       } else if (result.instructions) {
         toast.success(result.instructions, { duration: 10000 })
       } else {
@@ -274,6 +316,25 @@ function SubscriptionPageContent() {
       }
     } else {
       toast.error(result.message ?? "Could not start checkout.")
+    }
+  }
+
+  const handleSubmitProof = async () => {
+    if (!manualCheckout?.reference || !proofFile) {
+      toast.error("Choose a payment proof image or PDF first.")
+      return
+    }
+    setProofSubmitting(true)
+    const res = await submitManualPaymentProof(manualCheckout.reference, proofFile, proofNote.trim() || undefined)
+    setProofSubmitting(false)
+    if (res.success) {
+      toast.success(res.message ?? "Proof submitted for review.")
+      setManualCheckout(null)
+      setProofFile(null)
+      setProofNote("")
+      mutate()
+    } else {
+      toast.error(res.message ?? "Could not submit proof.")
     }
   }
 
@@ -489,9 +550,62 @@ function SubscriptionPageContent() {
       )}
       {!anyCheckoutAvailable && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          No payment methods are enabled on this platform, so Subscribe / Renew buttons stay unavailable. An admin must
-          enable Stripe, Paystack, M-Pesa, Pesapal, or Flutterwave under Admin → Payment Gateways.
+          No payment methods are ready on this platform, so Subscribe / Renew buttons stay unavailable. An admin must
+          enable a gateway under Admin → Payment Gateways and save credentials (or bank details for Bank Transfer).
+          Toggling Active alone is not enough if keys / bank info are missing.
         </div>
+      )}
+      {manualCheckout && (
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle>Bank transfer instructions</CardTitle>
+            <CardDescription>
+              Pay {manualCheckout.currency} {Number(manualCheckout.amount).toLocaleString()} using reference{" "}
+              <span className="font-mono font-medium text-foreground">{manualCheckout.reference}</span>, then upload
+              proof for admin approval.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(manualCheckout.bankName || manualCheckout.accountNumber) && (
+              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm space-y-1">
+                {manualCheckout.bankName ? <div>Bank: {manualCheckout.bankName}</div> : null}
+                {manualCheckout.accountName ? <div>Account name: {manualCheckout.accountName}</div> : null}
+                {manualCheckout.accountNumber ? <div>Account number: {manualCheckout.accountNumber}</div> : null}
+              </div>
+            )}
+            {manualCheckout.instructions && (
+              <pre className="whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                {manualCheckout.instructions}
+              </pre>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="manual-proof">Payment proof (image or PDF)</Label>
+              <Input
+                id="manual-proof"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-note">Note (optional)</Label>
+              <Input
+                id="manual-note"
+                value={proofNote}
+                onChange={(e) => setProofNote(e.target.value)}
+                placeholder="Transaction ID, payer name, etc."
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleSubmitProof} disabled={proofSubmitting || !proofFile}>
+                {proofSubmitting ? "Submitting…" : "Submit proof"}
+              </Button>
+              <Button variant="outline" onClick={() => setManualCheckout(null)} disabled={proofSubmitting}>
+                Close
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
       {checkoutMessage === "success" && (
         <div className="rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
@@ -623,6 +737,36 @@ function SubscriptionPageContent() {
           <CardDescription>Compare and switch plans. Apply a coupon before Paystack or M-Pesa checkout.</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="inline-flex rounded-lg border border-border bg-muted/30 p-1">
+              {currencies.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => {
+                    setPricingCurrency(c.code)
+                    setCouponPreview(null)
+                    setCouponError(null)
+                  }}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    activeCurrency === c.code
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {c.code}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Showing prices in {activeCurrency}
+              {plansResponse?.source === "cloudflare" || plansResponse?.source === "forced"
+                ? ` (location${plansResponse?.detectedCountry ? `: ${plansResponse.detectedCountry}` : ""})`
+                : ""}
+              . Switch anytime.
+            </p>
+          </div>
           <div className="mb-6 max-w-md space-y-2 rounded-lg border p-4 bg-muted/20">
             <Label htmlFor="coupon-code">Coupon code</Label>
             <div className="flex gap-2">

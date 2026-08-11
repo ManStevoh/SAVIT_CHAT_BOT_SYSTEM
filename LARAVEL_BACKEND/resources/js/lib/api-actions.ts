@@ -2469,17 +2469,94 @@ export async function createBillingPortalSession(
 export async function updatePaymentGateway(
   slug: string,
   data: { isEnabled?: boolean; config?: Record<string, string | number> }
-): Promise<{ success: boolean; gateway?: PaymentGateway; message?: string }> {
+): Promise<{ success: boolean; gateway?: PaymentGateway; warning?: string | null; message?: string }> {
   if (useMockApi()) {
     await delay(600)
     return { success: true }
   }
   try {
-    const res = await apiRequest<{ success: boolean; gateway: PaymentGateway }>(`/api/admin/payment-gateways/${slug}`, {
+    const res = await apiRequest<{ success: boolean; gateway: PaymentGateway; warning?: string | null }>(`/api/admin/payment-gateways/${slug}`, {
       method: 'PUT',
       body: data,
     })
     return res
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export type ManualBillingPayment = {
+  id: string
+  reference: string
+  status: string
+  amount: number
+  currency: string
+  planSlug?: string | null
+  instructions?: string | null
+  bankName?: string | null
+  accountName?: string | null
+  accountNumber?: string | null
+  hasProof?: boolean
+  proofNote?: string | null
+  proofSubmittedAt?: string | null
+  createdAt?: string | null
+  companyId?: string | null
+  companyName?: string | null
+  proofOriginalName?: string | null
+  rejectionReason?: string | null
+}
+
+export async function listAdminManualPayments(): Promise<{
+  success: boolean
+  payments?: ManualBillingPayment[]
+  message?: string
+}> {
+  try {
+    return await apiRequest<{ success: boolean; payments: ManualBillingPayment[] }>('/api/admin/manual-payments')
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function approveManualPayment(id: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/admin/manual-payments/${id}/approve`, {
+      method: 'POST',
+      body: {},
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function rejectManualPayment(
+  id: string,
+  reason?: string
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/admin/manual-payments/${id}/reject`, {
+      method: 'POST',
+      body: { reason },
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function submitManualPaymentProof(
+  reference: string,
+  proof: File,
+  note?: string
+): Promise<{ success: boolean; message?: string; payment?: ManualBillingPayment }> {
+  try {
+    const form = new FormData()
+    form.append('reference', reference)
+    form.append('proof', proof)
+    if (note) form.append('note', note)
+    return await apiRequest<{ success: boolean; message?: string; payment?: ManualBillingPayment }>(
+      '/api/company/subscription/manual-payments/proof',
+      { method: 'POST', body: form }
+    )
   } catch (e) {
     return { ...handleApiError(e), success: false }
   }

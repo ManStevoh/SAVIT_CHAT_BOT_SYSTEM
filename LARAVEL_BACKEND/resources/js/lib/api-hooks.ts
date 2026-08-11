@@ -112,14 +112,14 @@ export function usePlans(currency?: string | null) {
       }
       await delay(400)
       const mockPlans: Plan[] = [
-        { id: '1', name: 'Starter', slug: 'starter', price: currency === 'KES' ? 'KSh 3,799' : currency === 'NGN' ? '₦ 45,000' : '$29', priceAmount: currency === 'KES' ? 3799 : currency === 'NGN' ? 45000 : 29, currency: currency ?? 'USD', description: 'Perfect for small businesses just getting started', features: ['1 WhatsApp number', '1,000 messages/month', 'Basic AI chatbot', 'Order management', 'Email support'], popular: false, cta: 'Start Free Trial', checkoutAvailable: true },
-        { id: '2', name: 'Growth', slug: 'professional', price: currency === 'KES' ? 'KSh 12,999' : currency === 'NGN' ? '₦ 155,000' : '$99', priceAmount: currency === 'KES' ? 12999 : currency === 'NGN' ? 155000 : 99, currency: currency ?? 'USD', description: 'For growing businesses with higher volume', features: ['3 WhatsApp numbers', '10,000 messages/month', 'Advanced AI with GPT-4', 'Multi-agent inbox', 'Analytics dashboard', 'Priority support', 'API access'], popular: true, cta: 'Start Free Trial', checkoutAvailable: true },
-        { id: '3', name: 'Enterprise', slug: 'enterprise', price: 'Custom', currency: currency ?? 'USD', description: 'For large organizations with custom needs', features: ['Unlimited WhatsApp numbers', 'Unlimited messages', 'Custom AI training', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee', 'On-premise option'], popular: false, cta: 'Contact Sales', checkoutAvailable: false },
+        { id: '1', name: 'Starter', slug: 'starter', price: currency === 'USD' ? '$29' : currency === 'NGN' ? '₦ 45,000' : 'KSh 3,799', priceAmount: currency === 'USD' ? 29 : currency === 'NGN' ? 45000 : 3799, currency: currency ?? 'KES', description: 'Perfect for small businesses just getting started', features: ['1 WhatsApp number', '1,000 messages/month', 'Basic AI chatbot', 'Order management', 'Email support'], popular: false, cta: 'Start Free Trial', checkoutAvailable: true },
+        { id: '2', name: 'Growth', slug: 'professional', price: currency === 'USD' ? '$99' : currency === 'NGN' ? '₦ 155,000' : 'KSh 12,999', priceAmount: currency === 'USD' ? 99 : currency === 'NGN' ? 155000 : 12999, currency: currency ?? 'KES', description: 'For growing businesses with higher volume', features: ['3 WhatsApp numbers', '10,000 messages/month', 'Advanced AI with GPT-4', 'Multi-agent inbox', 'Analytics dashboard', 'Priority support', 'API access'], popular: true, cta: 'Start Free Trial', checkoutAvailable: true },
+        { id: '3', name: 'Enterprise', slug: 'enterprise', price: 'Custom', currency: currency ?? 'KES', description: 'For large organizations with custom needs', features: ['Unlimited WhatsApp numbers', 'Unlimited messages', 'Custom AI training', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee', 'On-premise option'], popular: false, cta: 'Contact Sales', checkoutAvailable: false },
       ]
       return normalizePlansResponse({
-        currency: currency ?? 'USD',
-        currencyLabel: currency === 'KES' ? 'Kenyan Shilling' : currency === 'NGN' ? 'Nigerian Naira' : 'US Dollar',
-        currencySymbol: currency === 'KES' ? 'KSh' : currency === 'NGN' ? '₦' : '$',
+        currency: currency ?? 'KES',
+        currencyLabel: currency === 'USD' ? 'US Dollar' : currency === 'NGN' ? 'Nigerian Naira' : 'Kenyan Shilling',
+        currencySymbol: currency === 'USD' ? '$' : currency === 'NGN' ? '₦' : 'KSh',
         detectedCountry: null,
         source: currency ? 'query' : 'default',
         availableCurrencies: [

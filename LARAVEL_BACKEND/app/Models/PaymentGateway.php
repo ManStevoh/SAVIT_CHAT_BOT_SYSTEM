@@ -20,20 +20,28 @@ class PaymentGateway extends Model
     ];
 
     /**
-     * Get merged config for a gateway (DB + env fallback). Cached per slug.
+     * Get merged config for a gateway (defaults + env + non-empty DB values). Cached per slug.
+     * Empty DB strings do not wipe env credentials — that previously made “Active” gateways unusable.
      */
     public static function getConfig(string $slug): array
     {
         $cacheKey = "payment_gateway_config:{$slug}";
 
         return Cache::remember($cacheKey, 300, function () use ($slug) {
-            $gateway = self::where('slug', $slug)->first();
             $defaults = self::defaultConfig($slug);
-            if (! $gateway || ! $gateway->config) {
-                return array_merge($defaults, self::configFromEnv($slug));
+            $fromEnv = self::configFromEnv($slug);
+            $gateway = self::where('slug', $slug)->first();
+            $fromDb = is_array($gateway?->config) ? $gateway->config : [];
+
+            $merged = array_merge($defaults, $fromEnv);
+            foreach ($fromDb as $key => $value) {
+                if ($value === null || $value === '') {
+                    continue;
+                }
+                $merged[$key] = $value;
             }
 
-            return array_merge($defaults, $gateway->config);
+            return $merged;
         });
     }
 
@@ -48,6 +56,46 @@ class PaymentGateway extends Model
         }
 
         return (bool) $gateway->is_enabled;
+    }
+
+    /**
+     * Whether required credentials/details are present for this gateway to accept payments.
+     *
+     * @return array{ready: bool, missing: list<string>}
+     */
+    public static function readiness(string $slug): array
+    {
+        $cfg = self::getConfig($slug);
+        $required = match ($slug) {
+            'stripe' => ['secret'],
+            'paystack' => ['secret_key'],
+            'pesapal' => ['consumer_key', 'consumer_secret'],
+            'flutterwave' => ['secret_key'],
+            'mpesa' => ['shortcode', 'passkey'],
+            'manual' => [], // bank_name OR account_number OR instructions
+            default => [],
+        };
+
+        if ($slug === 'manual') {
+            $ready = ! empty($cfg['instructions']) || ! empty($cfg['bank_name']) || ! empty($cfg['account_number']);
+            $missing = $ready ? [] : ['bank_name or account_number or instructions'];
+
+            return ['ready' => $ready, 'missing' => $missing];
+        }
+
+        $missing = [];
+        foreach ($required as $key) {
+            if (empty($cfg[$key])) {
+                $missing[] = $key;
+            }
+        }
+
+        return ['ready' => $missing === [], 'missing' => $missing];
+    }
+
+    public static function isReady(string $slug): bool
+    {
+        return self::isEnabled($slug) && self::readiness($slug)['ready'];
     }
 
     /**

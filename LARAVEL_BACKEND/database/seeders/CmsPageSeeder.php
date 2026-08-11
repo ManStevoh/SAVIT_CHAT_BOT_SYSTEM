@@ -223,6 +223,7 @@ class CmsPageSeeder extends Seeder
                             'ctaHref' => '/pricing',
                             'imageUrl' => $ctaImage,
                             'imageAlt' => 'Growth Engine campaigns and attribution',
+                            'imagePosition' => 'left',
                         ],
                     ],
                     [
@@ -236,6 +237,7 @@ class CmsPageSeeder extends Seeder
                             'ctaHref' => '/register',
                             'imageUrl' => $stepsImage,
                             'imageAlt' => 'Three steps to go live',
+                            'imagePosition' => 'right',
                             'steps' => [
                                 ['title' => 'Connect WhatsApp', 'description' => 'Sign up, connect your WhatsApp Business number (Embedded Signup or Cloud API).'],
                                 ['title' => 'Add catalog, storefront & payments', 'description' => 'Products (physical, digital, bookings), dine-in tables if needed, FAQs, and M-Pesa / Paystack / Stripe.'],
