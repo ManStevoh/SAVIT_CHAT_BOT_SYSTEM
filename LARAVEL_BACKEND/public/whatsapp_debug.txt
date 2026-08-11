@@ -508,3 +508,28 @@
 [2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
 [2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
 [2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}

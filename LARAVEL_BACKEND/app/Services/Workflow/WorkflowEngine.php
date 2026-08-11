@@ -258,6 +258,34 @@ final class WorkflowEngine
             }
         }
 
+        // Handle UPDATE_QUANTITY NLU intent (e.g., "change sneakers to 1", "make it 3 pairs", "set count to 2")
+        if ($intent->intent === CommerceIntent::UPDATE_QUANTITY && ! $isImageQuery) {
+            $targetProduct = $intent->product ?? '';
+            $newQty = $intent->quantity ?? 1;
+
+            if ($targetProduct === '' && preg_match('/(?:change|make|set|update)\s+(?:(\w+\s*)+)\s+to\s+(\d+)/iu', $rawMessage, $m)) {
+                $targetProduct = trim($m[1]);
+                $newQty = (int) $m[2];
+            }
+
+            $updResult = $this->domain->updateItemQuantity($state, $targetProduct, $newQty);
+            $nextState = $updResult['state'];
+            $itemName = $updResult['item_name'];
+
+            if ($itemName !== null) {
+                $nextState = $nextState->with(['step' => CheckoutStep::BUILDING_CART]);
+                $summary = $this->renderer->render(ResponseSpec::CART_SUMMARY, $nextState, $company);
+                $prefix = "✏️ Updated cart: *{$itemName}* quantity set to {$updResult['new_qty']}.\n\n";
+
+                return new WorkflowTransitionResult(
+                    nextState: $nextState,
+                    executedActions: [['type' => 'UpdateQuantity', 'payload' => ['item' => $itemName, 'qty' => $newQty]]],
+                    responseSpec: ResponseSpec::CART_SUMMARY->value,
+                    customerReply: $prefix . $summary
+                );
+            }
+        }
+
         $isExplicitAddToCart = (! $isRemoveOrClear) && (
             $intent->intent === CommerceIntent::ADD_TO_CART ||
             $intent->intent === CommerceIntent::SELECT_OPTION ||

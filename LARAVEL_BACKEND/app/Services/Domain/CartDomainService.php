@@ -107,6 +107,42 @@ final class CartDomainService
     }
 
     /**
+     * Update absolute item quantity in the cart state.
+     */
+    public function updateItemQuantity(ConversationState $state, string $productName, int $newQuantity): array
+    {
+        $items = [];
+        $lowerTarget = mb_strtolower(trim($productName));
+        $updatedName = null;
+
+        foreach ($state->cartItems as $item) {
+            $itemName = mb_strtolower($item['name'] ?? '');
+            $match = ($lowerTarget === '')
+                || ($itemName !== '' && (str_contains($itemName, $lowerTarget) || str_contains($lowerTarget, $itemName)));
+
+            if ($updatedName === null && $match) {
+                $updatedName = $item['name'] ?? 'item';
+                if ($newQuantity > 0) {
+                    $item['quantity'] = $newQuantity;
+                    $items[] = $item;
+                }
+            } else {
+                $items[] = $item;
+            }
+        }
+
+        $nextState = $state->with([
+            'cartItems' => $items,
+        ]);
+
+        return [
+            'state' => $nextState,
+            'item_name' => $updatedName,
+            'new_qty' => max(0, $newQuantity),
+        ];
+    }
+
+    /**
      * Calculate cart grand total.
      */
     public function calculateTotal(ConversationState $state): float

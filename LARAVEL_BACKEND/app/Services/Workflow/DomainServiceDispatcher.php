@@ -91,6 +91,11 @@ final class DomainServiceDispatcher
         return $this->cartDomain->removeOrReduceItem($state, $productName, $qtyToRemove);
     }
 
+    public function updateItemQuantity(ConversationState $state, string $productName, int $newQuantity): array
+    {
+        return $this->cartDomain->updateItemQuantity($state, $productName, $newQuantity);
+    }
+
     public function createOrder(Company $company, ConversationState $state): Order
     {
         return $this->orderDomain->createOrderFromState($company, $state);
