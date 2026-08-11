@@ -56,19 +56,54 @@ final class CartDomainService
      */
     public function removeItem(ConversationState $state, string $productName): ConversationState
     {
+        $res = $this->removeOrReduceItem($state, $productName, 9999);
+
+        return $res['state'];
+    }
+
+    /**
+     * Remove or reduce item quantity from the cart state.
+     */
+    public function removeOrReduceItem(ConversationState $state, string $productName, int $qtyToRemove = 1): array
+    {
         $items = [];
         $lowerTarget = mb_strtolower(trim($productName));
+        $removedName = null;
+        $newQty = 0;
+        $wasReduced = false;
 
         foreach ($state->cartItems as $item) {
             $itemName = mb_strtolower($item['name'] ?? '');
-            if (! str_contains($itemName, $lowerTarget) && ! str_contains($lowerTarget, $itemName)) {
+            $match = ($lowerTarget === '')
+                || ($itemName !== '' && (str_contains($itemName, $lowerTarget) || str_contains($lowerTarget, $itemName)));
+
+            if ($removedName === null && $match) {
+                $removedName = $item['name'] ?? 'item';
+                $currentQty = (int) ($item['quantity'] ?? 1);
+                if ($currentQty > $qtyToRemove) {
+                    $item['quantity'] = $currentQty - $qtyToRemove;
+                    $newQty = $item['quantity'];
+                    $wasReduced = true;
+                    $items[] = $item;
+                } else {
+                    $newQty = 0;
+                    $wasReduced = false;
+                }
+            } else {
                 $items[] = $item;
             }
         }
 
-        return $state->with([
+        $nextState = $state->with([
             'cartItems' => $items,
         ]);
+
+        return [
+            'state' => $nextState,
+            'item_name' => $removedName,
+            'was_reduced' => $wasReduced,
+            'new_qty' => $newQty,
+        ];
     }
 
     /**

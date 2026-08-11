@@ -193,12 +193,79 @@ final class WorkflowEngine
             }
         }
 
-        $isExplicitAddToCart = $intent->intent === CommerceIntent::ADD_TO_CART ||
+        $isRemoveOrClear = $intent->intent === CommerceIntent::REMOVE_FROM_CART ||
+            str_contains($lowerRaw, 'remove') ||
+            str_contains($lowerRaw, 'delete') ||
+            str_contains($lowerRaw, 'drop') ||
+            str_contains($lowerRaw, 'clear') ||
+            str_contains($lowerRaw, 'empty') ||
+            str_contains($lowerRaw, 'take out') ||
+            str_contains($lowerRaw, 'take off') ||
+            str_contains($lowerRaw, 'minus');
+
+        if ($isRemoveOrClear && $intent->intent !== CommerceIntent::GENERAL_CHAT && ! $isImageQuery) {
+            $isFullClear = $lowerRaw === 'clear' ||
+                $lowerRaw === 'clear cart' ||
+                $lowerRaw === 'empty' ||
+                $lowerRaw === 'empty cart' ||
+                $lowerRaw === 'reset cart';
+
+            if ($isFullClear) {
+                $nextState = $state->with(['cartItems' => []]);
+                $reply = "🛒 Your cart has been cleared. Reply 'prices' or a product name to add new items!";
+                return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            // Extract target product name & quantity to remove
+            $targetProduct = $intent->product ?? '';
+            $qtyToRemove = $intent->quantity ?? 1;
+
+            if (preg_match('/(?:remove|delete|drop|minus|reduce|take out|take off)\s+(?:(\d+|one|two|three|four|five)\s+)?(.+)/iu', $rawMessage, $m)) {
+                $rawQtyStr = mb_strtolower(trim($m[1] ?? ''));
+                $rawTargetStr = trim($m[2] ?? '');
+                if ($rawQtyStr !== '') {
+                    $qtyWordMap = ['one' => 1, 'two' => 2, 'three' => 3, 'four' => 4, 'five' => 5];
+                    $qtyToRemove = is_numeric($rawQtyStr) ? (int) $rawQtyStr : ($qtyWordMap[$rawQtyStr] ?? 1);
+                }
+                if ($rawTargetStr !== '') {
+                    $cleanedTarget = preg_replace('/(?:\s+(?:from|in)?\s*(?:my|the)?\s*cart|\s+i\s+just\s+want.*)$/iu', '', $rawTargetStr);
+                    $targetProduct = trim($cleanedTarget);
+                }
+            }
+
+            $remResult = $this->domain->removeOrReduceItem($state, $targetProduct, $qtyToRemove);
+            $nextState = $remResult['state'];
+            $itemName = $remResult['item_name'];
+
+            if ($itemName !== null) {
+                $nextState = $nextState->with(['step' => CheckoutStep::BUILDING_CART]);
+                $summary = $this->renderer->render(ResponseSpec::CART_SUMMARY, $nextState, $company);
+                $prefix = $remResult['was_reduced']
+                    ? "🗑️ Updated cart: *{$itemName}* quantity reduced to {$remResult['new_qty']}.\n\n"
+                    : "🗑️ Removed *{$itemName}* from your cart.\n\n";
+
+                return new WorkflowTransitionResult(
+                    nextState: $nextState,
+                    executedActions: [['type' => 'RemoveFromCart', 'payload' => ['item' => $itemName, 'qty' => $qtyToRemove]]],
+                    responseSpec: ResponseSpec::CART_SUMMARY->value,
+                    customerReply: $prefix . $summary
+                );
+            }
+
+            if ($intent->intent === CommerceIntent::REMOVE_FROM_CART && empty($state->cartItems)) {
+                $reply = "Your cart is currently empty.";
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+        }
+
+        $isExplicitAddToCart = (! $isRemoveOrClear) && (
+            $intent->intent === CommerceIntent::ADD_TO_CART ||
             $intent->intent === CommerceIntent::SELECT_OPTION ||
             str_contains($lowerRaw, 'want') ||
             str_contains($lowerRaw, 'buy') ||
             str_contains($lowerRaw, 'order') ||
-            str_contains($lowerRaw, 'add');
+            str_contains($lowerRaw, 'add')
+        );
 
         if ($isExplicitAddToCart && $intent->intent !== CommerceIntent::GENERAL_CHAT && $intent->intent !== CommerceIntent::ASK_PRODUCT_INFO && ! $isImageQuery) {
             $product = null;

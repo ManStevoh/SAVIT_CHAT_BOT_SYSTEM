@@ -175,4 +175,62 @@ class ConversationalOSPipelineTest extends TestCase
         $this->assertStringContainsString('Earphones', $res3->customerReply);
         $this->assertStringNotContainsString('Connecting you with a support representative', $res3->customerReply);
     }
+
+    public function test_cart_item_quantity_reduction_and_removal(): void
+    {
+        $company = Company::create([
+            'name' => 'Sneaker Store',
+            'email' => 'sneakers@test.local',
+            'status' => 'active',
+        ]);
+
+        $product = Product::create([
+            'company_id' => $company->id,
+            'name' => 'Black Sneakers',
+            'price' => 350.0,
+            'stock' => 10,
+            'status' => 'active',
+        ]);
+
+        $chat = Chat::create([
+            'company_id' => $company->id,
+            'customer_phone' => '254711223344',
+            'customer_name' => 'Bob',
+            'status' => 'active',
+            'conversation_step' => 'product',
+            'order_draft' => [
+                'items' => [
+                    [
+                        'product_id' => $product->id,
+                        'name' => 'Black Sneakers',
+                        'price' => 350.0,
+                        'quantity' => 2,
+                    ],
+                ],
+            ],
+        ]);
+
+        $senderMock = $this->createMock(WhatsAppMessageSenderService::class);
+        $channelAdapter = new WhatsAppChannelAdapter($senderMock);
+
+        $pipeline = app(ConversationalOSPipeline::class);
+
+        // Turn 1: Customer asks to "remove one sneaker i just want a pair"
+        $env = new InboundEnvelope('whatsapp', '254711223344', $company->id, 'remove one sneaker i just want a pair');
+        $res = $pipeline->processTurn($company, $chat, $env, $channelAdapter);
+
+        // Assert quantity was reduced from 2 to 1 instead of adding another item
+        $items = $chat->fresh()->order_draft['items'];
+        $this->assertCount(1, $items);
+        $this->assertEquals(1, $items[0]['quantity']);
+        $this->assertStringContainsString('reduced to 1', $res->customerReply);
+
+        // Turn 2: Customer asks to "remove sneaker" -> should remove item completely
+        $envRemove = new InboundEnvelope('whatsapp', '254711223344', $company->id, 'remove sneaker');
+        $resRemove = $pipeline->processTurn($company, $chat, $envRemove, $channelAdapter);
+
+        $itemsAfter = $chat->fresh()->order_draft['items'] ?? [];
+        $this->assertCount(0, $itemsAfter);
+        $this->assertStringContainsString('Removed *Black Sneakers* from your cart', $resRemove->customerReply);
+    }
 }
