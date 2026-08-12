@@ -50,6 +50,32 @@ class UnifiedIntentClassifierServiceTest extends TestCase
         $this->assertTrue($result->intent->isPhase1Eligible());
     }
 
+    public function test_classifies_request_human_intent(): void
+    {
+        $company = Company::factory()->create();
+        $chat = Chat::factory()->create(['company_id' => $company->id]);
+
+        $mockGateway = Mockery::mock(AiGateway::class);
+        $mockGateway->shouldReceive('completeWithJson')
+            ->once()
+            ->andReturn([
+                'content' => json_encode([
+                    'intent' => 'request_human',
+                    'confidence' => 0.98,
+                    'requires_clarification' => false,
+                ]),
+                'success' => true,
+                'model' => 'gpt-5-mini',
+            ]);
+
+        $classifier = new UnifiedIntentClassifierService($mockGateway);
+        $result = $classifier->classify($company, $chat, 'I need to talk to an agent');
+
+        $this->assertInstanceOf(IntentResult::class, $result);
+        $this->assertEquals(CommerceIntent::REQUEST_HUMAN, $result->intent);
+        $this->assertEquals(0.98, $result->confidence);
+    }
+
     public function test_order_flow_handles_update_quantity_structured_intent(): void
     {
         $company = Company::factory()->create();

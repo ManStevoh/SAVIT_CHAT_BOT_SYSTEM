@@ -8,7 +8,7 @@ class AppConfig {
   factory AppConfig.fromEnvironment() {
     const raw = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'https://chat.essemdigital.com/api',
+      defaultValue: 'https://relayiq.app/api',
     );
     return AppConfig(apiBaseUrl: raw.replaceAll(RegExp(r'/$'), ''));
   }

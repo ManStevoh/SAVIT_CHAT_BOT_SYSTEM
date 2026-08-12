@@ -6,7 +6,7 @@ import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
 const DOCS_URL = "https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/"
-const CONTACT_EMAIL = "support@essemdigital.com"
+const CONTACT_EMAIL = "support@relayiq.app"
 
 const footerLinks = {
   Product: [
@@ -22,7 +22,7 @@ const footerLinks = {
     { name: "Product tour", href: "#demo" },
   ],
   Company: [
-    { name: "About Essem Digital", href: "https://essemdigital.com", external: true },
+    { name: "About RelayIQ", href: "https://relayiq.app", external: true },
     { name: "Contact", href: `mailto:${CONTACT_EMAIL}` },
     { name: "Privacy", href: "/privacy" },
     { name: "Terms", href: "/terms" },
@@ -109,8 +109,8 @@ export function Footer() {
             </p>
             <p className="text-xs text-muted-foreground">
               Powered by Essem Digital Innovation Limited ·{" "}
-              <a href="https://essemdigital.com" className="hover:text-foreground underline-offset-2 hover:underline" target="_blank" rel="noopener noreferrer">
-                essemdigital.com
+              <a href="https://relayiq.app" className="hover:text-foreground underline-offset-2 hover:underline" target="_blank" rel="noopener noreferrer">
+                relayiq.app
               </a>
             </p>
           </div>

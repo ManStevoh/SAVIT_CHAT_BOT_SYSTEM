@@ -93,7 +93,7 @@ class MigrateViaCronCommand extends Command
         $log = $base.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'logs'.DIRECTORY_SEPARATOR.'migrate-cron.log';
 
         // Production path from current host log (override when printing from local).
-        $prodBase = '/home/qkbghwib/chat.essemdigital.com/LARAVEL_BACKEND';
+        $prodBase = '/home/qkbghwib/relayiq.app/LARAVEL_BACKEND';
         $prodOneShot = "* * * * * cd {$prodBase} && php artisan migrate:via-cron --force >> {$prodBase}/storage/logs/migrate-cron.log 2>&1";
         $prodScheduler = "* * * * * cd {$prodBase} && php artisan schedule:run >> /dev/null 2>&1";
 

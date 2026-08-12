@@ -2,7 +2,7 @@
 class AppBrandingCopy {
   static const productName = 'RelayIQ';
   static const legalEntity = 'Essem Digital Innovation Limited';
-  static const companyWebsite = 'https://essemdigital.com';
+  static const companyWebsite = 'https://relayiq.app';
   static const tagline = 'Every Conversation. Smarter.';
   static const poweredBy = 'Powered by Essem Digital Innovation Limited';
   static const productOf =

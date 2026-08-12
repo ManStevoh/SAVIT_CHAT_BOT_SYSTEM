@@ -19,8 +19,8 @@ fi
 echo "==> npm build..."
 npm run build
 
-if [ ! -f "public/build/manifest.json" ]; then
-    echo "Error: public/build/manifest.json is missing!"
+if [ ! -f "public/build_fresh/manifest.json" ] && [ ! -f "public/build/manifest.json" ]; then
+    echo "Error: manifest.json is missing!"
     exit 1
 fi
 
@@ -34,18 +34,27 @@ import os, shutil
 
 src = '$SRC_DIR'
 dst = '$STAGING_DIR'
+has_fresh = os.path.exists(os.path.join(src, 'public', 'build_fresh'))
+
 exclude_dirs = {
     'node_modules', '.git', 'tests', 'test-results', 'e2e', 'playwright-report', '.cursor',
     'assets_old', 'build_old', 'pint', 'fakerphp', 'phpunit', 'mockery', 'sebastian', 'phar-io',
     'theseer', 'myclabs', 'psysh', 'collision', 'ignition', 'flare-client-php', 'backtrace'
 }
+if has_fresh:
+    exclude_dirs.add('build')
+
 exclude_files = {'.env', '.env.local', '.env.backup', 'hot', '.phpunit.result.cache'}
 
 for root, dirs, files in os.walk(src):
-    # filter excluded dirs in-place
     dirs[:] = [d for d in dirs if d not in exclude_dirs]
     rel_path = os.path.relpath(root, src)
-    target_root = os.path.join(dst, rel_path) if rel_path != '.' else dst
+    
+    target_rel = rel_path
+    if has_fresh and (rel_path == 'public/build_fresh' or rel_path.startswith('public/build_fresh/')):
+        target_rel = rel_path.replace('public/build_fresh', 'public/build', 1)
+        
+    target_root = os.path.join(dst, target_rel) if target_rel != '.' else dst
     os.makedirs(target_root, exist_ok=True)
     
     for file in files:

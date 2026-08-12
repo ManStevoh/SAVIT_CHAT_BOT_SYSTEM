@@ -10,9 +10,9 @@ const FALLBACK = (
     <p>
       RelayIQ is a product of Essem Digital Innovation Limited. We provide a multi-tenant SaaS platform
       for WhatsApp business messaging, AI-assisted replies, order management, and related
-      services. Learn more about the company at{" "}
-      <a href="https://essemdigital.com" className="text-[#2563eb] underline" target="_blank" rel="noopener noreferrer">
-        essemdigital.com
+      services. Learn more at{" "}
+      <a href="https://relayiq.app" className="text-[#2563eb] underline" target="_blank" rel="noopener noreferrer">
+        relayiq.app
       </a>
       .
     </p>
@@ -53,7 +53,7 @@ const FALLBACK = (
     <p>
       Depending on your jurisdiction, you may have rights to access, correct, or delete personal
       data. Contact us at{" "}
-      <a href="mailto:support@essemdigital.com">support@essemdigital.com</a> to
+      <a href="mailto:support@relayiq.app">support@relayiq.app</a> to
       submit a request.
     </p>
 

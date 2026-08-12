@@ -973,7 +973,7 @@ class CmsPageSeeder extends Seeder
                             'title' => 'Privacy Policy',
                             'lastUpdated' => 'June 2026',
                             'body' => '<h2>1. Who we are</h2>
-<p>RelayIQ is a product of Essem Digital Innovation Limited. We provide a multi-tenant SaaS platform for WhatsApp business messaging, AI-assisted replies, order management, and related services. Learn more at <a href="https://essemdigital.com" target="_blank" rel="noopener noreferrer">essemdigital.com</a>.</p>
+<p>RelayIQ is a product of Essem Digital Innovation Limited. We provide a multi-tenant SaaS platform for WhatsApp business messaging, AI-assisted replies, order management, and related services. Learn more at <a href="https://relayiq.app" target="_blank" rel="noopener noreferrer">relayiq.app</a>.</p>
 <h2>2. Information we collect</h2>
 <p>We collect information you provide when you register and use the platform, including:</p>
 <ul>
@@ -990,7 +990,7 @@ class CmsPageSeeder extends Seeder
 <h2>5. Security</h2>
 <p>We use industry-standard measures including encryption in transit and access controls. Each tenant\'s data is logically isolated in our multi-tenant architecture.</p>
 <h2>6. Your rights</h2>
-<p>Depending on your jurisdiction, you may have rights to access, correct, or delete personal data. Contact us at support@essemdigital.com to submit a request.</p>
+<p>Depending on your jurisdiction, you may have rights to access, correct, or delete personal data. Contact us at support@relayiq.app to submit a request.</p>
 <h2>7. Changes</h2>
 <p>We may update this policy from time to time. Continued use of the service after changes constitutes acceptance of the updated policy.</p>',
                         ],
@@ -1031,7 +1031,7 @@ class CmsPageSeeder extends Seeder
 <h2>7. Termination</h2>
 <p>You may cancel your subscription at any time. We may suspend or terminate accounts that violate these terms or applicable law.</p>
 <h2>8. Contact</h2>
-<p>For questions about these terms, contact support@essemdigital.com.</p>',
+<p>For questions about these terms, contact support@relayiq.app.</p>',
                         ],
                     ],
                 ],

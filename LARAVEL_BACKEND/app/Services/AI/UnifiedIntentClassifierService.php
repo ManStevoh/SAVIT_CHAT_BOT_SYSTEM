@@ -138,6 +138,7 @@ RULES & ANAPHORA RESOLUTION:
    - If user replies "1", "option 1", "first one", "red", "the cheaper one", map selected_token to "o1" or "v_red".
    - If user says "I don't want [item]", "cancel", "nevermind", "stop", "don't want to buy", "why did you send me this", set intent="cancel_order", action_directive="CANCEL_FLOW".
    - If user asks location ("where are you", "where is your shop"), set intent="ask_store_location", action_directive="SWITCH_TOPIC".
+   - If user wants human support, agent, or representative ("I need to talk to an agent", "speak with a person", "connect me to support"), set intent="request_human", action_directive="SWITCH_TOPIC".
 3. Place resolved tokens into selected_token, target_product_token, or target_variant_token.
 
 INTENTS:
@@ -187,6 +188,7 @@ INTENTS:
 - start_checkout: Customer says "done", "checkout", "view cart", "place order".
 - provide_address / choose_pickup / choose_dine_in / confirm_order / choose_payment_method / provide_phone: Checkout steps.
 - ask_delivery_fee / ask_product_info / ask_order_status / cancel_order / request_human / general_chat / unknown.
+- request_human: Customer wants to talk/speak to a human, agent, person, representative, or customer support (e.g. "I need to talk to an agent", "speak with someone", "human support").
 
 Return ONLY valid JSON.
 PROMPT;

@@ -81,11 +81,11 @@ class MailService
     {
         $product = e(config('branding.product_name', 'RelayIQ'));
         $entity = e(config('branding.legal_entity', 'Essem Digital Innovation Limited'));
-        $site = e(config('branding.company_website', 'https://essemdigital.com'));
+        $site = e(config('branding.company_website', 'https://relayiq.app'));
 
         return '<p style="margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;line-height:1.5;">'
             . $product . ' is a product of ' . $entity . '.<br>'
-            . 'Powered by ' . $entity . ' · <a href="' . $site . '" style="color:#2563eb;">essemdigital.com</a>'
+            . 'Powered by ' . $entity . ' · <a href="' . $site . '" style="color:#2563eb;">relayiq.app</a>'
             . '</p>';
     }
 

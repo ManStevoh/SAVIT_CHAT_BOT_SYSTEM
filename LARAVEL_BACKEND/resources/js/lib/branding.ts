@@ -2,7 +2,7 @@
 export const BRAND = {
   productName: "RelayIQ",
   legalEntity: "Essem Digital Innovation Limited",
-  companyWebsite: "https://essemdigital.com",
+  companyWebsite: "https://relayiq.app",
   tagline: "Every Conversation. Smarter.",
   /** Official channel partnership trust line (public marketing). */
   whatsappPartner: "Official WhatsApp Business Partner",

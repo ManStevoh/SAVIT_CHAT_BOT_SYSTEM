@@ -56,7 +56,7 @@ if ($TargetBranch -eq "main") {
     Write-Host ""
     Write-Host "Push to main will trigger: CI tests -> rsync -> post-deploy -> health check" -ForegroundColor Green
     Write-Host "Actions: https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions"
-    Write-Host "Live app: https://essemchat.essemglobalsolutions.com"
+    Write-Host "Live app: https://relayiq.app"
 } else {
     Write-Host ""
     Write-Host "Pushed $TargetBranch. CI runs on feature branches; production deploy runs only on main." -ForegroundColor Cyan

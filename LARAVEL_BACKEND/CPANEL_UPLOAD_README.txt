@@ -1,26 +1,26 @@
 Essem Chat — cPanel upload package
 ==================================
 
-DOMAIN: https://ai.essemdigital.com
+DOMAINS: https://relayiq.app
 DOCUMENT ROOT must point to:  .../LARAVEL_BACKEND/public   (NOT the parent folder)
 
 STEP 1 — Upload & extract
 -------------------------
 1. Upload this zip to cPanel File Manager (e.g. into /home/youruser/)
 2. Extract so you have: /home/youruser/LARAVEL_BACKEND/
-3. In cPanel → Domains, set ai.essemdigital.com document root to:
+3. In cPanel → Domains, set relayiq.app document root to:
    /home/youruser/LARAVEL_BACKEND/public
 
 STEP 2 — Create .env
 --------------------
 Copy .env.example to .env in LARAVEL_BACKEND/ and edit:
 
-  APP_NAME="Essem Chat"
+  APP_NAME="RelayIQ"
   APP_ENV=production
   APP_DEBUG=false
-  APP_URL=https://ai.essemdigital.com
-  FRONTEND_URL=https://ai.essemdigital.com
-  SANCTUM_STATEFUL_DOMAINS=ai.essemdigital.com
+  APP_URL=https://relayiq.app
+  FRONTEND_URL=https://relayiq.app
+  SANCTUM_STATEFUL_DOMAINS=relayiq.app
 
   DB_CONNECTION=mysql
   DB_HOST=localhost
@@ -110,8 +110,8 @@ Or set QUEUE_CONNECTION=sync to run all jobs inline (no worker; slower requests)
 
 STEP 6 — Verify
 ---------------
-  https://ai.essemdigital.com/up          → should return OK
-  https://ai.essemdigital.com             → landing page loads (no [::1]:5173 errors)
+  https://relayiq.app/up          → should return OK
+  https://relayiq.app             → landing page loads (no [::1]:5173 errors)
 
 Default super admin (if you run db:seed):
   Email: superadmin@essem.local

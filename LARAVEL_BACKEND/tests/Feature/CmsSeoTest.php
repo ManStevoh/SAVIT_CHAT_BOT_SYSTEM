@@ -92,7 +92,7 @@ class CmsSeoTest extends TestCase
             'ogImage' => 'https://cdn.example.com/pricing-og.jpg',
             'ogTitle' => 'Pricing share title',
             'ogDescription' => 'Pricing share description',
-            'canonicalUrl' => 'https://ai.essemdigital.com/pricing',
+            'canonicalUrl' => 'https://relayiq.app/pricing',
             'robots' => 'index, follow',
             'isPublished' => true,
         ]);
@@ -103,7 +103,7 @@ class CmsSeoTest extends TestCase
         $this->assertSame('Pricing — RelayIQ', $page->meta_title);
         $this->assertSame('https://cdn.example.com/pricing-og.jpg', $page->og_image);
         $this->assertSame('Pricing share title', $page->og_title);
-        $this->assertSame('https://ai.essemdigital.com/pricing', $page->canonical_url);
+        $this->assertSame('https://relayiq.app/pricing', $page->canonical_url);
     }
 
     public function test_admin_can_toggle_footer_mobile_app_section_via_cms(): void

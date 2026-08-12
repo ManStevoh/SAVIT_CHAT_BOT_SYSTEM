@@ -14,8 +14,8 @@ return [
     | and production domains which access your API via a frontend SPA.
     |
     | Set SANCTUM_STATEFUL_DOMAINS in .env (comma-separated hostnames, no scheme).
-    | Production (Inertia same-origin): SANCTUM_STATEFUL_DOMAINS=essemchat.essemglobalsolutions.com
-    | Must match the host in APP_URL / FRONTEND_URL (e.g. essemchat.essemglobalsolutions.com).
+    | Production (Inertia same-origin): SANCTUM_STATEFUL_DOMAINS=relayiq.app
+    | Must match the host in APP_URL / FRONTEND_URL (e.g. relayiq.app).
     |
     */
 

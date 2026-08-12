@@ -33,7 +33,7 @@ Strategic vision: [Digital Nervous System](technical/SAVIT_DIGITAL_NERVOUS_SYSTE
 
 | Component | URL |
 |-----------|-----|
-| Web application (UI + API) | [essemchat.essemglobalsolutions.com](https://essemchat.essemglobalsolutions.com) |
+| Web application (UI + API) | [relayiq.app](https://relayiq.app) |
 
 ## Documentation sections
 

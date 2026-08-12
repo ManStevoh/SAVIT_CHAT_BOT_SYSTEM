@@ -16,7 +16,7 @@ return [
 
     'legal_entity' => 'Essem Digital Innovation Limited',
 
-    'company_website' => 'https://essemdigital.com',
+    'company_website' => 'https://relayiq.app',
 
     'product_tagline' => 'Every Conversation. Smarter.',
 

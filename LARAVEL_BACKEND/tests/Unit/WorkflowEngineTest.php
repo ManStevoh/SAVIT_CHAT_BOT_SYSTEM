@@ -181,4 +181,34 @@ class WorkflowEngineTest extends TestCase
         $resultPaystack = $engine->handle($state, $intentPaystack, $company);
         $this->assertStringContainsString('PAYSTACK Payment', (string) $resultPaystack->customerReply);
     }
+
+    public function test_workflow_engine_triggers_human_handoff_on_request_human_intent(): void
+    {
+        [$company, $product] = $this->seedCompanyAndProduct();
+
+        $engine = new WorkflowEngine(
+            new DomainServiceDispatcher(app(OrderFlowService::class)),
+            new ResponseSpecRenderer()
+        );
+
+        $state = new ConversationState(
+            chatId: 1,
+            companyId: $company->id,
+            customerPhone: '254700111222',
+            customerName: 'Ken',
+            step: CheckoutStep::IDLE
+        );
+
+        $intent = new IntentResult(
+            intent: CommerceIntent::REQUEST_HUMAN,
+            confidence: 0.98,
+            messageText: 'I need to talk to an agent'
+        );
+
+        $result = $engine->handle($state, $intent, $company);
+
+        $this->assertEquals(CheckoutStep::IDLE, $result->nextState->step);
+        $this->assertEquals([['type' => 'RequestAgentHandoff']], $result->sideEffects);
+        $this->assertStringContainsString('Connecting you with a support representative', (string) $result->customerReply);
+    }
 }

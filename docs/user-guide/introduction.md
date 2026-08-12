@@ -19,7 +19,7 @@ Businesses in Africa and globally increasingly sell through WhatsApp, but manual
 
 ## How the platform is organized
 
-RelayIQ is a **multi-tenant SaaS** product of **Essem Digital Innovation Limited** ([essemdigital.com](https://essemdigital.com)):
+RelayIQ is a **multi-tenant SaaS** product of **Essem Digital Innovation Limited** ([relayiq.app](https://relayiq.app)):
 
 - **One platform** (RelayIQ, powered by Essem Digital Innovation Limited) serves many **companies** (tenants)
 - Each company has its own products, FAQs, WhatsApp number, orders, and settings

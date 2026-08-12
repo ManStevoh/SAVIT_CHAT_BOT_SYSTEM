@@ -12,7 +12,7 @@ Production runs as a **single Laravel application** on cPanel/VPS. The Inertia +
 
 | Component | URL |
 |-----------|-----|
-| App (UI + API) | https://essemchat.essemglobalsolutions.com |
+| App (UI + API) | https://relayiq.app |
 
 All routes — landing, dashboard, admin, webhooks, and REST API — live under this domain.
 
@@ -51,7 +51,7 @@ php artisan view:clear
 php artisan config:cache
 ```
 
-Ensure `.env` has `APP_ENV=production` and `APP_DEBUG=false`, and `APP_URL` matches your live domain (e.g. `https://ai.essemdigital.com`).
+Ensure `.env` has `APP_ENV=production` and `APP_DEBUG=false`, and `APP_URL` matches your live domain (e.g. `https://relayiq.app`).
 
 ## Deployment steps
 
@@ -96,11 +96,11 @@ If the host has no Node.js, build locally or in CI and upload `public/build/` (a
 ```env
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://essemchat.essemglobalsolutions.com
+APP_URL=https://relayiq.app
 
 # Same as APP_URL for Inertia same-origin (checkout redirects, email links)
-FRONTEND_URL=https://essemchat.essemglobalsolutions.com
-SANCTUM_STATEFUL_DOMAINS=essemchat.essemglobalsolutions.com
+FRONTEND_URL=https://relayiq.app
+SANCTUM_STATEFUL_DOMAINS=relayiq.app
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -146,7 +146,7 @@ Laravel `public/.htaccess` handles URL rewriting. Ensure `mod_rewrite` is enable
 ```nginx
 server {
     listen 443 ssl;
-    server_name essemchat.essemglobalsolutions.com;
+    server_name relayiq.app;
     root /path/to/LARAVEL_BACKEND/public;
 
     index index.php;
@@ -166,22 +166,22 @@ server {
 After the app is live with HTTPS:
 
 1. Meta Developer → WhatsApp → Configuration
-2. Callback URL: `https://essemchat.essemglobalsolutions.com/api/whatsapp/webhook`
+2. Callback URL: `https://relayiq.app/api/whatsapp/webhook`
 3. Verify token: match Admin → Settings
 4. Subscribe to **messages**
 
 ## Stripe webhook configuration
 
 1. Stripe Dashboard → Webhooks
-2. Endpoint: `https://essemchat.essemglobalsolutions.com/api/stripe/webhook`
+2. Endpoint: `https://relayiq.app/api/stripe/webhook`
 3. Events: `checkout.session.completed`, subscription events
 4. Copy webhook secret to Admin → Payment Gateways
 
 ## Post-deploy verification
 
 ```bash
-curl https://essemchat.essemglobalsolutions.com/up
-curl https://essemchat.essemglobalsolutions.com/api/plans
+curl https://relayiq.app/up
+curl https://relayiq.app/api/plans
 ```
 
 | Check | Expected |
@@ -204,7 +204,7 @@ See [GitHub Pages Setup](../GITHUB_PAGES_SETUP.md).
 Production deploy is automated via **GitHub Actions** (not Vercel):
 
 ```
-Local → git push main → GitHub Actions → SSH/rsync → essemchat.essemglobalsolutions.com
+Local → git push main → GitHub Actions → SSH/rsync → relayiq.app
 ```
 
 See **[CI/CD Pipeline](ci-cd.md)** for one-time SSH + secrets setup and the `scripts/deploy-from-local.ps1` helper.

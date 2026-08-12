@@ -201,7 +201,7 @@ export function LandoFooter({
                 rel="noopener noreferrer"
                 className="mt-1 inline-block font-medium text-primary hover:underline"
               >
-                essemdigital.com
+                relayiq.app
               </a>
             </div>
           </div>

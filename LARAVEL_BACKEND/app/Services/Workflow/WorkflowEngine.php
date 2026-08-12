@@ -78,12 +78,17 @@ final class WorkflowEngine
 
         $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent') || str_contains($lastBotMessage, 'Talk to agent');
 
-        $isExplicitAgentRequest = str_contains($rawMessage, 'talk to agent') ||
+        $isExplicitAgentRequest = $intent->intent === CommerceIntent::REQUEST_HUMAN ||
+            str_contains($rawMessage, 'talk to agent') ||
+            str_contains($rawMessage, 'talk to an agent') ||
+            str_contains($rawMessage, 'speak to an agent') ||
+            str_contains($rawMessage, 'speak to agent') ||
             str_contains($rawMessage, 'human') ||
             str_contains($rawMessage, 'speak to someone') ||
             str_contains($rawMessage, 'agent handoff') ||
-            str_contains($rawMessage, 'speak to agent') ||
-            str_contains($rawMessage, 'real person');
+            str_contains($rawMessage, 'real person') ||
+            str_contains($rawMessage, 'customer support') ||
+            str_contains($rawMessage, 'customer service');
 
         $isMenuOption3 = ($rawMessage === '3') && $lastWasQuickMenu;
 
