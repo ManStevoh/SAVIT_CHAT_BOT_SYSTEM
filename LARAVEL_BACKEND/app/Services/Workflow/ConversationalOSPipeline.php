@@ -108,13 +108,13 @@ final class ConversationalOSPipeline
             $readOnlyIntents = [
                 'ask_location', 'ask_hours', 'ask_availability',
                 'ask_recommendation', 'ask_comparison',
-                'ask_shipping', 'ask_returns', 'general_chat', 'ask_store_location', 'ask_faq', 'ask_delivery_fee'
+                'ask_shipping', 'ask_returns', 'general_chat', 'ask_store_location', 'ask_faq', 'ask_delivery_fee',
+                'ask_product_info', 'ask_price', 'unknown'
             ];
 
             $intentName = $intentResult->intent->value ?? 'general_chat';
             $isReadOnly = in_array($intentName, $readOnlyIntents, true)
-                && ! $intentResult->isExplicitPurchaseIntent()
-                && empty($intentResult->selectedToken);
+                && ! $intentResult->isExplicitPurchaseIntent();
 
             if ($isReadOnly) {
                 // 1. Capture State Hash before execution
@@ -165,6 +165,17 @@ final class ConversationalOSPipeline
 
             // Step 4: Dehydrate and persist updated ConversationState back to DB
             $this->hydrator->dehydrateToChat($transitionResult->nextState, $chat);
+
+            foreach ($transitionResult->executedActions as $action) {
+                if (($action['type'] ?? '') === 'RequestAgentHandoff') {
+                    $chat->update([
+                        'agent_handling_at' => now(),
+                        'ai_handled' => false,
+                        'status' => 'pending',
+                    ]);
+                    break;
+                }
+            }
 
             return $transitionResult;
         });

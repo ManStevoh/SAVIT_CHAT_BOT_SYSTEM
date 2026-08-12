@@ -255,29 +255,20 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Agent lock: only silence AI when a human teammate has actually replied after the lock.
-        // AI-initiated transfer notifies the team but must not strand the customer if nobody took over.
-        if ($chat->agent_handling_at !== null) {
-            if (! $chat->isAgentHandling(30)) {
-                $chat->update(['agent_handling_at' => null]);
-                $chat->refresh();
-            } elseif (! $this->forceReply) {
-                $humanTookOver = Message::query()
-                    ->where('chat_id', $chat->id)
-                    ->where('sender', 'agent')
-                    ->where('created_at', '>=', $chat->agent_handling_at)
-                    ->exists();
-                if ($humanTookOver) {
-                    \App\Services\WhatsApp\WhatsAppDebugLogger::warning('SKIPPED_HUMAN_AGENT_ACTIVE', [
-                        'chat_id' => $chat->id,
-                        'agent_handling_at' => $chat->agent_handling_at?->toIso8601String(),
-                    ]);
-                    $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
+        // Agent lock: silence AI when chat has been handed off to a human agent.
+        if ($chat->agent_handling_at !== null || $chat->ai_handled === false || $chat->status === 'pending') {
+            if ($chat->isAgentHandling(30) && ! $this->forceReply) {
+                \App\Services\WhatsApp\WhatsAppDebugLogger::warning('SKIPPED_HUMAN_AGENT_ACTIVE', [
+                    'chat_id' => $chat->id,
+                    'agent_handling_at' => $chat->agent_handling_at?->toIso8601String(),
+                ]);
+                $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
 
-                    return;
-                }
-                // No human reply yet — resume AI frontline.
-                $chat->update(['agent_handling_at' => null]);
+                return;
+            }
+
+            if ($chat->agent_handling_at !== null && ! $chat->isAgentHandling(30)) {
+                $chat->update(['agent_handling_at' => null, 'ai_handled' => true, 'status' => 'open']);
                 $chat->refresh();
             }
         }

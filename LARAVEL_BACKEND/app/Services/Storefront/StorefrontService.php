@@ -19,6 +19,8 @@ use App\Models\StorefrontSession;
 use App\Services\Orders\TaxCalculationService;
 use App\Services\PlanLimitService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -814,87 +816,125 @@ class StorefrontService
 
         $chatId = null;
         if ($customerPhone !== '') {
-            $chat = $this->whatsappBridge->resolveOrCreateChat($company, $customerPhone, $customerName);
-            $chatId = $chat?->id;
-        }
-
-        $order = Order::create([
-            'company_id' => $company->id,
-            'chat_id' => $chatId,
-            'order_number' => $orderNumber,
-            'customer_name' => $customerName,
-            'customer_phone' => $customerPhone ?: null,
-            'customer_email' => $customerEmail,
-            'delivery_address' => $deliveryAddress,
-            'fulfillment_type' => $fulfillmentType,
-            'dine_in_table_id' => $dineInTable?->id,
-            'dine_in_table_name' => $dineInTable?->name,
-            'subtotal' => $summary['subtotal'],
-            'tax_total' => $summary['taxTotal'],
-            'tax_breakdown' => $summary['taxBreakdown'] !== [] ? $summary['taxBreakdown'] : null,
-            'delivery_fee' => $deliveryFee,
-            'tip_amount' => $tipAmount,
-            'discount_total' => $discountTotal,
-            'coupon_code' => $coupon ? $coupon->code : null,
-            'coupon_id' => $coupon?->id,
-            'order_notes' => $orderNotes,
-            'gift_message' => $giftMessage,
-            'scheduled_for' => $scheduledFor,
-            'total' => max(0, round($summary['total'] + $deliveryFee + $tipAmount - $discountTotal, 2)),
-            'status' => 'pending',
-            'payment_status' => 'pending',
-            'source' => 'storefront',
-            'spam_flagged' => $spamFlagged,
-        ]);
-
-        if ($coupon) {
-            $coupon->increment('redeemed_count');
-        }
-
-        foreach ($summary['items'] as $idx => $item) {
-            $lineCalc = $summary['calcLines'][$idx] ?? [];
-            $product = Product::find($item['productId']);
-
-            OrderProduct::create([
-                'order_id' => $order->id,
-                'product_id' => $item['productId'],
-                'product_variant_id' => $item['productVariantId'],
-                'name' => $item['name'],
-                'quantity' => $item['quantity'],
-                'price' => $item['price'],
-                'tax_rate_id' => $lineCalc['tax_rate_id'] ?? null,
-                'tax_name' => $lineCalc['tax_name'] ?? null,
-                'tax_code' => $lineCalc['tax_code'] ?? null,
-                'tax_rate' => $lineCalc['tax_rate'] ?? null,
-                'tax_inclusive' => $lineCalc['tax_inclusive'] ?? false,
-                'tax_amount' => $lineCalc['tax_amount'] ?? 0,
-                'line_subtotal' => $item['lineSubtotal'],
-                'fulfillment_data' => $product?->fulfillmentSnapshot(),
-            ]);
-
-            if ($product && $product->isBundle()) {
-                $this->expandBundleLines($order, $product, $item['quantity']);
+            try {
+                $chat = $this->whatsappBridge->resolveOrCreateChat($company, $customerPhone, $customerName);
+                $chatId = $chat?->id;
+            } catch (\Throwable $e) {
+                Log::warning('Failed to resolve or create chat during storefront placeOrder', ['error' => $e->getMessage()]);
             }
         }
 
-        $order->ensurePublicTokens();
-        $this->clearCart($session);
-        if ($chatId) {
-            $chat = Chat::find($chatId);
-            if ($chat) {
-                $chat->update([
-                    'conversation_step' => null,
-                    'order_draft' => null,
+        $order = DB::transaction(function () use (
+            $company,
+            $chatId,
+            $orderNumber,
+            $customerName,
+            $customerPhone,
+            $customerEmail,
+            $deliveryAddress,
+            $fulfillmentType,
+            $dineInTable,
+            $summary,
+            $deliveryFee,
+            $tipAmount,
+            $discountTotal,
+            $coupon,
+            $orderNotes,
+            $giftMessage,
+            $scheduledFor,
+            $spamFlagged
+        ) {
+            $order = Order::create([
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'order_number' => $orderNumber,
+                'customer_name' => $customerName,
+                'customer_phone' => $customerPhone ?: null,
+                'customer_email' => $customerEmail,
+                'delivery_address' => $deliveryAddress,
+                'fulfillment_type' => $fulfillmentType,
+                'dine_in_table_id' => $dineInTable?->id,
+                'dine_in_table_name' => $dineInTable?->name,
+                'subtotal' => $summary['subtotal'],
+                'tax_total' => $summary['taxTotal'],
+                'tax_breakdown' => $summary['taxBreakdown'] !== [] ? $summary['taxBreakdown'] : null,
+                'delivery_fee' => $deliveryFee,
+                'tip_amount' => $tipAmount,
+                'discount_total' => $discountTotal,
+                'coupon_code' => $coupon ? $coupon->code : null,
+                'coupon_id' => $coupon?->id,
+                'order_notes' => $orderNotes,
+                'gift_message' => $giftMessage,
+                'scheduled_for' => $scheduledFor,
+                'total' => max(0, round($summary['total'] + $deliveryFee + $tipAmount - $discountTotal, 2)),
+                'status' => 'pending',
+                'payment_status' => 'pending',
+                'source' => 'storefront',
+                'spam_flagged' => $spamFlagged,
+            ]);
+
+            if ($coupon) {
+                $coupon->increment('redeemed_count');
+            }
+
+            foreach ($summary['items'] as $idx => $item) {
+                $lineCalc = $summary['calcLines'][$idx] ?? [];
+                $product = Product::find($item['productId']);
+
+                OrderProduct::create([
+                    'order_id' => $order->id,
+                    'product_id' => $item['productId'],
+                    'product_variant_id' => $item['productVariantId'],
+                    'name' => $item['name'],
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                    'tax_rate_id' => $lineCalc['tax_rate_id'] ?? null,
+                    'tax_name' => $lineCalc['tax_name'] ?? null,
+                    'tax_code' => $lineCalc['tax_code'] ?? null,
+                    'tax_rate' => $lineCalc['tax_rate'] ?? null,
+                    'tax_inclusive' => $lineCalc['tax_inclusive'] ?? false,
+                    'tax_amount' => $lineCalc['tax_amount'] ?? 0,
+                    'line_subtotal' => $item['lineSubtotal'],
+                    'fulfillment_data' => $product?->fulfillmentSnapshot(),
                 ]);
+
+                if ($product && $product->isBundle()) {
+                    $this->expandBundleLines($order, $product, $item['quantity']);
+                }
+            }
+
+            $order->ensurePublicTokens();
+
+            return $order;
+        });
+
+        // Clear session cart now that order placement transaction is committed
+        $this->clearCart($session);
+
+        if ($chatId) {
+            try {
+                $chat = \App\Models\Chat::find($chatId);
+                if ($chat) {
+                    $chat->update([
+                        'conversation_step' => null,
+                        'order_draft' => null,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to reset chat draft step during storefront placeOrder', ['error' => $e->getMessage()]);
             }
         }
 
         if ($customerPhone !== '') {
-            $customer = $this->findOrCreateCustomer($company, $customerPhone, $customerName, $customerEmail ?: null);
-            if ($customer && $deliveryAddress) {
-                $this->saveDefaultAddress($customer, $deliveryAddress);
+            try {
+                $customer = $this->findOrCreateCustomer($company, $customerPhone, $customerName, $customerEmail ?: null);
+                if ($customer && $deliveryAddress) {
+                    $this->saveDefaultAddress($customer, $deliveryAddress);
+                }
+                $this->whatsappBridge->notifyOrderPlaced($order->fresh(['company.settings', 'orderProducts', 'chat']));
+            } catch (\Throwable $e) {
+                Log::warning('Failed post-checkout notification/CRM update', ['order_id' => $order->id, 'error' => $e->getMessage()]);
             }
-            $this->whatsappBridge->notifyOrderPlaced($order->fresh(['company.settings', 'orderProducts', 'chat']));
         }
 
         return $order;

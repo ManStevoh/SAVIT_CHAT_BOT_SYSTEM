@@ -89,34 +89,34 @@ class StorefrontWhatsAppBridgeService
      */
     public function notifyOrderPlaced(Order $order): bool
     {
-        $order->loadMissing(['company.settings', 'chat', 'orderProducts']);
-        $company = $order->company;
-        if (! $company) {
-            return false;
-        }
-
-        $company->loadMissing('settings');
-        if (($company->settings?->storefront_whatsapp_order_notify ?? true) === false) {
-            return false;
-        }
-
-        $chat = $order->chat ?: $this->attachOrderToChat($order);
-        if (! $chat) {
-            return false;
-        }
-
-        $account = WhatsAppAccount::where('company_id', $company->id)->where('status', 'active')->first();
-        if (! $account) {
-            return false;
-        }
-
-        $phone = preg_replace('/\D+/', '', (string) ($order->customer_phone ?: $chat->customer_phone)) ?? '';
-        if ($phone === '') {
-            return false;
-        }
-
-        $text = $this->composeOrderPlacedMessage($order);
         try {
+            $order->loadMissing(['company.settings', 'chat', 'orderProducts']);
+            $company = $order->company;
+            if (! $company) {
+                return false;
+            }
+
+            $company->loadMissing('settings');
+            if (($company->settings?->storefront_whatsapp_order_notify ?? true) === false) {
+                return false;
+            }
+
+            $chat = $order->chat ?: $this->attachOrderToChat($order);
+            if (! $chat) {
+                return false;
+            }
+
+            $account = WhatsAppAccount::where('company_id', $company->id)->where('status', 'active')->first();
+            if (! $account) {
+                return false;
+            }
+
+            $phone = preg_replace('/\D+/', '', (string) ($order->customer_phone ?: $chat->customer_phone)) ?? '';
+            if ($phone === '') {
+                return false;
+            }
+
+            $text = $this->composeOrderPlacedMessage($order);
             $result = $this->whatsapp->sendText($account, $phone, $text);
             if (! ($result['success'] ?? false)) {
                 Log::warning('Storefront WhatsApp order notify failed', [

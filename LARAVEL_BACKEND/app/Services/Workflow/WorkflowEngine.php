@@ -445,7 +445,7 @@ final class WorkflowEngine
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $locationReply);
         }
 
-        if ($intent->intent === CommerceIntent::ASK_PRODUCT_INFO) {
+        if ($intent->intent === CommerceIntent::ASK_PRODUCT_INFO && (str_contains($lowerRaw, 'catalog') || str_contains($lowerRaw, 'prices') || $lowerRaw === 'products' || str_contains($lowerRaw, 'what do you sell'))) {
             $catalogText = ResponseSpecRenderer::renderCatalogPrompt($company);
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $catalogText);
         }
@@ -455,7 +455,7 @@ final class WorkflowEngine
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $greetingText);
         }
 
-        $reply = $intent->clarificationQuestion ?? "I can help you add items to your cart or place an order. Reply 'prices' to see our catalog!";
+        $reply = $intent->clarificationQuestion ?? "I didn't quite get that! I can help you check prices, recommend products, or place an order. Reply 'prices' anytime to browse our catalog!";
 
         return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
     }

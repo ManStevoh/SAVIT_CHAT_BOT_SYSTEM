@@ -350,8 +350,15 @@ class PublicStorefrontController extends Controller
 
         try {
             $order = $this->storefront->placeOrder($company, $session, $validated);
-        } catch (\RuntimeException $e) {
-            return back()->withErrors(['checkout' => $e->getMessage()])->withInput();
+        } catch (\Throwable $e) {
+            Log::error('Storefront checkout error', [
+                'company_slug' => $slug,
+                'session_token' => $session->session_token ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->withErrors(['checkout' => $e->getMessage() ?: 'Could not process order. Please try again.'])->withInput();
         }
 
         $this->storefront->recordEvent($company, 'purchase', $session->session_token, null, [

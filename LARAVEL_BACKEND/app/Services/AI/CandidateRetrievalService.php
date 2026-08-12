@@ -77,15 +77,37 @@ final class CandidateRetrievalService
             }
         }
 
-        // 2. Query candidates by text matching if more candidates needed
+        // 2. Query candidates by text matching (name, description, category, and common synonyms)
         if (count($candidateProducts) < 3 && $lowerText !== '') {
+            $keywords = [$lowerText];
+            $synonymMap = [
+                'footwear' => ['sneaker', 'shoe', 'boot', 'footwear', 'sandal'],
+                'shoes' => ['sneaker', 'shoe', 'boot', 'footwear'],
+                'shoe' => ['sneaker', 'shoe', 'boot', 'footwear'],
+                'clothes' => ['trouser', 'shirt', 'dress', 'pant', 'jean', 'cloth', 'apparel', 'fashion'],
+                'clothing' => ['trouser', 'shirt', 'dress', 'pant', 'jean', 'cloth', 'apparel', 'fashion'],
+                'apparel' => ['trouser', 'shirt', 'dress', 'pant', 'jean', 'cloth', 'apparel', 'fashion'],
+                'audio' => ['earphone', 'headphone', 'speaker', 'sound', 'audio'],
+                'reading' => ['book', 'read', 'novel'],
+            ];
+
+            foreach ($synonymMap as $key => $syns) {
+                if (str_contains($lowerText, $key)) {
+                    $keywords = array_unique(array_merge($keywords, $syns));
+                }
+            }
+
             $matchedProducts = Product::where('company_id', $tenantId)
                 ->where('status', 'active')
-                ->where(function ($q) use ($lowerText) {
-                    $q->where('name', 'like', '%' . $lowerText . '%')
-                      ->orWhereRaw('LOWER(?) LIKE CONCAT("%", LOWER(name), "%")', [$lowerText]);
+                ->where(function ($q) use ($keywords) {
+                    foreach ($keywords as $kw) {
+                        $q->orWhere('name', 'like', '%' . $kw . '%')
+                          ->orWhere('description', 'like', '%' . $kw . '%')
+                          ->orWhere('category', 'like', '%' . $kw . '%')
+                          ->orWhereRaw('LOWER(?) LIKE CONCAT("%", LOWER(name), "%")', [$kw]);
+                    }
                 })
-                ->limit(3)
+                ->limit(5)
                 ->get();
 
             $pCount = count($candidateProducts) + 1;

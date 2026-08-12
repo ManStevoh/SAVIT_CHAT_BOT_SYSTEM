@@ -65,12 +65,24 @@ final class IntentResult
 
     public function isExplicitPurchaseIntent(): bool
     {
+        $inquiryIntents = [
+            CommerceIntent::ASK_PRODUCT_INFO,
+            CommerceIntent::ASK_PRICE,
+            CommerceIntent::ASK_STORE_LOCATION,
+            CommerceIntent::ASK_DELIVERY_FEE,
+            CommerceIntent::ASK_ORDER_STATUS,
+            CommerceIntent::REQUEST_HUMAN,
+            CommerceIntent::GENERAL_CHAT,
+            CommerceIntent::UNKNOWN,
+        ];
+
+        if (in_array($this->intent, $inquiryIntents, true)) {
+            return false;
+        }
+
         return $this->intent === CommerceIntent::ADD_TO_CART
             || $this->intent === CommerceIntent::SELECT_OPTION
             || $this->intent === CommerceIntent::START_CHECKOUT
-            || $this->intent === CommerceIntent::CONFIRM_ORDER
-            || ! empty($this->selectedToken)
-            || ! empty($this->resolvedProductId)
-            || ! empty($this->resolvedVariantId);
+            || $this->intent === CommerceIntent::CONFIRM_ORDER;
     }
 }

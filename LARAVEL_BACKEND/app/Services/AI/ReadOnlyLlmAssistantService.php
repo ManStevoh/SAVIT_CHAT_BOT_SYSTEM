@@ -31,19 +31,18 @@ final class ReadOnlyLlmAssistantService
             return $greetingService->buildOpening($company, $state->customerName, null, $state->customerPhone);
         }
 
-        // If customer asks for catalog, products, prices, or what is sold, delegate directly to Systematic AI Renderer
-        $isCatalogRequest = str_contains($lowerMsg, 'catalog') ||
+        // 0b. Explicit Catalog Requests (only for direct requests like "catalog", "prices", "what do you sell")
+        $isExplicitCatalogRequest = str_contains($lowerMsg, 'catalog') ||
             str_contains($lowerMsg, 'what do you sell') ||
             str_contains($lowerMsg, 'what you sell') ||
             str_contains($lowerMsg, 'what do you guys sell') ||
-            str_contains($lowerMsg, 'prices') ||
+            $lowerMsg === 'prices' ||
+            $lowerMsg === 'products' ||
             str_contains($lowerMsg, 'show products') ||
             str_contains($lowerMsg, 'product catalog') ||
-            str_contains($lowerMsg, 'send me your catalog') ||
-            $intent->intent === \App\Enums\CommerceIntent::ASK_PRODUCT_INFO ||
-            $intent->intent === \App\Enums\CommerceIntent::ASK_PRICE;
+            str_contains($lowerMsg, 'send me your catalog');
 
-        if ($isCatalogRequest) {
+        if ($isExplicitCatalogRequest) {
             return ResponseSpecRenderer::renderCatalogPrompt($company);
         }
 
@@ -147,27 +146,45 @@ final class ReadOnlyLlmAssistantService
         }
 
         // Deterministic Fallback if LLM execution fails
-        $fallback = $this->deterministicFallback($intent, $company, $context);
+        $fallback = $this->deterministicFallback($intent, $company, $context, $candidateContext);
         return \App\Services\WhatsAppMessageSenderService::cleanMarkdownLinksForWhatsApp($fallback);
     }
 
     private function buildSystemPrompt(string $storeName): string
     {
         return <<<PROMPT
-You are a customer service assistant for {$storeName}.
+You are an intelligent, helpful customer service assistant for {$storeName}.
 Answer customer questions directly, warmly, and accurately in 1-3 sentences suitable for WhatsApp.
 
 INSTRUCTIONS:
-1. If you need details about specific products, store information, FAQs, or current cart status, call the available read-only tools.
-2. DO NOT perform or promise any transactional action (do NOT add items to cart, place orders, cancel orders, or process payments).
-3. If asking about item availability or prices, state the price and add: "Reply with the item name whenever you'd like to add it to your order!"
-4. NEVER state "I have added X to your cart" or "Your order is updated".
-5. Keep answers concise (under 60 words).
+1. Recommend products: If the customer asks for recommendations or a category (e.g. "footwear", "books"), suggest 1-3 specific matching products from store context with prices.
+2. Item Not Found: If the customer asks for an item or category NOT carried by the store (e.g. "laptops"), politely explain that the store does not stock that item, and mention what categories/items are available.
+3. Clarification: If the customer's request is vague or ambiguous, ask a brief clarifying question presenting 2-3 candidate options.
+4. DO NOT perform or promise transactional actions (do NOT add items to cart, place orders, cancel orders, or process payments).
+5. If stating prices or options, add: "Reply with the item name or number to add it to your order!"
+6. Keep answers concise and WhatsApp-friendly (under 60 words).
 PROMPT;
     }
 
-    private function deterministicFallback(IntentResult $intent, Company $company, array $context): string
+    private function deterministicFallback(IntentResult $intent, Company $company, array $context, array $candidateContext = []): string
     {
+        $candidates = $candidateContext['candidate_products'] ?? [];
+        if (! empty($candidates)) {
+            $recommendations = [];
+            foreach (array_slice($candidates, 0, 3) as $c) {
+                $pName = $c['name'] ?? 'Product';
+                $price = isset($c['price']) ? '$' . number_format((float) $c['price'], 2) : '';
+                $recommendations[] = "• *{$pName}*" . ($price !== '' ? " ({$price})" : '');
+            }
+            $recList = implode("\n", $recommendations);
+            return "🛍️ *Here is what I recommend based on your search:*\n\n{$recList}\n\nReply with the product name or number to order!";
+        }
+
+        $userMsg = mb_strtolower(trim((string) ($intent->messageText ?? '')));
+        if (str_contains($userMsg, 'do you sell') || str_contains($userMsg, 'do you have') || str_contains($userMsg, 'looking for') || str_contains($userMsg, 'sell ') || str_contains($userMsg, 'recommend')) {
+            return "We don't currently carry that specific item in our store. Reply *prices* anytime to browse our available catalog!";
+        }
+
         $intentVal = $intent->intent->value ?? 'general_chat';
         $storeUrl = $context['store']['url'] ?? '';
         $address = $context['store']['address'] ?? '';
