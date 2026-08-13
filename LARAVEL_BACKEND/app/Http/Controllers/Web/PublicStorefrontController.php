@@ -55,15 +55,27 @@ class PublicStorefrontController extends Controller
 
         $phone = $request->query('phone');
         if (is_string($phone) && trim($phone) !== '') {
-            $session->update(['customer_phone' => preg_replace('/\D+/', '', $phone)]);
+            try {
+                $session->update(['customer_phone' => preg_replace('/\D+/', '', $phone)]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to update session phone', ['error' => $e->getMessage()]);
+            }
         }
         $email = $request->query('email');
         if (is_string($email) && trim($email) !== '') {
-            $session->update(['customer_email' => trim($email)]);
+            try {
+                $session->update(['customer_email' => trim($email)]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to update session email', ['error' => $e->getMessage()]);
+            }
         }
 
-        $this->persistCartToken($company, $session->session_token);
-        $this->storefront->recordEvent($company, 'view_catalog', $session->session_token);
+        try {
+            $this->persistCartToken($company, $session->session_token);
+            $this->storefront->recordEvent($company, 'view_catalog', $session->session_token);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to record view_catalog event', ['error' => $e->getMessage()]);
+        }
 
         return Inertia::render('store/page', [
             'slug' => $slug,
@@ -328,10 +340,21 @@ class PublicStorefrontController extends Controller
         $company = $this->storefront->resolveCompanyBySlug($slug);
         $session = $this->storefront->getSession($company, $this->cartToken($company));
 
+        $sessionPhone = $request->query('phone') ?? $session->customer_phone;
+        $hasWhatsAppPhone = is_string($sessionPhone) && trim($sessionPhone) !== '';
+        $authCustomer = StorefrontAuthController::getAuthenticatedCustomer($company);
+
+        // Web Direct visitors (non-WhatsApp) MUST be logged in to track orders
+        if (! $hasWhatsAppPhone && ! $authCustomer) {
+            return back()->withErrors([
+                'checkout' => 'Please sign in or create an account with your Email & Password to complete your order.',
+            ])->withInput();
+        }
+
         $validated = $request->validate([
             'customerName' => 'required|string|max:255',
-            'customerPhone' => 'required|string|max:40',
-            'customerEmail' => 'nullable|email|max:255',
+            'customerPhone' => $hasWhatsAppPhone ? 'required|string|max:40' : 'nullable|string|max:40',
+            'customerEmail' => $authCustomer ? 'required|email|max:255' : 'nullable|email|max:255',
             'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in',
             'deliveryAddress' => 'nullable|string|max:1000',
             'dineInTableCode' => 'nullable|string|max:100',
@@ -452,6 +475,8 @@ class PublicStorefrontController extends Controller
             ->with('orderProducts')
             ->firstOrFail();
 
+        $orderModel->ensurePublicTokens();
+
         return Inertia::render('store/confirmation', [
             'slug' => $slug,
             'company' => $this->companyPayload($company),
@@ -503,9 +528,16 @@ class PublicStorefrontController extends Controller
         ]);
     }
 
-    public function pay(string $token, Request $request): SymfonyResponse
+    public function pay(string $token, Request $request): mixed
     {
-        $order = Order::where('pay_token', $token)->with(['orderProducts', 'company.settings'])->firstOrFail();
+        $order = Order::where('pay_token', $token)
+            ->when(ctype_digit($token), function ($q) use ($token) {
+                $q->orWhere('id', (int) $token);
+            })
+            ->with(['orderProducts', 'company.settings'])
+            ->firstOrFail();
+
+        $order->ensurePublicTokens();
 
         if ($order->payment_status === 'paid') {
             return Inertia::render('pay/page', [
@@ -604,9 +636,16 @@ class PublicStorefrontController extends Controller
         ]);
     }
 
-    public function payAction(string $token, Request $request): SymfonyResponse
+    public function payAction(string $token, Request $request): mixed
     {
-        $order = Order::where('pay_token', $token)->with(['company.settings'])->firstOrFail();
+        $order = Order::where('pay_token', $token)
+            ->when(ctype_digit($token), function ($q) use ($token) {
+                $q->orWhere('id', (int) $token);
+            })
+            ->with(['company.settings'])
+            ->firstOrFail();
+
+        $order->ensurePublicTokens();
 
         $validated = $request->validate([
             'method' => 'required|string|in:cod,stripe,paystack,mpesa,pesapal,flutterwave,manual',
@@ -699,7 +738,7 @@ class PublicStorefrontController extends Controller
         return back();
     }
 
-    public function paystackPaymentComplete(Request $request): SymfonyResponse
+    public function paystackPaymentComplete(Request $request): mixed
     {
         $reference = (string) ($request->query('reference') ?: $request->query('trxref') ?: '');
         $result = $this->orderPayment->completePaystackReturn($reference);
@@ -763,6 +802,8 @@ class PublicStorefrontController extends Controller
 
         $prefill = $whatsappPrefill ?: ('Hi, I\'m interested in '.$company->name);
 
+        $authCustomer = StorefrontAuthController::getAuthenticatedCustomer($company);
+
         return [
             'name' => $company->name,
             'logo' => $company->logo ? asset('storage/'.$company->logo) : null,
@@ -775,6 +816,11 @@ class PublicStorefrontController extends Controller
             'displayRate' => $displayRate,
             'theme' => is_array($company->storefront_theme) ? $company->storefront_theme : [],
             'customDomain' => $company->custom_domain,
+            'authCustomer' => $authCustomer ? [
+                'id' => $authCustomer->id,
+                'name' => $authCustomer->name,
+                'email' => $authCustomer->email,
+            ] : null,
         ];
     }
 

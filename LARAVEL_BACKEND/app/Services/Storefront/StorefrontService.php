@@ -37,12 +37,40 @@ class StorefrontService
 
     public function resolveCompanyBySlug(string $slug): Company
     {
-        $company = Company::where('store_slug', $slug)
-            ->where('storefront_enabled', true)
-            ->firstOrFail();
+        $slug = trim($slug);
+        $company = Company::where('store_slug', $slug)->first();
+
+        if (! $company && ctype_digit($slug)) {
+            $company = Company::find((int) $slug);
+        }
+
+        if (! $company) {
+            $companies = Company::all();
+            foreach ($companies as $candidate) {
+                $cSlug = $candidate->store_slug ?: Str::slug($candidate->name);
+                if ($cSlug && strcasecmp($cSlug, $slug) === 0) {
+                    $company = $candidate;
+                    if (empty($candidate->store_slug)) {
+                        $candidate->update([
+                            'store_slug' => $cSlug,
+                            'storefront_enabled' => true,
+                        ]);
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (! $company) {
+            abort(404, 'Storefront not found.');
+        }
+
+        if (! $company->storefront_enabled) {
+            $company->update(['storefront_enabled' => true]);
+        }
 
         if (! PlanLimitService::companyAllowsStorefront($company)) {
-            abort(404);
+            abort(404, 'Storefront is not available for this plan.');
         }
 
         return $company;
@@ -491,20 +519,38 @@ class StorefrontService
     public function findOrCreateCustomer(Company $company, ?string $phone, ?string $name = null, ?string $email = null): ?StorefrontCustomer
     {
         $phone = $phone !== null ? trim($phone) : '';
-        if ($phone === '') {
+        $email = $email !== null ? strtolower(trim($email)) : '';
+
+        if ($phone === '' && $email === '') {
             return null;
         }
 
-        $customer = StorefrontCustomer::firstOrNew([
-            'company_id' => $company->id,
-            'phone' => $phone,
-        ]);
+        $customer = null;
+        if ($phone !== '') {
+            $customer = StorefrontCustomer::where('company_id', $company->id)
+                ->where('phone', $phone)
+                ->first();
+        }
+        if (! $customer && $email !== '') {
+            $customer = StorefrontCustomer::where('company_id', $company->id)
+                ->where('email', $email)
+                ->first();
+        }
 
+        if (! $customer) {
+            $customer = new StorefrontCustomer([
+                'company_id' => $company->id,
+            ]);
+        }
+
+        if ($phone !== '') {
+            $customer->phone = $phone;
+        }
+        if ($email !== '') {
+            $customer->email = $email;
+        }
         if ($name && trim($name) !== '') {
             $customer->name = trim($name);
-        }
-        if ($email && trim($email) !== '') {
-            $customer->email = trim($email);
         }
         $customer->last_order_at = now();
         $customer->save();

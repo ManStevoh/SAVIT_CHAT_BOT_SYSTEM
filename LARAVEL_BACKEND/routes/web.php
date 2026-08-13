@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\PublicDineInController;
 use App\Http\Controllers\Web\PublicStorefrontController;
 use App\Http\Controllers\Web\RobotsController;
 use App\Http\Controllers\Web\SitemapController;
+use App\Http\Controllers\Web\StorefrontAuthController;
 use App\Models\Booking;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
@@ -159,14 +160,48 @@ Route::get('/order/{order}/pay', function (Order $order) {
     return redirect('/');
 })->name('orders.pay');
 
-// Clear Laravel application cache, config, routes, and views on cPanel
+// Clear Laravel application cache, config, routes, views, and run pending migrations on cPanel
 Route::get('/clear-cache', function () {
-    \Illuminate\Support\Facades\Artisan::call('config:clear');
-    \Illuminate\Support\Facades\Artisan::call('cache:clear');
-    \Illuminate\Support\Facades\Artisan::call('route:clear');
-    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    $output = [];
 
-    return response('✅ Laravel Application Cache Cleared Successfully!', 200);
+    try {
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        $output[] = 'Config cache cleared.';
+    } catch (\Throwable $e) {
+        $output[] = 'Config clear error: '.$e->getMessage();
+    }
+
+    try {
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+        $output[] = 'Application cache cleared.';
+    } catch (\Throwable $e) {
+        $output[] = 'Cache clear error: '.$e->getMessage();
+    }
+
+    try {
+        \Illuminate\Support\Facades\Artisan::call('route:clear');
+        $output[] = 'Route cache cleared.';
+    } catch (\Throwable $e) {
+        $output[] = 'Route clear error: '.$e->getMessage();
+    }
+
+    try {
+        \Illuminate\Support\Facades\Artisan::call('view:clear');
+        $output[] = 'View cache cleared.';
+    } catch (\Throwable $e) {
+        $output[] = 'View clear error: '.$e->getMessage();
+    }
+
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $output[] = 'Database migrations: '.trim(\Illuminate\Support\Facades\Artisan::output() ?: 'Nothing to migrate.');
+    } catch (\Throwable $e) {
+        $output[] = 'Migration error: '.$e->getMessage();
+    }
+
+    return response("<pre>✅ Laravel Application Maintenance Complete!\n\n".implode("\n", $output).'</pre>', 200, [
+        'Content-Type' => 'text/html; charset=UTF-8',
+    ]);
 });
 
 // Paid digital access portal + private downloads (signed URLs)
@@ -203,6 +238,11 @@ Route::get('/s/{slug}/wishlist', [PublicStorefrontController::class, 'wishlist']
 Route::post('/s/{slug}/wishlist/toggle', [PublicStorefrontController::class, 'wishlistToggle'])->name('storefront.wishlist.toggle');
 Route::post('/s/{slug}/p/{product}/reviews', [PublicStorefrontController::class, 'reviewStore'])->name('storefront.product.reviews.store');
 
+// Storefront Customer Auth (Email + Password for non-WhatsApp buyers)
+Route::post('/s/{slug}/account/register', [StorefrontAuthController::class, 'register'])->name('storefront.account.register');
+Route::post('/s/{slug}/account/login', [StorefrontAuthController::class, 'login'])->name('storefront.account.login');
+Route::post('/s/{slug}/account/logout', [StorefrontAuthController::class, 'logout'])->name('storefront.account.logout');
+
 // Link-in-bio
 Route::get('/b/{slug}', [PublicStorefrontController::class, 'bio'])->name('storefront.bio');
 
@@ -216,3 +256,27 @@ Route::get('/invoice/{token}', [PublicStorefrontController::class, 'invoice'])->
 // Dine-in table QR
 Route::get('/t/{qrToken}', [PublicDineInController::class, 'byToken'])->name('dinein.token');
 Route::get('/s/{slug}/table/{qrToken}', [PublicDineInController::class, 'storeTable'])->name('storefront.table');
+
+// Diagnostic: show recent error entries (separate from WhatsApp debug log)
+Route::get('/debug-error', function () {
+    $file = public_path('error_log.txt');
+    if (! file_exists($file)) {
+        return response('<pre>No errors logged yet. Try visiting the failing page first, then reload this page.</pre>', 200, ['Content-Type' => 'text/html']);
+    }
+    $content = file_get_contents($file);
+    // Extract just the ERROR summary lines (first line of each entry has the message)
+    $lines = explode("\n", $content);
+    $summaries = [];
+    foreach ($lines as $line) {
+        if (str_starts_with($line, '[') && str_contains($line, 'ERROR:')) {
+            $summaries[] = $line;
+        }
+    }
+    if (empty($summaries)) {
+        return response('<pre>Log file exists but no ERROR entries found. Raw first 2000 chars:\n\n' . htmlspecialchars(substr($content, 0, 2000)) . '</pre>', 200, ['Content-Type' => 'text/html']);
+    }
+    // Show last 20 error summaries
+    $recent = array_slice($summaries, -20);
+    $output = "Found " . count($summaries) . " error(s). Showing last " . count($recent) . ":\n\n" . implode("\n\n", $recent);
+    return response('<pre>' . htmlspecialchars($output) . '</pre>', 200, ['Content-Type' => 'text/html']);
+});

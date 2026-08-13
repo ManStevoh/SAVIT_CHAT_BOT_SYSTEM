@@ -2,17 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class StorefrontCustomer extends Model
+class StorefrontCustomer extends Authenticatable
 {
     protected $fillable = [
-        'company_id', 'phone', 'email', 'name', 'locale', 'last_order_at',
+        'company_id', 'phone', 'email', 'name', 'password', 'locale', 'last_order_at',
+    ];
+
+    protected $hidden = [
+        'password', 'remember_token',
     ];
 
     protected $casts = [
+        'password' => 'hashed',
         'last_order_at' => 'datetime',
     ];
 

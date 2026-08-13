@@ -1,1 +1,0 @@
-import{j as o}from"./app-BZnm9iaD.js";import{R as t,a,b as s}from"./index-CobRfa4c.js";function i({...l}){return o.jsx(t,{"data-slot":"collapsible",...l})}function n({...l}){return o.jsx(a,{"data-slot":"collapsible-trigger",...l})}function p({...l}){return o.jsx(s,{"data-slot":"collapsible-content",...l})}export{i as C,n as a,p as b};

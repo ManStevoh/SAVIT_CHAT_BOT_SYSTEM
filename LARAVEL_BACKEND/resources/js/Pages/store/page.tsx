@@ -2,10 +2,20 @@
 
 import { FormEvent, useMemo, useState } from 'react'
 import { Link, router } from '@inertiajs/react'
-import { Heart, MessageCircle, ShoppingBag } from 'lucide-react'
+import {
+  ArrowRight,
+  Heart,
+  LogOut,
+  MessageCircle,
+  Search,
+  ShoppingBag,
+  SlidersHorizontal,
+  User,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SeoHead, type SeoPayload } from '@/components/seo/SeoHead'
+import { StorefrontAuthModal } from '@/components/store/StorefrontAuthModal'
 
 type StoreProduct = {
   id: string
@@ -51,6 +61,7 @@ type Props = {
     logo?: string | null
     currency: string
     whatsappUrl?: string | null
+    authCustomer?: { id: number; name: string; email: string } | null
     theme?: { primary_color?: string; accent_color?: string; announcement_bar?: string; footer_text?: string }
   }
   products: StoreProduct[]
@@ -75,43 +86,74 @@ function ProductCard({ slug, product, currency }: { slug: string; product: Store
   return (
     <Link
       href={href}
-      className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+      className="group relative flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900"
     >
-      {product.onSale && (
-        <span className="absolute left-2 top-2 z-10 rounded bg-rose-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-          {product.discountPercent ? `-${product.discountPercent}%` : 'Sale'}
-        </span>
-      )}
+      {/* Badges */}
+      <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
+        {product.onSale && (
+          <span className="rounded-full bg-rose-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
+            {product.discountPercent ? `-${product.discountPercent}% OFF` : 'SALE'}
+          </span>
+        )}
+        {product.lowStock && !product.soldOut && (
+          <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
+            LOW STOCK
+          </span>
+        )}
+      </div>
+
       {product.soldOut && (
-        <span className="absolute right-2 top-2 z-10 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-          Sold out
+        <span className="absolute right-3 top-3 z-10 rounded-full bg-slate-900/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-xs">
+          SOLD OUT
         </span>
       )}
-      <div className="aspect-square w-full overflow-hidden bg-slate-100">
+
+      {/* Product Image Container */}
+      <div className="relative aspect-square w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
         {product.image ? (
           <img
             src={product.image}
             alt={product.name}
             loading="lazy"
-            className="h-full w-full object-cover transition group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-slate-300">
+          <div className="flex h-full w-full items-center justify-center text-slate-300 dark:text-slate-600">
             <ShoppingBag className="h-10 w-10" />
           </div>
         )}
-      </div>
-      <div className="space-y-1 p-3">
-        <p className="line-clamp-1 text-sm font-medium">{product.name}</p>
-        <div className="flex flex-wrap items-baseline gap-2">
-          <p className="text-sm font-semibold" style={{ color: 'var(--sf-primary, inherit)' }}>
-            {formatPrice(product.price, currency)}
-          </p>
-          {product.onSale && product.compareAtPrice != null && (
-            <p className="text-xs text-slate-400 line-through">{formatPrice(product.compareAtPrice, currency)}</p>
-          )}
+
+        {/* Hover overlay pill */}
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-slate-900 shadow-md transform translate-y-2 transition-transform duration-300 group-hover:translate-y-0">
+            View Details <ArrowRight className="h-3.5 w-3.5" />
+          </span>
         </div>
-        {product.lowStock && !product.soldOut && <p className="text-[11px] text-amber-600">Only a few left</p>}
+      </div>
+
+      {/* Card Content */}
+      <div className="flex flex-1 flex-col justify-between p-4">
+        <div>
+          {product.category && (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{product.category}</span>
+          )}
+          <h3 className="line-clamp-1 text-xs font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
+            {product.name}
+          </h3>
+        </div>
+
+        <div className="mt-2.5 flex items-baseline justify-between">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-sm font-extrabold text-slate-900 dark:text-white" style={{ color: 'var(--sf-primary, inherit)' }}>
+              {formatPrice(product.price, currency)}
+            </span>
+            {product.onSale && product.compareAtPrice != null && (
+              <span className="text-[11px] font-medium text-slate-400 line-through">
+                {formatPrice(product.compareAtPrice, currency)}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </Link>
   )
@@ -130,6 +172,7 @@ export default function StorePage({
 }: Props) {
   const [q, setQ] = useState(String(filters.q ?? ''))
   const [sort, setSort] = useState(String(filters.sort ?? 'name_asc'))
+  const [authModalOpen, setAuthModalOpen] = useState(false)
   const theme = company.theme ?? {}
   const style = {
     ['--sf-primary' as string]: theme.primary_color || '#0f172a',
@@ -169,97 +212,149 @@ export default function StorePage({
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900" style={style}>
+    <div className="min-h-screen bg-slate-50/80 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100" style={style}>
       <SeoHead seo={seo} fallbackTitle={`${company.name} — Shop`} />
 
       {theme.announcement_bar ? (
-        <div className="bg-[var(--sf-accent)] px-4 py-2 text-center text-xs font-medium text-white">
+        <div className="bg-[var(--sf-accent)] px-4 py-2 text-center text-xs font-semibold text-white shadow-xs">
           {theme.announcement_bar}
         </div>
       ) : null}
 
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3.5">
           <div className="flex items-center gap-3">
             {company.logo ? (
-              <img src={company.logo} alt={company.name} className="h-9 w-9 rounded-full object-cover" />
+              <img src={company.logo} alt={company.name} className="h-9 w-9 rounded-2xl object-cover shadow-xs" />
             ) : (
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-extrabold text-white shadow-xs"
                 style={{ background: 'var(--sf-primary)' }}
               >
                 {company.name.charAt(0).toUpperCase()}
               </div>
             )}
-            <h1 className="text-lg font-semibold tracking-tight">{company.name}</h1>
+            <h1 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">{company.name}</h1>
           </div>
+
           <div className="flex items-center gap-2">
-            <Link href={`/s/${slug}/track`} className="hidden text-xs text-slate-500 hover:text-slate-900 sm:inline">
+            <Link href={`/s/${slug}/track`} className="hidden text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white sm:inline">
               {chrome?.trackOrder || 'Track order'}
             </Link>
+
+            {company.authCustomer ? (
+              <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <User className="h-3.5 w-3.5" />
+                <span>{company.authCustomer.name.split(' ')[0]}</span>
+                <button
+                  type="button"
+                  onClick={() => router.post(`/s/${slug}/account/logout`)}
+                  className="ml-1 text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAuthModalOpen(true)}
+                className="gap-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                <User className="h-3.5 w-3.5" /> Sign In
+              </Button>
+            )}
+
             <Link href={`/s/${slug}/wishlist`}>
-              <Button variant="outline" className="gap-2" style={{ borderColor: 'var(--sf-primary)', color: 'var(--sf-primary)' }}>
-                <Heart className={`h-4 w-4 ${wishlist.length > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-xl border-slate-200 text-xs font-semibold dark:border-slate-800">
+                <Heart className={`h-3.5 w-3.5 ${wishlist.length > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
                 <span className="hidden sm:inline">{chrome?.wishlist || 'Wishlist'}</span>
                 {wishlist.length > 0 ? ` (${wishlist.length})` : ''}
               </Button>
             </Link>
+
             <Link href={`/s/${slug}/cart`}>
-              <Button variant="outline" className="gap-2" style={{ borderColor: 'var(--sf-primary)', color: 'var(--sf-primary)' }}>
-                <ShoppingBag className="h-4 w-4" />
-                {chrome?.cart || 'Cart'}
-                {cartCount > 0 ? ` (${cartCount})` : ''}
+              <Button size="sm" className="gap-2 rounded-xl bg-slate-900 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900">
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span>{chrome?.cart || 'Cart'}</span>
+                {cartCount > 0 && (
+                  <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white">
+                    {cartCount}
+                  </span>
+                )}
               </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
-        <form onSubmit={applyFilters} className="flex flex-col gap-3 sm:flex-row">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={chrome?.search || 'Search products'}
-            className="flex-1"
-          />
-          <select
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value)
-              router.get(
-                `/s/${slug}`,
-                { q: q || undefined, sort: e.target.value, category: filters.category || undefined },
-                { preserveState: true, replace: true }
-              )
-            }}
-            className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-          >
-            <option value="name_asc">Name A–Z</option>
-            <option value="price_asc">Price: low to high</option>
-            <option value="price_desc">Price: high to low</option>
-            <option value="newest">Newest</option>
-          </select>
-          <Button type="submit" style={{ background: 'var(--sf-primary)' }}>
-            {chrome?.search || 'Search'}
-          </Button>
+      {/* Main Catalog Container */}
+      <main className="mx-auto max-w-5xl space-y-7 px-4 py-8">
+        
+        {/* Search & Filter Bar */}
+        <form onSubmit={applyFilters} className="flex flex-col gap-3 rounded-3xl border border-slate-200/80 bg-white p-3.5 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={chrome?.search || 'Search products by name or category...'}
+              className="pl-10 rounded-2xl border-slate-200/80 bg-slate-50/50 text-xs dark:border-slate-800 dark:bg-slate-800/50"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <select
+              value={sort}
+              onChange={(e) => {
+                setSort(e.target.value)
+                router.get(
+                  `/s/${slug}`,
+                  { q: q || undefined, sort: e.target.value, category: filters.category || undefined },
+                  { preserveState: true, replace: true }
+                )
+              }}
+              className="h-10 rounded-2xl border border-slate-200/80 bg-slate-50/50 px-3.5 text-xs font-semibold text-slate-700 outline-hidden dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
+            >
+              <option value="name_asc">Sort A–Z</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="newest">Newest First</option>
+            </select>
+
+            <Button type="submit" size="default" className="rounded-2xl bg-slate-900 px-5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-emerald-600">
+              <Search className="h-3.5 w-3.5" /> Search
+            </Button>
+          </div>
         </form>
 
+        {/* Category Pills Bar */}
         {allCategories.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
               type="button"
               onClick={() => setCategory(null)}
-              className={`rounded-full border px-3 py-1 text-xs ${!filters.category ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600'}`}
+              className={`rounded-full px-4 py-2 text-xs font-bold transition-all ${
+                !filters.category
+                  ? 'bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+              }`}
             >
-              All
+              All Categories
             </button>
             {allCategories.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setCategory(c)}
-                className={`rounded-full border px-3 py-1 text-xs ${filters.category === c ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600'}`}
+                className={`rounded-full px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
+                  filters.category === c
+                    ? 'bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+                }`}
               >
                 {c}
               </button>
@@ -267,35 +362,36 @@ export default function StorePage({
           </div>
         )}
 
+        {/* Sections & Catalog Grid */}
         {resolvedSections.map((section, idx) => {
           if (section.type === 'hero') {
             return (
-              <section key={idx} className="overflow-hidden rounded-3xl bg-slate-900 text-white">
+              <section key={idx} className="overflow-hidden rounded-3xl bg-slate-900 text-white shadow-xl">
                 <div className="grid gap-6 p-8 md:grid-cols-2 md:items-center">
                   <div className="space-y-3">
-                    <h2 className="text-3xl font-semibold tracking-tight">{section.headline || company.name}</h2>
-                    {section.subhead ? <p className="text-slate-300">{section.subhead}</p> : null}
-                    {section.cta_label ? (
-                      <a href={section.cta_href || `#catalog`} className="inline-block rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900">
-                        {section.cta_label}
+                    <h2 className="text-3xl font-extrabold tracking-tight">{section.headline || company.name}</h2>
+                    {section.subhead && <p className="text-xs text-slate-300 leading-relaxed">{section.subhead}</p>}
+                    {section.cta_label && (
+                      <a href={section.cta_href || `#catalog`} className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-xs font-bold text-slate-900 shadow-md transition-transform hover:scale-105">
+                        {section.cta_label} <ArrowRight className="h-3.5 w-3.5" />
                       </a>
-                    ) : null}
+                    )}
                   </div>
-                  {section.image ? <img src={section.image} alt="" className="h-48 w-full rounded-2xl object-cover md:h-64" /> : null}
+                  {section.image && <img src={section.image} alt="" className="h-48 w-full rounded-2xl object-cover md:h-64" />}
                 </div>
               </section>
             )
           }
           if (section.type === 'announcement') {
             return (
-              <p key={idx} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p key={idx} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
                 {section.text}
               </p>
             )
           }
           if (section.type === 'rich_text') {
             return (
-              <div key={idx} className="prose prose-sm max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: section.html || '' }} />
+              <div key={idx} className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300" dangerouslySetInnerHTML={{ __html: section.html || '' }} />
             )
           }
           if (section.type === 'featured_products') {
@@ -303,7 +399,7 @@ export default function StorePage({
             if (featured.length === 0) return null
             return (
               <section key={idx} className="space-y-4">
-                <h2 className="text-lg font-semibold">Featured</h2>
+                <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Featured Products</h2>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                   {featured.map((product) => (
                     <ProductCard key={product.id} slug={slug} product={product} currency={company.currency} />
@@ -312,12 +408,12 @@ export default function StorePage({
               </section>
             )
           }
-          // catalog (default)
+          // Catalog (Default)
           return (
             <section key={idx} id="catalog" className="space-y-4">
               {products.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-500">
-                  No products match your search. Try a different keyword or clear filters.
+                <div className="rounded-3xl border border-dashed border-slate-200/80 bg-white p-12 text-center text-xs text-slate-500 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+                  No products match your search keyword or filter.
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -331,22 +427,30 @@ export default function StorePage({
         })}
       </main>
 
-      {company.whatsappUrl ? (
+      {/* Floating WhatsApp Chat Pill */}
+      {company.whatsappUrl && (
         <a
           href={company.whatsappUrl}
           target="_blank"
           rel="noreferrer"
-          className="fixed bottom-5 right-5 z-20 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white shadow-lg"
+          className="fixed bottom-5 right-5 z-20 inline-flex items-center gap-2 rounded-full px-4 py-3 text-xs font-bold text-white shadow-xl transition-transform hover:scale-105"
           style={{ background: '#128C7E' }}
         >
           <MessageCircle className="h-4 w-4" />
           Chat on WhatsApp
         </a>
-      ) : null}
+      )}
 
-      <footer className="border-t border-slate-100 py-8 text-center text-xs text-slate-400">
+      <footer className="border-t border-slate-200/80 py-8 text-center text-xs font-medium text-slate-400 dark:border-slate-800">
         {theme.footer_text || 'Powered by RelayIQ'}
       </footer>
+
+      <StorefrontAuthModal
+        open={authModalOpen}
+        onOpenChange={setAuthModalOpen}
+        slug={slug}
+        companyName={company.name}
+      />
     </div>
   )
 }

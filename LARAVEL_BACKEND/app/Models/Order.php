@@ -200,6 +200,15 @@ class Order extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (Order $order) {
+            if (empty($order->invoice_token)) {
+                $order->invoice_token = bin2hex(random_bytes(24));
+            }
+            if (empty($order->pay_token)) {
+                $order->pay_token = bin2hex(random_bytes(24));
+            }
+        });
+
         static::created(function (Order $order) {
             $company = $order->company;
             if (! $company) {
