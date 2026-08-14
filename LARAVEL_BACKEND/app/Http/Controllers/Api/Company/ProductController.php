@@ -89,6 +89,7 @@ class ProductController extends Controller
             'bookable',
             'clearDigitalFile',
         ]);
+        $this->normalizeMultipartNullableFields($request);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -115,7 +116,7 @@ class ProductController extends Controller
             'metaDescription' => 'nullable|string|max:500',
             'slug' => 'nullable|string|max:255',
             'stock' => 'required|integer|min:0',
-            'image' => 'nullable|image|max:5120',
+            'image' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,svg|max:10240',
             'digitalFile' => 'nullable|file|max:20480|mimetypes:application/pdf,application/epub+zip,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ]);
         $productType = $validated['productType'] ?? 'physical';
@@ -282,6 +283,7 @@ class ProductController extends Controller
             'bookable',
             'clearDigitalFile',
         ]);
+        $this->normalizeMultipartNullableFields($request);
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -310,7 +312,7 @@ class ProductController extends Controller
             'clearDigitalFile' => 'sometimes|boolean',
             'stock' => 'sometimes|integer|min:0',
             'status' => 'sometimes|in:active,inactive',
-            'image' => 'nullable|image|max:5120',
+            'image' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,svg|max:10240',
             'digitalFile' => 'nullable|file|max:20480|mimetypes:application/pdf,application/epub+zip,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ]);
         if (array_key_exists('productType', $validated)
@@ -369,7 +371,7 @@ class ProductController extends Controller
         }
 
         $validated = $request->validate([
-            'image' => 'required|image|max:5120',
+            'image' => 'required|file|mimes:jpeg,jpg,png,gif,webp,svg|max:10240',
             'isPrimary' => 'sometimes|boolean',
             'sortOrder' => 'sometimes|integer|min:0',
             'altText' => 'nullable|string|max:255',
@@ -404,7 +406,7 @@ class ProductController extends Controller
         }
 
         $validated = $request->validate([
-            'image' => 'required|image|max:5120',
+            'image' => 'required|file|mimes:jpeg,jpg,png,gif,webp,svg|max:10240',
             'isPrimary' => 'sometimes|boolean',
             'sortOrder' => 'sometimes|integer|min:0',
             'altText' => 'nullable|string|max:255',
@@ -845,6 +847,39 @@ class ProductController extends Controller
                 continue;
             }
             $merged[$key] = $normalized;
+        }
+        if ($merged !== []) {
+            $request->merge($merged);
+        }
+    }
+
+    /**
+     * Convert empty string inputs ("") for nullable numeric/integer/url fields into null
+     * so Laravel validation rules don't fail on multipart/form-data requests.
+     */
+    private function normalizeMultipartNullableFields(Request $request): void
+    {
+        $nullableFields = [
+            'compareAtPrice',
+            'taxRateId',
+            'accessExpiresDays',
+            'maxDownloads',
+            'bookingDurationMinutes',
+            'accessUrl',
+            'serviceBookingUrl',
+            'fulfillmentInstructions',
+            'licenseKeyPrefix',
+            'licenseKeys',
+            'metaTitle',
+            'metaDescription',
+            'slug',
+        ];
+
+        $merged = [];
+        foreach ($nullableFields as $field) {
+            if ($request->has($field) && $request->input($field) === '') {
+                $merged[$field] = null;
+            }
         }
         if ($merged !== []) {
             $request->merge($merged);

@@ -46,6 +46,7 @@ type Quote = {
 
 type Props = {
   slug: string
+  sessionPhone?: string | null
   company: { name: string; currency: string; whatsappUrl?: string | null; authCustomer?: { id: number; name: string; email: string } | null }
   cart: CartSummary
   dineInEnabled: boolean
@@ -65,6 +66,7 @@ function formatPrice(amount: number, currency: string): string {
 
 export default function StoreCheckoutPage({
   slug,
+  sessionPhone = null,
   company,
   cart,
   dineInEnabled,
@@ -74,7 +76,7 @@ export default function StoreCheckoutPage({
 }: Props) {
   const authCustomer = company.authCustomer
   const [customerName, setCustomerName] = useState(authCustomer?.name || suggestedAddress?.customerName || '')
-  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerPhone, setCustomerPhone] = useState(sessionPhone || '')
   const [customerEmail, setCustomerEmail] = useState(authCustomer?.email || '')
   const [orderNotes, setOrderNotes] = useState('')
   const [giftMessage, setGiftMessage] = useState('')
@@ -90,19 +92,20 @@ export default function StoreCheckoutPage({
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [showMoreOptions, setShowMoreOptions] = useState(false)
 
-  // Detect WhatsApp traffic via URL phone query
-  const [isWhatsAppVisitor, setIsWhatsAppVisitor] = useState(false)
+  // Detect WhatsApp traffic via URL phone query or session phone
+  const [isWhatsAppVisitor, setIsWhatsAppVisitor] = useState(Boolean(sessionPhone && sessionPhone.trim() !== ''))
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       const phoneParam = params.get('phone')
-      if (phoneParam && phoneParam.trim() !== '') {
+      const effectivePhone = (phoneParam && phoneParam.trim() !== '') ? phoneParam.trim() : sessionPhone
+      if (effectivePhone && effectivePhone.trim() !== '') {
         setIsWhatsAppVisitor(true)
-        if (!customerPhone) setCustomerPhone(phoneParam.trim())
+        if (!customerPhone) setCustomerPhone(effectivePhone.trim())
       }
     }
-  }, [])
+  }, [sessionPhone])
 
   useEffect(() => {
     if (dineInEnabled && presetDineInTableCode) {

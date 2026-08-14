@@ -303,7 +303,7 @@ export default function ProductsPage() {
         bookable: formData.bookable,
         bookingDurationMinutes: formData.bookingDurationMinutes ? parseInt(formData.bookingDurationMinutes, 10) : null,
         licenseKeys: formData.licenseKeys || undefined,
-        stock: parseInt(formData.stock),
+        stock: Number.isNaN(parseInt(formData.stock, 10)) ? 0 : parseInt(formData.stock, 10),
         image: productImageFile ?? undefined,
         digitalFile: digitalFile ?? undefined,
       })
@@ -313,11 +313,18 @@ export default function ProductsPage() {
         mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         setIsAddModalOpen(false)
         setFormData(initialFormData)
+        setFormErrors({})
         setProductImageFile(null)
         setDigitalFile(null)
+      } else {
+        setFormErrors((prev) => ({
+          ...prev,
+          general: result.message || 'Failed to create product. Please check form inputs.',
+        }))
       }
     } catch (error) {
       console.error('Failed to create product:', error)
+      setFormErrors((prev) => ({ ...prev, general: 'An unexpected error occurred while creating product.' }))
     } finally {
       setIsSubmitting(false)
     }
@@ -353,7 +360,7 @@ export default function ProductsPage() {
         bookable: formData.bookable,
         bookingDurationMinutes: formData.bookingDurationMinutes ? parseInt(formData.bookingDurationMinutes, 10) : null,
         licenseKeys: formData.licenseKeys || undefined,
-        stock: parseInt(formData.stock),
+        stock: Number.isNaN(parseInt(formData.stock, 10)) ? 0 : parseInt(formData.stock, 10),
         image: productImageFile ?? undefined,
         digitalFile: digitalFile ?? undefined,
       })
@@ -363,11 +370,18 @@ export default function ProductsPage() {
         setIsEditModalOpen(false)
         setSelectedProduct(null)
         setFormData(initialFormData)
+        setFormErrors({})
         setProductImageFile(null)
         setDigitalFile(null)
+      } else {
+        setFormErrors((prev) => ({
+          ...prev,
+          general: result.message || 'Failed to update product. Please check form inputs.',
+        }))
       }
     } catch (error) {
       console.error('Failed to update product:', error)
+      setFormErrors((prev) => ({ ...prev, general: 'An unexpected error occurred while updating product.' }))
     } finally {
       setIsSubmitting(false)
     }
@@ -693,6 +707,11 @@ export default function ProductsPage() {
   // Product form fields (shared between add and edit)
   const renderProductForm = () => (
     <div className="space-y-4">
+      {formErrors.general && (
+        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
+          {formErrors.general}
+        </div>
+      )}
       <InputField
         label="Product Name"
         name="name"

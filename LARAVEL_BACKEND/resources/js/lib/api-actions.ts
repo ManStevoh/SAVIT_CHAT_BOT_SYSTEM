@@ -687,10 +687,8 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
       if (data.metaDescription != null) formData.append('metaDescription', data.metaDescription)
       if (data.slug != null) formData.append('slug', data.slug)
       formData.append('price', String(data.price))
-      if (data.compareAtPrice != null && data.compareAtPrice !== undefined) {
+      if (data.compareAtPrice != null && data.compareAtPrice !== undefined && !Number.isNaN(data.compareAtPrice)) {
         formData.append('compareAtPrice', String(data.compareAtPrice))
-      } else if (data.compareAtPrice === null) {
-        formData.append('compareAtPrice', '')
       }
       if (data.taxRateId) formData.append('taxRateId', data.taxRateId)
       formData.append('category', data.category)

@@ -319,6 +319,7 @@ class PublicStorefrontController extends Controller
 
         return Inertia::render('store/checkout', [
             'slug' => $slug,
+            'sessionPhone' => is_string($phone) && trim($phone) !== '' ? trim($phone) : null,
             'company' => $this->companyPayload(
                 $company,
                 $request,
