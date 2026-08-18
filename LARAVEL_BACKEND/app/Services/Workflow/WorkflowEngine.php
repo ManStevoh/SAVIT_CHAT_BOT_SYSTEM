@@ -76,7 +76,10 @@ final class WorkflowEngine
             ->latest('id')
             ->value('content') ?? '';
 
-        $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent') || str_contains($lastBotMessage, 'Talk to agent');
+        $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent')
+            || str_contains($lastBotMessage, '1. Prices')
+            || str_contains($lastBotMessage, '2. Order')
+            || str_contains($lastBotMessage, 'Talk to agent');
 
         $isExplicitAgentRequest = $intent->intent === CommerceIntent::REQUEST_HUMAN ||
             str_contains($rawMessage, 'talk to agent') ||
@@ -143,15 +146,24 @@ final class WorkflowEngine
     {
         $rawMessage = (string) ($intent->messageText ?? $intent->rawPayload['incoming_message'] ?? '');
         $lowerRaw = mb_strtolower(trim($rawMessage));
-        $greetingService = app(ConversationGreetingService::class);
+        $lastBotMessage = \App\Models\Message::where('chat_id', $state->chatId)
+            ->where('sender', 'bot')
+            ->latest('id')
+            ->value('content') ?? '';
+
+        $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent')
+            || str_contains($lastBotMessage, '1. Prices')
+            || str_contains($lastBotMessage, '2. Order')
+            || str_contains($lastBotMessage, '2. Track Order')
+            || str_contains($lastBotMessage, 'Talk to agent');
 
         $isSelectingResolvedProduct = ! empty($intent->resolvedProductId)
             || ! empty($intent->selectedToken)
             || $intent->intent === CommerceIntent::SELECT_OPTION
             || $intent->intent === CommerceIntent::ADD_TO_CART;
 
-        // Catalog Inquiry (Evaluated FIRST when customer asks for catalog/prices or selects menu option 1 from quick menu)
-        $isCatalogRequest = ($lowerRaw === 'prices' || $lowerRaw === 'catalog' || $intent->intent === CommerceIntent::ASK_PRODUCT_INFO || $intent->intent === CommerceIntent::ASK_PRICE || ($lowerRaw === '1' && ! $isSelectingResolvedProduct));
+        // Catalog Inquiry (Evaluated FIRST when customer asks for catalog/prices/menu or selects menu option 1 from quick menu)
+        $isCatalogRequest = ($lowerRaw === 'prices' || $lowerRaw === 'catalog' || $lowerRaw === 'menu' || str_contains($lowerRaw, 'menu') || ($intent->intent === CommerceIntent::ASK_PRODUCT_INFO && $lowerRaw !== '2') || $intent->intent === CommerceIntent::ASK_PRICE || ($lowerRaw === '1' && ! $isSelectingResolvedProduct)) && $lowerRaw !== '2';
 
         if ($isCatalogRequest && ! $isSelectingResolvedProduct) {
             $catalogText = ResponseSpecRenderer::renderCatalogPrompt($company);
@@ -178,8 +190,14 @@ final class WorkflowEngine
             $nextStep = CheckoutStep::COLLECTING_ADDRESS;
             $spec = ResponseSpec::PROMPT_DELIVERY_ADDRESS;
 
-            $nextState = $state->with(['step' => $nextStep]);
-            $reply = $this->renderer->render($spec, $nextState, $company);
+            $remembered = $this->getRememberedAddressForState($state, $company);
+            $facts = $remembered ? ['remembered_address' => $remembered] : [];
+
+            $nextState = $state->with([
+                'step' => $nextStep,
+                'pendingDraftData' => array_merge($state->pendingDraftData, $remembered ? ['remembered_address' => $remembered] : []),
+            ]);
+            $reply = $this->renderer->render($spec, $nextState, $company, $facts);
 
             return new WorkflowTransitionResult($nextState, [], $spec->value, $reply);
         }
@@ -188,9 +206,9 @@ final class WorkflowEngine
         if ($isImageQuery) {
             $product = $this->domain->findProduct($company, $intent->product ?? $rawMessage);
             if ($product) {
-                $imgUrl = $product->image ? (filter_var($product->image, FILTER_VALIDATE_URL) ? $product->image : url($product->image)) : null;
+                $imgUrl = $product->image_url;
                 if ($imgUrl) {
-                    $reply = "📸 Here is *{$product->name}*:\nPrice: " . \App\Support\MoneyFormatter::format((float) $product->price, $company->currency ?? 'USD') . "\n\nReply with '{$product->name}' to add it to your cart!";
+                    $reply = "📷 Here is *{$product->name}*:\nPrice: " . \App\Support\MoneyFormatter::format((float) $product->price, $company->currency ?? 'USD') . "\n\nReply with '{$product->name}' to add it to your cart!\n\n[IMAGE_URL: {$imgUrl}]";
                     return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply, null, ['image_url' => $imgUrl]);
                 }
                 $reply = "Details for *{$product->name}*:\nPrice: " . \App\Support\MoneyFormatter::format((float) $product->price, $company->currency ?? 'USD') . "\n(No photo is currently uploaded for this product).";
@@ -199,6 +217,7 @@ final class WorkflowEngine
         }
 
         $isRemoveOrClear = $intent->intent === CommerceIntent::REMOVE_FROM_CART ||
+            $intent->intent === CommerceIntent::CLEAR_CART ||
             str_contains($lowerRaw, 'remove') ||
             str_contains($lowerRaw, 'delete') ||
             str_contains($lowerRaw, 'drop') ||
@@ -209,11 +228,28 @@ final class WorkflowEngine
             str_contains($lowerRaw, 'minus');
 
         if ($isRemoveOrClear && $intent->intent !== CommerceIntent::GENERAL_CHAT && ! $isImageQuery) {
-            $isFullClear = $lowerRaw === 'clear' ||
+            $isFullClear = $intent->intent === CommerceIntent::CLEAR_CART ||
+                $lowerRaw === 'clear' ||
                 $lowerRaw === 'clear cart' ||
+                $lowerRaw === 'clear my cart' ||
                 $lowerRaw === 'empty' ||
                 $lowerRaw === 'empty cart' ||
-                $lowerRaw === 'reset cart';
+                $lowerRaw === 'empty my cart' ||
+                $lowerRaw === 'reset cart' ||
+                $lowerRaw === 'delete cart' ||
+                $lowerRaw === 'delete my cart' ||
+                $lowerRaw === 'delete all' ||
+                $lowerRaw === 'clear all' ||
+                str_contains($lowerRaw, 'clear cart') ||
+                str_contains($lowerRaw, 'clear my cart') ||
+                str_contains($lowerRaw, 'empty cart') ||
+                str_contains($lowerRaw, 'empty my cart') ||
+                str_contains($lowerRaw, 'delete cart') ||
+                str_contains($lowerRaw, 'delete my cart') ||
+                str_contains($lowerRaw, 'clear all') ||
+                str_contains($lowerRaw, 'empty all') ||
+                str_contains($lowerRaw, 'delete all') ||
+                (empty($intent->product) && (str_contains($lowerRaw, 'clear') || str_contains($lowerRaw, 'empty') || str_contains($lowerRaw, 'reset')));
 
             if ($isFullClear) {
                 $nextState = $state->with(['cartItems' => []]);
@@ -291,26 +327,28 @@ final class WorkflowEngine
             }
         }
 
+        $matchedProduct = null;
+        if (! $isRemoveOrClear && $lowerRaw !== 'prices' && $lowerRaw !== 'menu' && $lowerRaw !== 'catalog') {
+            $matchedProduct = $this->domain->findProduct($company, $intent->product ?? $rawMessage);
+            if (! $matchedProduct && $intent->product && $intent->product !== $rawMessage) {
+                $matchedProduct = $this->domain->findProduct($company, $rawMessage);
+            }
+        }
+
         $isExplicitAddToCart = (! $isRemoveOrClear) && (
             $intent->intent === CommerceIntent::ADD_TO_CART ||
             $intent->intent === CommerceIntent::SELECT_OPTION ||
+            $matchedProduct !== null ||
             str_contains($lowerRaw, 'want') ||
             str_contains($lowerRaw, 'buy') ||
             str_contains($lowerRaw, 'order') ||
             str_contains($lowerRaw, 'add')
         );
 
-        if ($isExplicitAddToCart && $intent->intent !== CommerceIntent::GENERAL_CHAT && $intent->intent !== CommerceIntent::ASK_PRODUCT_INFO && ! $isImageQuery) {
-            $product = null;
-            if ($intent->resolvedProductId) {
+        if ($isExplicitAddToCart && ! $isImageQuery && ($matchedProduct !== null || ($intent->intent !== CommerceIntent::GENERAL_CHAT && $intent->intent !== CommerceIntent::ASK_PRODUCT_INFO))) {
+            $product = $matchedProduct;
+            if (! $product && $intent->resolvedProductId) {
                 $product = Product::where('company_id', $company->id)->where('id', $intent->resolvedProductId)->where('status', 'active')->first();
-            }
-            if (! $product) {
-                $productName = $intent->product ?? $rawMessage;
-                $product = $this->domain->findProduct($company, $productName);
-                if (! $product && $intent->product && $intent->product !== $rawMessage) {
-                    $product = $this->domain->findProduct($company, $rawMessage);
-                }
             }
 
             if ($product) {
@@ -376,6 +414,7 @@ final class WorkflowEngine
 
                 $extra = [];
                 if (! empty($product->image_url)) {
+                    $reply .= "\n\n[IMAGE_URL: {$product->image_url}]";
                     $extra = ['image_url' => $product->image_url];
                 }
 
@@ -404,6 +443,7 @@ final class WorkflowEngine
             return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
         }
 
+        $greetingService = app(ConversationGreetingService::class);
         if ($greetingService->isPureGreeting($rawMessage)) {
             $greetingText = $greetingService->buildOpening($company, $state->customerName);
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $greetingText);
@@ -415,16 +455,64 @@ final class WorkflowEngine
             return new WorkflowTransitionResult($state, [], ResponseSpec::CART_SUMMARY->value, $reply);
         }
 
-        // Quick Menu Option 1 or Prices / Catalog Inquiry
-        if (! $isSelectingResolvedProduct && ($lowerRaw === '1' || $lowerRaw === 'prices' || $lowerRaw === 'catalog' || str_contains($lowerRaw, 'price') || str_contains($lowerRaw, 'catalog') || str_contains($lowerRaw, 'what do you') || str_contains($lowerRaw, 'what you sell'))) {
+        // Quick Menu Option 1 or Prices / Catalog / Menu Inquiry
+        if (! $isSelectingResolvedProduct && ($lowerRaw === '1' || $lowerRaw === 'prices' || $lowerRaw === 'catalog' || $lowerRaw === 'menu' || str_contains($lowerRaw, 'price') || str_contains($lowerRaw, 'catalog') || str_contains($lowerRaw, 'menu') || str_contains($lowerRaw, 'what do you') || str_contains($lowerRaw, 'what you sell'))) {
             $catalogText = ResponseSpecRenderer::renderCatalogPrompt($company);
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $catalogText);
         }
 
-        // Quick Menu Option 2: Order Inquiry
-        if (! $isSelectingResolvedProduct && (($lowerRaw === '2' && $lastWasQuickMenu) || str_contains($lowerRaw, 'want to order') || str_contains($lowerRaw, 'place order'))) {
-            $prompt = "Which product would you like to order?\n\n" . ResponseSpecRenderer::renderCatalogPrompt($company);
-            return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $prompt);
+        // Quick Menu Option 2: Order Tracker Inquiry & Order # Lookups
+        $isTrackOrderRequest = ($lowerRaw === '2' && $lastWasQuickMenu) ||
+            $intent->intent === CommerceIntent::ASK_ORDER_STATUS ||
+            str_contains($lowerRaw, 'track') ||
+            str_contains($lowerRaw, 'order status') ||
+            str_contains($lowerRaw, 'my order') ||
+            str_contains($lowerRaw, 'check order') ||
+            str_contains($lowerRaw, 'where is my order') ||
+            preg_match('/^#?\d{1,8}$/i', trim($rawMessage)) === 1 ||
+            preg_match('/^(?:order|ord)\s*#?\d+/i', trim($rawMessage)) === 1;
+
+        if ($isTrackOrderRequest) {
+            $trackingService = app(\App\Services\Domain\OrderTrackingService::class);
+            $orderFlow = app(\App\Services\OrderFlowService::class);
+
+            // 1. Check if specific order number requested (e.g. #160, order 160)
+            $specificOrder = $trackingService->findOrderByNumber($company, $rawMessage);
+            if ($specificOrder) {
+                $reply = $trackingService->formatOrderTrackingCard($company, $specificOrder, $state->customerPhone);
+                if (in_array($specificOrder->payment_status, ['unpaid', 'pending'], true) && $specificOrder->status !== 'cancelled') {
+                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $specificOrder->id]);
+                }
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            // 2. Priority 1: Check for single active unpaid/pending order for this customer
+            $pendingOrder = $trackingService->getPendingUnpaidOrder($company, $state->customerPhone, $state->chatId);
+            if ($pendingOrder) {
+                $reply = $trackingService->formatOrderTrackingCard($company, $pendingOrder, $state->customerPhone);
+                $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $pendingOrder->id]);
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            // 3. Otherwise retrieve recent orders for this customer
+            $recentOrders = $trackingService->getRecentOrders($company, $state->customerPhone, $state->chatId);
+            if ($recentOrders->isEmpty()) {
+                $cleanPhone = preg_replace('/\D+/', '', $state->customerPhone);
+                $phoneDisplay = $cleanPhone !== '' ? ('+' . $cleanPhone) : 'your number';
+                $reply = "🔍 *Order Tracker*\n\nWe couldn't find any recent orders associated with your phone number ({$phoneDisplay}).\n\n• If you placed an order under a different phone number or Order ID, please reply with your *Order #* (e.g. *#160* or *160*).\n• Reply *'prices'* to browse our catalog and place your first order!";
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            if ($recentOrders->count() === 1) {
+                $reply = $trackingService->formatOrderTrackingCard($company, $recentOrders->first(), $state->customerPhone);
+                if (in_array($recentOrders->first()->payment_status, ['unpaid', 'pending'], true) && $recentOrders->first()->status !== 'cancelled') {
+                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $recentOrders->first()->id]);
+                }
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            $reply = $trackingService->formatOrderList($company, $recentOrders);
+            return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
         }
 
         // Quick Menu Option 3: Talk to Agent
@@ -445,7 +533,7 @@ final class WorkflowEngine
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $locationReply);
         }
 
-        if ($intent->intent === CommerceIntent::ASK_PRODUCT_INFO && (str_contains($lowerRaw, 'catalog') || str_contains($lowerRaw, 'prices') || $lowerRaw === 'products' || str_contains($lowerRaw, 'what do you sell'))) {
+        if (($intent->intent === CommerceIntent::ASK_PRODUCT_INFO || $intent->intent === CommerceIntent::ASK_PRICE) && empty($intent->product) && empty($intent->resolvedProductId)) {
             $catalogText = ResponseSpecRenderer::renderCatalogPrompt($company);
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $catalogText);
         }
@@ -629,6 +717,19 @@ final class WorkflowEngine
             return new WorkflowTransitionResult($nextState, [], ResponseSpec::PROMPT_ORDER_CONFIRMATION->value, $reply);
         }
 
+        $rememberedAddress = $state->pendingDraftData['remembered_address'] ?? $this->getRememberedAddressForState($state, $company);
+
+        if ($rememberedAddress && ($this->wantsConfirmRememberedAddress($rawMessage) || $rawMessage === '1')) {
+            $nextState = $state->with([
+                'step' => CheckoutStep::REVIEWING_ORDER,
+                'deliveryAddress' => $rememberedAddress,
+                'fulfillmentType' => 'delivery',
+            ]);
+            $reply = $this->renderer->render(ResponseSpec::PROMPT_ORDER_CONFIRMATION, $nextState, $company);
+
+            return new WorkflowTransitionResult($nextState, [], ResponseSpec::PROMPT_ORDER_CONFIRMATION->value, $reply);
+        }
+
         $addressInput = $intent->address ?? $rawMessage;
 
         if ($addressInput && $this->domain->isValidAddress($addressInput)) {
@@ -642,7 +743,8 @@ final class WorkflowEngine
             return new WorkflowTransitionResult($nextState, [], ResponseSpec::PROMPT_ORDER_CONFIRMATION->value, $reply);
         }
 
-        $reply = $this->renderer->render(ResponseSpec::PROMPT_DELIVERY_ADDRESS, $state, $company);
+        $facts = $rememberedAddress ? ['remembered_address' => $rememberedAddress] : [];
+        $reply = $this->renderer->render(ResponseSpec::PROMPT_DELIVERY_ADDRESS, $state, $company, $facts);
 
         return new WorkflowTransitionResult($state, [], ResponseSpec::PROMPT_DELIVERY_ADDRESS->value, $reply);
     }
@@ -904,14 +1006,16 @@ final class WorkflowEngine
             str_contains($rawMessage, 'payment method');
 
         $matchedMethodKey = null;
+        $isSingleDigitMenuOption = in_array(trim($rawMessage), ['1', '2', '3'], true);
+
         if ($intent->paymentMethod) {
             $matchedMethodKey = $intent->paymentMethod;
-        } else {
+        } elseif (! $isSingleDigitMenuOption) {
             $activeMethods = ResponseSpecRenderer::getActivePaymentMethods($company);
             foreach ($activeMethods as $m) {
                 $k = $m['key'];
                 $lbl = mb_strtolower($m['label']);
-                if (str_contains($rawMessage, $k) || str_contains($lbl, $rawMessage)) {
+                if ($rawMessage !== '' && (str_contains($rawMessage, $k) || str_contains($lbl, $rawMessage))) {
                     $matchedMethodKey = $k;
                     break;
                 }
@@ -937,6 +1041,7 @@ final class WorkflowEngine
             $selectingState = $state->with(['step' => CheckoutStep::SELECTING_PAYMENT_METHOD]);
             $modifiedIntent = new IntentResult(
                 intent: CommerceIntent::CHOOSE_PAYMENT_METHOD,
+                confidence: 1.0,
                 paymentMethod: $matchedMethodKey,
                 messageText: $matchedMethodKey,
                 rawPayload: $intent->rawPayload
@@ -973,8 +1078,13 @@ final class WorkflowEngine
         $isNewOrderRequest = $intent->intent === CommerceIntent::ADD_TO_CART ||
             $intent->intent === CommerceIntent::START_CHECKOUT ||
             $intent->intent === CommerceIntent::ASK_PRODUCT_INFO ||
+            $intent->intent === CommerceIntent::SELECT_OPTION ||
+            ! empty($intent->resolvedProductId) ||
+            ! empty($intent->selectedToken) ||
+            is_numeric($rawMessage) ||
             str_contains($rawMessage, 'price') ||
             str_contains($rawMessage, 'catalog') ||
+            str_contains($rawMessage, 'menu') ||
             str_contains($rawMessage, 'something else') ||
             str_contains($rawMessage, 'new order') ||
             str_contains($rawMessage, 'order again');
@@ -1018,5 +1128,40 @@ final class WorkflowEngine
         $reply = "Your order #{$state->pendingOrderId} is being processed. Thank you for shopping with us! Reply with 'prices' if you'd like to place another order, or reply 'change payment' to switch payment method.";
 
         return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+    }
+
+    private function getRememberedAddressForState(ConversationState $state, Company $company): ?string
+    {
+        $query = \App\Models\Order::where('company_id', $company->id)
+            ->whereNotNull('delivery_address')
+            ->where('delivery_address', '!=', '')
+            ->where('delivery_address', '!=', 'Store Pickup')
+            ->where('delivery_address', '!=', 'Dine-In')
+            ->where('delivery_address', '!=', 'N/A');
+
+        if ($state->customerPhone) {
+            $query->where(function ($q) use ($state) {
+                $q->where('chat_id', $state->chatId)
+                  ->orWhere('customer_phone', $state->customerPhone);
+            });
+        } else {
+            $query->where('chat_id', $state->chatId);
+        }
+
+        $addr = $query->orderByDesc('id')->value('delivery_address');
+        return $addr ? trim((string) $addr) : null;
+    }
+
+    private function wantsConfirmRememberedAddress(string $lower): bool
+    {
+        if (in_array($lower, ['1', 'yes', 'yep', 'yeah', 'ok', 'sure', 'confirm', 'use this', 'use that', 'same', 'use saved', 'same address'], true)) {
+            return true;
+        }
+        return str_contains($lower, 'use this address')
+            || str_contains($lower, 'use that address')
+            || str_contains($lower, 'same address')
+            || str_contains($lower, 'use saved')
+            || str_contains($lower, 'use previous')
+            || str_contains($lower, 'confirm address');
     }
 }

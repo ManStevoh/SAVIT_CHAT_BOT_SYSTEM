@@ -21,7 +21,9 @@ final class ResponseSpecRenderer
         return match ($spec) {
             ResponseSpec::CART_SUMMARY => $this->renderCartSummary($state, $company, $domainFacts),
             ResponseSpec::PROMPT_VARIANT_SELECTION => $this->renderVariantPrompt($domainFacts),
-            ResponseSpec::PROMPT_DELIVERY_ADDRESS => "What is your delivery address?\n(Reply with street, building, or area name, or say 'pickup' if picking up in store).",
+            ResponseSpec::PROMPT_DELIVERY_ADDRESS => ! empty($domainFacts['remembered_address'])
+                ? "📍 We found your previous delivery address:\n*{$domainFacts['remembered_address']}*\n\nReply:\n1 - Use this address\nOr reply with a *new delivery address* (or say 'pickup' for store pickup)."
+                : "What is your delivery address?\n(Reply with street, building, or area name, or say 'pickup' if picking up in store).",
             ResponseSpec::REPROMPT_DELIVERY_ADDRESS => "Please provide a valid delivery address (street, building, or area name), or reply 'pickup' to pick up your order.",
             ResponseSpec::PROMPT_ORDER_CONFIRMATION => $this->renderOrderConfirmationPrompt($state, $company),
             ResponseSpec::PROMPT_PAYMENT_SELECTION => $this->renderPaymentSelectionPrompt($company),
@@ -45,7 +47,7 @@ final class ResponseSpecRenderer
             return "🛍️ Our product catalog is currently being updated. Please check back shortly or visit our online store!";
         }
 
-        $lines = ["🛍️ *Here's our product catalog:*", ""];
+        $lines = ["🏷️ *Our Products & Prices:*", ""];
         foreach ($products as $idx => $prod) {
             $num = $idx + 1;
             $formattedPrice = MoneyFormatter::format((float) $prod->price, $company->currency ?? 'USD');
@@ -54,6 +56,30 @@ final class ResponseSpecRenderer
                 $shortDesc = mb_substr(strip_tags($prod->description), 0, 80);
                 $lines[] = "   _{$shortDesc}_";
             }
+        }
+
+        $lines[] = "";
+        $lines[] = "Reply with a *product name or number* for details, or reply 'order' to place an order!";
+
+        return implode("\n", $lines);
+    }
+
+    public static function renderOrderPrompt(Company $company): string
+    {
+        $products = Product::where('company_id', $company->id)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
+        if ($products->isEmpty()) {
+            return "🛍️ Our catalog is currently empty. Please check back shortly!";
+        }
+
+        $lines = ["🛒 *Which product would you like to order?*", "Reply with the *product name or number* (e.g. '1') to order:", ""];
+        foreach ($products as $idx => $prod) {
+            $num = $idx + 1;
+            $formattedPrice = MoneyFormatter::format((float) $prod->price, $company->currency ?? 'USD');
+            $lines[] = "{$num}. *{$prod->name}* — {$formattedPrice}";
         }
 
         $lines[] = "";

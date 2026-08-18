@@ -2,6 +2,7 @@
 
 namespace App\Services\Storefront;
 
+use App\Models\Chat;
 use App\Models\Company;
 use App\Models\DeliveryZone;
 use App\Models\DineInTable;

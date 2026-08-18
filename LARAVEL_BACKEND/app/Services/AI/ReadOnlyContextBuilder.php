@@ -69,6 +69,10 @@ final class ReadOnlyContextBuilder
             }
         }
 
+        // Verified customer orders context (anti-hallucination fact injection)
+        $orderTrackingService = app(\App\Services\Domain\OrderTrackingService::class);
+        $verifiedOrders = $orderTrackingService->getLlmOrderContext($company, $state->customerPhone, $state->chatId);
+
         return [
             'store' => [
                 'name' => $company->name ?? 'Store',
@@ -80,6 +84,7 @@ final class ReadOnlyContextBuilder
                 'step' => $state->step->value,
                 'cart_summary' => $cartSummary,
             ],
+            'verified_orders' => $verifiedOrders,
             'candidate_products' => $candidates,
         ];
     }

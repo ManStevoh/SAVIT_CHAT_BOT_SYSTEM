@@ -2,6 +2,7 @@
 
 namespace App\Services\Conversation;
 
+use App\Models\Chat;
 use App\Models\Company;
 
 /**
@@ -9,7 +10,7 @@ use App\Models\Company;
  */
 final class ConversationGreetingService
 {
-    public const QUICK_MENU_SUFFIX = "\n\nReply with: 1. Prices  2. Order  3. Talk to agent";
+    public const QUICK_MENU_SUFFIX = "\n\nReply with: 1. Prices  2. Track Order  3. Talk to agent";
 
     /** @var array<int, string> Longest first for prefix stripping. */
     private const GREETING_PHRASES = [

@@ -47,6 +47,8 @@ class OrderFlowService
 
     public const STEP_EXISTING_ORDER_PROMPT = 'existing_order_prompt';
 
+    public const STEP_TRACKING_ACTIONS = 'tracking_actions';
+
     public function __construct(
         protected OrderPaymentService $orderPayment,
         protected TaxCalculationService $taxCalculator,
@@ -453,7 +455,15 @@ class OrderFlowService
                 return 'Order cancelled. If you change your mind, reply "order" or "2" to start a new order.';
             }
             if (in_array($lower, ['1', 'continue', 'pay', 'yes', 'proceed'], true)) {
-                $this->setStep($chat, self::STEP_EXISTING_ORDER_ADDRESS, ['order_id' => $order->id]);
+                $remembered = $this->getRememberedCustomerAddress($chat, $company);
+                $draftData = ['order_id' => $order->id];
+                if ($remembered) {
+                    $draftData['remembered_address'] = $remembered;
+                    $this->setStep($chat, self::STEP_EXISTING_ORDER_ADDRESS, $draftData);
+
+                    return "Great — we found your previous delivery address:\n📍 *{$remembered}*\n\nReply:\n1 - Use this address\nOr reply with a *new delivery address*.";
+                }
+                $this->setStep($chat, self::STEP_EXISTING_ORDER_ADDRESS, $draftData);
 
                 return 'Great — please reply with your delivery address to continue.';
             }
@@ -477,9 +487,17 @@ class OrderFlowService
             if ($this->shouldDelegateOrderStepToAssistant($lower, $trimmed)) {
                 return null;
             }
-            $address = trim($messageText);
-            if (strlen($address) < 3) {
-                return 'Please provide a valid delivery address (at least a few characters).';
+            $remembered = $draft['remembered_address'] ?? $this->getRememberedCustomerAddress($chat, $company);
+            if ($remembered && ($this->wantsConfirmRememberedAddress($lower) || $trimmed === '1')) {
+                $address = $remembered;
+            } else {
+                $address = trim($messageText);
+                if (strlen($address) < 3) {
+                    if ($remembered) {
+                        return "Please confirm using your saved address by replying *1* or *'yes'*, or type a valid *new delivery address*.";
+                    }
+                    return 'Please provide a valid delivery address (at least a few characters).';
+                }
             }
             $order->update(['delivery_address' => $address]);
             $registry = app(\App\Services\PaymentGateways\PaymentGatewayRegistry::class);
@@ -495,6 +513,40 @@ class OrderFlowService
             $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, $draft);
 
             return "Delivery address saved: {$address}\n\n".$this->formatPaymentMethodPrompt($order);
+        }
+
+        if ($step === self::STEP_TRACKING_ACTIONS) {
+            $order = isset($draft['order_id']) ? Order::find((int) $draft['order_id']) : null;
+            if (! $order || $order->status === 'cancelled') {
+                $this->clearState($chat);
+
+                return 'This order is no longer active. Reply "prices" to browse products and place a new order.';
+            }
+
+            if ($this->wantsCancel($lower) || $trimmed === '2') {
+                $order->update(['status' => 'cancelled']);
+                $this->clearState($chat);
+
+                return "❌ Order #{$order->order_number} has been cancelled.\n\nReply 'prices' to browse products and place a new order!";
+            }
+
+            if ($trimmed === '1' || str_contains($lower, 'pay')) {
+                $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, ['order_id' => $order->id]);
+
+                return $this->formatPaymentMethodPrompt($order);
+            }
+
+            if ($trimmed === '3' || str_contains($lower, 'address')) {
+                $this->setStep($chat, self::STEP_EXISTING_ORDER_ADDRESS, ['order_id' => $order->id]);
+
+                return "Please reply with your new delivery address for Order #{$order->order_number}:";
+            }
+
+            if ($trimmed === '4' || str_contains($lower, 'agent') || str_contains($lower, 'support')) {
+                $this->clearState($chat);
+
+                return null;
+            }
         }
 
         if ($step === self::STEP_EXISTING_ORDER_PAYMENT_METHOD) {
@@ -589,6 +641,13 @@ class OrderFlowService
                 }
                 $draft = $this->stripPickingDraft($draft);
                 if ($this->draftRequiresDeliveryAddress($draft)) {
+                    $remembered = $this->getRememberedCustomerAddress($chat, $company);
+                    if ($remembered) {
+                        $draft['remembered_address'] = $remembered;
+                        $this->setStep($chat, self::STEP_ADDRESS, $draft);
+
+                        return "📍 We found your previous delivery address:\n*{$remembered}*\n\nReply:\n1 - Use this address\nOr reply with a *new delivery address* (or say 'pickup' for store pickup).";
+                    }
                     $this->setStep($chat, self::STEP_ADDRESS, $draft);
 
                     return 'What is your delivery address?';
@@ -639,7 +698,7 @@ class OrderFlowService
 
             if ($this->wantsPickup($lower)) {
                 $draft['fulfillment_type'] = 'pickup';
-                unset($draft['delivery_address']);
+                unset($draft['delivery_address'], $draft['remembered_address']);
                 $this->setStep($chat, self::STEP_CONFIRM, $draft);
                 $summary = $this->formatDraftSummary($company, $draft, $chat);
 
@@ -647,7 +706,7 @@ class OrderFlowService
             }
             if ($this->wantsDineIn($lower)) {
                 $draft['fulfillment_type'] = 'dine_in';
-                unset($draft['delivery_address']);
+                unset($draft['delivery_address'], $draft['remembered_address']);
                 $this->setStep($chat, self::STEP_CONFIRM, $draft);
                 $summary = $this->formatDraftSummary($company, $draft, $chat);
 
@@ -662,8 +721,23 @@ class OrderFlowService
                 return 'Scheduled for '.$scheduled->toDayDateTimeString().".\nNow reply with your delivery address (or say pickup / dine-in).";
             }
 
+            $rememberedAddress = $draft['remembered_address'] ?? $this->getRememberedCustomerAddress($chat, $company);
+
+            if ($rememberedAddress && ($this->wantsConfirmRememberedAddress($lower) || $trimmed === '1')) {
+                $address = $rememberedAddress;
+                $draft['delivery_address'] = $address;
+                $draft['fulfillment_type'] = $draft['fulfillment_type'] ?? 'delivery';
+                $this->setStep($chat, self::STEP_CONFIRM, $draft);
+                $summary = $this->formatDraftSummary($company, $draft, $chat);
+
+                return "📍 Delivery address confirmed:\n{$address}\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+            }
+
             $address = trim($messageText);
             if (! $this->looksLikeDeliveryAddress($address)) {
+                if ($rememberedAddress) {
+                    return "Please confirm using your saved address by replying *1* or *'yes'*, or type a valid *new delivery address* (or reply 'pickup').";
+                }
                 return 'Please provide your delivery address (e.g., street, building, or area name), or reply "pickup" if you would like to pick up your order.';
             }
             $draft['delivery_address'] = $address;
@@ -1940,6 +2014,11 @@ class OrderFlowService
             return true;
         }
 
+        // If a specific product name follows (e.g. "picture of shoerack"), do not intercept as cart images
+        if (preg_match('/\b(?:photo|image|picture)s?\s+of\s+(?!my\s+cart|the\s+cart|items\s+in\s+my\s+cart)(.+)/iu', $lower)) {
+            return false;
+        }
+
         return (bool) preg_match('/\b(?:image|images|photo|photos|picture|pictures|photo of|image of|picture of)\b/iu', $lower);
     }
 
@@ -2269,5 +2348,40 @@ class OrderFlowService
         }
 
         return null;
+    }
+
+    public function getRememberedCustomerAddress(Chat $chat, Company $company): ?string
+    {
+        $query = Order::where('company_id', $company->id)
+            ->whereNotNull('delivery_address')
+            ->where('delivery_address', '!=', '')
+            ->where('delivery_address', '!=', 'Store Pickup')
+            ->where('delivery_address', '!=', 'Dine-In')
+            ->where('delivery_address', '!=', 'N/A');
+
+        if ($chat->customer_phone) {
+            $query->where(function ($q) use ($chat) {
+                $q->where('chat_id', $chat->id)
+                  ->orWhere('customer_phone', $chat->customer_phone);
+            });
+        } else {
+            $query->where('chat_id', $chat->id);
+        }
+
+        $addr = $query->orderByDesc('id')->value('delivery_address');
+        return $addr ? trim((string) $addr) : null;
+    }
+
+    protected function wantsConfirmRememberedAddress(string $lower): bool
+    {
+        if (in_array($lower, ['1', 'yes', 'yep', 'yeah', 'ok', 'sure', 'confirm', 'use this', 'use that', 'same', 'use saved', 'same address'], true)) {
+            return true;
+        }
+        return str_contains($lower, 'use this address')
+            || str_contains($lower, 'use that address')
+            || str_contains($lower, 'same address')
+            || str_contains($lower, 'use saved')
+            || str_contains($lower, 'use previous')
+            || str_contains($lower, 'confirm address');
     }
 }

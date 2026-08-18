@@ -50,6 +50,14 @@ class OrderController extends Controller
                 'cancelled' => "Your order has been cancelled. Reply to this message if you’d like help.",
                 default => "We’ll keep you updated as it progresses.",
             };
+            if ($order->status === 'shipped') {
+                if (! empty($order->courier_name)) {
+                    $lines[] = "• Courier: {$order->courier_name}";
+                }
+                if (! empty($order->tracking_number)) {
+                    $lines[] = "• Tracking Number: {$order->tracking_number}";
+                }
+            }
         }
 
         if ($oldPaymentStatus !== $order->payment_status) {
@@ -124,14 +132,37 @@ class OrderController extends Controller
         $query = Order::with('orderProducts')->where('company_id', $companyId)->orderByDesc('created_at');
 
         if ($request->filled('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
+            $status = $request->status;
+            if ($status === 'failed') {
+                $query->where(function ($q) {
+                    $q->where('status', 'cancelled')->orWhere('payment_status', 'failed');
+                });
+            } elseif ($status === 'waiting_shipping' || $status === 'ready_to_ship') {
+                $query->where(function ($q) {
+                    $q->where('status', 'confirmed')
+                      ->orWhere(function ($sub) {
+                          $sub->where('payment_status', 'paid')
+                              ->whereNotIn('status', ['shipped', 'delivered', 'cancelled']);
+                      });
+                });
+            } elseif ($status === 'shipped_delivered' || $status === 'completed') {
+                $query->whereIn('status', ['shipped', 'delivered']);
+            } elseif ($status === 'pending') {
+                $query->where(function ($q) {
+                    $q->where('status', 'pending')->orWhere('payment_status', 'pending');
+                });
+            } else {
+                $query->where('status', $status);
+            }
         }
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'like', "%{$search}%")
                     ->orWhere('customer_name', 'like', "%{$search}%")
-                    ->orWhere('customer_phone', 'like', "%{$search}%");
+                    ->orWhere('customer_phone', 'like', "%{$search}%")
+                    ->orWhere('delivery_address', 'like', "%{$search}%")
+                    ->orWhere('tracking_number', 'like', "%{$search}%");
             });
         }
 
@@ -156,6 +187,15 @@ class OrderController extends Controller
                 'orderNumber' => $order->order_number,
                 'customerName' => $order->customer_name,
                 'customerPhone' => $order->customer_phone,
+                'customerEmail' => $order->customer_email,
+                'deliveryAddress' => $order->delivery_address,
+                'fulfillmentType' => $order->fulfillment_type ?? 'delivery',
+                'dineInTableName' => $order->dine_in_table_name,
+                'orderNotes' => $order->order_notes,
+                'trackingNumber' => $order->tracking_number,
+                'courierName' => $order->courier_name,
+                'shippedAt' => $order->shipped_at?->toIso8601String(),
+                'deliveryFee' => (float) ($order->delivery_fee ?? 0),
                 'chatId' => $order->chat_id ? (string) $order->chat_id : null,
                 'products' => $order->orderProducts->map(fn ($p) => [
                     'id' => (string) $p->id,
@@ -207,6 +247,15 @@ class OrderController extends Controller
                 'orderNumber' => $order->order_number,
                 'customerName' => $order->customer_name,
                 'customerPhone' => $order->customer_phone,
+                'customerEmail' => $order->customer_email,
+                'deliveryAddress' => $order->delivery_address,
+                'fulfillmentType' => $order->fulfillment_type ?? 'delivery',
+                'dineInTableName' => $order->dine_in_table_name,
+                'orderNotes' => $order->order_notes,
+                'trackingNumber' => $order->tracking_number,
+                'courierName' => $order->courier_name,
+                'shippedAt' => $order->shipped_at?->toIso8601String(),
+                'deliveryFee' => (float) ($order->delivery_fee ?? 0),
                 'products' => $order->orderProducts->map(fn ($p) => [
                     'id' => (string) $p->id,
                     'name' => $p->name,
@@ -466,6 +515,9 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'sometimes|in:pending,confirmed,shipped,delivered,cancelled',
             'paymentStatus' => 'sometimes|in:pending,paid,refunded',
+            'courierName' => 'sometimes|nullable|string|max:100',
+            'trackingNumber' => 'sometimes|nullable|string|max:100',
+            'deliveryAddress' => 'sometimes|nullable|string|max:1000',
         ]);
 
         if ($order->company_id !== $request->user()->company_id) {
@@ -478,6 +530,18 @@ class OrderController extends Controller
         $updates = [];
         if ($request->has('status')) {
             $updates['status'] = $request->status;
+            if ($request->status === 'shipped' && $oldStatus !== 'shipped') {
+                $updates['shipped_at'] = now();
+            }
+        }
+        if ($request->has('courierName')) {
+            $updates['courier_name'] = $request->courierName;
+        }
+        if ($request->has('trackingNumber')) {
+            $updates['tracking_number'] = $request->trackingNumber;
+        }
+        if ($request->has('deliveryAddress')) {
+            $updates['delivery_address'] = $request->deliveryAddress;
         }
 
         $markedPaidViaService = false;

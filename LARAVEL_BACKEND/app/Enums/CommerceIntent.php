@@ -8,6 +8,7 @@ enum CommerceIntent: string
     case ADD_TO_CART = 'add_to_cart';
     case SELECT_OPTION = 'select_option';
     case REMOVE_FROM_CART = 'remove_from_cart';
+    case CLEAR_CART = 'clear_cart';
     case UPDATE_QUANTITY = 'update_quantity';
 
     // FSM & Existing Orchestrator Handled Intents (Preserved)

@@ -75,6 +75,15 @@ export interface Order {
   orderNumber: string
   customerName: string
   customerPhone: string
+  customerEmail?: string | null
+  deliveryAddress?: string | null
+  fulfillmentType?: 'delivery' | 'pickup' | 'dine_in' | string
+  dineInTableName?: string | null
+  orderNotes?: string | null
+  trackingNumber?: string | null
+  courierName?: string | null
+  shippedAt?: string | null
+  deliveryFee?: number
   products: OrderProduct[]
   subtotal?: number
   taxTotal?: number

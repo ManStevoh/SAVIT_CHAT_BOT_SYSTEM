@@ -19,10 +19,12 @@ import {
   companyExportData,
   importProducts,
   createProductVariant,
+  updateProductVariant,
   deleteProductVariant,
   uploadProductImage,
   uploadVariantImage,
 } from '@/lib/api-actions'
+import { ProductVariantsModal } from '@/components/dashboard/products/product-variants-modal'
 import { downloadFile, resolveBackendMediaUrl } from '@/lib/api-client'
 import type { Product, ProductVariant } from '@/lib/mock-data'
 import {
@@ -193,12 +195,6 @@ export default function ProductsPage() {
   const [importResult, setImportResult] = useState<{ created: number; errors?: { row: number; errors: string[] }[] } | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const [variantsSheetProduct, setVariantsSheetProduct] = useState<Product | null>(null)
-  const [variantLabel, setVariantLabel] = useState('')
-  const [variantPrice, setVariantPrice] = useState('')
-  const [variantStock, setVariantStock] = useState('0')
-  const [variantImageFile, setVariantImageFile] = useState<File | null>(null)
-  const [variantSaving, setVariantSaving] = useState(false)
-  const [variantImageUploadingId, setVariantImageUploadingId] = useState<string | null>(null)
   const [productExtraImageUploading, setProductExtraImageUploading] = useState(false)
 
   const { data: companySettings } = useCompanySettings()
@@ -459,38 +455,45 @@ export default function ProductsPage() {
     setExportFormat(value === 'json' ? 'json' : 'csv')
   }
 
-  const handleAddVariant = useCallback(async () => {
-    if (!variantsSheetProduct || !variantLabel.trim() || variantPrice === '') return
-    const price = parseFloat(variantPrice)
-    if (Number.isNaN(price) || price < 0) return
-    setVariantSaving(true)
-    try {
-      const res = await createProductVariant(variantsSheetProduct.id, {
-        label: variantLabel.trim(),
-        price,
-        stock: parseInt(variantStock, 10) || 0,
-        image: variantImageFile ?? undefined,
-      })
+  const handleAddVariantModal = useCallback(
+    async (data: { label: string; price: number; stock: number; image?: File }) => {
+      if (!variantsSheetProduct) return false
+      const res = await createProductVariant(variantsSheetProduct.id, data)
       if (res.success) {
-        setVariantLabel('')
-        setVariantPrice('')
-        setVariantStock('0')
-        setVariantImageFile(null)
         mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         if (res.variant) {
           setVariantsSheetProduct((prev) =>
-            prev
-              ? { ...prev, variants: [...(prev.variants ?? []), res.variant!] }
-              : null
+            prev ? { ...prev, variants: [...(prev.variants ?? []), res.variant!] } : null
           )
         }
+        return true
       }
-    } finally {
-      setVariantSaving(false)
-    }
-  }, [variantsSheetProduct, variantLabel, variantPrice, variantStock, mutate, categoryFilter, statusFilter, searchQuery, variantImageFile])
+      return false
+    },
+    [variantsSheetProduct, mutate, categoryFilter, statusFilter, searchQuery]
+  )
 
-  const handleDeleteVariant = useCallback(
+  const handleUpdateVariantModal = useCallback(
+    async (variantId: string, data: { label?: string; price?: number; stock?: number; status?: 'active' | 'inactive' }) => {
+      const res = await updateProductVariant(variantId, data)
+      if (res.success) {
+        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        setVariantsSheetProduct((prev) =>
+          prev
+            ? {
+                ...prev,
+                variants: (prev.variants ?? []).map((v) => (v.id === variantId ? { ...v, ...data } : v)),
+              }
+            : null
+        )
+        return true
+      }
+      return false
+    },
+    [mutate, categoryFilter, statusFilter, searchQuery]
+  )
+
+  const handleDeleteVariantModal = useCallback(
     async (variantId: string) => {
       const res = await deleteProductVariant(variantId)
       if (res.success) {
@@ -498,22 +501,21 @@ export default function ProductsPage() {
         setVariantsSheetProduct((prev) =>
           prev ? { ...prev, variants: (prev.variants ?? []).filter((v) => v.id !== variantId) } : null
         )
+        return true
       }
+      return false
     },
     [mutate, categoryFilter, statusFilter, searchQuery]
   )
 
-  const handleUploadVariantImage = useCallback(
+  const handleUploadVariantImageModal = useCallback(
     async (variantId: string, file: File) => {
-      setVariantImageUploadingId(variantId)
-      try {
-        const res = await uploadVariantImage(variantId, { image: file, isPrimary: true })
-        if (res.success) {
-          mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
-        }
-      } finally {
-        setVariantImageUploadingId(null)
+      const res = await uploadVariantImage(variantId, { image: file, isPrimary: true })
+      if (res.success) {
+        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        return true
       }
+      return false
     },
     [mutate, categoryFilter, statusFilter, searchQuery]
   )
@@ -642,15 +644,7 @@ export default function ProductsPage() {
               <Edit className="mr-2 h-4 w-4" />
               Edit Product
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setVariantsSheetProduct(product)
-                setVariantLabel('')
-                setVariantPrice('')
-                setVariantStock('0')
-                    setVariantImageFile(null)
-              }}
-            >
+            <DropdownMenuItem onClick={() => setVariantsSheetProduct(product)}>
               <Layers className="mr-2 h-4 w-4" />
               Options / variants
             </DropdownMenuItem>
@@ -1257,106 +1251,20 @@ export default function ProductsPage() {
         {renderProductForm()}
       </FormModal>
 
-      <Sheet
+      <ProductVariantsModal
+        product={variantsSheetProduct}
         open={variantsSheetProduct !== null}
         onOpenChange={(open) => {
           if (!open) {
             setVariantsSheetProduct(null)
-            setVariantImageFile(null)
           }
         }}
-      >
-        <SheetContent className="overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Product options</SheetTitle>
-            <SheetDescription>
-              Add sizes, colors, brands, etc. Customers pick a number for the product, then a number for the option, then quantity in WhatsApp.
-            </SheetDescription>
-          </SheetHeader>
-          {variantsSheetProduct && (
-            <div className="mt-6 space-y-6">
-              <p className="text-sm font-medium text-foreground">{variantsSheetProduct.name}</p>
-              <ul className="space-y-2">
-                {(variantsSheetProduct.variants ?? []).map((v) => {
-                  const vThumb = variantDisplayImage(v)
-                  return (
-                  <li
-                    key={v.id}
-                    className="rounded-md border border-border/60 px-3 py-2 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        {vThumb ? (
-                          <div className="h-10 w-10 overflow-hidden rounded-md">
-                            <ProductThumbImg
-                              src={vThumb}
-                              alt={v.label}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-10 w-10 rounded-md bg-muted" />
-                        )}
-                        <span>
-                          {v.label} — {formatCurrency(v.price)} (stock {v.stock})
-                        </span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => handleDeleteVariant(v.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="mt-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) handleUploadVariantImage(v.id, file)
-                          e.currentTarget.value = ''
-                        }}
-                        disabled={variantImageUploadingId === v.id}
-                        className="block w-full text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-secondary file:px-2 file:py-1 file:text-xs file:font-medium disabled:opacity-60"
-                      />
-                    </div>
-                  </li>
-                  )
-                })}
-                {(variantsSheetProduct.variants ?? []).length === 0 && (
-                  <p className="text-sm text-muted-foreground">No options yet. Add one below.</p>
-                )}
-              </ul>
-              <div className="space-y-3 border-t border-border pt-4">
-                <InputField label="Option label" name="vlabel" value={variantLabel} onChange={setVariantLabel} placeholder="e.g. Blue / L / Brand X" />
-                <div className="grid grid-cols-2 gap-3">
-                  <InputField label="Price" name="vprice" type="number" value={variantPrice} onChange={setVariantPrice} placeholder="0" />
-                  <InputField label="Stock" name="vstock" type="number" value={variantStock} onChange={setVariantStock} placeholder="0" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-foreground">Option image (optional)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setVariantImageFile(e.target.files?.[0] ?? null)}
-                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium"
-                  />
-                  {variantImageFile && (
-                    <p className="text-xs text-muted-foreground">Selected: {variantImageFile.name}</p>
-                  )}
-                </div>
-                <Button type="button" onClick={handleAddVariant} disabled={variantSaving || !variantLabel.trim() || variantPrice === ''}>
-                  {variantSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add option'}
-                </Button>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+        formatCurrency={formatCurrency}
+        onAddVariant={handleAddVariantModal}
+        onUpdateVariant={handleUpdateVariantModal}
+        onDeleteVariant={handleDeleteVariantModal}
+        onUploadVariantImage={handleUploadVariantImageModal}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

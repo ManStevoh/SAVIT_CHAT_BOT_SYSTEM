@@ -46,6 +46,9 @@ class Order extends Model
         'source',
         'payment_recovered_at',
         'agent_proactive_follow_up_at',
+        'tracking_number',
+        'courier_name',
+        'shipped_at',
     ];
 
     protected $casts = [
@@ -60,6 +63,7 @@ class Order extends Model
         'spam_flagged' => 'boolean',
         'payment_recovered_at' => 'datetime',
         'agent_proactive_follow_up_at' => 'datetime',
+        'shipped_at' => 'datetime',
     ];
 
     public function getTotalAmountAttribute(): float

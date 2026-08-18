@@ -37,18 +37,38 @@ final class OrderDomainService
             'subtotal' => $totalAmount,
         ]);
 
+        $groupedItems = [];
         foreach ($state->cartItems as $item) {
-            $unitPrice = (float) ($item['price'] ?? 0.0);
-            $qty = (int) ($item['quantity'] ?? 1);
+            $prodId = $item['product_id'] ?? null;
+            $varId = $item['variant_id'] ?? null;
+            $name = $item['name'] ?? 'Item';
+            $key = ($prodId ?? 0) . '_' . ($varId ?? 0) . '_' . mb_strtolower(trim($name));
+
+            if (! isset($groupedItems[$key])) {
+                $groupedItems[$key] = [
+                    'product_id' => $prodId,
+                    'product_variant_id' => $varId,
+                    'name' => $name,
+                    'quantity' => 0,
+                    'price' => (float) ($item['price'] ?? 0.0),
+                    'fulfillment_data' => $item['fulfillment_data'] ?? null,
+                ];
+            }
+            $groupedItems[$key]['quantity'] += (int) ($item['quantity'] ?? 1);
+        }
+
+        foreach ($groupedItems as $item) {
+            $unitPrice = $item['price'];
+            $qty = $item['quantity'];
             OrderProduct::create([
                 'order_id' => $order->id,
-                'product_id' => $item['product_id'] ?? null,
-                'product_variant_id' => $item['variant_id'] ?? null,
-                'name' => $item['name'] ?? 'Item',
+                'product_id' => $item['product_id'],
+                'product_variant_id' => $item['product_variant_id'],
+                'name' => $item['name'],
                 'quantity' => $qty,
                 'price' => $unitPrice,
                 'line_subtotal' => $unitPrice * $qty,
-                'fulfillment_data' => $item['fulfillment_data'] ?? null,
+                'fulfillment_data' => $item['fulfillment_data'],
             ]);
         }
 

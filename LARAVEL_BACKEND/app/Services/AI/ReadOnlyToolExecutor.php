@@ -98,22 +98,40 @@ final class ReadOnlyToolExecutor
     private function searchProducts(Company $company, string $query): array
     {
         $q = mb_strtolower(trim($query));
-        $products = Product::where('company_id', $company->id)
-            ->where('status', 'active')
-            ->where(function ($builder) use ($q) {
-                $builder->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"])
-                    ->orWhereRaw('LOWER(description) LIKE ?', ["%{$q}%"])
-                    ->orWhereRaw('LOWER(category) LIKE ?', ["%{$q}%"]);
-            })
-            ->take(5)
-            ->get();
+        $domain = app(\App\Services\Workflow\DomainServiceDispatcher::class);
 
+        // 1. First try domain product dispatcher matching (uses name substring, variant matching, etc.)
+        $matchedProduct = $domain->findProduct($company, $q);
+        $products = collect();
+
+        if ($matchedProduct) {
+            $products->push($matchedProduct);
+        }
+
+        // 2. If not found directly, clean prefix words and search again
         if ($products->isEmpty()) {
-            // Fall back to top products if specific search returns empty
-            $products = Product::where('company_id', $company->id)
-                ->where('status', 'active')
-                ->take(5)
-                ->get();
+            $cleaned = preg_replace('/^(?:send|show|give|get|view|picture|photo|image|pic|details|info|of|a|an|the|me|us)\s+/iu', '', $q);
+            $cleaned = trim((string) $cleaned);
+
+            if ($cleaned !== '' && $cleaned !== $q) {
+                $matchedProduct = $domain->findProduct($company, $cleaned);
+                if ($matchedProduct) {
+                    $products->push($matchedProduct);
+                }
+            }
+
+            if ($products->isEmpty()) {
+                $searchTerm = $cleaned !== '' ? $cleaned : $q;
+                $products = Product::where('company_id', $company->id)
+                    ->where('status', 'active')
+                    ->where(function ($builder) use ($searchTerm) {
+                        $builder->whereRaw('LOWER(name) LIKE ?', ["%{$searchTerm}%"])
+                            ->orWhereRaw('LOWER(description) LIKE ?', ["%{$searchTerm}%"])
+                            ->orWhereRaw('LOWER(category) LIKE ?', ["%{$searchTerm}%"]);
+                    })
+                    ->take(5)
+                    ->get();
+            }
         }
 
         $results = [];
@@ -124,11 +142,15 @@ final class ReadOnlyToolExecutor
                 'price' => MoneyFormatter::format((float) ($v->price ?? $p->price), $company->currency ?? 'USD'),
             ])->toArray();
 
+            $imgUrl = $p->image ? (filter_var($p->image, FILTER_VALIDATE_URL) ? $p->image : url($p->image)) : null;
+
             $results[] = [
                 'id' => $p->id,
                 'name' => $p->name,
                 'price' => MoneyFormatter::format((float) $p->price, $company->currency ?? 'USD'),
                 'description' => mb_substr(strip_tags((string) ($p->description ?? '')), 0, 150),
+                'image_url' => $imgUrl,
+                'has_photo' => ! empty($imgUrl),
                 'variants' => $variants,
             ];
         }

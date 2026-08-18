@@ -513,7 +513,11 @@ class WhatsAppMessageSenderService
         ]);
 
         // Fallback to sending formatted text with preview_url
-        $fallbackText = rtrim($bodyText) . "\n\n" . ($buttonText ? "🔗 *{$buttonText}:*\n" : "") . $url;
+        if (str_contains($bodyText, $url)) {
+            $fallbackText = $bodyText;
+        } else {
+            $fallbackText = rtrim($bodyText) . "\n\n" . ($buttonText ? "🔗 *{$buttonText}:*\n" : "") . $url;
+        }
         return $this->sendText($account, $to, $fallbackText, bypassCtaConversion: true);
     }
 

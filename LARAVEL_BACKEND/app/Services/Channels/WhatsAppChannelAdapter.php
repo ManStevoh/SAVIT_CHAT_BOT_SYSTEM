@@ -64,6 +64,28 @@ final class WhatsAppChannelAdapter implements ChannelAdapterInterface
         $ctaUrl = $message->ctaUrl ?? $message->extra['cta_url'] ?? null;
         $ctaButtonText = $message->ctaButtonText ?? $message->extra['cta_button_text'] ?? null;
         $imageUrl = $message->extra['image_url'] ?? $message->extra['media_url'] ?? null;
+        $messageText = trim(preg_replace('/\[IMAGE_URL:\s*([^\s\]]+)(?:\s+CAPTION:\s*([^\]]+))?\]/i', '', $message->content));
+        $isImageValid = false;
+
+        $extractedImages = [];
+        if (preg_match_all('/\[IMAGE_URL:\s*([^\s\]]+)(?:\s+CAPTION:\s*([^\]]+))?\]/i', $message->content, $imgMatches, PREG_SET_ORDER)) {
+            foreach ($imgMatches as $m) {
+                $candidateUrl = trim($m[1]);
+                $caption = isset($m[2]) ? trim($m[2]) : null;
+                if ($this->isMediaUrlReachable($candidateUrl)) {
+                    $extractedImages[] = [
+                        'url' => $candidateUrl,
+                        'caption' => $caption,
+                    ];
+                }
+            }
+        } elseif (! empty($imageUrl) && $this->isMediaUrlReachable($imageUrl)) {
+            $extractedImages[] = [
+                'url' => $imageUrl,
+                'caption' => null,
+            ];
+        }
+
         $res = ['success' => false];
 
         if (empty($ctaUrl) && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|receipt|/orders/|/s/|pesapaliframe)[^\s]*)~i', $message->content, $m)) {
@@ -95,30 +117,56 @@ final class WhatsAppChannelAdapter implements ChannelAdapterInterface
                     $ctaButtonText = 'Shop Online';
                 }
             }
+        }
 
-            $res = $this->senderService->sendInteractiveCtaUrl(
-                $account,
-                $message->recipientId,
-                $message->content,
-                $ctaButtonText,
-                $ctaUrl
-            );
-        } elseif (! empty($imageUrl) && filter_var($imageUrl, FILTER_VALIDATE_URL) && ! str_contains($imageUrl, 'localhost') && ! str_contains($imageUrl, '127.0.0.1')) {
+        if (! empty($extractedImages) && count($extractedImages) === 1 && empty($ctaUrl)) {
+            $img = $extractedImages[0];
+            $captionText = $img['caption'] ?? $messageText;
+            if (empty($img['caption']) && strlen($messageText) > 1000) {
+                $captionText = mb_substr($messageText, 0, 995) . '...';
+            }
+
             $res = $this->senderService->sendImage(
                 $account,
                 $message->recipientId,
-                $imageUrl,
-                $message->content
+                $img['url'],
+                $captionText
             );
-        }
 
-        // Automatic Fallback: If interactive/image send failed or wasn't applicable, send as text!
-        if (empty($res['success'])) {
-            $res = $this->senderService->sendText(
-                $account,
-                $message->recipientId,
-                $message->content
-            );
+            if (empty($res['success'])) {
+                $res = $this->senderService->sendText(
+                    $account,
+                    $message->recipientId,
+                    $messageText
+                );
+            }
+        } else {
+            if (! empty($ctaUrl) && filter_var($ctaUrl, FILTER_VALIDATE_URL)) {
+                $res = $this->senderService->sendInteractiveCtaUrl(
+                    $account,
+                    $message->recipientId,
+                    $messageText,
+                    $ctaButtonText,
+                    $ctaUrl
+                );
+            } else {
+                $res = $this->senderService->sendText(
+                    $account,
+                    $message->recipientId,
+                    $messageText
+                );
+            }
+
+            if (! empty($extractedImages) && (count($extractedImages) > 1 || ! empty($ctaUrl))) {
+                foreach ($extractedImages as $img) {
+                    $this->senderService->sendImage(
+                        $account,
+                        $message->recipientId,
+                        $img['url'],
+                        $img['caption'] ?? null
+                    );
+                }
+            }
         }
 
         if (! empty($res['success'])) {
@@ -158,5 +206,34 @@ final class WhatsAppChannelAdapter implements ChannelAdapterInterface
         }
 
         return (bool) ($res['success'] ?? false);
+    }
+
+    private function isMediaUrlReachable(string $url): bool
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        if (str_contains($url, 'localhost') || str_contains($url, '127.0.0.1')) {
+            return false;
+        }
+
+        $cacheKey = 'media_url_status_' . md5($url);
+        return (bool) \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($url) {
+            try {
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_NOBODY, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'WhatsApp/2.0');
+                curl_exec($ch);
+                $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                return $statusCode >= 200 && $statusCode < 400;
+            } catch (\Throwable $e) {
+                return false;
+            }
+        });
     }
 }

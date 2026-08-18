@@ -91,6 +91,13 @@ class ProductController extends Controller
         ]);
         $this->normalizeMultipartNullableFields($request);
 
+        if ($response = $this->checkFileUploadValidity($request, 'image')) {
+            return $response;
+        }
+        if ($response = $this->checkFileUploadValidity($request, 'digitalFile')) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -285,6 +292,13 @@ class ProductController extends Controller
         ]);
         $this->normalizeMultipartNullableFields($request);
 
+        if ($response = $this->checkFileUploadValidity($request, 'image')) {
+            return $response;
+        }
+        if ($response = $this->checkFileUploadValidity($request, 'digitalFile')) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
@@ -368,6 +382,10 @@ class ProductController extends Controller
     {
         if ($product->company_id !== $request->user()->company_id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        if ($response = $this->checkFileUploadValidity($request, 'image')) {
+            return $response;
         }
 
         $validated = $request->validate([
@@ -884,6 +902,38 @@ class ProductController extends Controller
         if ($merged !== []) {
             $request->merge($merged);
         }
+    }
+
+    /**
+     * Check if a file present in request failed PHP upload limits (upload_max_filesize / post_max_size).
+     */
+    private function checkFileUploadValidity(Request $request, string $key): ?JsonResponse
+    {
+        $file = $request->file($key);
+        if ($file && ! $file->isValid()) {
+            $error = $file->getError();
+            $maxUpload = ini_get('upload_max_filesize') ?: '2M';
+            $postMax = ini_get('post_max_size') ?: '8M';
+
+            $explanation = match ($error) {
+                UPLOAD_ERR_INI_SIZE => "File size exceeds server upload limit ({$maxUpload}). Please increase upload_max_filesize in cPanel MultiPHP INI Editor or select an image under {$maxUpload}.",
+                UPLOAD_ERR_FORM_SIZE => "File size exceeds form limit.",
+                UPLOAD_ERR_PARTIAL => "File upload was only partially completed. Please try uploading again.",
+                UPLOAD_ERR_NO_TMP_DIR => "Server is missing a temporary upload folder (upload_tmp_dir).",
+                UPLOAD_ERR_CANT_WRITE => "Server failed to write file to disk (check cPanel disk quota or temp permissions).",
+                default => "PHP upload error code {$error}. Server limit is {$maxUpload}.",
+            };
+
+            return response()->json([
+                'success' => false,
+                'message' => $explanation,
+                'errors' => [
+                    $key => [$explanation],
+                ],
+            ], 422);
+        }
+
+        return null;
     }
 
     /**

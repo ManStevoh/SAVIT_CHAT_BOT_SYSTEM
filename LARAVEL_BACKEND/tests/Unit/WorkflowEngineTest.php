@@ -43,10 +43,7 @@ class WorkflowEngineTest extends TestCase
     {
         [$company, $product] = $this->seedCompanyAndProduct();
 
-        $engine = new WorkflowEngine(
-            new DomainServiceDispatcher(app(OrderFlowService::class)),
-            new ResponseSpecRenderer()
-        );
+        $engine = app(WorkflowEngine::class);
 
         $state = new ConversationState(
             chatId: 1,
@@ -76,10 +73,7 @@ class WorkflowEngineTest extends TestCase
     {
         [$company, $product] = $this->seedCompanyAndProduct();
 
-        $engine = new WorkflowEngine(
-            new DomainServiceDispatcher(app(OrderFlowService::class)),
-            new ResponseSpecRenderer()
-        );
+        $engine = app(WorkflowEngine::class);
 
         $state = new ConversationState(
             chatId: 1,
@@ -110,10 +104,7 @@ class WorkflowEngineTest extends TestCase
     {
         [$company, $product] = $this->seedCompanyAndProduct();
 
-        $engine = new WorkflowEngine(
-            new DomainServiceDispatcher(app(OrderFlowService::class)),
-            new ResponseSpecRenderer()
-        );
+        $engine = app(WorkflowEngine::class);
 
         $state = new ConversationState(
             chatId: 1,
@@ -146,10 +137,7 @@ class WorkflowEngineTest extends TestCase
     {
         [$company, $product] = $this->seedCompanyAndProduct();
 
-        $engine = new WorkflowEngine(
-            new DomainServiceDispatcher(app(OrderFlowService::class)),
-            new ResponseSpecRenderer()
-        );
+        $engine = app(WorkflowEngine::class);
 
         $state = new ConversationState(
             chatId: 1,
@@ -186,10 +174,7 @@ class WorkflowEngineTest extends TestCase
     {
         [$company, $product] = $this->seedCompanyAndProduct();
 
-        $engine = new WorkflowEngine(
-            new DomainServiceDispatcher(app(OrderFlowService::class)),
-            new ResponseSpecRenderer()
-        );
+        $engine = app(WorkflowEngine::class);
 
         $state = new ConversationState(
             chatId: 1,
@@ -208,7 +193,122 @@ class WorkflowEngineTest extends TestCase
         $result = $engine->handle($state, $intent, $company);
 
         $this->assertEquals(CheckoutStep::IDLE, $result->nextState->step);
-        $this->assertEquals([['type' => 'RequestAgentHandoff']], $result->sideEffects);
+        $this->assertEquals([['type' => 'RequestAgentHandoff']], $result->executedActions);
         $this->assertStringContainsString('Connecting you with a support representative', (string) $result->customerReply);
+    }
+
+    public function test_workflow_engine_allows_selecting_product_option_when_in_awaiting_payment_state(): void
+    {
+        [$company, $product] = $this->seedCompanyAndProduct();
+
+        $engine = app(WorkflowEngine::class);
+
+        $state = new ConversationState(
+            chatId: 1,
+            companyId: $company->id,
+            customerPhone: '254700111222',
+            customerName: 'Ken',
+            step: CheckoutStep::AWAITING_PAYMENT,
+            pendingOrderId: 160
+        );
+
+        $intent = new IntentResult(
+            intent: CommerceIntent::SELECT_OPTION,
+            confidence: 1.0,
+            selectedToken: 'p1',
+            resolvedProductId: $product->id,
+            messageText: '1'
+        );
+
+        $result = $engine->handle($state, $intent, $company);
+
+        $this->assertEquals(CheckoutStep::BUILDING_CART, $result->nextState->step);
+        $this->assertNull($result->nextState->pendingOrderId);
+        $this->assertCount(1, $result->nextState->cartItems);
+        $this->assertEquals($product->name, $result->nextState->cartItems[0]['name']);
+        $this->assertStringContainsString('Red Headphones', (string) $result->customerReply);
+    }
+
+    public function test_workflow_engine_clears_entire_cart_on_clear_my_cart_phrase(): void
+    {
+        [$company, $product] = $this->seedCompanyAndProduct();
+
+        $engine = app(WorkflowEngine::class);
+
+        $state = new ConversationState(
+            chatId: 1,
+            companyId: $company->id,
+            customerPhone: '254700111222',
+            customerName: 'Ken',
+            step: CheckoutStep::BUILDING_CART,
+            cartItems: [
+                ['product_id' => $product->id, 'name' => 'Black Sneakers', 'price' => 350.00, 'quantity' => 1],
+                ['product_id' => $product->id, 'name' => 'Red Headphones', 'price' => 150.00, 'quantity' => 1],
+            ]
+        );
+
+        $intent = new IntentResult(
+            intent: CommerceIntent::REMOVE_FROM_CART,
+            confidence: 0.95,
+            messageText: 'clear my cart'
+        );
+
+        $result = $engine->handle($state, $intent, $company);
+
+        $this->assertCount(0, $result->nextState->cartItems);
+        $this->assertStringContainsString('Your cart has been cleared', (string) $result->customerReply);
+    }
+
+    public function test_workflow_engine_adds_item_to_cart_when_customer_types_exact_product_name(): void
+    {
+        [$company, $product] = $this->seedCompanyAndProduct();
+
+        $engine = app(WorkflowEngine::class);
+
+        $state = new ConversationState(
+            chatId: 1,
+            companyId: $company->id,
+            customerPhone: '254700111222',
+            customerName: 'Ken',
+            step: CheckoutStep::BUILDING_CART
+        );
+
+        $intent = new IntentResult(
+            intent: CommerceIntent::GENERAL_CHAT,
+            confidence: 0.5,
+            messageText: 'Red Headphones'
+        );
+
+        $result = $engine->handle($state, $intent, $company);
+
+        $this->assertCount(1, $result->nextState->cartItems);
+        $this->assertEquals('Red Headphones', $result->nextState->cartItems[0]['name']);
+    }
+
+    public function test_workflow_engine_handles_option_2_when_in_awaiting_payment_state(): void
+    {
+        [$company, $product] = $this->seedCompanyAndProduct();
+
+        $engine = app(WorkflowEngine::class);
+
+        $state = new ConversationState(
+            chatId: 1,
+            companyId: $company->id,
+            customerPhone: '254700111222',
+            customerName: 'Ken',
+            step: CheckoutStep::AWAITING_PAYMENT,
+            pendingOrderId: 999
+        );
+
+        $intent = new IntentResult(
+            intent: CommerceIntent::ASK_ORDER_STATUS,
+            confidence: 0.95,
+            messageText: '2'
+        );
+
+        $result = $engine->handle($state, $intent, $company);
+
+        $this->assertStringContainsString('Order Tracker', (string) $result->customerReply);
+        $this->assertNull($result->nextState->pendingOrderId);
     }
 }

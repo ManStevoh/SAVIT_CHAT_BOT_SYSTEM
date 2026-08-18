@@ -495,15 +495,25 @@ export async function markAllNotificationsRead(): Promise<{ success: boolean; me
 export async function updateOrderStatus(
   orderId: string,
   status: Order['status'],
-  paymentStatus?: 'pending' | 'paid' | 'refunded'
+  paymentStatus?: 'pending' | 'paid' | 'refunded',
+  shippingData?: { courierName?: string; trackingNumber?: string; deliveryAddress?: string }
 ): Promise<{ success: boolean; message?: string; whatsappSent?: boolean; whatsappError?: string | null }> {
   if (useMockApi()) {
     await delay(800)
     return { success: true, message: 'Order updated successfully', whatsappSent: true, whatsappError: null }
   }
   try {
-    const body: { status: Order['status']; paymentStatus?: string } = { status }
+    const body: {
+      status: Order['status']
+      paymentStatus?: string
+      courierName?: string
+      trackingNumber?: string
+      deliveryAddress?: string
+    } = { status }
     if (paymentStatus !== undefined) body.paymentStatus = paymentStatus
+    if (shippingData?.courierName !== undefined) body.courierName = shippingData.courierName
+    if (shippingData?.trackingNumber !== undefined) body.trackingNumber = shippingData.trackingNumber
+    if (shippingData?.deliveryAddress !== undefined) body.deliveryAddress = shippingData.deliveryAddress
     return await apiRequest<{ success: boolean; message?: string; whatsappSent?: boolean; whatsappError?: string | null }>(`/api/company/orders/${orderId}`, {
       method: 'PATCH',
       body,

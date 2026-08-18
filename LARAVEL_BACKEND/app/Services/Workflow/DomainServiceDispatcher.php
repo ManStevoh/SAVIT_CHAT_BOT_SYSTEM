@@ -21,18 +21,8 @@ final class DomainServiceDispatcher
     public function findProduct(Company $company, string $nameOrId): ?Product
     {
         $nameOrId = trim($nameOrId);
-        if ($nameOrId === '') {
+        if ($nameOrId === '' || (is_numeric($nameOrId) && (int) $nameOrId < 100)) {
             return null;
-        }
-
-        if (is_numeric($nameOrId)) {
-            $product = Product::where('company_id', $company->id)
-                ->where('id', (int) $nameOrId)
-                ->where('status', 'active')
-                ->first();
-            if ($product) {
-                return $product;
-            }
         }
 
         // 1. Direct LIKE query on product name
@@ -53,7 +43,7 @@ final class DomainServiceDispatcher
 
         foreach ($allProducts as $p) {
             $pName = mb_strtolower($p->name);
-            if ($pName !== '' && (str_contains($lowerInput, $pName) || str_contains($pName, $lowerInput))) {
+            if ($pName !== '' && (str_contains($lowerInput, $pName) || (strlen($lowerInput) >= 3 && str_contains($pName, $lowerInput)))) {
                 return $p;
             }
         }

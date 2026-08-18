@@ -39,19 +39,45 @@ final class ConversationalOSPipeline
             // Step 1: Hydrate immutable ConversationState from database Chat record
             $currentState = $this->hydrator->hydrateFromChat($chat);
 
-            // Fast-Path Cost Optimization: Numeric choice for variant or product selection
             $trimmedMsg = trim($envelope->messageText);
 
-            $lastBotMessage = \App\Models\Message::where('chat_id', $chat->id)
-                ->where('sender', 'bot')
-                ->latest('id')
-                ->value('content') ?? '';
-            $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent') || str_contains($lastBotMessage, '1. Prices');
+            $isCheckoutActiveStep = in_array($currentState->step, [
+                \App\Enums\CheckoutStep::COLLECTING_ADDRESS,
+                \App\Enums\CheckoutStep::REVIEWING_ORDER,
+                \App\Enums\CheckoutStep::SELECTING_PAYMENT_METHOD,
+                \App\Enums\CheckoutStep::PROVIDING_PHONE,
+                \App\Enums\CheckoutStep::SELECTING_VARIANT,
+            ], true);
 
-            if (is_numeric($trimmedMsg) && (int) $trimmedMsg >= 1 && (int) $trimmedMsg <= 99 && ! $lastWasQuickMenu) {
+            if (is_numeric($trimmedMsg) && (int) $trimmedMsg >= 1 && (int) $trimmedMsg <= 99) {
+                // Quick Menu choices 1, 2, 3 deterministically route ONLY when NOT in active checkout steps
+                if (! $isCheckoutActiveStep && in_array($trimmedMsg, ['1', '2', '3'], true)) {
+                    $quickIntent = match ($trimmedMsg) {
+                        '1' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::ASK_PRODUCT_INFO, confidence: 1.0, messageText: '1'),
+                        '2' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::ASK_ORDER_STATUS, confidence: 1.0, messageText: '2'),
+                        '3' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::REQUEST_HUMAN, confidence: 1.0, messageText: '3'),
+                    };
+
+                    $transitionResult = $this->workflowEngine->handle($currentState, $quickIntent, $company);
+                    $this->hydrator->dehydrateToChat($transitionResult->nextState, $chat);
+
+                    foreach ($transitionResult->executedActions as $action) {
+                        if (($action['type'] ?? '') === 'RequestAgentHandoff') {
+                            $chat->update([
+                                'agent_handling_at' => now(),
+                                'ai_handled' => false,
+                                'status' => 'pending',
+                            ]);
+                            break;
+                        }
+                    }
+
+                    return $transitionResult;
+                }
+
                 $fastToken = ($currentState->step === \App\Enums\CheckoutStep::SELECTING_VARIANT) ? ('o' . $trimmedMsg) : ('p' . $trimmedMsg);
                 $resolvedFast = $this->candidateRetrievalService->resolveToken($company->id, $chat->id, $fastToken, $currentState, $company);
-                
+
                 // Fallback: if step is not SELECTING_VARIANT but 'o' token resolves, or vice versa
                 if (! is_array($resolvedFast)) {
                     $altToken = str_starts_with($fastToken, 'o') ? ('p' . $trimmedMsg) : ('o' . $trimmedMsg);
@@ -112,9 +138,39 @@ final class ConversationalOSPipeline
                 'ask_product_info', 'ask_price', 'unknown'
             ];
 
+            $lowerText = mb_strtolower(trim($envelope->messageText));
+            $hasTransactionalKeyword = preg_match('/\b(add|buy|order|checkout|remove|delete|drop|minus|clear|confirm|yes|proceed|continue|done|track)\b/i', $lowerText) === 1 || $lowerText === '2';
+
+            // Automatic Catalog Product Resolution
+            if (empty($intentResult->resolvedProductId) && $lowerText !== 'prices' && $lowerText !== 'menu' && $lowerText !== 'catalog') {
+                $domainDispatcher = app(\App\Services\Workflow\DomainServiceDispatcher::class);
+                $targetStr = $intentResult->product ?? $envelope->messageText;
+                $matchedProduct = $domainDispatcher->findProduct($company, $targetStr);
+                if (! $matchedProduct && $intentResult->product && $intentResult->product !== $envelope->messageText) {
+                    $matchedProduct = $domainDispatcher->findProduct($company, $envelope->messageText);
+                }
+                if ($matchedProduct) {
+                    $intentResult->resolvedProductId = $matchedProduct->id;
+                    $intentResult->intent = \App\Enums\CommerceIntent::ADD_TO_CART;
+                }
+            }
+
+            $isCheckoutActiveStep = in_array($currentState->step, [
+                \App\Enums\CheckoutStep::COLLECTING_ADDRESS,
+                \App\Enums\CheckoutStep::REVIEWING_ORDER,
+                \App\Enums\CheckoutStep::SELECTING_PAYMENT_METHOD,
+                \App\Enums\CheckoutStep::PROVIDING_PHONE,
+                \App\Enums\CheckoutStep::SELECTING_VARIANT,
+            ], true);
+
             $intentName = $intentResult->intent->value ?? 'general_chat';
-            $isReadOnly = in_array($intentName, $readOnlyIntents, true)
-                && ! $intentResult->isExplicitPurchaseIntent();
+            $isReadOnly = (! $isCheckoutActiveStep)
+                && in_array($intentName, $readOnlyIntents, true)
+                && $intentName !== 'ask_order_status'
+                && ! $intentResult->isExplicitPurchaseIntent()
+                && empty($intentResult->resolvedProductId)
+                && empty($intentResult->selectedToken)
+                && ! $hasTransactionalKeyword;
 
             if ($isReadOnly) {
                 // 1. Capture State Hash before execution
@@ -140,6 +196,14 @@ final class ConversationalOSPipeline
             }
 
             // Step 2c: Deterministic Token Resolution & Tenant Guarding
+            if (in_array($trimmedMsg, ['1', '2', '3'], true) || in_array(mb_strtolower($trimmedMsg), ['prices', 'order', 'track order', 'track', 'talk to agent'], true)) {
+                $intentResult->selectedToken = null;
+                $intentResult->targetProductToken = null;
+                $intentResult->targetVariantToken = null;
+                $intentResult->resolvedProductId = null;
+                $intentResult->resolvedVariantId = null;
+            }
+
             $selectedToken = $intentResult->selectedToken ?? $intentResult->targetVariantToken;
             if ($selectedToken) {
                 $resolved = $this->candidateRetrievalService->resolveToken($company->id, $chat->id, $selectedToken, $currentState, $company);
