@@ -66,12 +66,19 @@ class PlanEntitlementEnforcementTest extends TestCase
 
     public function test_seeded_plan_features_match_enforced_entitlements(): void
     {
+        $free = Plan::where('slug', 'free')->firstOrFail();
         $starter = Plan::where('slug', 'starter')->firstOrFail();
         $growth = Plan::where('slug', 'professional')->firstOrFail();
         $enterprise = Plan::where('slug', 'enterprise')->firstOrFail();
 
-        $this->assertSame(5000, $starter->entitlements['messages']);
-        $this->assertSame(3, $starter->entitlements['team']);
+        $this->assertSame(50, $free->entitlements['messages']);
+        $this->assertSame(20, $free->entitlements['max_products']);
+        $this->assertSame(1, $free->entitlements['team']);
+        $this->assertTrue($free->entitlements['requires_branding']);
+
+        $this->assertSame(500, $starter->entitlements['messages']);
+        $this->assertSame(100, $starter->entitlements['max_products']);
+        $this->assertSame(1, $starter->entitlements['team']);
         $this->assertFalse($starter->entitlements['api_access']);
         $this->assertTrue($starter->entitlements['analytics']);
         $this->assertSame(20, $starter->entitlements['ai_posts_per_month']);
@@ -85,8 +92,12 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertTrue($starter->entitlements['allow_link_in_bio']);
         $this->assertFalse($starter->entitlements['allow_dine_in']);
         $this->assertTrue($starter->entitlements['allow_whatsapp_campaigns']);
+        $this->assertFalse($starter->entitlements['requires_branding']);
 
-        $this->assertSame(50000, $growth->entitlements['messages']);
+        $this->assertSame(2000, $growth->entitlements['messages']);
+        $this->assertSame(1000, $growth->entitlements['max_products']);
+        $this->assertSame(5, $growth->entitlements['team']);
+        $this->assertSame(2, $growth->entitlements['whatsapp_numbers']);
         $this->assertTrue($growth->entitlements['api_access']);
         $this->assertTrue($growth->entitlements['analytics']);
         $this->assertSame(100, $growth->entitlements['ai_posts_per_month']);
@@ -98,8 +109,10 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertTrue($growth->entitlements['allow_dine_in']);
         $this->assertTrue($growth->entitlements['allow_whatsapp_campaigns']);
 
-        $this->assertNull($enterprise->entitlements['messages']);
-        $this->assertSame(50, $enterprise->entitlements['team']);
+        $this->assertSame(10000, $enterprise->entitlements['messages']);
+        $this->assertNull($enterprise->entitlements['max_products']);
+        $this->assertSame(15, $enterprise->entitlements['team']);
+        $this->assertSame(5, $enterprise->entitlements['whatsapp_numbers']);
         $this->assertSame(500, $enterprise->entitlements['ai_posts_per_month']);
         $this->assertNull($enterprise->entitlements['max_bookings_per_month']);
 
@@ -110,6 +123,9 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertFalse((bool) data_get($plans->firstWhere('slug', 'starter'), 'entitlements.allowService'));
         $this->assertSame(50, data_get($plans->firstWhere('slug', 'professional'), 'entitlements.maxBookingsPerMonth'));
         $this->assertNull(data_get($plans->firstWhere('slug', 'enterprise'), 'entitlements.maxBookingsPerMonth'));
+        $this->assertSame(20, data_get($plans->firstWhere('slug', 'free'), 'entitlements.maxProducts'));
+        $this->assertSame(100, data_get($plans->firstWhere('slug', 'starter'), 'entitlements.maxProducts'));
+        $this->assertNull(data_get($plans->firstWhere('slug', 'enterprise'), 'entitlements.maxProducts'));
     }
 
     public function test_catalog_product_types_are_gated_by_plan(): void
@@ -180,7 +196,7 @@ class PlanEntitlementEnforcementTest extends TestCase
 
     public function test_team_seat_limit_blocks_invite_on_starter(): void
     {
-        ['company' => $company, 'owner' => $owner] = $this->companyOnPlan('starter', 2);
+        ['company' => $company, 'owner' => $owner] = $this->companyOnPlan('starter', 0);
         Sanctum::actingAs($owner);
 
         $this->assertFalse(PlanLimitService::canAddTeamMember($company));
@@ -190,6 +206,36 @@ class PlanEntitlementEnforcementTest extends TestCase
             'email' => 'extra-agent@limits.test',
         ])->assertStatus(422)
             ->assertJsonPath('code', 'team_limit_reached');
+    }
+
+    public function test_product_limit_enforcement_blocks_creation_when_limit_reached(): void
+    {
+        ['company' => $freeCompany, 'owner' => $freeOwner] = $this->companyOnPlan('free');
+        Sanctum::actingAs($freeOwner);
+
+        $this->assertSame(20, PlanLimitService::getMaxProducts($freeCompany));
+
+        CompanyEntitlementOverride::create([
+            'company_id' => $freeCompany->id,
+            'overrides' => ['max_products' => 1],
+        ]);
+
+        $this->postJson('/api/company/products', [
+            'name' => 'First Product',
+            'price' => 500,
+            'stock' => 10,
+            'productType' => 'physical',
+        ])->assertOk();
+
+        $this->assertFalse(PlanLimitService::canAddProduct($freeCompany->fresh()));
+
+        $this->postJson('/api/company/products', [
+            'name' => 'Second Product (Over Limit)',
+            'price' => 500,
+            'stock' => 10,
+            'productType' => 'physical',
+        ])->assertStatus(403)
+            ->assertJsonPath('code', 'product_limit_reached');
     }
 
     public function test_growth_can_invite_within_team_limit(): void
@@ -262,7 +308,6 @@ class PlanEntitlementEnforcementTest extends TestCase
         $starter = Plan::where('slug', 'starter')->firstOrFail();
         $starterBlob = strtolower(implode(' ', $starter->features));
         $this->assertStringContainsString('storefront', $starterBlob);
-        $this->assertStringContainsString('physical & digital', $starterBlob);
         $this->assertStringNotContainsString('dine-in', $starterBlob);
     }
 

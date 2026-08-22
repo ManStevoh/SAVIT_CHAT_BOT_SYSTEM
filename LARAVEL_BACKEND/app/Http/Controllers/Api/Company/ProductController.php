@@ -127,6 +127,9 @@ class ProductController extends Controller
             'digitalFile' => 'nullable|file|max:20480|mimetypes:application/pdf,application/epub+zip,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ]);
         $productType = $validated['productType'] ?? 'physical';
+        if ($response = $this->productLimitEntitlementResponse((int) $companyId)) {
+            return $response;
+        }
         if ($response = $this->catalogTypeEntitlementResponse((int) $companyId, $productType)) {
             return $response;
         }
@@ -1086,6 +1089,27 @@ class ProductController extends Controller
             'code' => 'bookings_required',
             'message' => 'Bookings are not available on your current plan.',
         ], 403);
+    }
+
+    private function productLimitEntitlementResponse(int $companyId, int $countToAdd = 1): ?JsonResponse
+    {
+        $company = Company::find($companyId);
+        if (! $company) {
+            return null;
+        }
+
+        if (! $this->entitlements->canAddProduct($company, $countToAdd)) {
+            $max = $this->entitlements->maxProducts($company);
+
+            return response()->json([
+                'success' => false,
+                'code' => 'product_limit_reached',
+                'message' => "You have reached your limit of {$max} products for your plan. Upgrade your plan to add more products.",
+                'maxProducts' => $max,
+            ], 403);
+        }
+
+        return null;
     }
 
     /**

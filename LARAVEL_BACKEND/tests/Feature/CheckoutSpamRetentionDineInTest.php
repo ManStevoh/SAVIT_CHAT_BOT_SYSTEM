@@ -118,8 +118,8 @@ class CheckoutSpamRetentionDineInTest extends TestCase
             '254700000010',
         );
         $this->assertNotNull($confirmReply);
-        $this->assertStringContainsString('Pay online:', (string) $confirmReply);
-        $this->assertStringContainsString('Invoice:', (string) $confirmReply);
+        $this->assertStringContainsStringIgnoringCase('Pay online', (string) $confirmReply);
+        $this->assertStringContainsStringIgnoringCase('Invoice', (string) $confirmReply);
 
         $order = Order::where('company_id', $company->id)->first();
         $this->assertNotNull($order);

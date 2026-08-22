@@ -7,11 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DataTable, type Column } from '@/components/shared/data-table'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, SwitchField } from '@/components/shared/form-field'
-import { useDineInTables, type DineInTable } from '@/lib/api-hooks'
-import { createDineInTable, updateDineInTable, deleteDineInTable } from '@/lib/api-actions'
-import { Plus, Edit, Trash2, Copy, QrCode } from 'lucide-react'
+import { useDineInTables, useCompanySettings, type DineInTable } from '@/lib/api-hooks'
+import { createDineInTable, updateDineInTable, deleteDineInTable, updateSettings } from '@/lib/api-actions'
+import { Plus, Edit, Trash2, Copy, QrCode, MessageSquare, Globe, ExternalLink } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { toast } from 'sonner'
+import { Label } from '@/components/ui/label'
 
 interface TableFormData {
   name: string
@@ -29,16 +30,38 @@ const initialForm: TableFormData = {
 
 export default function DineInPage() {
   const { data, isLoading } = useDineInTables()
+  const { data: settings } = useCompanySettings()
   const { mutate } = useSWRConfig()
   const tables = data?.tables ?? []
 
+  const [savingSettings, setSavingSettings] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<DineInTable | null>(null)
   const [form, setForm] = useState<TableFormData>(initialForm)
   const [submitting, setSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DineInTable | null>(null)
 
-  const refresh = () => mutate(['dine-in-tables'])
+  const refresh = () => {
+    mutate(['dine-in-tables'])
+    mutate('company-settings')
+  }
+
+  const handleUpdateDineInOptions = async (key: 'dineInQrTarget' | 'dineInPaymentTiming', value: string) => {
+    setSavingSettings(true)
+    try {
+      const res = await updateSettings({ [key]: value })
+      if (res.success) {
+        toast.success('Dine-in settings updated')
+        refresh()
+      } else {
+        toast.error(res.message || 'Failed to update settings')
+      }
+    } catch {
+      toast.error('Failed to update settings')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
 
   const openCreate = () => {
     setEditing(null)
@@ -140,13 +163,37 @@ export default function DineInPage() {
     },
     {
       key: 'orderUrl',
-      header: 'QR order link',
+      header: 'QR Order Destinations',
       cell: (t) => (
-        <div className="flex items-center gap-2">
-          <code className="max-w-[220px] truncate text-xs text-muted-foreground">{t.orderUrl}</code>
-          <Button variant="ghost" size="icon" onClick={() => copyUrl(t.orderUrl)} aria-label="Copy link">
-            <Copy className="h-4 w-4" />
-          </Button>
+        <div className="space-y-1.5 py-1">
+          <div className="flex items-center gap-1.5 text-xs">
+            <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-[11px] font-medium text-muted-foreground w-14 shrink-0">Web Menu:</span>
+            <code className="max-w-[150px] truncate text-[11px]">{t.orderUrl}</code>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyUrl(t.orderUrl)} title="Copy Web Menu Link">
+              <Copy className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6" asChild title="Open Web Menu">
+              <a href={t.orderUrl} target="_blank" rel="noreferrer">
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </Button>
+          </div>
+          {t.whatsappOrderUrl && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <MessageSquare className="h-3.5 w-3.5 text-green-600 shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground w-14 shrink-0">WhatsApp:</span>
+              <code className="max-w-[150px] truncate text-[11px]">{t.whatsappOrderUrl}</code>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyUrl(t.whatsappOrderUrl!)} title="Copy WhatsApp Scan-to-Chat Link">
+                <Copy className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6" asChild title="Open WhatsApp Chat">
+                <a href={t.whatsappOrderUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </Button>
+            </div>
+          )}
         </div>
       ),
     },
@@ -177,13 +224,63 @@ export default function DineInPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dine-in tables</h1>
           <p className="text-sm text-muted-foreground">
-            Create a table, print its QR code, and customers can scan it to order straight from their seat.
+            Create tables, print QR codes, and let guests order straight from their seats via Web or WhatsApp.
           </p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Add table
         </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Table QR Code Behavior</CardTitle>
+            <CardDescription className="text-xs">
+              Controls what happens when a dining customer scans your table QR code.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <select
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={settings?.dineInQrTarget ?? 'web_menu'}
+              disabled={savingSettings}
+              onChange={(e) => handleUpdateDineInOptions('dineInQrTarget', e.target.value)}
+            >
+              <option value="web_menu">Digital Web Menu (Opens Storefront with Table pre-tagged)</option>
+              <option value="whatsapp_chat">WhatsApp Chat (Opens WhatsApp with prefilled Table greeting)</option>
+              <option value="dual_choice">Dual Choice Landing (Guest chooses Web Menu or WhatsApp)</option>
+            </select>
+            <p className="text-[11px] text-muted-foreground">
+              WhatsApp Scan-to-Chat enables instant table orders with zero address entry.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Table Billing & Payment Timing</CardTitle>
+            <CardDescription className="text-xs">
+              Determine how table dining bills are settled.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <select
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={settings?.dineInPaymentTiming ?? 'pay_upfront'}
+              disabled={savingSettings}
+              onChange={(e) => handleUpdateDineInOptions('dineInPaymentTiming', e.target.value)}
+            >
+              <option value="pay_upfront">Pay Upfront (Instant M-Pesa / Card checkout per order)</option>
+              <option value="open_tab">Open Table Tab (Kitchen prepares order; guest pays staff after dining)</option>
+              <option value="customer_choice">Customer Choice (Guest chooses pay now or pay later)</option>
+            </select>
+            <p className="text-[11px] text-muted-foreground">
+              With Open Tab, table orders are routed directly to the kitchen/dashboard without blocking for payment.
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -193,8 +290,7 @@ export default function DineInPage() {
             Tables
           </CardTitle>
           <CardDescription>
-            Each table gets a unique QR link. Scanning it opens your storefront with dine-in preselected and the
-            table attached to the order.
+            Each table gets a unique QR link. Scanning it connects the table to the order automatically.
           </CardDescription>
         </CardHeader>
         <CardContent>

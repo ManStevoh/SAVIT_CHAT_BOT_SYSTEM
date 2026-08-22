@@ -124,6 +124,9 @@ class DineInTableController extends Controller
             'isActive' => (bool) $table->is_active,
             'qrToken' => $table->qr_token,
             'orderUrl' => $table->publicOrderUrl(),
+            'whatsappOrderUrl' => $table->whatsappOrderUrl(),
+            'targetQrUrl' => $table->targetQrUrl(),
         ];
     }
 }
+

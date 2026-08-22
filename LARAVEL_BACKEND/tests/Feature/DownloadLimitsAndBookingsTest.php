@@ -174,13 +174,15 @@ class DownloadLimitsAndBookingsTest extends TestCase
         $remaining = app(BookingService::class)->availableSlots($company, $product, $from, $to);
         $this->assertNotEmpty($remaining, 'Expected at least one free slot after first booking');
 
-        $this->post('/book/'.$settings->public_slug, [
-            'startsAt' => $remaining[0]['start'],
-            'productId' => $product->id,
-            'customerName' => 'Public Booker',
-            'customerEmail' => 'public@example.com',
-            'customerPhone' => '254700111222',
-        ])->assertRedirect();
+        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+            ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class)
+            ->post('/book/'.$settings->public_slug, [
+                'startsAt' => $remaining[0]['start'],
+                'productId' => $product->id,
+                'customerName' => 'Public Booker',
+                'customerEmail' => 'public@example.com',
+                'customerPhone' => '254700111222',
+            ])->assertRedirect();
 
         $this->assertDatabaseHas('bookings', [
             'company_id' => $company->id,
@@ -189,9 +191,9 @@ class DownloadLimitsAndBookingsTest extends TestCase
         ]);
     }
 
-    public function test_starter_plan_blocks_bookings_api(): void
+    public function test_free_plan_blocks_bookings_api(): void
     {
-        [, $user] = $this->companyUser('starter');
+        [, $user] = $this->companyUser('free');
         Sanctum::actingAs($user);
 
         $this->getJson('/api/company/bookings/settings')

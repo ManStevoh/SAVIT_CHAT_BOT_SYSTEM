@@ -90,6 +90,7 @@ use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\FlutterwaveWebhookController;
 use App\Http\Controllers\Api\LandingController;
 use App\Http\Controllers\Api\MpesaCallbackController;
+use App\Http\Controllers\Api\PayPalWebhookController;
 use App\Http\Controllers\Api\PaystackWebhookController;
 use App\Http\Controllers\Api\PesapalCallbackController;
 use App\Http\Controllers\Api\PlanController;
@@ -124,6 +125,10 @@ Route::match(['get', 'post'], 'pesapal/ipn', PesapalCallbackController::class);
 Route::post('flutterwave/webhook', FlutterwaveWebhookController::class);
 Route::match(['get', 'post'], 'flutterwave/callback', FlutterwaveWebhookController::class);
 
+// PayPal webhook & callback (no auth)
+Route::post('paypal/webhook', PayPalWebhookController::class);
+Route::match(['get', 'post'], 'paypal/callback', PayPalWebhookController::class);
+
 // WhatsApp webhook (no auth; Meta calls for verification and incoming messages)
 Route::get('whatsapp/webhook', [WhatsAppWebhookController::class, 'verify']);
 Route::post('whatsapp/webhook', [WhatsAppWebhookController::class, 'receive']);
@@ -133,8 +138,6 @@ Route::prefix('auth')->group(function () {
     Route::get('verify-email', EmailVerificationController::class)->name('api.verification.verify');
     Route::middleware('throttle:auth-login')->post('login', [AuthController::class, 'login']);
     Route::middleware('throttle:auth-register')->post('register', [AuthController::class, 'register']);
-    Route::post('send-login-otp', [AuthController::class, 'sendLoginOtp']);
-    Route::post('verify-login-otp', [AuthController::class, 'verifyLoginOtp']);
     Route::post('send-register-otp', [AuthController::class, 'sendRegisterOtp']);
     Route::post('verify-register-otp', [AuthController::class, 'verifyRegisterOtp']);
 
@@ -172,6 +175,7 @@ Route::prefix('v1/company')->middleware('api.key')->group(function () {
 
 // Company (auth required; subscription must be active except for subscription/checkout routes)
 Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscription.active'])->group(function () {
+    Route::get('dashboard-summary', [\App\Http\Controllers\Api\Company\DashboardSummaryController::class, 'index']);
     Route::get('chats', [ChatController::class, 'index']);
     Route::post('chats/start', [ChatController::class, 'start']);
     Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);
@@ -291,6 +295,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::get('settings', [SettingsController::class, 'show']);
     Route::put('settings', [SettingsController::class, 'update']);
+    Route::patch('settings', [SettingsController::class, 'update']);
     Route::post('settings', [SettingsController::class, 'update']); // multipart logo (PHP files require POST)
     Route::get('setup-status', [SetupStatusController::class, 'show']);
     Route::post('setup-status/dismiss', [SetupStatusController::class, 'dismiss']);

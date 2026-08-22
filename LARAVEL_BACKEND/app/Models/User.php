@@ -82,8 +82,8 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
      */
     public function sendPasswordResetNotification($token): void
     {
-        $frontendUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/');
-        $url = $frontendUrl . '/reset-password?token=' . $token;
+        $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+        $url = $frontendUrl . '/reset-password?token=' . urlencode((string) $token) . '&email=' . urlencode($this->email);
         $appName = MailService::applicationName();
         $subject = '[' . $appName . '] Reset your password';
         $html = '<p>You are receiving this because we received a password reset request for your account.</p>';

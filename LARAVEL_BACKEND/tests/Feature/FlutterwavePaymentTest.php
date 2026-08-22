@@ -104,11 +104,12 @@ class FlutterwavePaymentTest extends TestCase
             ], 200),
         ]);
 
-        $company = Company::factory()->create(['email' => 'admin@merchant.com', 'name' => 'Acme Merchant']);
+        $company = Company::create(['email' => 'admin@merchant.com', 'name' => 'Acme Merchant']);
         $plan = Plan::create([
             'name' => 'Pro Plan',
             'slug' => 'pro',
             'price_amount' => 5000,
+            'price_display' => '5000 KES',
             'is_free' => false,
         ]);
 
@@ -122,7 +123,7 @@ class FlutterwavePaymentTest extends TestCase
 
     public function test_merchant_flutterwave_driver_is_ready_when_configured(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::create(['name' => 'Store Inc', 'email' => 'store@example.com']);
         CompanySetting::create([
             'company_id' => $company->id,
             'orders_collect_payment_enabled' => true,
@@ -145,7 +146,7 @@ class FlutterwavePaymentTest extends TestCase
 
     public function test_flutterwave_callback_completes_order_payment(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::create(['name' => 'Store Inc', 'email' => 'store@example.com']);
         CompanySetting::create([
             'company_id' => $company->id,
             'orders_accept_flutterwave' => true,
@@ -160,6 +161,7 @@ class FlutterwavePaymentTest extends TestCase
             'order_number' => 'ORD-1001',
             'customer_name' => 'Jane Doe',
             'customer_email' => 'jane@example.com',
+            'customer_phone' => '+254700000000',
             'total' => 2000.00,
             'status' => 'pending',
             'payment_status' => 'unpaid',
@@ -194,9 +196,8 @@ class FlutterwavePaymentTest extends TestCase
 
     public function test_admin_and_merchant_settings_flutterwave_saving_and_masking(): void
     {
-        $user = User::factory()->create(['is_admin' => true]);
-        $company = Company::factory()->create();
-        $user->update(['company_id' => $company->id]);
+        $company = Company::create(['name' => 'Store Inc', 'email' => 'store@example.com']);
+        $user = User::factory()->create(['role' => 'admin', 'company_id' => $company->id]);
 
         // 1. Merchant settings save
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/company/settings', [

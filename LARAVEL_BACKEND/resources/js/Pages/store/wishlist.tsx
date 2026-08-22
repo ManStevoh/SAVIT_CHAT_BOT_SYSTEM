@@ -2,8 +2,21 @@
 
 import { useState } from 'react'
 import { Head, Link, router } from '@inertiajs/react'
-import { ArrowLeft, Heart, ShoppingBag, Trash2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Heart,
+  LogOut,
+  Plus,
+  ShoppingBag,
+  Sparkles,
+  Trash2,
+  User,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { StorefrontAuthModal } from '@/components/store/StorefrontAuthModal'
+import { resolveStorefrontStyle, type BrandTheme } from '@/lib/theme-utils'
 
 type StoreProduct = {
   id: string
@@ -12,13 +25,22 @@ type StoreProduct = {
   price: number
   compareAtPrice?: number | null
   onSale?: boolean
+  discountPercent?: number | null
   soldOut?: boolean
   image?: string | null
 }
 
 type Props = {
   slug: string
-  company: { name: string; currency: string }
+  company: {
+    name: string
+    logo?: string | null
+    currency: string
+    displayCurrency?: string
+    displayRate?: number
+    authCustomer?: { id: number; name: string; email: string } | null
+    theme?: BrandTheme
+  }
   products: StoreProduct[]
   wishlist?: string[]
   cartCount: number
@@ -26,11 +48,12 @@ type Props = {
   seo?: { title?: string; description?: string }
 }
 
-function formatPrice(amount: number, currency: string): string {
+function formatPrice(amount: number, currency: string, rate: number = 1): string {
+  const converted = amount * (rate || 1)
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount)
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(converted)
   } catch {
-    return `${currency} ${amount.toFixed(2)}`
+    return `${currency} ${converted.toFixed(2)}`
   }
 }
 
@@ -44,6 +67,11 @@ export default function StoreWishlistPage({
 }: Props) {
   const [products, setProducts] = useState(initialProducts)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [movingAll, setMovingAll] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+
+  const displayCurrency = company.displayCurrency || company.currency
+  const displayRate = company.displayRate || 1.0
 
   const removeFromWishlist = async (productId: string) => {
     setBusyId(productId)
@@ -57,7 +85,7 @@ export default function StoreWishlistPage({
           'X-CSRF-TOKEN': csrf,
           'X-Requested-With': 'XMLHttpRequest',
         },
-        body: JSON.stringify({ productId }),
+        body: JSON.stringify({ productId: Number(productId) }),
       })
       if (res.ok) {
         setProducts((prev) => prev.filter((p) => p.id !== productId))
@@ -72,99 +100,227 @@ export default function StoreWishlistPage({
     router.post(
       `/s/${slug}/cart`,
       { productId, quantity: 1 },
-      { onFinish: () => setBusyId(null) }
+      {
+        preserveScroll: true,
+        onFinish: () => setBusyId(null),
+      }
     )
   }
 
+  const moveAllToCart = async () => {
+    setMovingAll(true)
+    for (const product of products) {
+      if (!product.soldOut) {
+        await router.post(`/s/${slug}/cart`, { productId: product.id, quantity: 1 }, { preserveScroll: true })
+      }
+    }
+    setMovingAll(false)
+    router.visit(`/s/${slug}/cart`)
+  }
+
+  const clearAllWishlist = async () => {
+    if (!confirm('Are you sure you want to clear your saved items?')) return
+    for (const product of products) {
+      await removeFromWishlist(product.id)
+    }
+  }
+
+  const style = resolveStorefrontStyle(company.theme)
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div
+      className="min-h-screen bg-slate-50/80 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+      style={style}
+    >
       <Head>
         <title>{seo?.title || `Wishlist — ${company.name}`}</title>
         {seo?.description ? <meta head-key="description" name="description" content={seo.description} /> : null}
       </Head>
 
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
-          <Link href={`/s/${slug}`} className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
-            <ArrowLeft className="h-4 w-4" /> Continue shopping
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3.5">
+          <Link
+            href={`/s/${slug}`}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" /> Continue Shopping
           </Link>
+
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold">{chrome?.wishlist || 'Wishlist'}</h1>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{company.name}</span>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Saved Wishlist</h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {company.authCustomer ? (
+              <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <User className="h-3.5 w-3.5" />
+                <span>{company.authCustomer.name.split(' ')[0]}</span>
+                <button
+                  type="button"
+                  onClick={() => router.post(`/s/${slug}/account/logout`)}
+                  className="ml-1 text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAuthModalOpen(true)}
+                className="gap-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                <User className="h-3.5 w-3.5" /> Sign In
+              </Button>
+            )}
+
             <Link href={`/s/${slug}/cart`}>
-              <Button variant="outline" className="gap-2">
-                <ShoppingBag className="h-4 w-4" />
-                {chrome?.cart || 'Cart'}
-                {cartCount > 0 ? ` (${cartCount})` : ''}
+              <Button size="sm" className="gap-2 rounded-xl bg-slate-900 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900">
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span>{chrome?.cart || 'Cart'}</span>
+                {cartCount > 0 && (
+                  <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white">
+                    {cartCount}
+                  </span>
+                )}
               </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      {/* Main Container */}
+      <main className="mx-auto max-w-4xl px-4 py-8 pb-24">
         {products.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center text-slate-500">
-            <Heart className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-            Your wishlist is empty.
-            <div className="mt-4">
+          <div className="mx-auto max-w-md rounded-3xl border border-slate-200/80 bg-white p-12 text-center shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 dark:bg-rose-950/40">
+              <Heart className="h-8 w-8" />
+            </div>
+            <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Your Wishlist is Empty</h2>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              Tap the heart icon on any product in our store to save it here for later.
+            </p>
+            <div className="mt-6">
               <Link href={`/s/${slug}`}>
-                <Button variant="outline">Browse {company.name}</Button>
+                <Button size="lg" className="w-full gap-2 rounded-2xl bg-slate-900 text-xs font-semibold dark:bg-slate-100 dark:text-slate-900">
+                  Browse {company.name} Products <ArrowRight className="h-4 w-4" />
+                </Button>
               </Link>
             </div>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            {products.map((product) => {
-              const href = `/s/${slug}/p/${product.slug || product.id}`
-              const busy = busyId === product.id
-              return (
-                <div key={product.id} className="flex items-center gap-3 border-b border-slate-100 p-4 last:border-b-0">
-                  <Link href={href} className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                    {product.image ? (
-                      <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-slate-300">
-                        <ShoppingBag className="h-6 w-6" />
+          <div className="space-y-4">
+            {/* Action header bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                {products.length} Saved {products.length === 1 ? 'Item' : 'Items'}
+              </p>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllWishlist}
+                  className="rounded-xl border-slate-200 text-xs font-semibold text-slate-500 hover:text-rose-600 dark:border-slate-800"
+                >
+                  Clear Wishlist
+                </Button>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={movingAll}
+                  onClick={moveAllToCart}
+                  className="gap-1.5 rounded-xl bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 dark:bg-emerald-600"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  {movingAll ? 'Moving…' : 'Move All to Cart'}
+                </Button>
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+              {products.map((product) => {
+                const href = `/s/${slug}/p/${product.slug || product.id}`
+                const busy = busyId === product.id
+                return (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between gap-4 border-b border-slate-100 p-4 transition-colors last:border-b-0 dark:border-slate-800/80"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <Link href={href} className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-300">
+                            <ShoppingBag className="h-6 w-6" />
+                          </div>
+                        )}
+                      </Link>
+                      <div>
+                        <Link href={href}>
+                          <h3 className="text-xs font-bold text-slate-900 hover:text-emerald-600 transition-colors dark:text-white">
+                            {product.name}
+                          </h3>
+                        </Link>
+                        <div className="mt-1 flex items-baseline gap-2 text-xs">
+                          <span className="font-extrabold text-slate-900 dark:text-white">
+                            {formatPrice(product.price, displayCurrency, displayRate)}
+                          </span>
+                          {product.onSale && product.compareAtPrice != null && (
+                            <span className="text-[11px] text-slate-400 line-through">
+                              {formatPrice(product.compareAtPrice, displayCurrency, displayRate)}
+                            </span>
+                          )}
+                          {product.soldOut && <span className="font-bold text-rose-600 text-[10px]">Sold out</span>}
+                        </div>
                       </div>
-                    )}
-                  </Link>
-                  <div className="min-w-0 flex-1">
-                    <Link href={href} className="text-sm font-medium hover:underline">
-                      {product.name}
-                    </Link>
-                    <div className="mt-0.5 flex items-center gap-2 text-sm text-slate-500">
-                      <span className="font-medium text-slate-900">{formatPrice(product.price, company.currency)}</span>
-                      {product.onSale && product.compareAtPrice != null ? (
-                        <span className="line-through">{formatPrice(product.compareAtPrice, company.currency)}</span>
-                      ) : null}
-                      {product.soldOut ? <span className="text-rose-600">Sold out</span> : null}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={busy || !!product.soldOut}
+                        onClick={() => addToCart(product.id)}
+                        className="rounded-xl bg-slate-900 px-3.5 text-xs font-bold text-white hover:bg-slate-800 dark:bg-emerald-600"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Add to Cart
+                      </Button>
+
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void removeFromWishlist(product.id)}
+                        className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 transition-colors"
+                        title="Remove from Wishlist"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={busy || !!product.soldOut}
-                      onClick={() => addToCart(product.id)}
-                    >
-                      Add
-                    </Button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void removeFromWishlist(product.id)}
-                      className="rounded-md p-2 text-slate-400 hover:text-rose-500 disabled:opacity-50"
-                      aria-label="Remove from wishlist"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         )}
       </main>
+
+      <StorefrontAuthModal
+        open={authModalOpen}
+        onOpenChange={setAuthModalOpen}
+        slug={slug}
+        companyName={company.name}
+      />
     </div>
   )
 }
+

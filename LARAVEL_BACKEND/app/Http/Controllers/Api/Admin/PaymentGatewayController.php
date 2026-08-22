@@ -99,6 +99,7 @@ class PaymentGatewayController extends Controller
             'paystack' => ['secret_key'],
             'pesapal' => ['consumer_secret'],
             'flutterwave' => ['secret_key', 'secret_hash'],
+            'paypal' => ['client_secret', 'webhook_id'],
             default => [],
         }, true);
     }
@@ -119,6 +120,7 @@ class PaymentGatewayController extends Controller
             'paystack' => ['secret_key'],
             'pesapal' => ['consumer_secret'],
             'flutterwave' => ['secret_key', 'secret_hash'],
+            'paypal' => ['client_secret', 'webhook_id'],
             default => [],
         };
 

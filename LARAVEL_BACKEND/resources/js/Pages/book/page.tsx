@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { SeoHead, type SeoPayload } from '@/components/seo/SeoHead'
 
 type Slot = { start: string; end: string }
 type BookableProduct = {
@@ -26,6 +27,7 @@ type Props = {
   orderId?: number | null
   prefill?: { name?: string | null; phone?: string | null }
   errors?: Record<string, string>
+  seo?: SeoPayload | null
 }
 
 export default function PublicBookPage({
@@ -38,6 +40,7 @@ export default function PublicBookPage({
   orderId,
   prefill,
   errors = {},
+  seo,
 }: Props) {
   const [productId, setProductId] = useState(selectedProductId || products[0]?.id || '')
   const [startsAt, setStartsAt] = useState(slots[0]?.start || '')
@@ -85,7 +88,9 @@ export default function PublicBookPage({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 py-10 text-slate-900">
+    <>
+      <SeoHead seo={seo} fallbackTitle={`Book Appointment — ${company.name}`} />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 py-10 text-slate-900">
       <div className="mx-auto max-w-3xl space-y-8">
         <header className="space-y-2">
           <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Book a meeting</p>
@@ -174,5 +179,6 @@ export default function PublicBookPage({
         </form>
       </div>
     </div>
+    </>
   )
 }

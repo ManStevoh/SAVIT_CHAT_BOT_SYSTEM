@@ -17,21 +17,24 @@ final class EntitlementService
 {
     /** @var array<string, array<string, mixed>> */
     public const DEFAULTS = [
-        'starter' => [
-            'messages' => 5000,
-            'team' => 3,
+        'free' => [
+            'messages' => 50,
+            'max_products' => 20,
+            'team' => 1,
             'whatsapp_numbers' => 1,
-            'ai_cost_usd' => 5.0,
+            'ai_cost_usd' => 1.0,
             'ai_model_modes' => ['auto'],
             'allow_byok' => false,
             'credential_modes' => ['platform'],
             'api_access' => false,
             'analytics' => true,
-            'attribution' => true,
-            'ai_posts_per_month' => 20,
-            'ai_images_per_month' => 10,
+            'analytics_level' => 'basic',
+            'crm_level' => 'basic',
+            'attribution' => false,
+            'ai_posts_per_month' => 5,
+            'ai_images_per_month' => 2,
             'social_platforms' => 1,
-            'growth_enabled' => true,
+            'growth_enabled' => false,
             'agent_commerce' => true,
             'allow_physical' => true,
             'allow_digital' => true,
@@ -41,18 +44,52 @@ final class EntitlementService
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
             'allow_dine_in' => false,
-            'allow_whatsapp_campaigns' => true,
+            'allow_whatsapp_campaigns' => false,
+            'requires_branding' => true,
         ],
-        'professional' => [
-            'messages' => 50000,
-            'team' => 10,
+        'starter' => [
+            'messages' => 500,
+            'max_products' => 100,
+            'team' => 1,
             'whatsapp_numbers' => 1,
-            'ai_cost_usd' => 50.0,
+            'ai_cost_usd' => 5.0,
+            'ai_model_modes' => ['auto'],
+            'allow_byok' => false,
+            'credential_modes' => ['platform'],
+            'api_access' => false,
+            'analytics' => true,
+            'analytics_level' => 'basic',
+            'crm_level' => 'basic',
+            'attribution' => true,
+            'ai_posts_per_month' => 20,
+            'ai_images_per_month' => 10,
+            'social_platforms' => 1,
+            'growth_enabled' => true,
+            'agent_commerce' => true,
+            'allow_physical' => true,
+            'allow_digital' => true,
+            'allow_service' => true,
+            'allow_bookings' => true,
+            'max_bookings_per_month' => 50,
+            'allow_storefront' => true,
+            'allow_link_in_bio' => true,
+            'allow_dine_in' => false,
+            'allow_whatsapp_campaigns' => true,
+            'requires_branding' => false,
+        ],
+        'growth' => [
+            'messages' => 2000,
+            'max_products' => 1000,
+            'team' => 5,
+            'whatsapp_numbers' => 2,
+            'ai_cost_usd' => 20.0,
             'ai_model_modes' => ['auto', 'platform_default'],
             'allow_byok' => true,
             'credential_modes' => ['platform', 'company_preferred'],
             'api_access' => true,
             'analytics' => true,
+            'analytics_level' => 'standard',
+            'crm_level' => 'advanced',
             'attribution' => true,
             'ai_posts_per_month' => 100,
             'ai_images_per_month' => 50,
@@ -63,22 +100,56 @@ final class EntitlementService
             'allow_digital' => true,
             'allow_service' => true,
             'allow_bookings' => true,
-            'max_bookings_per_month' => 50,
+            'max_bookings_per_month' => 200,
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
             'allow_dine_in' => true,
             'allow_whatsapp_campaigns' => true,
+            'requires_branding' => false,
         ],
-        'enterprise' => [
-            'messages' => null, // unlimited
-            'team' => 50,
-            'whatsapp_numbers' => 1,
-            'ai_cost_usd' => null,
+        'professional' => [
+            'messages' => 2000,
+            'max_products' => 1000,
+            'team' => 5,
+            'whatsapp_numbers' => 2,
+            'ai_cost_usd' => 20.0,
+            'ai_model_modes' => ['auto', 'platform_default'],
+            'allow_byok' => true,
+            'credential_modes' => ['platform', 'company_preferred'],
+            'api_access' => true,
+            'analytics' => true,
+            'analytics_level' => 'standard',
+            'crm_level' => 'advanced',
+            'attribution' => true,
+            'ai_posts_per_month' => 100,
+            'ai_images_per_month' => 50,
+            'social_platforms' => 3,
+            'growth_enabled' => true,
+            'agent_commerce' => true,
+            'allow_physical' => true,
+            'allow_digital' => true,
+            'allow_service' => true,
+            'allow_bookings' => true,
+            'max_bookings_per_month' => 200,
+            'allow_storefront' => true,
+            'allow_link_in_bio' => true,
+            'allow_dine_in' => true,
+            'allow_whatsapp_campaigns' => true,
+            'requires_branding' => false,
+        ],
+        'business' => [
+            'messages' => 10000,
+            'max_products' => null, // unlimited
+            'team' => 15,
+            'whatsapp_numbers' => 5,
+            'ai_cost_usd' => 100.0,
             'ai_model_modes' => ['auto', 'platform_default', 'specific'],
             'allow_byok' => true,
             'credential_modes' => ['platform', 'company_preferred', 'company'],
             'api_access' => true,
             'analytics' => true,
+            'analytics_level' => 'advanced',
+            'crm_level' => 'advanced',
             'attribution' => true,
             'ai_posts_per_month' => 500,
             'ai_images_per_month' => 200,
@@ -94,6 +165,37 @@ final class EntitlementService
             'allow_link_in_bio' => true,
             'allow_dine_in' => true,
             'allow_whatsapp_campaigns' => true,
+            'requires_branding' => false,
+        ],
+        'enterprise' => [
+            'messages' => 10000,
+            'max_products' => null, // unlimited
+            'team' => 15,
+            'whatsapp_numbers' => 5,
+            'ai_cost_usd' => 100.0,
+            'ai_model_modes' => ['auto', 'platform_default', 'specific'],
+            'allow_byok' => true,
+            'credential_modes' => ['platform', 'company_preferred', 'company'],
+            'api_access' => true,
+            'analytics' => true,
+            'analytics_level' => 'advanced',
+            'crm_level' => 'advanced',
+            'attribution' => true,
+            'ai_posts_per_month' => 500,
+            'ai_images_per_month' => 200,
+            'social_platforms' => 10,
+            'growth_enabled' => true,
+            'agent_commerce' => true,
+            'allow_physical' => true,
+            'allow_digital' => true,
+            'allow_service' => true,
+            'allow_bookings' => true,
+            'max_bookings_per_month' => null,
+            'allow_storefront' => true,
+            'allow_link_in_bio' => true,
+            'allow_dine_in' => true,
+            'allow_whatsapp_campaigns' => true,
+            'requires_branding' => false,
         ],
     ];
 
@@ -105,8 +207,9 @@ final class EntitlementService
     public static function blankTemplate(): array
     {
         return [
-            'messages' => 5000,
-            'team' => 3,
+            'messages' => 500,
+            'max_products' => 100,
+            'team' => 1,
             'whatsapp_numbers' => 1,
             'ai_cost_usd' => 5.0,
             'ai_model_modes' => ['auto'],
@@ -114,6 +217,8 @@ final class EntitlementService
             'credential_modes' => ['platform'],
             'api_access' => false,
             'analytics' => true,
+            'analytics_level' => 'basic',
+            'crm_level' => 'basic',
             'attribution' => true,
             'ai_posts_per_month' => 20,
             'ai_images_per_month' => 10,
@@ -129,6 +234,7 @@ final class EntitlementService
             'allow_link_in_bio' => true,
             'allow_dine_in' => false,
             'allow_whatsapp_campaigns' => true,
+            'requires_branding' => false,
         ];
     }
 
@@ -155,6 +261,15 @@ final class EntitlementService
             }
         }
 
+        if (array_key_exists('max_products', $input)) {
+            $products = $input['max_products'];
+            if ($products === null || $products === '' || $products === 'unlimited') {
+                $out['max_products'] = null;
+            } else {
+                $out['max_products'] = max(0, (int) $products);
+            }
+        }
+
         if (array_key_exists('team', $input)) {
             $out['team'] = max(1, (int) $input['team']);
         }
@@ -178,6 +293,12 @@ final class EntitlementService
             $modes = array_values(array_intersect($allowed, array_map('strval', $input['credential_modes'])));
             $out['credential_modes'] = $modes !== [] ? $modes : ['platform'];
         }
+        if (array_key_exists('crm_level', $input) && in_array((string) $input['crm_level'], ['basic', 'advanced'], true)) {
+            $out['crm_level'] = (string) $input['crm_level'];
+        }
+        if (array_key_exists('analytics_level', $input) && in_array((string) $input['analytics_level'], ['basic', 'standard', 'advanced'], true)) {
+            $out['analytics_level'] = (string) $input['analytics_level'];
+        }
         foreach ([
             'api_access',
             'analytics',
@@ -192,6 +313,7 @@ final class EntitlementService
             'allow_link_in_bio',
             'allow_dine_in',
             'allow_whatsapp_campaigns',
+            'requires_branding',
         ] as $boolKey) {
             if (array_key_exists($boolKey, $input)) {
                 $out[$boolKey] = (bool) $input[$boolKey];
@@ -228,7 +350,9 @@ final class EntitlementService
         return [
             'messages' => $e['messages'],
             'messagesUnlimited' => $e['messages'] === null,
-            'team' => (int) ($e['team'] ?? 3),
+            'maxProducts' => $e['max_products'] ?? null,
+            'maxProductsUnlimited' => ($e['max_products'] ?? null) === null,
+            'team' => (int) ($e['team'] ?? 1),
             'whatsappNumbers' => (int) ($e['whatsapp_numbers'] ?? 1),
             'aiCostUsd' => $e['ai_cost_usd'] ?? null,
             'aiModelModes' => $e['ai_model_modes'] ?? ['auto'],
@@ -236,6 +360,8 @@ final class EntitlementService
             'credentialModes' => $e['credential_modes'] ?? ['platform'],
             'apiAccess' => (bool) ($e['api_access'] ?? false),
             'analytics' => (bool) ($e['analytics'] ?? false),
+            'analyticsLevel' => (string) ($e['analytics_level'] ?? ($e['analytics'] ? 'standard' : 'basic')),
+            'crmLevel' => (string) ($e['crm_level'] ?? 'basic'),
             'attribution' => (bool) ($e['attribution'] ?? true),
             'aiPostsPerMonth' => (int) ($e['ai_posts_per_month'] ?? 20),
             'aiImagesPerMonth' => (int) ($e['ai_images_per_month'] ?? 10),
@@ -253,6 +379,7 @@ final class EntitlementService
             'allowLinkInBio' => (bool) ($e['allow_link_in_bio'] ?? true),
             'allowDineIn' => (bool) ($e['allow_dine_in'] ?? false),
             'allowWhatsappCampaigns' => (bool) ($e['allow_whatsapp_campaigns'] ?? true),
+            'requiresBranding' => (bool) ($e['requires_branding'] ?? false),
         ];
     }
 
@@ -428,6 +555,43 @@ final class EntitlementService
         $value = $this->limitsForCompany($company)['ai_cost_usd'] ?? null;
 
         return $value === null ? null : (float) $value;
+    }
+
+    public function maxProducts(Company $company): ?int
+    {
+        $limits = $this->limitsForCompany($company);
+        $value = array_key_exists('max_products', $limits)
+            ? $limits['max_products']
+            : 100;
+
+        return $value === null ? null : max(0, (int) $value);
+    }
+
+    public function canAddProduct(Company $company, int $countToAdd = 1): bool
+    {
+        $max = $this->maxProducts($company);
+        if ($max === null) {
+            return true;
+        }
+
+        $current = \App\Models\Product::where('company_id', $company->id)->count();
+
+        return ($current + $countToAdd) <= $max;
+    }
+
+    public function crmLevel(Company $company): string
+    {
+        return (string) ($this->limitsForCompany($company)['crm_level'] ?? 'basic');
+    }
+
+    public function analyticsLevel(Company $company): string
+    {
+        return (string) ($this->limitsForCompany($company)['analytics_level'] ?? ($this->hasAnalyticsAccess($company) ? 'standard' : 'basic'));
+    }
+
+    public function requiresBranding(Company $company): bool
+    {
+        return (bool) ($this->limitsForCompany($company)['requires_branding'] ?? false);
     }
 
     /**

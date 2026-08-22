@@ -51,4 +51,36 @@ class DineInTable extends Model
 
         return url('/s/'.$slug.'/table/'.$this->qr_token);
     }
+
+    public function whatsappOrderUrl(): ?string
+    {
+        $phone = $this->company?->whatsapp_number ?? $this->company?->settings?->whatsapp_number;
+        if (! $phone) {
+            return null;
+        }
+
+        $cleanPhone = preg_replace('/[^\d]/', '', (string) $phone);
+        if ($cleanPhone === '') {
+            return null;
+        }
+
+        $tableName = $this->name ?: ('Table '.$this->code);
+        $message = "Hi! I am at {$tableName} (Ref: T{$this->code}). I would like to view the menu and place an order.";
+
+        return 'https://wa.me/'.$cleanPhone.'?text='.rawurlencode($message);
+    }
+
+    public function targetQrUrl(): string
+    {
+        $target = $this->company?->settings?->dine_in_qr_target ?? 'web_menu';
+        if ($target === 'whatsapp_chat') {
+            $wa = $this->whatsappOrderUrl();
+            if ($wa) {
+                return $wa;
+            }
+        }
+
+        return $this->publicOrderUrl();
+    }
 }
+

@@ -8,6 +8,7 @@ use App\Services\PaymentGateways\Drivers\CodGatewayDriver;
 use App\Services\PaymentGateways\Drivers\FlutterwaveGatewayDriver;
 use App\Services\PaymentGateways\Drivers\ManualGatewayDriver;
 use App\Services\PaymentGateways\Drivers\MpesaGatewayDriver;
+use App\Services\PaymentGateways\Drivers\PayPalGatewayDriver;
 use App\Services\PaymentGateways\Drivers\PaystackGatewayDriver;
 use App\Services\PaymentGateways\Drivers\PesapalGatewayDriver;
 use App\Services\PaymentGateways\Drivers\StripeGatewayDriver;
@@ -24,6 +25,7 @@ class PaymentGatewayRegistry
         $this->registerDriver(new PaystackGatewayDriver());
         $this->registerDriver(new PesapalGatewayDriver());
         $this->registerDriver(new FlutterwaveGatewayDriver());
+        $this->registerDriver(new PayPalGatewayDriver());
         $this->registerDriver(new CodGatewayDriver());
         $this->registerDriver(new ManualGatewayDriver());
     }

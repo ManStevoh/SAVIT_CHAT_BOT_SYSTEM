@@ -51,6 +51,7 @@ class CompanySetting extends Model
         'orders_accept_paystack',
         'orders_accept_pesapal',
         'orders_accept_flutterwave',
+        'orders_accept_paypal',
         'orders_accept_cod',
         'orders_collect_payment_enabled',
         'order_payment_mpesa_config',
@@ -58,6 +59,7 @@ class CompanySetting extends Model
         'order_payment_paystack_config',
         'order_payment_pesapal_config',
         'order_payment_flutterwave_config',
+        'order_payment_paypal_config',
         'order_payment_manual_instructions',
         'delivery_fees_enabled',
         'default_delivery_fee',
@@ -73,6 +75,12 @@ class CompanySetting extends Model
         'spam_max_orders_per_hour',
         'spam_max_orders_per_day',
         'dine_in_enabled',
+        'business_mode',
+        'enable_products_catalog',
+        'enable_bookings',
+        'enable_dine_in',
+        'dine_in_qr_target',
+        'dine_in_payment_timing',
         'abandoned_cart_recovery_enabled',
         'storefront_whatsapp_order_notify',
         'abandoned_cart_template_name',
@@ -89,6 +97,7 @@ class CompanySetting extends Model
         'orders_accept_paystack' => 'boolean',
         'orders_accept_pesapal' => 'boolean',
         'orders_accept_flutterwave' => 'boolean',
+        'orders_accept_paypal' => 'boolean',
         'orders_accept_cod' => 'boolean',
         'orders_collect_payment_enabled' => 'boolean',
         'order_payment_mpesa_config' => 'array',
@@ -96,6 +105,7 @@ class CompanySetting extends Model
         'order_payment_paystack_config' => 'array',
         'order_payment_pesapal_config' => 'array',
         'order_payment_flutterwave_config' => 'array',
+        'order_payment_paypal_config' => 'array',
         'delivery_fees_enabled' => 'boolean',
         'default_delivery_fee' => 'decimal:2',
         'free_delivery_above' => 'decimal:2',
@@ -109,6 +119,9 @@ class CompanySetting extends Model
         'spam_max_orders_per_hour' => 'integer',
         'spam_max_orders_per_day' => 'integer',
         'dine_in_enabled' => 'boolean',
+        'enable_products_catalog' => 'boolean',
+        'enable_bookings' => 'boolean',
+        'enable_dine_in' => 'boolean',
         'working_hours' => 'array',
         'learn_from_conversations' => 'boolean',
         'dev_mode_enabled' => 'boolean',
@@ -217,6 +230,13 @@ class CompanySetting extends Model
         return is_array($c) && ! empty($c['secret_key']);
     }
 
+    public function hasOrderPaymentPayPalConfig(): bool
+    {
+        $c = $this->order_payment_paypal_config;
+
+        return is_array($c) && ! empty($c['client_id']) && ! empty($c['client_secret']);
+    }
+
     /** ISO 4217 code for catalog and chat price display (e.g. USD, KES, EGP). */
     public function displayCurrencyCode(): string
     {
@@ -230,4 +250,54 @@ class CompanySetting extends Model
     {
         return MoneyFormatter::displayOptionsFromSettings($this);
     }
+
+    public function isServicesMode(): bool
+    {
+        return ($this->business_mode ?? 'hybrid') === 'services';
+    }
+
+    public function isRestaurantMode(): bool
+    {
+        return ($this->business_mode ?? 'hybrid') === 'restaurant';
+    }
+
+    public function isRetailMode(): bool
+    {
+        return ($this->business_mode ?? 'hybrid') === 'retail';
+    }
+
+    public function isHybridMode(): bool
+    {
+        return ($this->business_mode ?? 'hybrid') === 'hybrid';
+    }
+
+    public function allowsBookings(): bool
+    {
+        if ($this->isServicesMode()) {
+            return true;
+        }
+        if ($this->isRetailMode()) {
+            return false;
+        }
+
+        return (bool) ($this->enable_bookings ?? true);
+    }
+
+    public function allowsDineIn(): bool
+    {
+        if ($this->isRestaurantMode()) {
+            return true;
+        }
+        if ($this->isRetailMode() || $this->isServicesMode()) {
+            return false;
+        }
+
+        return (bool) ($this->enable_dine_in ?? false);
+    }
+
+    public function allowsProductsCatalog(): bool
+    {
+        return (bool) ($this->enable_products_catalog ?? true);
+    }
 }
+

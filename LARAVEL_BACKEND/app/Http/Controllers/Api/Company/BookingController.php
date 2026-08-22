@@ -84,6 +84,8 @@ class BookingController extends Controller
             'publicSlug' => 'sometimes|string|max:80|alpha_dash',
             'calendarWebhookUrl' => 'nullable|url|max:2048',
             'isEnabled' => 'sometimes|boolean',
+            'paymentRequirement' => 'sometimes|string|in:at_venue,required,optional',
+            'whatsappBookingMode' => 'sometimes|string|in:whatsapp_native,web_link,hybrid',
             'availability' => 'sometimes|array',
             'availability.*.weekday' => 'required_with:availability|integer|min:0|max:6',
             'availability.*.startTime' => 'required_with:availability|date_format:H:i',
@@ -112,6 +114,12 @@ class BookingController extends Controller
         }
         if (array_key_exists('isEnabled', $validated)) {
             $updates['is_enabled'] = (bool) $validated['isEnabled'];
+        }
+        if (array_key_exists('paymentRequirement', $validated)) {
+            $updates['payment_requirement'] = $validated['paymentRequirement'];
+        }
+        if (array_key_exists('whatsappBookingMode', $validated)) {
+            $updates['whatsapp_booking_mode'] = $validated['whatsappBookingMode'];
         }
         if (array_key_exists('publicSlug', $validated)) {
             $slug = strtolower($validated['publicSlug']);
@@ -192,6 +200,8 @@ class BookingController extends Controller
             'publicSlug' => $settings->public_slug,
             'calendarWebhookUrl' => $settings->calendar_webhook_url,
             'isEnabled' => $settings->is_enabled,
+            'paymentRequirement' => $settings->payment_requirement ?? 'at_venue',
+            'whatsappBookingMode' => $settings->whatsapp_booking_mode ?? 'hybrid',
         ];
     }
 

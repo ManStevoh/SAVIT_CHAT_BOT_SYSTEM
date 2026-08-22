@@ -3,6 +3,7 @@
 namespace App\Services\Cms;
 
 use App\Models\BlogPost;
+use App\Models\BookingSetting;
 use App\Models\CmsPage;
 use App\Models\Company;
 use App\Models\LandingFaq;
@@ -62,6 +63,49 @@ class CmsSeoService
             $breadcrumbs[] = ['name' => $page->title ?: Str::title($page->slug), 'url' => $canonical];
         }
 
+        $websiteNode = [
+            '@type' => 'WebSite',
+            '@id' => $base.'/#website',
+            'name' => $siteName,
+            'url' => $base,
+            'publisher' => ['@id' => $base.'/#organization'],
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => $base.'/blog?q={search_term_string}',
+                'query-input' => 'required name=search_term_string',
+            ],
+        ];
+
+        $pageSpecificNode = null;
+        if ($page->slug === 'contact') {
+            $pageSpecificNode = [
+                '@type' => 'ContactPage',
+                '@id' => $canonical.'#contactpage',
+                'url' => $canonical,
+                'name' => $title,
+                'description' => $description ?: null,
+                'mainEntity' => [
+                    '@type' => 'Organization',
+                    'name' => $siteName,
+                    'url' => $base,
+                    'contactPoint' => [
+                        '@type' => 'ContactPoint',
+                        'contactType' => 'customer support',
+                        'url' => $canonical,
+                    ],
+                ],
+            ];
+        } elseif ($page->slug === 'about') {
+            $pageSpecificNode = [
+                '@type' => 'AboutPage',
+                '@id' => $canonical.'#aboutpage',
+                'url' => $canonical,
+                'name' => $title,
+                'description' => $description ?: null,
+                'about' => ['@id' => $base.'/#organization'],
+            ];
+        }
+
         $jsonLd = [
             '@context' => 'https://schema.org',
             '@graph' => array_values(array_filter([
@@ -72,13 +116,7 @@ class CmsSeoService
                     'url' => $base,
                     'logo' => $this->defaultOgImage(),
                 ],
-                [
-                    '@type' => 'WebSite',
-                    '@id' => $base.'/#website',
-                    'name' => $siteName,
-                    'url' => $base,
-                    'publisher' => ['@id' => $base.'/#organization'],
-                ],
+                $websiteNode,
                 [
                     '@type' => 'WebPage',
                     '@id' => $canonical.'#webpage',
@@ -88,6 +126,7 @@ class CmsSeoService
                     'isPartOf' => ['@id' => $base.'/#website'],
                     'about' => ['@id' => $base.'/#organization'],
                 ],
+                $pageSpecificNode,
                 $this->breadcrumbNode($breadcrumbs),
                 $this->softwareApplicationNode($base, $siteName, $description),
                 $this->faqNode($page),
@@ -150,20 +189,35 @@ class CmsSeoService
         $title = trim((string) ($theme['seo_title'] ?? '')) ?: ($company->name.' — Shop');
         $description = trim((string) ($theme['seo_description'] ?? ''))
             ?: ('Shop '.$company->name.' online. Browse products and order for delivery or pickup.');
-        $ogImage = $company->logo ? asset('storage/'.$company->logo) : $this->defaultOgImage();
+        
+        $customOg = !empty($theme['og_image']) ? $this->absoluteUrl($theme['og_image']) : null;
+        $ogImage = $customOg ?: ($company->logo ? asset('storage/'.$company->logo) : $this->defaultOgImage());
         $siteName = $company->name;
+        $googleVerification = !empty($theme['google_site_verification']) ? trim((string) $theme['google_site_verification']) : null;
+
+        $storeType = $theme['business_type'] ?? 'OnlineStore';
+        $storeNode = [
+            '@type' => $storeType,
+            '@id' => $canonical.'#store',
+            'name' => $company->name,
+            'url' => $canonical,
+            'image' => $ogImage,
+            'description' => $description,
+        ];
+
+        if (!empty($company->address) || !empty($theme['street_address'])) {
+            $storeNode['address'] = [
+                '@type' => 'PostalAddress',
+                'streetAddress' => $theme['street_address'] ?? $company->address,
+                'addressLocality' => $theme['city'] ?? null,
+                'addressCountry' => $theme['country'] ?? null,
+            ];
+        }
 
         $jsonLd = [
             '@context' => 'https://schema.org',
             '@graph' => array_values(array_filter([
-                [
-                    '@type' => 'OnlineStore',
-                    '@id' => $canonical.'#store',
-                    'name' => $company->name,
-                    'url' => $canonical,
-                    'image' => $ogImage,
-                    'description' => $description,
-                ],
+                $storeNode,
                 $this->breadcrumbNode([
                     ['name' => 'Home', 'url' => $canonical],
                 ]),
@@ -183,6 +237,7 @@ class CmsSeoService
             'siteName' => $siteName,
             'twitterCard' => 'summary_large_image',
             'jsonLd' => $jsonLd,
+            'googleSiteVerification' => $googleVerification,
             'skipAppTitleSuffix' => true,
         ]);
     }
@@ -202,6 +257,9 @@ class CmsSeoService
         } else {
             $canonical = $this->appBaseUrl().'/s/'.$company->store_slug.'/p/'.$productPath;
         }
+
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        $googleVerification = !empty($theme['google_site_verification']) ? trim((string) $theme['google_site_verification']) : null;
 
         $title = trim((string) ($product->meta_title ?: '')) ?: ($product->name.' — '.$company->name);
         $description = trim((string) ($product->meta_description ?: ''))
@@ -232,6 +290,7 @@ class CmsSeoService
             'url' => $canonical,
             'priceCurrency' => $currency,
             'price' => (string) ($serializedProduct['price'] ?? $product->price ?? 0),
+            'priceValidUntil' => now()->addYear()->toDateString(),
             'availability' => $availability,
             'itemCondition' => 'https://schema.org/NewCondition',
         ];
@@ -297,8 +356,113 @@ class CmsSeoService
             'siteName' => $company->name,
             'twitterCard' => 'summary_large_image',
             'jsonLd' => $jsonLd,
+            'googleSiteVerification' => $googleVerification,
             'skipAppTitleSuffix' => true,
         ]);
+    }
+
+    /**
+     * Booking appointment page SEO.
+     *
+     * @return array<string, mixed>
+     */
+    public function forBookingPage(Company $company, BookingSetting $settings): array
+    {
+        $base = $this->appBaseUrl();
+        $canonical = $base.'/book/'.$settings->public_slug;
+        $title = 'Book with '.$company->name;
+        $description = 'Schedule an appointment with '.$company->name.'. Select a date and time slot for instant confirmation.';
+        $ogImage = $company->logo ? asset('storage/'.$company->logo) : $this->defaultOgImage();
+
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        $googleVerification = !empty($theme['google_site_verification']) ? trim((string) $theme['google_site_verification']) : null;
+
+        $jsonLd = [
+            '@context' => 'https://schema.org',
+            '@graph' => array_values(array_filter([
+                [
+                    '@type' => 'Service',
+                    '@id' => $canonical.'#service',
+                    'name' => 'Appointment Booking — '.$company->name,
+                    'provider' => [
+                        '@type' => 'LocalBusiness',
+                        'name' => $company->name,
+                        'url' => $canonical,
+                    ],
+                    'url' => $canonical,
+                    'description' => $description,
+                ],
+                $this->breadcrumbNode([
+                    ['name' => 'Home', 'url' => $base.'/'],
+                    ['name' => 'Book Appointment', 'url' => $canonical],
+                ]),
+            ])),
+        ];
+
+        return $this->decoratePayload([
+            'title' => $title,
+            'description' => $description,
+            'canonical' => $canonical,
+            'robots' => 'index, follow',
+            'ogTitle' => $title,
+            'ogDescription' => $description,
+            'ogImage' => $ogImage,
+            'ogType' => 'website',
+            'ogUrl' => $canonical,
+            'siteName' => $company->name,
+            'twitterCard' => 'summary_large_image',
+            'jsonLd' => $jsonLd,
+            'googleSiteVerification' => $googleVerification,
+            'skipAppTitleSuffix' => true,
+        ]);
+    }
+
+    /**
+     * Dedicated isolated sitemap for a custom domain tenant.
+     *
+     * @return list<array{loc: string, lastmod?: string, changefreq: string, priority: string, image?: array{loc: string, title?: string}}>
+     */
+    public function sitemapForTenantDomain(Company $company, string $domain): array
+    {
+        $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+        $storeBase = $scheme.'://'.$domain;
+        $entries = [];
+
+        $entries[] = [
+            'loc' => $storeBase,
+            'lastmod' => optional($company->updated_at)?->toAtomString() ?? now()->toAtomString(),
+            'changefreq' => 'daily',
+            'priority' => '1.0',
+        ];
+
+        if (Schema::hasTable('products')) {
+            try {
+                $products = Product::query()
+                    ->where('company_id', $company->id)
+                    ->where('status', 'active')
+                    ->orderBy('id')
+                    ->get(['id', 'slug', 'name', 'image', 'updated_at']);
+
+                foreach ($products as $product) {
+                    $path = $product->slug ?: (string) $product->id;
+                    $imgUrl = $product->image_url;
+                    $entry = [
+                        'loc' => $storeBase.'/p/'.$path,
+                        'lastmod' => optional($product->updated_at)?->toAtomString(),
+                        'changefreq' => 'weekly',
+                        'priority' => '0.8',
+                    ];
+                    if ($imgUrl) {
+                        $entry['image'] = ['loc' => $imgUrl, 'title' => $product->name];
+                    }
+                    $entries[] = $entry;
+                }
+            } catch (\Throwable) {
+                // ignore
+            }
+        }
+
+        return $entries;
     }
 
     /**
@@ -451,16 +615,21 @@ class CmsSeoService
                     ->where('company_id', $store->id)
                     ->where('status', 'active')
                     ->orderBy('id')
-                    ->get(['id', 'slug', 'updated_at']);
+                    ->get(['id', 'slug', 'name', 'image', 'updated_at']);
 
                 foreach ($products as $product) {
                     $path = $product->slug ?: (string) $product->id;
-                    $entries[] = [
+                    $imgUrl = $product->image_url;
+                    $entry = [
                         'loc' => $productLocPrefix.$path,
                         'lastmod' => optional($product->updated_at)?->toAtomString(),
                         'changefreq' => 'weekly',
                         'priority' => '0.6',
                     ];
+                    if ($imgUrl) {
+                        $entry['image'] = ['loc' => $imgUrl, 'title' => $product->name];
+                    }
+                    $entries[] = $entry;
                 }
             }
         } catch (\Throwable) {

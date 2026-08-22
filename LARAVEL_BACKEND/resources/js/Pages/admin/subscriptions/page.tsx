@@ -71,7 +71,7 @@ export default function AdminSubscriptionsPage() {
   const planSlugs = useMemo(() => {
     const slugs = (plans ?? []).map((p) => p.slug).filter(Boolean)
     if (slugs.length) return slugs as string[]
-    return ["starter", "professional", "enterprise"]
+    return ["free", "starter", "growth", "professional", "business", "enterprise"]
   }, [plans])
 
   const openChangePlan = (sub: Subscription) => {

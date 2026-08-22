@@ -14,6 +14,7 @@ enum CheckoutStep: string
     case PROVIDING_PHONE = 'mpesa_phone';
     case AWAITING_PAYMENT = 'awaiting_payment';
     case ORDER_COMPLETED = 'order_completed';
+    case TRACKING_ACTIONS = 'tracking_actions';
 
     public static function fromLegacyStep(?string $step): self
     {
@@ -31,6 +32,7 @@ enum CheckoutStep: string
             'mpesa_phone' => self::PROVIDING_PHONE,
             'awaiting_payment' => self::AWAITING_PAYMENT,
             'order_completed' => self::ORDER_COMPLETED,
+            'tracking_actions' => self::TRACKING_ACTIONS,
             default => self::IDLE,
         };
     }
@@ -48,6 +50,7 @@ enum CheckoutStep: string
             self::PROVIDING_PHONE => 'mpesa_phone',
             self::AWAITING_PAYMENT => 'awaiting_payment',
             self::ORDER_COMPLETED => 'order_completed',
+            self::TRACKING_ACTIONS => 'tracking_actions',
         };
     }
 }

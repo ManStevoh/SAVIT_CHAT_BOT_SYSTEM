@@ -85,11 +85,12 @@ class PesapalPaymentTest extends TestCase
             ], 200),
         ]);
 
-        $company = Company::factory()->create(['email' => 'admin@merchant.com', 'name' => 'Acme Merchant']);
+        $company = Company::create(['email' => 'admin@merchant.com', 'name' => 'Acme Merchant']);
         $plan = Plan::create([
             'name' => 'Pro Plan',
             'slug' => 'pro',
             'price_amount' => 5000,
+            'price_display' => '5000 KES',
             'is_free' => false,
         ]);
 
@@ -104,7 +105,7 @@ class PesapalPaymentTest extends TestCase
 
     public function test_merchant_pesapal_driver_is_ready_when_configured(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::create(['name' => 'Store Inc', 'email' => 'store@example.com']);
         CompanySetting::create([
             'company_id' => $company->id,
             'orders_collect_payment_enabled' => true,
@@ -127,7 +128,7 @@ class PesapalPaymentTest extends TestCase
 
     public function test_pesapal_callback_completes_order_payment(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::create(['name' => 'Store Inc', 'email' => 'store@example.com']);
         CompanySetting::create([
             'company_id' => $company->id,
             'orders_accept_pesapal' => true,
@@ -143,6 +144,7 @@ class PesapalPaymentTest extends TestCase
             'order_number' => 'ORD-1001',
             'customer_name' => 'John Doe',
             'customer_email' => 'john@example.com',
+            'customer_phone' => '+254700000000',
             'total' => 1500.00,
             'status' => 'pending',
             'payment_status' => 'unpaid',
@@ -175,9 +177,8 @@ class PesapalPaymentTest extends TestCase
 
     public function test_admin_and_merchant_settings_pesapal_saving_and_masking(): void
     {
-        $user = User::factory()->create(['is_admin' => true]);
-        $company = Company::factory()->create();
-        $user->update(['company_id' => $company->id]);
+        $company = Company::create(['name' => 'Store Inc', 'email' => 'store@example.com']);
+        $user = User::factory()->create(['role' => 'admin', 'company_id' => $company->id]);
 
         // 1. Merchant settings save
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/company/settings', [

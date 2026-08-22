@@ -172,6 +172,8 @@ class SubscriptionController extends Controller
         $company = $request->user()->company;
         $messageCount = PlanLimitService::getMessagesUsedInCurrentPeriod($company);
         $teamCount = User::where('company_id', $companyId)->count();
+        $productCount = \App\Models\Product::where('company_id', $companyId)->count();
+        $waCount = \App\Models\WhatsAppAccount::where('company_id', $companyId)->where('status', 'active')->count();
         $planLimits = PlanLimitService::getLimitsForPlan($plan);
 
         $growth = GrowthLimitService::usageSummary($company);
@@ -179,6 +181,8 @@ class SubscriptionController extends Controller
 
         $items = [
             ['name' => 'Messages', 'used' => $messageCount, 'limit' => $planLimits['messages']],
+            ['name' => 'Products', 'used' => $productCount, 'limit' => $planLimits['max_products'] ?? null],
+            ['name' => 'WhatsApp numbers', 'used' => $waCount, 'limit' => $planLimits['whatsapp_numbers'] ?? 1],
             ['name' => 'Team members', 'used' => $teamCount, 'limit' => $planLimits['team']],
         ];
 

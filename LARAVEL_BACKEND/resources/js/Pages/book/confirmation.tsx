@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { SeoHead, type SeoPayload } from '@/components/seo/SeoHead'
 
 type Props = {
   company: { name?: string }
@@ -14,11 +15,14 @@ type Props = {
     icsUrl: string
     timezone: string
   }
+  seo?: SeoPayload | null
 }
 
-export default function BookingConfirmationPage({ company, booking }: Props) {
+export default function BookingConfirmationPage({ company, booking, seo }: Props) {
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-16">
+    <>
+      <SeoHead seo={seo} fallbackTitle="Booking Confirmed" />
+      <div className="min-h-screen bg-slate-50 px-4 py-16">
       <div className="mx-auto max-w-lg space-y-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Confirmed</p>
         <h1 className="text-2xl font-semibold">{booking.title || 'Your meeting'}</h1>
@@ -50,5 +54,6 @@ export default function BookingConfirmationPage({ company, booking }: Props) {
         </div>
       </div>
     </div>
+    </>
   )
 }

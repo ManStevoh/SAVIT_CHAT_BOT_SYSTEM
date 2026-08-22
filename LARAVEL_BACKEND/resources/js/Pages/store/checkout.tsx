@@ -5,6 +5,7 @@ import { Link, router } from '@inertiajs/react'
 import {
   ArrowLeft,
   ArrowRight,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -17,6 +18,7 @@ import {
   Phone,
   ShieldCheck,
   ShoppingBag,
+  Sparkles,
   Store,
   Tag,
   Truck,
@@ -28,6 +30,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { StorefrontAuthModal } from '@/components/store/StorefrontAuthModal'
+import { resolveStorefrontStyle, type BrandTheme } from '@/lib/theme-utils'
 
 type CartItem = { key: string; name: string; price: number; quantity: number; lineTotal: number }
 type CartSummary = { items: CartItem[]; subtotal: number; taxTotal: number; total: number }
@@ -47,7 +50,15 @@ type Quote = {
 type Props = {
   slug: string
   sessionPhone?: string | null
-  company: { name: string; currency: string; whatsappUrl?: string | null; authCustomer?: { id: number; name: string; email: string } | null }
+  company: {
+    name: string
+    currency: string
+    displayCurrency?: string
+    displayRate?: number
+    whatsappUrl?: string | null
+    authCustomer?: { id: number; name: string; email: string } | null
+    theme?: BrandTheme
+  }
   cart: CartSummary
   dineInEnabled: boolean
   deliveryFeesEnabled: boolean
@@ -56,11 +67,12 @@ type Props = {
   errors?: Record<string, string>
 }
 
-function formatPrice(amount: number, currency: string): string {
+function formatPrice(amount: number, currency: string, rate: number = 1): string {
+  const converted = amount * (rate || 1)
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount)
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(converted)
   } catch {
-    return `${currency} ${amount.toFixed(2)}`
+    return `${currency} ${converted.toFixed(2)}`
   }
 }
 
@@ -82,6 +94,7 @@ export default function StoreCheckoutPage({
   const [giftMessage, setGiftMessage] = useState('')
   const [tipAmount, setTipAmount] = useState('')
   const [couponCode, setCouponCode] = useState('')
+  const [selectedTipPercent, setSelectedTipPercent] = useState<number | null>(null)
   const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup' | 'dine_in'>(
     dineInEnabled && presetDineInTableCode ? 'dine_in' : 'delivery'
   )
@@ -91,6 +104,9 @@ export default function StoreCheckoutPage({
   const [quote, setQuote] = useState<Quote | null>(null)
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [showMoreOptions, setShowMoreOptions] = useState(false)
+
+  const displayCurrency = company.displayCurrency || company.currency
+  const displayRate = company.displayRate || 1.0
 
   // Detect WhatsApp traffic via URL phone query or session phone
   const [isWhatsAppVisitor, setIsWhatsAppVisitor] = useState(Boolean(sessionPhone && sessionPhone.trim() !== ''))
@@ -164,6 +180,16 @@ export default function StoreCheckoutPage({
     return () => clearTimeout(t)
   }, [fulfillmentType, deliveryAddress, couponCode, tipAmount])
 
+  const handleTipChipClick = (percent: number) => {
+    setSelectedTipPercent(percent)
+    if (percent === 0) {
+      setTipAmount('')
+    } else {
+      const calculated = ((cart.subtotal * percent) / 100).toFixed(2)
+      setTipAmount(calculated)
+    }
+  }
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
 
@@ -193,9 +219,13 @@ export default function StoreCheckoutPage({
   }
 
   const displayTotal = quote?.total ?? cart.total
+  const style = resolveStorefrontStyle(company.theme)
 
   return (
-    <div className="min-h-screen bg-slate-50/80 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div
+      className="min-h-screen bg-slate-50/80 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+      style={style}
+    >
       {/* Top Navbar */}
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5">
@@ -217,7 +247,26 @@ export default function StoreCheckoutPage({
       </header>
 
       {/* Main Container */}
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main className="mx-auto max-w-5xl px-4 py-8 pb-24">
+        
+        {/* Checkout Steps Progress Bar */}
+        <div className="mb-6 hidden sm:flex items-center justify-between rounded-3xl border border-slate-200/80 bg-white px-8 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-white text-[11px] dark:bg-white dark:text-slate-900">1</span>
+            <span>Customer Info</span>
+          </div>
+          <div className="h-0.5 w-12 bg-slate-200 dark:bg-slate-800" />
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-white text-[11px] dark:bg-white dark:text-slate-900">2</span>
+            <span>Fulfillment</span>
+          </div>
+          <div className="h-0.5 w-12 bg-slate-200 dark:bg-slate-800" />
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-600 text-[11px] dark:bg-slate-800 dark:text-slate-400">3</span>
+            <span>Payment & Review</span>
+          </div>
+        </div>
+
         <div className="grid gap-8 lg:grid-cols-12">
           
           {/* Left Column: Form Controls */}
@@ -394,7 +443,7 @@ export default function StoreCheckoutPage({
                 </div>
 
                 {fulfillmentType === 'delivery' && (
-                  <div className="space-y-1.5 pt-1">
+                  <div className="space-y-2 pt-1">
                     <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Delivery Address</Label>
                     <div className="relative">
                       <MapPin className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
@@ -403,14 +452,18 @@ export default function StoreCheckoutPage({
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         rows={3}
                         required
-                        placeholder="Street, Building, City or Landmark"
+                        placeholder="Street, Building, Apartment, City or Landmark"
                         className="pl-10 rounded-2xl text-xs"
                       />
                     </div>
-                    {suggestedAddress?.line && (
-                      <p className="text-xs text-slate-500">
-                        Suggested address: <strong className="font-semibold text-slate-700 dark:text-slate-300">{suggestedAddress.line}</strong>
-                      </p>
+                    {suggestedAddress?.line && deliveryAddress !== suggestedAddress.line && (
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryAddress(suggestedAddress.line)}
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400 font-semibold"
+                      >
+                        Use saved address: {suggestedAddress.line}
+                      </button>
                     )}
                     {errors.deliveryAddress && <p className="text-xs font-medium text-red-600">{errors.deliveryAddress}</p>}
                   </div>
@@ -429,7 +482,7 @@ export default function StoreCheckoutPage({
                 )}
               </div>
 
-              {/* Collapsible Additional Options */}
+              {/* Collapsible Additional Options: Coupons, Tips, Notes */}
               <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
                 <button
                   type="button"
@@ -437,7 +490,7 @@ export default function StoreCheckoutPage({
                   className="flex w-full items-center justify-between text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                 >
                   <span className="flex items-center gap-1.5">
-                    <Tag className="h-3.5 w-3.5" /> Coupons, Tips & Special Instructions
+                    <Tag className="h-3.5 w-3.5" /> Promo Codes, Tips & Special Instructions
                   </span>
                   {showMoreOptions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
@@ -445,7 +498,7 @@ export default function StoreCheckoutPage({
                 {showMoreOptions && (
                   <div className="grid gap-4 pt-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Promo Code</Label>
+                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Promo / Discount Code</Label>
                       <Input
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value)}
@@ -453,25 +506,44 @@ export default function StoreCheckoutPage({
                         className="rounded-xl"
                       />
                       {quote && couponCode && !quote.couponValid && (
-                        <p className="text-xs font-medium text-red-600">Invalid or expired coupon.</p>
+                        <p className="text-xs font-medium text-red-600">Invalid or expired promo code.</p>
                       )}
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tip Amount</Label>
+                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tip the Store Team</Label>
+                      <div className="flex gap-1.5 mb-1.5">
+                        {[0, 5, 10, 15].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => handleTipChipClick(pct)}
+                            className={`flex-1 rounded-xl border py-1 text-xs font-bold transition-all ${
+                              selectedTipPercent === pct
+                                ? 'border-slate-900 bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300'
+                            }`}
+                          >
+                            {pct === 0 ? 'None' : `${pct}%`}
+                          </button>
+                        ))}
+                      </div>
                       <Input
                         type="number"
                         min="0"
                         step="0.01"
                         value={tipAmount}
-                        onChange={(e) => setTipAmount(e.target.value)}
-                        placeholder="0.00"
+                        onChange={(e) => {
+                          setSelectedTipPercent(null)
+                          setTipAmount(e.target.value)
+                        }}
+                        placeholder="Custom amount (0.00)"
                         className="rounded-xl"
                       />
                     </div>
 
                     <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Order Notes</Label>
+                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Order Notes / Instructions</Label>
                       <Textarea
                         value={orderNotes}
                         onChange={(e) => setOrderNotes(e.target.value)}
@@ -487,7 +559,7 @@ export default function StoreCheckoutPage({
                         value={giftMessage}
                         onChange={(e) => setGiftMessage(e.target.value)}
                         rows={2}
-                        placeholder="Optional card message for the recipient..."
+                        placeholder="Optional gift message to include with package..."
                         className="rounded-xl text-xs"
                       />
                     </div>
@@ -528,7 +600,9 @@ export default function StoreCheckoutPage({
                       </span>
                       <span className="font-medium text-slate-800 dark:text-slate-200">{item.name}</span>
                     </div>
-                    <span className="font-semibold text-slate-900 dark:text-white">{formatPrice(item.lineTotal, company.currency)}</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {formatPrice(item.lineTotal, displayCurrency, displayRate)}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -537,40 +611,50 @@ export default function StoreCheckoutPage({
               <div className="space-y-2 border-t border-slate-100 pt-4 text-xs dark:border-slate-800">
                 <div className="flex justify-between text-slate-600 dark:text-slate-400">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{formatPrice(quote?.subtotal ?? cart.subtotal, company.currency)}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {formatPrice(quote?.subtotal ?? cart.subtotal, displayCurrency, displayRate)}
+                  </span>
                 </div>
 
                 {(quote?.taxTotal ?? cart.taxTotal) > 0 && (
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Estimated Tax</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{formatPrice(quote?.taxTotal ?? cart.taxTotal, company.currency)}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {formatPrice(quote?.taxTotal ?? cart.taxTotal, displayCurrency, displayRate)}
+                    </span>
                   </div>
                 )}
 
                 {(quote?.deliveryFee ?? 0) > 0 && (
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Delivery Fee</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{formatPrice(quote!.deliveryFee, company.currency)}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {formatPrice(quote!.deliveryFee, displayCurrency, displayRate)}
+                    </span>
                   </div>
                 )}
 
                 {(quote?.discountTotal ?? 0) > 0 && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
                     <span>Discount Code</span>
-                    <span className="font-semibold">-{formatPrice(quote!.discountTotal, company.currency)}</span>
+                    <span>-{formatPrice(quote!.discountTotal, displayCurrency, displayRate)}</span>
                   </div>
                 )}
 
                 {(quote?.tipAmount ?? 0) > 0 && (
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Tip</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{formatPrice(quote!.tipAmount, company.currency)}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {formatPrice(quote!.tipAmount, displayCurrency, displayRate)}
+                    </span>
                   </div>
                 )}
 
                 <div className="flex items-baseline justify-between border-t border-slate-200/80 pt-3 text-base font-extrabold text-slate-900 dark:border-slate-700 dark:text-white">
                   <span>Total Due</span>
-                  <span className="text-xl text-emerald-600 dark:text-emerald-400">{formatPrice(displayTotal, company.currency)}</span>
+                  <span className="text-xl text-emerald-600 dark:text-emerald-400">
+                    {formatPrice(displayTotal, displayCurrency, displayRate)}
+                  </span>
                 </div>
               </div>
 
@@ -601,3 +685,4 @@ export default function StoreCheckoutPage({
     </div>
   )
 }
+

@@ -1,8 +1,8 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { router } from '@inertiajs/react'
-import { CheckCircle2, CreditCard, Lock, Smartphone, ShieldCheck, ArrowRight, Check, ShoppingBag, FileText } from 'lucide-react'
+import { CheckCircle2, CreditCard, Lock, Smartphone, ShieldCheck, ArrowRight, Check, ShoppingBag, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +14,7 @@ type OrderPayload = {
   totalFormatted: string
   paymentStatus: string
   paymentMethod?: string | null
+  invoiceToken?: string | null
   items: { name: string; quantity: number; lineSubtotal: number }[]
 }
 
@@ -29,6 +30,9 @@ type PaymentOptions = {
   cod: boolean
   stripe: boolean
   paystack: boolean
+  pesapal?: boolean
+  flutterwave?: boolean
+  paypal?: boolean
   mpesa: boolean
   manual: boolean
 }
@@ -36,7 +40,7 @@ type PaymentOptions = {
 type Props = {
   token: string
   order: OrderPayload
-  company: { name: string }
+  company: { name: string; customDomain?: string | null; storeSlug?: string | null }
   paymentOptions: PaymentOptions
   initialMethod?: string | null
   status?: string
@@ -59,6 +63,20 @@ export default function PublicPayPage({ token, order, company, paymentOptions, i
   const [submitting, setSubmitting] = useState(false)
 
   const isPaid = order.paymentStatus === 'paid'
+
+  // Live polling for STK Push / Webhook confirmation if pending
+  useEffect(() => {
+    if (isPaid) return
+
+    // If status exists and mentions STK or pending, poll every 4 seconds
+    const interval = setInterval(() => {
+      router.reload({
+        only: ['order', 'status'],
+      })
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [isPaid, token])
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -95,13 +113,16 @@ export default function PublicPayPage({ token, order, company, paymentOptions, i
 
         {/* Status / Errors */}
         {status && (
-          <div className="flex items-start gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-medium text-emerald-800 border border-emerald-200/60 dark:bg-emerald-950/40 dark:border-emerald-900/50 dark:text-emerald-300">
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <div>{status}</div>
+          <div className="flex items-start gap-2.5 rounded-2xl bg-emerald-50 p-4 text-xs font-medium text-emerald-800 border border-emerald-200/60 dark:bg-emerald-950/40 dark:border-emerald-900/50 dark:text-emerald-300">
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-600 dark:text-emerald-400 mt-0.5" />
+            <div>
+              <p className="font-bold">{status}</p>
+              <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">Waiting for payment confirmation. This page updates automatically.</p>
+            </div>
           </div>
         )}
-        {errors.method && <p className="rounded-2xl bg-red-50 p-3.5 text-sm font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">{errors.method}</p>}
-        {errors.email && <p className="rounded-2xl bg-red-50 p-3.5 text-sm font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">{errors.email}</p>}
+        {errors.method && <p className="rounded-2xl bg-red-50 p-3.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">{errors.method}</p>}
+        {errors.email && <p className="rounded-2xl bg-red-50 p-3.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">{errors.email}</p>}
 
         {isPaid ? (
           <div className="space-y-5 rounded-2xl bg-emerald-50/90 p-6 text-center border border-emerald-200/80 dark:bg-emerald-950/30 dark:border-emerald-900/50">
@@ -162,7 +183,7 @@ export default function PublicPayPage({ token, order, company, paymentOptions, i
                         <div className="flex items-center gap-3">
                           {m.id === 'mpesa' ? (
                             <Smartphone className="h-5 w-5 shrink-0" />
-                          ) : m.id === 'stripe' || m.id === 'paystack' || m.id === 'flutterwave' ? (
+                          ) : m.id === 'stripe' || m.id === 'paystack' || m.id === 'flutterwave' || m.id === 'paypal' ? (
                             <CreditCard className="h-5 w-5 shrink-0" />
                           ) : (
                             <ShieldCheck className="h-5 w-5 shrink-0" />
@@ -252,3 +273,4 @@ export default function PublicPayPage({ token, order, company, paymentOptions, i
     </div>
   )
 }
+

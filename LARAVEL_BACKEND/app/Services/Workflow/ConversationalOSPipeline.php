@@ -47,32 +47,53 @@ final class ConversationalOSPipeline
                 \App\Enums\CheckoutStep::SELECTING_PAYMENT_METHOD,
                 \App\Enums\CheckoutStep::PROVIDING_PHONE,
                 \App\Enums\CheckoutStep::SELECTING_VARIANT,
+                \App\Enums\CheckoutStep::TRACKING_ACTIONS, // protect 1/2/3/4 from quick-menu routing
             ], true);
 
             if (is_numeric($trimmedMsg) && (int) $trimmedMsg >= 1 && (int) $trimmedMsg <= 99) {
                 // Quick Menu choices 1, 2, 3 deterministically route ONLY when NOT in active checkout steps
                 if (! $isCheckoutActiveStep && in_array($trimmedMsg, ['1', '2', '3'], true)) {
-                    $quickIntent = match ($trimmedMsg) {
-                        '1' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::ASK_PRODUCT_INFO, confidence: 1.0, messageText: '1'),
-                        '2' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::ASK_ORDER_STATUS, confidence: 1.0, messageText: '2'),
-                        '3' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::REQUEST_HUMAN, confidence: 1.0, messageText: '3'),
-                    };
+                    // Context guard: only apply quick-menu hard-routing when the last bot message
+                    // was actually the quick menu. If the last message was a catalog listing,
+                    // skip this early-return entirely so the token resolution path below can
+                    // correctly map "2" → product #2 (p2) instead of firing the Order Tracker.
+                    $lastBotContent = \App\Models\Message::where('chat_id', $chat->id)
+                        ->where('sender', 'bot')
+                        ->latest('id')
+                        ->value('content') ?? '';
 
-                    $transitionResult = $this->workflowEngine->handle($currentState, $quickIntent, $company);
-                    $this->hydrator->dehydrateToChat($transitionResult->nextState, $chat);
+                    $lastWasQuickMenu = str_contains($lastBotContent, 'Reply with: 1. Prices')
+                        || (str_contains($lastBotContent, '2. Track Order') && str_contains($lastBotContent, '3. Talk to agent'));
 
-                    foreach ($transitionResult->executedActions as $action) {
-                        if (($action['type'] ?? '') === 'RequestAgentHandoff') {
-                            $chat->update([
-                                'agent_handling_at' => now(),
-                                'ai_handled' => false,
-                                'status' => 'pending',
-                            ]);
-                            break;
+                    $lastWasCatalogListing = str_contains($lastBotContent, 'Our Products & Prices')
+                        || str_contains($lastBotContent, '🏷️');
+
+                    // Only hard-route when context is genuinely the quick menu (or unknown context).
+                    // If context is catalog, fall through to token resolution path below.
+                    if (! $lastWasCatalogListing || $lastWasQuickMenu) {
+                        $quickIntent = match ($trimmedMsg) {
+                            '1' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::ASK_PRODUCT_INFO, confidence: 1.0, messageText: '1'),
+                            '2' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::ASK_ORDER_STATUS, confidence: 1.0, messageText: '2'),
+                            '3' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::REQUEST_HUMAN, confidence: 1.0, messageText: '3'),
+                        };
+
+                        $transitionResult = $this->workflowEngine->handle($currentState, $quickIntent, $company);
+                        $this->hydrator->dehydrateToChat($transitionResult->nextState, $chat);
+
+                        foreach ($transitionResult->executedActions as $action) {
+                            if (($action['type'] ?? '') === 'RequestAgentHandoff') {
+                                $chat->update([
+                                    'agent_handling_at' => now(),
+                                    'ai_handled' => false,
+                                    'status' => 'pending',
+                                ]);
+                                break;
+                            }
                         }
-                    }
 
-                    return $transitionResult;
+                        return $transitionResult;
+                    }
+                    // else: catalog was last shown — fall through to token resolution below
                 }
 
                 $fastToken = ($currentState->step === \App\Enums\CheckoutStep::SELECTING_VARIANT) ? ('o' . $trimmedMsg) : ('p' . $trimmedMsg);
@@ -161,6 +182,7 @@ final class ConversationalOSPipeline
                 \App\Enums\CheckoutStep::SELECTING_PAYMENT_METHOD,
                 \App\Enums\CheckoutStep::PROVIDING_PHONE,
                 \App\Enums\CheckoutStep::SELECTING_VARIANT,
+                \App\Enums\CheckoutStep::TRACKING_ACTIONS, // protect 1/2/3/4 from quick-menu routing
             ], true);
 
             $intentName = $intentResult->intent->value ?? 'general_chat';

@@ -76,10 +76,9 @@ final class WorkflowEngine
             ->latest('id')
             ->value('content') ?? '';
 
-        $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent')
-            || str_contains($lastBotMessage, '1. Prices')
-            || str_contains($lastBotMessage, '2. Order')
-            || str_contains($lastBotMessage, 'Talk to agent');
+        $lastWasQuickMenu = str_contains($lastBotMessage, 'Reply with: 1. Prices')
+            || (str_contains($lastBotMessage, '1. Prices') && str_contains($lastBotMessage, '3. Talk to agent'))
+            || (str_contains($lastBotMessage, '2. Track Order') && str_contains($lastBotMessage, '3. Talk to agent'));
 
         $isExplicitAgentRequest = $intent->intent === CommerceIntent::REQUEST_HUMAN ||
             str_contains($rawMessage, 'talk to agent') ||
@@ -132,6 +131,7 @@ final class WorkflowEngine
 
         return match ($state->step) {
             CheckoutStep::IDLE, CheckoutStep::BUILDING_CART => $this->handleBuildingCart($state, $intent, $company),
+            CheckoutStep::TRACKING_ACTIONS => $this->handleTrackingActions($state, $intent, $company),
             CheckoutStep::SELECTING_VARIANT => $this->handleSelectingVariant($state, $intent, $company),
             CheckoutStep::COLLECTING_ADDRESS => $this->handleCollectingAddress($state, $intent, $company),
             CheckoutStep::REVIEWING_ORDER => $this->handleReviewingOrder($state, $intent, $company),
@@ -151,11 +151,12 @@ final class WorkflowEngine
             ->latest('id')
             ->value('content') ?? '';
 
-        $lastWasQuickMenu = str_contains($lastBotMessage, '3. Talk to agent')
-            || str_contains($lastBotMessage, '1. Prices')
-            || str_contains($lastBotMessage, '2. Order')
-            || str_contains($lastBotMessage, '2. Track Order')
-            || str_contains($lastBotMessage, 'Talk to agent');
+        $lastWasQuickMenu = str_contains($lastBotMessage, 'Reply with: 1. Prices')
+            || (str_contains($lastBotMessage, '1. Prices') && str_contains($lastBotMessage, '3. Talk to agent'))
+            || (str_contains($lastBotMessage, '2. Track Order') && str_contains($lastBotMessage, '3. Talk to agent'));
+
+        $lastWasCatalogPrompt = str_contains($lastBotMessage, 'Our Products & Prices')
+            || str_contains($lastBotMessage, '🏷️');
 
         $isSelectingResolvedProduct = ! empty($intent->resolvedProductId)
             || ! empty($intent->selectedToken)
@@ -168,6 +169,67 @@ final class WorkflowEngine
         if ($isCatalogRequest && ! $isSelectingResolvedProduct) {
             $catalogText = ResponseSpecRenderer::renderCatalogPrompt($company);
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $catalogText);
+        }
+
+        // Quick Menu Option 2: Order Tracker Inquiry & Order # Lookups
+        $trimmedMsg = trim($rawMessage);
+        $isExplicitOrderLookup = preg_match('/^#\d{1,8}$/i', $trimmedMsg) === 1 ||
+            preg_match('/^(?:order|ord)\s*#?\d+/i', $trimmedMsg) === 1 ||
+            (! $lastWasCatalogPrompt && is_numeric($trimmedMsg) && strlen($trimmedMsg) >= 3 && ! $lastWasQuickMenu);
+
+        $isTrackOrderRequest = ($lowerRaw === '2' && $lastWasQuickMenu) ||
+            $intent->intent === CommerceIntent::ASK_ORDER_STATUS ||
+            str_contains($lowerRaw, 'track') ||
+            str_contains($lowerRaw, 'order status') ||
+            str_contains($lowerRaw, 'my order') ||
+            str_contains($lowerRaw, 'check order') ||
+            str_contains($lowerRaw, 'where is my order') ||
+            $isExplicitOrderLookup;
+
+        if ($isTrackOrderRequest) {
+            $trackingService = app(\App\Services\Domain\OrderTrackingService::class);
+            $orderFlow = app(\App\Services\OrderFlowService::class);
+            $chat = $state->chatId ? \App\Models\Chat::find($state->chatId) : null;
+
+            // 1. Check if specific order number requested (e.g. #160, order 160)
+            $specificOrder = $trackingService->findOrderByNumber($company, $rawMessage);
+            if ($specificOrder) {
+                $reply = $trackingService->formatOrderTrackingCard($company, $specificOrder, $state->customerPhone);
+                if ($chat && in_array($specificOrder->payment_status, ['unpaid', 'pending'], true) && $specificOrder->status !== 'cancelled') {
+                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $specificOrder->id]);
+                }
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            // 2. Priority 1: Check for single active unpaid/pending order for this customer
+            $pendingOrder = $trackingService->getPendingUnpaidOrder($company, $state->customerPhone, $state->chatId);
+            if ($pendingOrder) {
+                $reply = $trackingService->formatOrderTrackingCard($company, $pendingOrder, $state->customerPhone);
+                if ($chat) {
+                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $pendingOrder->id]);
+                }
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            // 3. Otherwise retrieve recent orders for this customer
+            $recentOrders = $trackingService->getRecentOrders($company, $state->customerPhone, $state->chatId);
+            if ($recentOrders->isEmpty()) {
+                $cleanPhone = preg_replace('/\D+/', '', $state->customerPhone);
+                $phoneDisplay = $cleanPhone !== '' ? ('+' . $cleanPhone) : 'your number';
+                $reply = "🔍 *Order Tracker*\n\nWe couldn't find any recent orders associated with your phone number ({$phoneDisplay}).\n\n• If you placed an order under a different phone number or Order ID, please reply with your *Order #* (e.g. *#160* or *160*).\n• Reply *'prices'* to browse our catalog and place your first order!";
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            if ($recentOrders->count() === 1) {
+                $reply = $trackingService->formatOrderTrackingCard($company, $recentOrders->first(), $state->customerPhone);
+                if ($chat && in_array($recentOrders->first()->payment_status, ['unpaid', 'pending'], true) && $recentOrders->first()->status !== 'cancelled') {
+                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $recentOrders->first()->id]);
+                }
+                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
+            $reply = $trackingService->formatOrderList($company, $recentOrders);
+            return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
         }
 
         $isCheckoutTrigger = $intent->intent === CommerceIntent::START_CHECKOUT ||
@@ -333,6 +395,16 @@ final class WorkflowEngine
             if (! $matchedProduct && $intent->product && $intent->product !== $rawMessage) {
                 $matchedProduct = $this->domain->findProduct($company, $rawMessage);
             }
+            if (! $matchedProduct && is_numeric($lowerRaw) && ((int) $lowerRaw >= 1 && (int) $lowerRaw <= 50)) {
+                $catIndex = (int) $lowerRaw - 1;
+                $catalogProducts = Product::where('company_id', $company->id)
+                    ->where('status', 'active')
+                    ->orderBy('name')
+                    ->get();
+                if ($catalogProducts->has($catIndex)) {
+                    $matchedProduct = $catalogProducts->get($catIndex);
+                }
+            }
         }
 
         $isExplicitAddToCart = (! $isRemoveOrClear) && (
@@ -461,60 +533,6 @@ final class WorkflowEngine
             return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $catalogText);
         }
 
-        // Quick Menu Option 2: Order Tracker Inquiry & Order # Lookups
-        $isTrackOrderRequest = ($lowerRaw === '2' && $lastWasQuickMenu) ||
-            $intent->intent === CommerceIntent::ASK_ORDER_STATUS ||
-            str_contains($lowerRaw, 'track') ||
-            str_contains($lowerRaw, 'order status') ||
-            str_contains($lowerRaw, 'my order') ||
-            str_contains($lowerRaw, 'check order') ||
-            str_contains($lowerRaw, 'where is my order') ||
-            preg_match('/^#?\d{1,8}$/i', trim($rawMessage)) === 1 ||
-            preg_match('/^(?:order|ord)\s*#?\d+/i', trim($rawMessage)) === 1;
-
-        if ($isTrackOrderRequest) {
-            $trackingService = app(\App\Services\Domain\OrderTrackingService::class);
-            $orderFlow = app(\App\Services\OrderFlowService::class);
-
-            // 1. Check if specific order number requested (e.g. #160, order 160)
-            $specificOrder = $trackingService->findOrderByNumber($company, $rawMessage);
-            if ($specificOrder) {
-                $reply = $trackingService->formatOrderTrackingCard($company, $specificOrder, $state->customerPhone);
-                if (in_array($specificOrder->payment_status, ['unpaid', 'pending'], true) && $specificOrder->status !== 'cancelled') {
-                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $specificOrder->id]);
-                }
-                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
-            }
-
-            // 2. Priority 1: Check for single active unpaid/pending order for this customer
-            $pendingOrder = $trackingService->getPendingUnpaidOrder($company, $state->customerPhone, $state->chatId);
-            if ($pendingOrder) {
-                $reply = $trackingService->formatOrderTrackingCard($company, $pendingOrder, $state->customerPhone);
-                $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $pendingOrder->id]);
-                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
-            }
-
-            // 3. Otherwise retrieve recent orders for this customer
-            $recentOrders = $trackingService->getRecentOrders($company, $state->customerPhone, $state->chatId);
-            if ($recentOrders->isEmpty()) {
-                $cleanPhone = preg_replace('/\D+/', '', $state->customerPhone);
-                $phoneDisplay = $cleanPhone !== '' ? ('+' . $cleanPhone) : 'your number';
-                $reply = "🔍 *Order Tracker*\n\nWe couldn't find any recent orders associated with your phone number ({$phoneDisplay}).\n\n• If you placed an order under a different phone number or Order ID, please reply with your *Order #* (e.g. *#160* or *160*).\n• Reply *'prices'* to browse our catalog and place your first order!";
-                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
-            }
-
-            if ($recentOrders->count() === 1) {
-                $reply = $trackingService->formatOrderTrackingCard($company, $recentOrders->first(), $state->customerPhone);
-                if (in_array($recentOrders->first()->payment_status, ['unpaid', 'pending'], true) && $recentOrders->first()->status !== 'cancelled') {
-                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $recentOrders->first()->id]);
-                }
-                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
-            }
-
-            $reply = $trackingService->formatOrderList($company, $recentOrders);
-            return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
-        }
-
         // Quick Menu Option 3: Talk to Agent
         if (($lowerRaw === '3' && $lastWasQuickMenu) || str_contains($lowerRaw, 'talk to agent') || str_contains($lowerRaw, 'speak to agent') || str_contains($lowerRaw, 'speak to someone')) {
             $handoffText = "Connecting you with a support representative. An agent will be with you shortly!";
@@ -546,6 +564,148 @@ final class WorkflowEngine
         $reply = $intent->clarificationQuestion ?? "I didn't quite get that! I can help you check prices, recommend products, or place an order. Reply 'prices' anytime to browse our catalog!";
 
         return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+    }
+
+    private function handleTrackingActions(ConversationState $state, IntentResult $intent, Company $company): WorkflowTransitionResult
+    {
+        $rawMessage = trim((string) ($intent->messageText ?? $intent->rawPayload['incoming_message'] ?? ''));
+        $lowerRaw   = mb_strtolower($rawMessage);
+
+        // Resolve the order being managed — pendingOrderId is already hydrated from order_draft['order_id']
+        $orderId = $state->pendingOrderId ?? ($state->pendingDraftData['order_id'] ?? null);
+        $order   = $orderId ? \App\Models\Order::with('orderProducts')->find((int) $orderId) : null;
+
+        // --- Option 1: Pay Now ---
+        if ($lowerRaw === '1' || str_contains($lowerRaw, 'pay now') || str_contains($lowerRaw, 'complete payment') || str_contains($lowerRaw, 'pay again')) {
+            if (! $order) {
+                return $this->fallbackToMenu($state, $company, "Sorry, I couldn't find your order. Reply 'track order' to look it up again.");
+            }
+
+            $paymentService = app(\App\Services\OrderPaymentService::class);
+            $method         = $order->payment_method ?? 'pesapal';
+            $payUrl         = null;
+
+            if ($method === 'paystack') {
+                $res    = $paymentService->createPaystackPaymentLinkForOrder($order);
+                $payUrl = $res['url'] ?? null;
+            } elseif ($method === 'pesapal') {
+                $res    = $paymentService->createPesapalPaymentLinkForOrder($order);
+                $payUrl = $res['url'] ?? null;
+            } elseif ($method === 'stripe') {
+                $res    = $paymentService->createStripePaymentLinkForOrder($order);
+                $payUrl = $res['url'] ?? null;
+            } elseif ($method === 'flutterwave') {
+                $res    = $paymentService->createFlutterwavePaymentLinkForOrder($order);
+                $payUrl = $res['url'] ?? null;
+            } elseif ($method === 'paypal') {
+                $res    = $paymentService->createPayPalPaymentLinkForOrder($order);
+                $payUrl = $res['url'] ?? null;
+            }
+
+            // Fallback to storefront URL if gateway didn't return a link
+            if (! $payUrl) {
+                $slug   = $company->store_slug ?: \Illuminate\Support\Str::slug($company->name) ?: ('store-' . $company->id);
+                $phone  = preg_replace('/\D+/', '', $state->customerPhone ?? '');
+                $payUrl = url('/s/' . $slug . '?phone=' . urlencode($phone) . '&order=' . $order->id);
+            }
+
+            $methodLabel   = strtoupper($method);
+            $ctaButtonText = "Pay via {$methodLabel}";
+            $reply = "💳 *{$methodLabel} Payment — Order #{$order->order_number}*\n\n"
+                   . "🔗 *Click the link below to complete your payment:*\n{$payUrl}\n\n"
+                   . "_(Reply 'change payment' to switch payment method, or '2' to cancel this order)_";
+
+            // Stay in TRACKING_ACTIONS so the rest of the menu still works after they pay
+            return new WorkflowTransitionResult(
+                nextState: $state,
+                executedActions: [],
+                responseSpec: ResponseSpec::PAYMENT_INSTRUCTIONS->value,
+                customerReply: $reply,
+                payUrl: $payUrl,
+                ctaButtonText: $ctaButtonText,
+                extra: ['cta_url' => $payUrl, 'cta_button_text' => $ctaButtonText]
+            );
+        }
+
+        // --- Change payment method (natural language shortcut) ---
+        if (str_contains($lowerRaw, 'change payment') || str_contains($lowerRaw, 'switch payment') || str_contains($lowerRaw, 'different payment') || str_contains($lowerRaw, 'other payment')) {
+            if ($order) {
+                $selectingState = $state->with(['step' => CheckoutStep::SELECTING_PAYMENT_METHOD, 'pendingOrderId' => $order->id]);
+                $reply = $this->renderer->render(ResponseSpec::PROMPT_PAYMENT_SELECTION, $selectingState, $company);
+                return new WorkflowTransitionResult($selectingState, [], ResponseSpec::PROMPT_PAYMENT_SELECTION->value, $reply);
+            }
+        }
+
+        // --- Option 2: Cancel Order ---
+        if ($lowerRaw === '2' || str_contains($lowerRaw, 'cancel')) {
+            if ($order && $order->status === 'pending') {
+                $order->update(['status' => 'cancelled']);
+            }
+
+            $greetingService = app(ConversationGreetingService::class);
+            $menuText = $greetingService->buildOpening($company, $state->customerName);
+
+            $nextState = $state->with([
+                'step'             => CheckoutStep::IDLE,
+                'cartItems'        => [],
+                'pendingOrderId'   => null,
+                'deliveryAddress'  => null,
+                'pendingDraftData' => [],
+            ]);
+
+            return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $menuText);
+        }
+
+        // --- Option 3: Change Delivery Address ---
+        if ($lowerRaw === '3' || str_contains($lowerRaw, 'change address') || str_contains($lowerRaw, 'change delivery') || str_contains($lowerRaw, 'update address') || ($lowerRaw === 'address' && $order)) {
+            if (! $order) {
+                return $this->fallbackToMenu($state, $company, "Sorry, I couldn't find your order details. Reply 'track order' to search again.");
+            }
+
+            $nextState = $state->with([
+                'step'             => CheckoutStep::COLLECTING_ADDRESS,
+                'pendingOrderId'   => $order->id,
+                'pendingDraftData' => array_merge($state->pendingDraftData, ['tracking_order_id' => $order->id]),
+            ]);
+
+            $reply = "📍 *Change Delivery Address — Order #{$order->order_number}*\n\nCurrent address: *{$order->delivery_address}*\n\nPlease reply with your new delivery address:";
+            return new WorkflowTransitionResult($nextState, [], ResponseSpec::PROMPT_DELIVERY_ADDRESS->value, $reply);
+        }
+
+        // --- Option 4: Talk to Agent ---
+        if ($lowerRaw === '4' || str_contains($lowerRaw, 'talk to agent') || str_contains($lowerRaw, 'speak to agent') || str_contains($lowerRaw, 'human') || $intent->intent === \App\Enums\CommerceIntent::REQUEST_HUMAN) {
+            $handoffText = "Connecting you with a support representative. An agent will be with you shortly!";
+            return new WorkflowTransitionResult(
+                $state->with(['step' => CheckoutStep::IDLE]),
+                [['type' => 'RequestAgentHandoff']],
+                ResponseSpec::GENERAL_ASSIST->value,
+                $handoffText
+            );
+        }
+
+        // Default: re-display the tracking card so they can pick an option
+        if ($order) {
+            $trackingService = app(\App\Services\Domain\OrderTrackingService::class);
+            $reply = $trackingService->formatOrderTrackingCard($company, $order, $state->customerPhone);
+            return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+        }
+
+        return $this->fallbackToMenu($state, $company, "I couldn't find your order. Reply 'track order' to search again.");
+    }
+
+    /**
+     * Reset state to IDLE and send a message, re-showing the main greeting menu as context.
+     */
+    private function fallbackToMenu(ConversationState $state, Company $company, string $message): WorkflowTransitionResult
+    {
+        $nextState = $state->with([
+            'step'             => CheckoutStep::IDLE,
+            'pendingOrderId'   => null,
+            'pendingDraftData' => [],
+        ]);
+        $greetingService = app(ConversationGreetingService::class);
+        $fullReply = $message . "\n\n" . $greetingService->buildOpening($company, $state->customerName);
+        return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $fullReply);
     }
 
     private function handleSelectingVariant(ConversationState $state, IntentResult $intent, Company $company): WorkflowTransitionResult
@@ -733,9 +893,31 @@ final class WorkflowEngine
         $addressInput = $intent->address ?? $rawMessage;
 
         if ($addressInput && $this->domain->isValidAddress($addressInput)) {
+            $newAddress = trim((string) $intent->address ?: (string) $intent->rawPayload['incoming_message']);
+
+            // If this address change came from the tracking actions menu (Option 3),
+            // update the order record and return to the tracking context — not the checkout review flow.
+            if (! empty($state->pendingDraftData['tracking_order_id'])) {
+                $trackingOrderId = (int) $state->pendingDraftData['tracking_order_id'];
+                \App\Models\Order::where('id', $trackingOrderId)->update(['delivery_address' => $newAddress]);
+
+                // Restore tracking context without the return marker
+                $cleanDraft = array_diff_key($state->pendingDraftData, ['tracking_order_id' => 1]);
+                $nextState  = $state->with([
+                    'step'             => CheckoutStep::TRACKING_ACTIONS,
+                    'pendingOrderId'   => $trackingOrderId,
+                    'deliveryAddress'  => $newAddress,
+                    'pendingDraftData' => array_merge($cleanDraft, ['order_id' => $trackingOrderId]),
+                ]);
+
+                $reply = "✅ *Delivery address updated!*\n\nNew address: *{$newAddress}*\n\n"
+                       . "Reply 1–4 to continue managing your order:";
+                return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+            }
+
             $nextState = $state->with([
                 'step' => CheckoutStep::REVIEWING_ORDER,
-                'deliveryAddress' => trim((string) $intent->address ?: (string) $intent->rawPayload['incoming_message']),
+                'deliveryAddress' => $newAddress,
                 'fulfillmentType' => 'delivery',
             ]);
             $reply = $this->renderer->render(ResponseSpec::PROMPT_ORDER_CONFIRMATION, $nextState, $company);
@@ -841,6 +1023,8 @@ final class WorkflowEngine
                 $selectedMethod = 'stripe';
             } elseif (str_contains($rawMsg, 'flutterwave')) {
                 $selectedMethod = 'flutterwave';
+            } elseif (str_contains($rawMsg, 'paypal') || str_contains($rawMsg, 'pay pal')) {
+                $selectedMethod = 'paypal';
             } elseif (str_contains($rawMsg, 'cod') || str_contains($rawMsg, 'cash')) {
                 $selectedMethod = 'cod';
             }
@@ -891,6 +1075,10 @@ final class WorkflowEngine
                 $res = $paymentService->createFlutterwavePaymentLinkForOrder($order);
                 $payUrl = $res['url'] ?? null;
                 $gatewayError = $res['error'] ?? null;
+            } elseif ($selectedMethod === 'paypal') {
+                $res = $paymentService->createPayPalPaymentLinkForOrder($order);
+                $payUrl = $res['url'] ?? null;
+                $gatewayError = $res['error'] ?? null;
             }
         }
 
@@ -915,6 +1103,7 @@ final class WorkflowEngine
                 'pesapal' => 'Pay via Pesapal',
                 'stripe' => 'Pay via Stripe',
                 'flutterwave' => 'Pay via Flutterwave',
+                'paypal' => 'Pay via PayPal',
                 default => 'Pay Online',
             };
         }
@@ -1031,6 +1220,8 @@ final class WorkflowEngine
                     $matchedMethodKey = 'stripe';
                 } elseif (str_contains($rawMessage, 'flutterwave')) {
                     $matchedMethodKey = 'flutterwave';
+                } elseif (str_contains($rawMessage, 'paypal') || str_contains($rawMessage, 'pay pal')) {
+                    $matchedMethodKey = 'paypal';
                 } elseif (str_contains($rawMessage, 'cod') || str_contains($rawMessage, 'cash')) {
                     $matchedMethodKey = 'cod';
                 }

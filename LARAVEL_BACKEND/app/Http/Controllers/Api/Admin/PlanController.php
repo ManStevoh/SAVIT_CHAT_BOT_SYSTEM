@@ -54,31 +54,58 @@ class PlanController extends Controller
             'entitlements' => 'sometimes|array',
             'entitlements.messages' => 'nullable|integer|min:0',
             'entitlements.messagesUnlimited' => 'sometimes|boolean',
+            'entitlements.maxProducts' => 'nullable|integer|min:0',
+            'entitlements.maxProductsUnlimited' => 'sometimes|boolean',
+            'entitlements.max_products' => 'nullable|integer|min:0',
             'entitlements.team' => 'sometimes|integer|min:1|max:1000',
             'entitlements.whatsappNumbers' => 'sometimes|integer|min:1|max:100',
+            'entitlements.whatsapp_numbers' => 'sometimes|integer|min:1|max:100',
             'entitlements.aiCostUsd' => 'nullable|numeric|min:0',
+            'entitlements.ai_cost_usd' => 'nullable|numeric|min:0',
             'entitlements.aiModelModes' => 'sometimes|array',
             'entitlements.aiModelModes.*' => 'string|in:auto,platform_default,specific',
             'entitlements.allowByok' => 'sometimes|boolean',
+            'entitlements.allow_byok' => 'sometimes|boolean',
             'entitlements.credentialModes' => 'sometimes|array',
             'entitlements.credentialModes.*' => 'string|in:platform,company_preferred,company',
+            'entitlements.crmLevel' => 'sometimes|string|in:basic,advanced',
+            'entitlements.crm_level' => 'sometimes|string|in:basic,advanced',
+            'entitlements.analyticsLevel' => 'sometimes|string|in:basic,standard,advanced',
+            'entitlements.analytics_level' => 'sometimes|string|in:basic,standard,advanced',
             'entitlements.apiAccess' => 'sometimes|boolean',
+            'entitlements.api_access' => 'sometimes|boolean',
             'entitlements.analytics' => 'sometimes|boolean',
             'entitlements.attribution' => 'sometimes|boolean',
             'entitlements.aiPostsPerMonth' => 'sometimes|integer|min:0|max:100000',
+            'entitlements.ai_posts_per_month' => 'sometimes|integer|min:0|max:100000',
             'entitlements.aiImagesPerMonth' => 'sometimes|integer|min:0|max:100000',
+            'entitlements.ai_images_per_month' => 'sometimes|integer|min:0|max:100000',
             'entitlements.socialPlatforms' => 'sometimes|integer|min:0|max:100',
+            'entitlements.social_platforms' => 'sometimes|integer|min:0|max:100',
             'entitlements.growthEnabled' => 'sometimes|boolean',
+            'entitlements.growth_enabled' => 'sometimes|boolean',
             'entitlements.agentCommerce' => 'sometimes|boolean',
+            'entitlements.agent_commerce' => 'sometimes|boolean',
             'entitlements.allowPhysical' => 'sometimes|boolean',
+            'entitlements.allow_physical' => 'sometimes|boolean',
             'entitlements.allowDigital' => 'sometimes|boolean',
+            'entitlements.allow_digital' => 'sometimes|boolean',
             'entitlements.allowService' => 'sometimes|boolean',
+            'entitlements.allow_service' => 'sometimes|boolean',
             'entitlements.allowBookings' => 'sometimes|boolean',
+            'entitlements.allow_bookings' => 'sometimes|boolean',
             'entitlements.maxBookingsPerMonth' => 'nullable|integer|min:0|max:1000000',
+            'entitlements.max_bookings_per_month' => 'nullable|integer|min:0|max:1000000',
             'entitlements.allowStorefront' => 'sometimes|boolean',
+            'entitlements.allow_storefront' => 'sometimes|boolean',
             'entitlements.allowLinkInBio' => 'sometimes|boolean',
+            'entitlements.allow_link_in_bio' => 'sometimes|boolean',
             'entitlements.allowDineIn' => 'sometimes|boolean',
+            'entitlements.allow_dine_in' => 'sometimes|boolean',
             'entitlements.allowWhatsappCampaigns' => 'sometimes|boolean',
+            'entitlements.allow_whatsapp_campaigns' => 'sometimes|boolean',
+            'entitlements.requiresBranding' => 'sometimes|boolean',
+            'entitlements.requires_branding' => 'sometimes|boolean',
         ];
     }
 
@@ -95,32 +122,36 @@ class PlanController extends Controller
         $e = $validated['entitlements'];
         $snake = [
             'messages' => ! empty($e['messagesUnlimited']) ? null : ($e['messages'] ?? null),
+            'max_products' => ! empty($e['maxProductsUnlimited']) ? null : ($e['maxProducts'] ?? $e['max_products'] ?? null),
             'team' => $e['team'] ?? null,
-            'whatsapp_numbers' => $e['whatsappNumbers'] ?? null,
-            'ai_cost_usd' => $e['aiCostUsd'] ?? null,
-            'ai_model_modes' => $e['aiModelModes'] ?? null,
-            'allow_byok' => $e['allowByok'] ?? null,
-            'credential_modes' => $e['credentialModes'] ?? null,
-            'api_access' => $e['apiAccess'] ?? null,
+            'whatsapp_numbers' => $e['whatsappNumbers'] ?? $e['whatsapp_numbers'] ?? null,
+            'ai_cost_usd' => $e['aiCostUsd'] ?? $e['ai_cost_usd'] ?? null,
+            'ai_model_modes' => $e['aiModelModes'] ?? $e['ai_model_modes'] ?? null,
+            'allow_byok' => $e['allowByok'] ?? $e['allow_byok'] ?? null,
+            'credential_modes' => $e['credentialModes'] ?? $e['credential_modes'] ?? null,
+            'crm_level' => $e['crmLevel'] ?? $e['crm_level'] ?? null,
+            'analytics_level' => $e['analyticsLevel'] ?? $e['analytics_level'] ?? null,
+            'api_access' => $e['apiAccess'] ?? $e['api_access'] ?? null,
             'analytics' => $e['analytics'] ?? null,
             'attribution' => $e['attribution'] ?? null,
-            'ai_posts_per_month' => $e['aiPostsPerMonth'] ?? null,
-            'ai_images_per_month' => $e['aiImagesPerMonth'] ?? null,
-            'social_platforms' => $e['socialPlatforms'] ?? null,
-            'growth_enabled' => $e['growthEnabled'] ?? null,
-            'agent_commerce' => $e['agentCommerce'] ?? null,
-            'allow_physical' => $e['allowPhysical'] ?? null,
-            'allow_digital' => $e['allowDigital'] ?? null,
-            'allow_service' => $e['allowService'] ?? null,
-            'allow_bookings' => $e['allowBookings'] ?? null,
-            'max_bookings_per_month' => $e['maxBookingsPerMonth'] ?? null,
-            'allow_storefront' => $e['allowStorefront'] ?? null,
-            'allow_link_in_bio' => $e['allowLinkInBio'] ?? null,
-            'allow_dine_in' => $e['allowDineIn'] ?? null,
-            'allow_whatsapp_campaigns' => $e['allowWhatsappCampaigns'] ?? null,
+            'ai_posts_per_month' => $e['aiPostsPerMonth'] ?? $e['ai_posts_per_month'] ?? null,
+            'ai_images_per_month' => $e['aiImagesPerMonth'] ?? $e['ai_images_per_month'] ?? null,
+            'social_platforms' => $e['socialPlatforms'] ?? $e['social_platforms'] ?? null,
+            'growth_enabled' => $e['growthEnabled'] ?? $e['growth_enabled'] ?? null,
+            'agent_commerce' => $e['agentCommerce'] ?? $e['agent_commerce'] ?? null,
+            'allow_physical' => $e['allowPhysical'] ?? $e['allow_physical'] ?? null,
+            'allow_digital' => $e['allowDigital'] ?? $e['allow_digital'] ?? null,
+            'allow_service' => $e['allowService'] ?? $e['allow_service'] ?? null,
+            'allow_bookings' => $e['allowBookings'] ?? $e['allow_bookings'] ?? null,
+            'max_bookings_per_month' => $e['maxBookingsPerMonth'] ?? $e['max_bookings_per_month'] ?? null,
+            'allow_storefront' => $e['allowStorefront'] ?? $e['allow_storefront'] ?? null,
+            'allow_link_in_bio' => $e['allowLinkInBio'] ?? $e['allow_link_in_bio'] ?? null,
+            'allow_dine_in' => $e['allowDineIn'] ?? $e['allow_dine_in'] ?? null,
+            'allow_whatsapp_campaigns' => $e['allowWhatsappCampaigns'] ?? $e['allow_whatsapp_campaigns'] ?? null,
+            'requires_branding' => $e['requiresBranding'] ?? $e['requires_branding'] ?? null,
         ];
 
-        // Drop nulls that mean "not provided" except messages (null = unlimited when messagesUnlimited).
+        // Drop nulls that mean "not provided" except messages / max_products (null = unlimited).
         $input = [];
         foreach ($snake as $key => $value) {
             if ($key === 'messages') {
@@ -132,12 +163,21 @@ class PlanController extends Controller
 
                 continue;
             }
+            if ($key === 'max_products') {
+                if (! empty($e['maxProductsUnlimited'])) {
+                    $input['max_products'] = null;
+                } elseif (array_key_exists('maxProducts', $e) || array_key_exists('max_products', $e)) {
+                    $input['max_products'] = $value;
+                }
+
+                continue;
+            }
             if ($value !== null) {
                 $input[$key] = $value;
             }
         }
-        if (array_key_exists('maxBookingsPerMonth', $e)) {
-            $input['max_bookings_per_month'] = $e['maxBookingsPerMonth'];
+        if (array_key_exists('maxBookingsPerMonth', $e) || array_key_exists('max_bookings_per_month', $e)) {
+            $input['max_bookings_per_month'] = $snake['max_bookings_per_month'];
         }
 
         return EntitlementService::normalizeAdminEntitlements($input, $slug);

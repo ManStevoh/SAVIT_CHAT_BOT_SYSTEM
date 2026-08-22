@@ -17,7 +17,7 @@ final class CheckCalendarAvailabilityTool implements AgentTool
 
     public function description(): string
     {
-        return 'Check business calendar availability and working hours for appointments or visits.';
+        return 'Check business calendar availability, open time slots, and working hours for service appointments or visits.';
     }
 
     public function parametersSchema(): array
@@ -26,6 +26,7 @@ final class CheckCalendarAvailabilityTool implements AgentTool
             'type' => 'object',
             'properties' => [
                 'days_ahead' => ['type' => 'integer', 'description' => 'Days to look ahead (default 7)'],
+                'product_id' => ['type' => 'integer', 'description' => 'Optional product or service ID to check duration-specific slots for'],
             ],
         ];
     }
@@ -37,7 +38,9 @@ final class CheckCalendarAvailabilityTool implements AgentTool
         }
 
         $days = min(14, max(1, (int) ($arguments['days_ahead'] ?? 7)));
+        $productId = isset($arguments['product_id']) ? (int) $arguments['product_id'] : null;
 
-        return $this->calendar->availability($context->company, $days);
+        return $this->calendar->availability($context->company, $days, $productId);
     }
 }
+

@@ -71,6 +71,7 @@ class PaymentGateway extends Model
             'paystack' => ['secret_key'],
             'pesapal' => ['consumer_key', 'consumer_secret'],
             'flutterwave' => ['secret_key'],
+            'paypal' => ['client_id', 'client_secret'],
             'mpesa' => ['shortcode', 'passkey'],
             'manual' => [], // bank_name OR account_number OR instructions
             default => [],
@@ -144,6 +145,13 @@ class PaymentGateway extends Model
                 'env' => 'sandbox',
                 'callback_url' => '',
             ],
+            'paypal' => [
+                'client_id' => '',
+                'client_secret' => '',
+                'webhook_id' => '',
+                'currency' => 'usd',
+                'env' => 'sandbox',
+            ],
             'manual' => [
                 'bank_name' => '',
                 'account_name' => '',
@@ -193,6 +201,13 @@ class PaymentGateway extends Model
                 'currency' => env('PESAPAL_CURRENCY', 'kes'),
                 'ipn_id' => env('PESAPAL_IPN_ID', ''),
                 'callback_url' => env('PESAPAL_CALLBACK_URL', ''),
+            ],
+            'paypal' => [
+                'client_id' => env('PAYPAL_CLIENT_ID', ''),
+                'client_secret' => env('PAYPAL_CLIENT_SECRET', ''),
+                'webhook_id' => env('PAYPAL_WEBHOOK_ID', ''),
+                'currency' => env('PAYPAL_CURRENCY', 'usd'),
+                'env' => env('PAYPAL_ENV', 'sandbox'),
             ],
             'manual' => [
                 'bank_name' => env('PLATFORM_BANK_NAME', ''),

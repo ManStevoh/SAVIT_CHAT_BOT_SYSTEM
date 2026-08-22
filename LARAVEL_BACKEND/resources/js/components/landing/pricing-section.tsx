@@ -50,7 +50,7 @@ export function PricingSection() {
           <SectionHeader
             label="Pricing"
             title="Straightforward plans"
-            description="14-day free trial on every plan. Pick what fits your volume."
+            description="Start free, upgrade as you grow. 14-day free trial on paid plans."
           />
         </FadeIn>
 
@@ -89,7 +89,7 @@ export function PricingSection() {
             Unable to load pricing. Please try again later.
           </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {list.map((plan, i) => {
               const showSubscribeActions = !plan.isFree && (plan.price ?? plan.priceDisplay) !== "Custom"
               const canCheckout = plan.checkoutAvailable && isLoggedIn

@@ -108,6 +108,9 @@ final class ResponseSpecRenderer
         if ($settings?->orders_accept_flutterwave ?? false) {
             $methods[] = ['key' => 'flutterwave', 'label' => 'Flutterwave'];
         }
+        if ($settings?->orders_accept_paypal ?? false) {
+            $methods[] = ['key' => 'paypal', 'label' => 'PayPal (Cards & PayPal Balance)'];
+        }
         if ($settings?->orders_accept_cod ?? true) {
             $methods[] = ['key' => 'cod', 'label' => 'Cash on Delivery / Manual'];
         }

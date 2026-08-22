@@ -112,9 +112,112 @@ export function usePlans(currency?: string | null) {
       }
       await delay(400)
       const mockPlans: Plan[] = [
-        { id: '1', name: 'Starter', slug: 'starter', price: currency === 'USD' ? '$29' : currency === 'NGN' ? '₦ 45,000' : 'KSh 3,799', priceAmount: currency === 'USD' ? 29 : currency === 'NGN' ? 45000 : 3799, currency: currency ?? 'KES', description: 'Perfect for small businesses just getting started', features: ['1 WhatsApp number', '1,000 messages/month', 'Basic AI chatbot', 'Order management', 'Email support'], popular: false, cta: 'Start Free Trial', checkoutAvailable: true },
-        { id: '2', name: 'Growth', slug: 'professional', price: currency === 'USD' ? '$99' : currency === 'NGN' ? '₦ 155,000' : 'KSh 12,999', priceAmount: currency === 'USD' ? 99 : currency === 'NGN' ? 155000 : 12999, currency: currency ?? 'KES', description: 'For growing businesses with higher volume', features: ['3 WhatsApp numbers', '10,000 messages/month', 'Advanced AI with GPT-4', 'Multi-agent inbox', 'Analytics dashboard', 'Priority support', 'API access'], popular: true, cta: 'Start Free Trial', checkoutAvailable: true },
-        { id: '3', name: 'Enterprise', slug: 'enterprise', price: 'Custom', currency: currency ?? 'KES', description: 'For large organizations with custom needs', features: ['Unlimited WhatsApp numbers', 'Unlimited messages', 'Custom AI training', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee', 'On-premise option'], popular: false, cta: 'Contact Sales', checkoutAvailable: false },
+        {
+          id: '0',
+          name: 'Free',
+          slug: 'free',
+          price: currency === 'USD' ? '$0' : currency === 'NGN' ? '₦0' : 'KSh 0',
+          priceAmount: 0,
+          currency: currency ?? 'KES',
+          description: 'Get started selling on WhatsApp with essential commerce tools',
+          features: [
+            '1 WhatsApp connection',
+            '20 products',
+            '50 AI conversations/month',
+            'Basic storefront',
+            'Basic customer inbox',
+            'M-Pesa payment integration',
+            'RelayIQ branding',
+            'Limited automation (5 posts/mo)',
+          ],
+          popular: false,
+          cta: 'Get Started Free',
+          isFree: true,
+          checkoutAvailable: false,
+        },
+        {
+          id: '1',
+          name: 'Starter',
+          slug: 'starter',
+          price: currency === 'USD' ? '$12' : currency === 'NGN' ? '₦ 18,000' : 'KSh 1,499',
+          priceAmount: currency === 'USD' ? 12 : currency === 'NGN' ? 18000 : 1499,
+          currency: currency ?? 'KES',
+          description: 'Essential AI sales agent and commerce automation for solo sellers and small shops',
+          features: [
+            '1 WhatsApp connection',
+            '100 products',
+            'AI sales agent',
+            '500 AI conversations/month',
+            'Online storefront',
+            'M-Pesa + Paystack/Stripe',
+            'Bookings & appointments',
+            'Automated replies',
+            'Basic CRM & analytics',
+            '1 team member',
+            'Basic automations (20 posts/mo)',
+          ],
+          popular: false,
+          cta: 'Start Free Trial',
+          hasTrial: true,
+          trialDays: 14,
+          checkoutAvailable: true,
+        },
+        {
+          id: '2',
+          name: 'Growth',
+          slug: 'professional',
+          price: currency === 'USD' ? '$29' : currency === 'NGN' ? '₦ 45,000' : 'KSh 3,999',
+          priceAmount: currency === 'USD' ? 29 : currency === 'NGN' ? 45000 : 3999,
+          currency: currency ?? 'KES',
+          description: 'For growing businesses needing higher volume, multi-number WhatsApp, and advanced CRM',
+          features: [
+            '2 WhatsApp connections',
+            '1,000 products',
+            'AI sales agent',
+            '2,000 AI conversations/month',
+            'Online storefront + Dine-in QR',
+            'M-Pesa + Paystack/Stripe',
+            'Bookings & services',
+            'Automated replies & campaigns',
+            'Advanced CRM & analytics',
+            '5 team members',
+            'Advanced automations (100 posts/mo)',
+            'API access',
+          ],
+          popular: true,
+          cta: 'Start Free Trial',
+          hasTrial: true,
+          trialDays: 14,
+          checkoutAvailable: true,
+        },
+        {
+          id: '3',
+          name: 'Business',
+          slug: 'enterprise',
+          price: currency === 'USD' ? '$79' : currency === 'NGN' ? '₦ 120,000' : 'KSh 9,999',
+          priceAmount: currency === 'USD' ? 79 : currency === 'NGN' ? 120000 : 9999,
+          currency: currency ?? 'KES',
+          description: 'Maximum power and capacity for established brands and high-volume teams',
+          features: [
+            '5 WhatsApp connections',
+            'Unlimited products',
+            'AI sales agent (custom models)',
+            '10,000 AI conversations/month',
+            'Online storefront + Dine-in QR',
+            'M-Pesa + Paystack/Stripe',
+            'Unlimited bookings',
+            'Automated replies & campaigns',
+            'Advanced CRM & analytics',
+            '15 team members',
+            'Unlimited automations (500 posts/mo)',
+            'Priority support & API access',
+          ],
+          popular: false,
+          cta: 'Start Free Trial',
+          hasTrial: true,
+          trialDays: 14,
+          checkoutAvailable: true,
+        },
       ]
       return normalizePlansResponse({
         currency: currency ?? 'KES',
@@ -300,7 +403,13 @@ export function useChats(filters?: { status?: string; search?: string; limit?: n
       }
       return data
     },
-    { revalidateOnFocus: true, refreshInterval: 5_000 }
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 8000,
+      shouldRetryOnError: false,
+      refreshInterval: 15_000,
+    }
   )
 }
 
@@ -350,8 +459,11 @@ export function useMessages(chatId: string | null) {
       return mockMessages.filter(m => m.chatId === chatId)
     },
     {
-      revalidateOnFocus: true,
-      refreshInterval: chatId ? 3_000 : 0,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 4000,
+      shouldRetryOnError: false,
+      refreshInterval: chatId ? 6_000 : 0,
     }
   )
 }
@@ -450,9 +562,13 @@ export function useCustomers(filters?: { search?: string; page?: number; limit?:
  * Fetch all products for the current company
  * API Endpoint: GET /api/company/products
  */
-export function useProducts(filters?: { category?: string; status?: string; search?: string }) {
+export function useProducts(
+  filters?: { category?: string; status?: string; search?: string },
+  options?: { enabled?: boolean }
+) {
+  const enabled = options?.enabled ?? true
   return useSWR<Product[]>(
-    ['products', filters],
+    enabled ? ['products', filters] : null,
     async () => {
       if (!useMockApi()) {
         return apiRequest<Product[]>(
@@ -542,6 +658,8 @@ export interface DineInTable {
   isActive: boolean
   qrToken: string
   orderUrl: string
+  whatsappOrderUrl?: string | null
+  targetQrUrl?: string
 }
 
 /** API: GET /api/company/dine-in-tables */
@@ -601,6 +719,85 @@ export function useAnalytics(period?: string) {
       return mockAnalytics
     },
     { revalidateOnFocus: false }
+  )
+}
+
+// ── Dashboard Summary (single combined endpoint to prevent concurrent 503s) ──
+
+export interface DashboardSummaryData {
+  analytics: AnalyticsData | null
+  recentOrders: {
+    id: string
+    orderNumber: string
+    customerName: string
+    status: string
+    total: number
+    products: unknown[]
+    createdAt: string | null
+  }[]
+  recentChats: {
+    id: string
+    customerName: string
+    lastMessage: string
+    lastMessageTime: string
+    unreadCount: number
+    status: string
+  }[]
+  subscription: {
+    id: string
+    plan: string
+    planName: string
+    status: string
+    daysRemaining: number
+    isExpiringSoon: boolean
+  }
+  settings: {
+    displayCurrency: string
+    companyName: string
+  }
+  setupStatus: SetupStatus
+  period: string
+}
+
+/**
+ * Single combined dashboard fetch — replaces 6 parallel API calls with 1.
+ * After data loads, seeds the SWR cache for setup-status, subscription,
+ * company-settings, and notifications so those hooks never fire separately.
+ * API Endpoint: GET /api/company/dashboard-summary?period=7d
+ */
+export function useDashboardSummary(period?: string) {
+  return useSWR<DashboardSummaryData>(
+    ['dashboard-summary', period],
+    async () => {
+      if (!useMockApi()) {
+        const data = await apiRequest<DashboardSummaryData>(
+          buildPath('/api/company/dashboard-summary', { period })
+        )
+        // Seed sibling SWR caches so other hooks (navbar, checklist) don't fire
+        const { mutate } = await import('swr')
+        mutate('company-setup-status', data.setupStatus, false)
+        mutate('subscription', data.subscription, false)
+        mutate('company-settings', { displayCurrency: data.settings.displayCurrency, companyName: data.settings.companyName }, false)
+        mutate('company-notifications', { items: [], unreadCount: 0 }, false)
+        return data
+      }
+      await delay(800)
+      return {
+        analytics: mockAnalytics,
+        recentOrders: [],
+        recentChats: [],
+        subscription: { id: '0', plan: 'starter', planName: 'Starter', status: 'trial', daysRemaining: 14, isExpiringSoon: false },
+        settings: { displayCurrency: 'USD', companyName: 'Demo Company' },
+        setupStatus: { steps: [], completedCount: 0, totalCount: 0, percent: 0, dismissed: false, isComplete: false },
+        period: period ?? '7d',
+      }
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 30000,
+      shouldRetryOnError: false,
+    }
   )
 }
 
@@ -764,6 +961,12 @@ export interface CompanySettings {
   defaultDeliveryFee?: number
   freeDeliveryAbove?: number | null
   dineInEnabled?: boolean
+  businessMode?: 'retail' | 'services' | 'restaurant' | 'hybrid'
+  enableProductsCatalog?: boolean
+  enableBookings?: boolean
+  enableDineIn?: boolean
+  dineInQrTarget?: 'web_menu' | 'whatsapp_chat' | 'dual_choice'
+  dineInPaymentTiming?: 'pay_upfront' | 'open_tab' | 'customer_choice'
   paymentRecoveryEnabled?: boolean
   paymentRecoveryHours?: number[]
   birthdayAutomationEnabled?: boolean
@@ -778,6 +981,22 @@ export interface CompanySettings {
   industry?: 'retail' | 'restaurant' | 'services' | 'other'
   /** Days to retain attribution data (30–730); null uses platform default */
   attributionRetentionDays?: number | null
+  storefrontAnnouncementBar?: string | null
+  storefrontSeoTitle?: string | null
+  storefrontSeoDescription?: string | null
+  storefrontTheme?: {
+    primary_color?: string | null
+    accent_color?: string | null
+    bg_color?: string | null
+    font_family?: string | null
+    border_radius?: string | null
+    announcement_bar?: string | null
+    announcement_bar_bg?: string | null
+    announcement_bar_text?: string | null
+    footer_text?: string | null
+    seo_title?: string | null
+    seo_description?: string | null
+  }
 }
 
 /** Business DNA shapes how the agent speaks (luxury vs café, etc.) */
@@ -840,10 +1059,11 @@ export type SetupStatus = {
 /**
  * Getting Started checklist for the company dashboard
  * API Endpoint: GET /api/company/setup-status
+ * @param initialData - Optional pre-fetched data (e.g. from dashboard-summary) to skip the network call
  */
-export function useSetupStatus() {
+export function useSetupStatus(initialData?: SetupStatus) {
   return useSWR<SetupStatus>(
-    'company-setup-status',
+    initialData ? null : 'company-setup-status',
     async () => {
       if (!useMockApi()) {
         return apiRequest<SetupStatus>('/api/company/setup-status')
@@ -894,7 +1114,13 @@ export function useSetupStatus() {
         isComplete: false,
       }
     },
-    { revalidateOnFocus: true }
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 30000,
+      shouldRetryOnError: false,
+      fallbackData: initialData,
+    }
   )
 }
 
@@ -912,9 +1138,10 @@ export interface TeamMember {
  * API Endpoint: GET /api/company/team
  * When mock: returns placeholder list; when real API is used, backend data is shown.
  */
-export function useCompanyTeam() {
+export function useCompanyTeam(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true
   return useSWR<TeamMember[]>(
-    'company-team',
+    enabled ? 'company-team' : null,
     async () => {
       if (!useMockApi()) {
         return apiRequest<TeamMember[]>('/api/company/team')
@@ -969,7 +1196,12 @@ export function useNotifications() {
       await delay(200)
       return { items: [], unreadCount: 0 }
     },
-    { revalidateOnFocus: true }
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 30000,
+      shouldRetryOnError: false,
+    }
   )
 }
 
@@ -1049,9 +1281,10 @@ export interface WhatsAppNumber {
  * Fetch WhatsApp numbers connected to the company
  * API Endpoint: GET /api/company/whatsapp/numbers
  */
-export function useWhatsAppNumbers() {
+export function useWhatsAppNumbers(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true
   return useSWR<WhatsAppNumber[]>(
-    'whatsapp-numbers',
+    enabled ? 'whatsapp-numbers' : null,
     async () => {
       if (!useMockApi()) {
         return apiRequest<WhatsAppNumber[]>('/api/company/whatsapp/numbers')

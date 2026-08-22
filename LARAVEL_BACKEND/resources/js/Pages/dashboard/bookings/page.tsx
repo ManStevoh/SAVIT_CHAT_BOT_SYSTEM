@@ -22,6 +22,8 @@ type BookingSettingsResponse = {
     publicSlug: string
     calendarWebhookUrl: string | null
     isEnabled: boolean
+    paymentRequirement?: 'at_venue' | 'required' | 'optional'
+    whatsappBookingMode?: 'whatsapp_native' | 'web_link' | 'hybrid'
   }
   availability: AvailabilityRow[]
   publicBookingUrl: string
@@ -300,6 +302,45 @@ export default function BookingsPage() {
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              <div>
+                <Label>Booking Payment Requirement</Label>
+                <select
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  value={settings.paymentRequirement ?? 'at_venue'}
+                  onChange={(e) =>
+                    setSettings({ ...settings, paymentRequirement: e.target.value as 'at_venue' | 'required' | 'optional' })
+                  }
+                >
+                  <option value="at_venue">Pay at Venue / Free Booking</option>
+                  <option value="required">Upfront Payment Required (M-Pesa / Card)</option>
+                  <option value="optional">Optional (Customer Chooses Online or Venue)</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Controls whether clients must pay when booking or pay upon arrival.
+                </p>
+              </div>
+
+              <div>
+                <Label>WhatsApp Booking Flow</Label>
+                <select
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  value={settings.whatsappBookingMode ?? 'hybrid'}
+                  onChange={(e) =>
+                    setSettings({ ...settings, whatsappBookingMode: e.target.value as 'whatsapp_native' | 'web_link' | 'hybrid' })
+                  }
+                >
+                  <option value="hybrid">Hybrid (Chat Concierge + Web Link)</option>
+                  <option value="whatsapp_native">Native WhatsApp Chat Only</option>
+                  <option value="web_link">Send Web Booking Link Only</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  How the AI handles scheduling requests on WhatsApp.
+                </p>
+              </div>
+            </div>
+
             <div>
               <Label>Calendar webhook (optional)</Label>
               <Input

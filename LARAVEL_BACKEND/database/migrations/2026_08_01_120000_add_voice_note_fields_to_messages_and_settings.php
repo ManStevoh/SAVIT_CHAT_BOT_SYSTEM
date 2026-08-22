@@ -8,14 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('messages', function (Blueprint $table) {
-            if (! Schema::hasColumn('messages', 'voice_transcript')) {
-                $table->text('voice_transcript')->nullable()->after('content');
-            }
-            if (! Schema::hasColumn('messages', 'voice_duration')) {
-                $table->integer('voice_duration')->nullable()->after('voice_transcript');
-            }
-        });
+        if (Schema::hasTable('messages')) {
+            Schema::table('messages', function (Blueprint $table) {
+                if (! Schema::hasColumn('messages', 'voice_transcript')) {
+                    $table->text('voice_transcript')->nullable()->after('content');
+                }
+                if (! Schema::hasColumn('messages', 'voice_duration')) {
+                    $table->integer('voice_duration')->nullable()->after('voice_transcript');
+                }
+            });
+        }
 
         Schema::table('company_settings', function (Blueprint $table) {
             if (! Schema::hasColumn('company_settings', 'agent_voice_reply_mode')) {

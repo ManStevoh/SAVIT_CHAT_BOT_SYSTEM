@@ -18,6 +18,8 @@ class BookingSetting extends Model
         'calendar_feed_token',
         'calendar_webhook_url',
         'is_enabled',
+        'payment_requirement',
+        'whatsapp_booking_mode',
     ];
 
     protected $casts = [
@@ -31,5 +33,25 @@ class BookingSetting extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function requiresUpfrontPayment(): bool
+    {
+        return ($this->payment_requirement ?? 'at_venue') === 'required';
+    }
+
+    public function allowsPayAtVenue(): bool
+    {
+        return in_array($this->payment_requirement ?? 'at_venue', ['at_venue', 'optional'], true);
+    }
+
+    public function isWhatsAppNativeEnabled(): bool
+    {
+        return in_array($this->whatsapp_booking_mode ?? 'hybrid', ['whatsapp_native', 'hybrid'], true);
+    }
+
+    public function isWebLinkEnabled(): bool
+    {
+        return in_array($this->whatsapp_booking_mode ?? 'hybrid', ['web_link', 'hybrid'], true);
     }
 }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link } from '@inertiajs/react'
 import { CheckCircle2, Copy, Check, ShoppingBag, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { resolveStorefrontStyle, type BrandTheme } from '@/lib/theme-utils'
 
 type OrderItem = { name: string; quantity: number; lineSubtotal: number }
 type OrderPayload = {
@@ -17,13 +18,14 @@ type OrderPayload = {
 
 type Props = {
   slug: string
-  company: { name: string }
+  company: { name: string; logo?: string | null; theme?: BrandTheme }
   order: OrderPayload
 }
 
 export default function StoreConfirmationPage({ slug, company, order }: Props) {
   const [copied, setCopied] = useState(false)
   const payUrl = `/pay/${order.payToken || order.id}`
+  const style = resolveStorefrontStyle(company.theme)
 
   const copyPayLink = () => {
     if (typeof window !== 'undefined') {
@@ -35,7 +37,10 @@ export default function StoreConfirmationPage({ slug, company, order }: Props) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50/80 px-4 py-12 dark:bg-slate-950">
+    <div
+      className="flex min-h-screen items-center justify-center bg-slate-50/80 px-4 py-12 dark:bg-slate-950"
+      style={style}
+    >
       <div className="w-full max-w-lg space-y-6 rounded-3xl border border-slate-200/80 bg-white p-8 text-center shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
         
         {/* Animated Check Icon */}

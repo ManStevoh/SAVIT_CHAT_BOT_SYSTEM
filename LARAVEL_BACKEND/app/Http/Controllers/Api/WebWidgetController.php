@@ -50,11 +50,19 @@ class WebWidgetController extends Controller
 
         $company->loadMissing('settings');
 
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+
 
 
         return response()->json([
 
             'companyName' => $company->name,
+
+            'companyLogo' => $company->logo ? asset('storage/'.$company->logo) : null,
+
+            'primaryColor' => $theme['primary_color'] ?? '#2563eb',
+
+            'accentColor' => $theme['accent_color'] ?? '#2563eb',
 
             'greeting' => $company->settings?->ai_greeting ?? 'Hi! How can we help you today?',
 

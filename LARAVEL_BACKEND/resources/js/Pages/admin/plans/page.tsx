@@ -51,22 +51,26 @@ const TRIAL_ELAPSED_OPTIONS: { value: string; label: string }[] = [
 ]
 
 const defaultEntitlements: PlanEntitlements = {
-  messages: 5000,
+  messages: 500,
   messagesUnlimited: false,
-  team: 3,
+  maxProducts: 100,
+  maxProductsUnlimited: false,
+  team: 1,
   whatsappNumbers: 1,
   aiCostUsd: 5,
   aiModelModes: ["auto"],
   allowByok: false,
   credentialModes: ["platform"],
+  crmLevel: "basic",
+  analyticsLevel: "basic",
   apiAccess: false,
-  analytics: false,
+  analytics: true,
   attribution: true,
   aiPostsPerMonth: 20,
   aiImagesPerMonth: 10,
   socialPlatforms: 1,
   growthEnabled: true,
-  agentCommerce: false,
+  agentCommerce: true,
   allowPhysical: true,
   allowDigital: true,
   allowService: false,
@@ -76,6 +80,7 @@ const defaultEntitlements: PlanEntitlements = {
   allowLinkInBio: true,
   allowDineIn: false,
   allowWhatsappCampaigns: true,
+  requiresBranding: false,
 }
 
 const defaultForm: CreatePlanData & { featuresText: string; entitlements: PlanEntitlements } = {
@@ -108,14 +113,18 @@ function entitlementsFromPlan(plan: Plan): PlanEntitlements {
   const e = plan.entitlements
   if (!e) return { ...defaultEntitlements }
   return {
-    messages: e.messagesUnlimited ? null : (e.messages ?? 5000),
+    messages: e.messagesUnlimited ? null : (e.messages ?? 500),
     messagesUnlimited: !!e.messagesUnlimited || e.messages == null,
-    team: e.team ?? 3,
+    maxProducts: e.maxProductsUnlimited ? null : (e.maxProducts ?? 100),
+    maxProductsUnlimited: !!e.maxProductsUnlimited || e.maxProducts == null,
+    team: e.team ?? 1,
     whatsappNumbers: e.whatsappNumbers ?? 1,
     aiCostUsd: e.aiCostUsd ?? null,
     aiModelModes: e.aiModelModes?.length ? e.aiModelModes : ["auto"],
     allowByok: !!e.allowByok,
     credentialModes: e.credentialModes?.length ? e.credentialModes : ["platform"],
+    crmLevel: e.crmLevel ?? "basic",
+    analyticsLevel: e.analyticsLevel ?? (e.analytics ? "standard" : "basic"),
     apiAccess: !!e.apiAccess,
     analytics: !!e.analytics,
     attribution: e.attribution !== false,
@@ -133,6 +142,7 @@ function entitlementsFromPlan(plan: Plan): PlanEntitlements {
     allowLinkInBio: e.allowLinkInBio !== false,
     allowDineIn: !!e.allowDineIn,
     allowWhatsappCampaigns: e.allowWhatsappCampaigns !== false,
+    requiresBranding: !!e.requiresBranding,
   }
 }
 
@@ -354,14 +364,17 @@ export default function AdminPlansPage() {
                         <span className="ml-1 text-muted-foreground text-xs">({plan.priceAmount})</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-xs max-w-[220px]">
+                    <TableCell className="text-muted-foreground text-xs max-w-[240px]">
                       {plan.entitlements ? (
                         <span>
-                          msgs {plan.entitlements.messagesUnlimited || plan.entitlements.messages == null ? "∞" : plan.entitlements.messages}
+                          products {plan.entitlements.maxProductsUnlimited || plan.entitlements.maxProducts == null ? "∞" : plan.entitlements.maxProducts}
+                          {" · "}msgs {plan.entitlements.messagesUnlimited || plan.entitlements.messages == null ? "∞" : plan.entitlements.messages}
                           {" · "}team {plan.entitlements.team ?? "—"}
                           {" · "}WA {plan.entitlements.whatsappNumbers ?? 1}
+                          {plan.entitlements.crmLevel === "advanced" ? " · Adv CRM" : ""}
                           {plan.entitlements.apiAccess ? " · API" : ""}
                           {plan.entitlements.analytics ? " · Analytics" : ""}
+                          {plan.entitlements.requiresBranding ? " · Branding" : ""}
                         </span>
                       ) : (
                         "—"
@@ -512,7 +525,7 @@ export default function AdminPlansPage() {
                         },
                       }))
                     }
-                    placeholder="5000"
+                    placeholder="500"
                   />
                   <label className="flex items-center gap-2 text-sm text-muted-foreground">
                     <input
@@ -530,12 +543,46 @@ export default function AdminPlansPage() {
                   </label>
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="ent-products">Product limit</Label>
+                  <Input
+                    id="ent-products"
+                    type="number"
+                    min={0}
+                    disabled={!!form.entitlements.maxProductsUnlimited}
+                    value={form.entitlements.maxProductsUnlimited ? "" : (form.entitlements.maxProducts ?? "")}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        entitlements: {
+                          ...f.entitlements,
+                          maxProducts: e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0,
+                        },
+                      }))
+                    }
+                    placeholder="100"
+                  />
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-input"
+                      checked={!!form.entitlements.maxProductsUnlimited}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          entitlements: { ...f.entitlements, maxProductsUnlimited: e.target.checked },
+                        }))
+                      }
+                    />
+                    Unlimited products
+                  </label>
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="ent-team">Team seats</Label>
                   <Input
                     id="ent-team"
                     type="number"
                     min={1}
-                    value={form.entitlements.team ?? 3}
+                    value={form.entitlements.team ?? 1}
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
@@ -558,9 +605,50 @@ export default function AdminPlansPage() {
                       }))
                     }
                   />
-                  <p className="text-xs text-muted-foreground">Product currently supports 1 connected number per company (reconnect/replace allowed).</p>
+                  <p className="text-xs text-muted-foreground">Max connected numbers for company.</p>
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="ent-crm">Customer CRM level</Label>
+                  <Select
+                    value={form.entitlements.crmLevel ?? "basic"}
+                    onValueChange={(val) =>
+                      setForm((f) => ({
+                        ...f,
+                        entitlements: { ...f.entitlements, crmLevel: val },
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="ent-crm">
+                      <SelectValue placeholder="Select CRM level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">Basic CRM</SelectItem>
+                      <SelectItem value="advanced">Advanced CRM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="ent-analytics-level">Analytics level</Label>
+                  <Select
+                    value={form.entitlements.analyticsLevel ?? "basic"}
+                    onValueChange={(val) =>
+                      setForm((f) => ({
+                        ...f,
+                        entitlements: { ...f.entitlements, analyticsLevel: val },
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="ent-analytics-level">
+                      <SelectValue placeholder="Select analytics level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">Basic Analytics</SelectItem>
+                      <SelectItem value="standard">Standard Analytics</SelectItem>
+                      <SelectItem value="advanced">Advanced Analytics & Custom Reports</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2 col-span-2">
                   <Label htmlFor="ent-ai-cost">AI cost limit (USD / period)</Label>
                   <Input
                     id="ent-ai-cost"
@@ -648,6 +736,7 @@ export default function AdminPlansPage() {
                     ["allowLinkInBio", "Allow link-in-bio"],
                     ["allowDineIn", "Allow dine-in table QR"],
                     ["allowWhatsappCampaigns", "Allow WhatsApp campaigns"],
+                    ["requiresBranding", "Enforce RelayIQ branding (show badge on storefront)"],
                   ] as const
                 ).map(([key, label]) => (
                   <label key={key} className="flex items-center gap-2 text-sm">

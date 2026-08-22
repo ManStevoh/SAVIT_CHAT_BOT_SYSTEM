@@ -76,6 +76,18 @@ class PaymentGatewaySeeder extends Seeder
                 ],
             ],
             [
+                'slug' => 'paypal',
+                'name' => 'PayPal (Cards & PayPal Balance)',
+                'is_enabled' => false,
+                'config' => [
+                    'client_id' => '',
+                    'client_secret' => '',
+                    'webhook_id' => '',
+                    'currency' => 'usd',
+                    'env' => 'sandbox',
+                ],
+            ],
+            [
                 'slug' => 'manual',
                 'name' => 'Bank Transfer / Invoice',
                 'is_enabled' => false,

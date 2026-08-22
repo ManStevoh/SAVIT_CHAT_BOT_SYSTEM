@@ -72,6 +72,14 @@ const FLUTTERWAVE_FIELDS: { key: string; label: string; type: string; placeholde
   { key: "callback_url", label: "Callback URL (optional)", type: "text", placeholder: "https://..." },
 ]
 
+const PAYPAL_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
+  { key: "client_id", label: "Client ID", type: "text", placeholder: "Your PayPal REST Client ID" },
+  { key: "client_secret", label: "Client Secret", type: "password", placeholder: "Leave blank to keep" },
+  { key: "webhook_id", label: "Webhook ID (optional)", type: "text", placeholder: "PayPal Webhook ID" },
+  { key: "currency", label: "Currency", type: "text", placeholder: "usd" },
+  { key: "env", label: "Environment Mode", type: "select", options: ["sandbox", "production"] },
+]
+
 const MANUAL_FIELDS: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] = [
   { key: "bank_name", label: "Bank Name", type: "text", placeholder: "e.g. Chase Bank / KCB Bank" },
   { key: "account_name", label: "Account Name", type: "text", placeholder: "e.g. EssemChat Platform Inc." },
@@ -334,9 +342,11 @@ export default function AdminPaymentGatewaysPage() {
                     ? PESAPAL_FIELDS
                     : gateway.slug === "flutterwave"
                       ? FLUTTERWAVE_FIELDS
-                      : gateway.slug === "manual"
-                        ? MANUAL_FIELDS
-                        : []
+                      : gateway.slug === "paypal"
+                        ? PAYPAL_FIELDS
+                        : gateway.slug === "manual"
+                          ? MANUAL_FIELDS
+                          : []
 
           return (
             <Card key={gateway.id}>

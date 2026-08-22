@@ -33,6 +33,7 @@ import {
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
+import { useCompanySettings } from "@/lib/api-hooks"
 import type { LucideIcon } from "lucide-react"
 
 export type DashboardNavItem = {
@@ -179,6 +180,8 @@ export function DashboardNavLinks({
   onNavigate?: () => void
 }) {
   const pathname = usePathname()
+  const { data: settings } = useCompanySettings()
+
   const aiActive = useMemo(
     () =>
       dashboardNavGroups
@@ -189,9 +192,31 @@ export function DashboardNavLinks({
   const [userToggled, setUserToggled] = useState<boolean | null>(null)
   const aiOpen = userToggled !== null ? userToggled : aiActive
 
+  const visibleGroups = useMemo(() => {
+    return dashboardNavGroups.map((group) => {
+      if (group.id !== "core" || !settings) {
+        return group
+      }
+
+      const filteredItems = group.items.filter((item) => {
+        if (item.href === "/dashboard/dine-in") {
+          const isDineInAllowed = settings.enableDineIn || settings.dineInEnabled || settings.businessMode === "restaurant"
+          return isDineInAllowed || isNavActive(pathname, item.href)
+        }
+        if (item.href === "/dashboard/bookings") {
+          const isBookingsAllowed = settings.enableBookings ?? (settings.businessMode !== "retail")
+          return isBookingsAllowed || isNavActive(pathname, item.href)
+        }
+        return true
+      })
+
+      return { ...group, items: filteredItems }
+    })
+  }, [settings, pathname])
+
   return (
     <nav className="flex flex-col gap-4 overflow-y-auto p-3 pb-6">
-      {dashboardNavGroups.map((group) => {
+      {visibleGroups.map((group) => {
         if (group.collapsible) {
           const open = collapsed ? aiActive : aiOpen
           return (

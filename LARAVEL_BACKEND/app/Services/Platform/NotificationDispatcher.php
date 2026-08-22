@@ -60,8 +60,9 @@ final class NotificationDispatcher
         $shouldEmail = match ($templateKey) {
             'approval.pending', 'approval.executed' => (bool) $settings->notify_security_alerts,
             'intelligence.case_opened' => (bool) $settings->notify_daily_summary,
-            'payment.received', 'subscription.confirmed' => (bool) $settings->notify_failed_payments,
-            'subscription.expiring', 'subscription.expired' => false,
+            'payment.failed' => (bool) $settings->notify_failed_payments,
+            'payment.received', 'subscription.confirmed' => false, // Direct emails sent by billing gateways via MailService
+            'subscription.expiring', 'subscription.expired', 'subscription.trial_started' => false, // Handled by lifecycle / auth services
             'usage.limit_warning' => (bool) $settings->notify_usage_alerts,
             default => false,
         };

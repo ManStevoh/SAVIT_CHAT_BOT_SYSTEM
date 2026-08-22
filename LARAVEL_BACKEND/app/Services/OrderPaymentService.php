@@ -26,6 +26,7 @@ class OrderPaymentService
         protected PaystackService $paystack,
         protected PesapalService $pesapal,
         protected FlutterwaveService $flutterwave,
+        protected PayPalService $paypal,
         protected WhatsAppMessageSenderService $waSender,
         protected OrderFulfillmentService $fulfillmentService,
     ) {}
@@ -302,6 +303,107 @@ class OrderPaymentService
             'url' => $result['url'],
             'reference' => $reference,
         ];
+    }
+
+    /**
+     * Create a PayPal payment link for an order.
+     *
+     * @return array{success: bool, url?: string, reference?: string, paypal_order_id?: string, error?: string}
+     */
+    public function createPayPalPaymentLinkForOrder(Order $order): array
+    {
+        $settings = $order->company?->settings;
+        $companyPayPal = $settings?->order_payment_paypal_config;
+        $useCompanyConfig = is_array($companyPayPal) && ! empty($companyPayPal['client_id']) && ! empty($companyPayPal['client_secret']);
+
+        if (! PayPalService::isEnabled() && ! $useCompanyConfig) {
+            return ['success' => false, 'error' => 'PayPal is disabled systemwide and not configured for this business.'];
+        }
+
+        $callbackUrl = url('/api/paypal/callback');
+        $result = $this->paypal->createPaymentLinkForOrder($order, $callbackUrl, $useCompanyConfig ? $companyPayPal : null);
+        if (! $result['success'] || empty($result['url'])) {
+            return ['success' => false, 'error' => $result['error'] ?? 'Could not create PayPal payment link.'];
+        }
+
+        $order->update(['payment_method' => 'paypal']);
+
+        $reference = $result['reference'] ?? null;
+        if ($reference) {
+            Cache::put(
+                PayPalService::CACHE_KEY_ORDER_PREFIX.$reference,
+                [
+                    'order_id' => $order->id,
+                    'paypal_order_id' => $result['paypal_order_id'] ?? null,
+                ],
+                now()->addMinutes(self::CACHE_TTL_MINUTES)
+            );
+        }
+
+        return [
+            'success' => true,
+            'url' => $result['url'],
+            'reference' => $reference,
+            'paypal_order_id' => $result['paypal_order_id'] ?? null,
+        ];
+    }
+
+    /**
+     * Complete PayPal payment return verification and capture.
+     *
+     * @return array{success: bool, order?: Order, error?: string}
+     */
+    public function completePayPalReturn(string $paypalOrderId, string $reference = ''): array
+    {
+        $paypalOrderId = trim($paypalOrderId);
+        $reference = trim($reference);
+
+        $pending = $reference !== '' ? Cache::get(PayPalService::CACHE_KEY_ORDER_PREFIX.$reference) : null;
+        $orderId = $pending['order_id'] ?? null;
+
+        if (! $orderId && $reference && preg_match('/^(?:essem_pp_|savit_pp_)(\d+)_/', $reference, $matches)) {
+            $orderId = (int) $matches[1];
+        }
+
+        if (! $orderId) {
+            // Try looking up order by reference or token
+            $order = Order::where('payment_method', 'paypal')
+                ->where(function ($q) {
+                    $q->whereNull('payment_status')->orWhere('payment_status', '!=', 'paid');
+                })
+                ->orderByDesc('id')
+                ->first();
+            $orderId = $order?->id;
+        }
+
+        if (! $orderId) {
+            return ['success' => false, 'error' => 'Could not find order for this payment.'];
+        }
+
+        $order = Order::with('company.settings')->find($orderId);
+        if (! $order) {
+            return ['success' => false, 'error' => 'Order not found.'];
+        }
+
+        if ($order->payment_status === 'paid') {
+            if ($reference !== '') Cache::forget(PayPalService::CACHE_KEY_ORDER_PREFIX.$reference);
+
+            return ['success' => true, 'order' => $order];
+        }
+
+        $companyPayPal = $order->company?->settings?->order_payment_paypal_config;
+        $configOverride = (is_array($companyPayPal) && ! empty($companyPayPal['client_id'])) ? $companyPayPal : null;
+
+        $captureRes = $this->paypal->captureOrder($paypalOrderId, $configOverride);
+        if (! ($captureRes['success'] ?? false) || ! ($captureRes['paid'] ?? false)) {
+            return ['success' => false, 'error' => $captureRes['error'] ?? 'PayPal payment not completed.', 'order' => $order];
+        }
+
+        $order->update(['payment_method' => 'paypal']);
+        $this->markOrderPaid($order);
+        if ($reference !== '') Cache::forget(PayPalService::CACHE_KEY_ORDER_PREFIX.$reference);
+
+        return ['success' => true, 'order' => $order->fresh()];
     }
 
     /**

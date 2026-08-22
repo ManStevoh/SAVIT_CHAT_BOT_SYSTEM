@@ -42,6 +42,7 @@ class CompanySetupStatusService
             || (bool) $settings->orders_accept_paystack
             || (bool) $settings->orders_accept_pesapal
             || (bool) $settings->orders_accept_flutterwave
+            || (bool) $settings->orders_accept_paypal
             || (bool) $settings->orders_accept_cod
         );
 

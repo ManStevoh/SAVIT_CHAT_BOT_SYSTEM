@@ -74,7 +74,7 @@ class CompanyController extends Controller
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|max:255',
             'phone' => 'nullable|string|max:50',
-            'plan' => 'sometimes|in:starter,professional,enterprise',
+            'plan' => 'sometimes|in:free,starter,growth,professional,business,enterprise',
             'status' => 'sometimes|in:active,suspended,pending',
             'industry' => 'sometimes|nullable|string|in:retail,restaurant,services,other',
             'isGrowthPilot' => 'sometimes|boolean',

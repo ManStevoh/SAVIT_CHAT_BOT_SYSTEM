@@ -5,13 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { CheckCircle2, Circle, ListChecks, X } from "lucide-react"
-import { useSetupStatus } from "@/lib/api-hooks"
+import { useSetupStatus, SetupStatus } from "@/lib/api-hooks"
 import { dismissSetupChecklist } from "@/lib/api-actions"
 import { useState } from "react"
 import { toast } from "sonner"
 
-export function GettingStartedChecklist() {
-  const { data, isLoading, mutate } = useSetupStatus()
+interface Props {
+  /** Pre-seeded data from the dashboard-summary combined fetch. When provided,
+   *  the component skips its own network request. */
+  initialData?: SetupStatus
+}
+
+export function GettingStartedChecklist({ initialData }: Props) {
+  const { data, isLoading, mutate } = useSetupStatus(initialData)
   const [dismissing, setDismissing] = useState(false)
 
   if (isLoading || !data) return null

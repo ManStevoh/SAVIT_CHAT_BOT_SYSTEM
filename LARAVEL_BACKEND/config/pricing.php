@@ -74,20 +74,35 @@ return [
     | Enterprise / custom plans omit amounts (null).
     */
     'plans' => [
+        'free' => [
+            'USD' => 0,
+            'KES' => 0,
+            'NGN' => 0,
+        ],
         'starter' => [
-            'USD' => 29,
-            'KES' => 3799,
-            'NGN' => 45000,
+            'USD' => 12,
+            'KES' => 1499,
+            'NGN' => 18000,
         ],
         'professional' => [
-            'USD' => 99,
-            'KES' => 12999,
-            'NGN' => 155000,
+            'USD' => 29,
+            'KES' => 3999,
+            'NGN' => 45000,
+        ],
+        'growth' => [
+            'USD' => 29,
+            'KES' => 3999,
+            'NGN' => 45000,
         ],
         'enterprise' => [
-            'USD' => null,
-            'KES' => null,
-            'NGN' => null,
+            'USD' => 79,
+            'KES' => 9999,
+            'NGN' => 120000,
+        ],
+        'business' => [
+            'USD' => 79,
+            'KES' => 9999,
+            'NGN' => 120000,
         ],
     ],
 ];

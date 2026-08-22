@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\BookingService;
+use App\Services\Cms\CmsSeoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,6 +18,7 @@ class PublicBookingController extends Controller
 {
     public function __construct(
         protected BookingService $bookings,
+        protected CmsSeoService $seo,
     ) {}
 
     public function show(string $slug, Request $request)
@@ -74,6 +76,7 @@ class PublicBookingController extends Controller
                 'name' => $order?->customer_name,
                 'phone' => $order?->customer_phone,
             ],
+            'seo' => $this->seo->forBookingPage($company, $settings),
         ]);
     }
 
@@ -136,6 +139,7 @@ class PublicBookingController extends Controller
                 'icsUrl' => url('/bookings/'.$booking->id.'/ics?token='.$booking->manage_token),
                 'timezone' => $settings->timezone,
             ],
+            'seo' => $this->seo->noindex('Booking confirmation — '.($booking->company?->name ?? $settings->company?->name ?? 'RelayIQ')),
         ]);
     }
 

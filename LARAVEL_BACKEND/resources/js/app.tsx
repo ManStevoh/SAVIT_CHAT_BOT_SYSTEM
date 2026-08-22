@@ -4,6 +4,7 @@ import { CookieConsentBanner } from '@/components/compliance/CookieConsentBanner
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import { Toaster } from '@/components/ui/toaster'
+import { SWRConfig } from 'swr'
 import '../css/globals.css'
 import { createInertiaApp, router } from '@inertiajs/react'
 import { createRoot } from 'react-dom/client'
@@ -25,7 +26,7 @@ function resolveLayout(name: string) {
 
 function shouldSkipAppTitleSuffix(title: string): boolean {
   try {
-    const seo = (router.page?.props as { seo?: { skipAppTitleSuffix?: boolean } } | undefined)?.seo
+    const seo = ((router as unknown as { page?: { props?: { seo?: { skipAppTitleSuffix?: boolean } } } }).page?.props)?.seo
     if (seo?.skipAppTitleSuffix) return true
   } catch {
     // ignore
@@ -87,14 +88,23 @@ createInertiaApp({
   setup({ el, App, props }) {
     createRoot(el).render(
       <AppErrorBoundary>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="essem-theme">
-          <AppBrandingProvider>
-            <App {...props} />
-            <CookieConsentBanner />
-            <Toaster />
-            <SonnerToaster position="top-right" richColors closeButton />
-          </AppBrandingProvider>
-        </ThemeProvider>
+        <SWRConfig
+          value={{
+            revalidateOnFocus: false,
+            revalidateOnReconnect: false,
+            shouldRetryOnError: false,
+            dedupingInterval: 8000,
+          }}
+        >
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="essem-theme">
+            <AppBrandingProvider>
+              <App {...props} />
+              <CookieConsentBanner />
+              <Toaster />
+              <SonnerToaster position="top-right" richColors closeButton />
+            </AppBrandingProvider>
+          </ThemeProvider>
+        </SWRConfig>
       </AppErrorBoundary>,
     )
   },

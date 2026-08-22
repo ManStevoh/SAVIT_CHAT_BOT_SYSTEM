@@ -43,7 +43,7 @@ class SendNewMessageNotificationJob implements ShouldQueue
             return;
         }
 
-        $frontendUrl = rtrim((string) env('FRONTEND_URL', config('app.url')), '/');
+        $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
         $chatsUrl = $frontendUrl . '/dashboard/chats';
         $customerName = $this->customerName ? trim($this->customerName) : 'Customer';
         $messagePreview = Str::limit($this->messageText, 200);

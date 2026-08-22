@@ -37,8 +37,8 @@ class AdminPlanEntitlementsTest extends TestCase
 
         $this->getJson('/api/admin/plans')
             ->assertOk()
-            ->assertJsonFragment(['slug' => 'starter'])
-            ->assertJsonPath('0.entitlements.team', 3);
+            ->assertJsonFragment(['slug' => 'free'])
+            ->assertJsonFragment(['slug' => 'starter']);
     }
 
     public function test_admin_can_update_starter_message_and_api_gates(): void
@@ -50,8 +50,11 @@ class AdminPlanEntitlementsTest extends TestCase
             'entitlements' => [
                 'messages' => 8000,
                 'messagesUnlimited' => false,
+                'maxProducts' => 250,
                 'team' => 5,
                 'whatsappNumbers' => 1,
+                'crmLevel' => 'advanced',
+                'analyticsLevel' => 'standard',
                 'apiAccess' => true,
                 'analytics' => true,
                 'aiPostsPerMonth' => 40,
@@ -64,10 +67,14 @@ class AdminPlanEntitlementsTest extends TestCase
                 'allowService' => true,
                 'allowBookings' => true,
                 'maxBookingsPerMonth' => 25,
+                'requiresBranding' => false,
             ],
         ])->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('plan.entitlements.messages', 8000)
+            ->assertJsonPath('plan.entitlements.maxProducts', 250)
+            ->assertJsonPath('plan.entitlements.crmLevel', 'advanced')
+            ->assertJsonPath('plan.entitlements.analyticsLevel', 'standard')
             ->assertJsonPath('plan.entitlements.team', 5)
             ->assertJsonPath('plan.entitlements.apiAccess', true)
             ->assertJsonPath('plan.entitlements.analytics', true)
@@ -78,10 +85,14 @@ class AdminPlanEntitlementsTest extends TestCase
 
         $plan->refresh();
         $this->assertSame(8000, $plan->entitlements['messages']);
+        $this->assertSame(250, $plan->entitlements['max_products']);
+        $this->assertSame('advanced', $plan->entitlements['crm_level']);
+        $this->assertSame('standard', $plan->entitlements['analytics_level']);
         $this->assertTrue($plan->entitlements['api_access']);
         $this->assertFalse($plan->entitlements['allow_digital']);
         $this->assertSame(25, $plan->entitlements['max_bookings_per_month']);
         $this->assertSame(8000, PlanLimitService::getMessageLimitForPlan('starter'));
+        $this->assertSame(250, PlanLimitService::getMaxProductsForPlan('starter'));
         $this->assertTrue(PlanLimitService::planHasApiAccess('starter'));
     }
 

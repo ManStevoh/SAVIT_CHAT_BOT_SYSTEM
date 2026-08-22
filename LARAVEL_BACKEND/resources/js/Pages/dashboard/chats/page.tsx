@@ -94,7 +94,7 @@ export default function ChatsPage() {
       currencyDisplayFromSettings(companySettings)
     )
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
-  const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' })
+  const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' }, { enabled: createOrderOpen })
 
   const {
     data: chats,

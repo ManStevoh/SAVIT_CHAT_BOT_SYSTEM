@@ -10,10 +10,14 @@ import { apiRequest } from '@/lib/api-client'
 import { Copy, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
 import { Link } from '@inertiajs/react'
 import { StorefrontCouponsCard } from '@/components/dashboard/StorefrontCouponsCard'
+import { BrandCustomizationCard } from '@/components/dashboard/BrandCustomizationCard'
+import type { BrandTheme } from '@/lib/theme-utils'
 
 type BioLink = { label: string; url: string }
 
 type SettingsResponse = {
+  companyName?: string
+  logo?: string | null
   storeSlug: string | null
   storefrontEnabled: boolean
   storefrontUrl: string | null
@@ -40,6 +44,10 @@ type SettingsResponse = {
   storefrontAnnouncementBar?: string
   storefrontSeoTitle?: string
   storefrontSeoDescription?: string
+  storefrontOgImage?: string
+  storefrontGoogleSiteVerification?: string
+  storefrontBusinessType?: string
+  storefrontTheme?: BrandTheme
 }
 
 export default function DashboardStorefrontPage() {
@@ -48,6 +56,9 @@ export default function DashboardStorefrontPage() {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
+  const [companyName, setCompanyName] = useState('My Brand')
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null)
+  const [storefrontTheme, setStorefrontTheme] = useState<BrandTheme | null>(null)
   const [storeSlug, setStoreSlug] = useState('')
   const [storefrontEnabled, setStorefrontEnabled] = useState(false)
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null)
@@ -75,12 +86,18 @@ export default function DashboardStorefrontPage() {
   const [announcementBar, setAnnouncementBar] = useState('')
   const [storefrontSeoTitle, setStorefrontSeoTitle] = useState('')
   const [storefrontSeoDescription, setStorefrontSeoDescription] = useState('')
+  const [storefrontOgImage, setStorefrontOgImage] = useState('')
+  const [storefrontGoogleSiteVerification, setStorefrontGoogleSiteVerification] = useState('')
+  const [storefrontBusinessType, setStorefrontBusinessType] = useState('OnlineStore')
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const data = await apiRequest<SettingsResponse>('/api/company/settings')
+      setCompanyName(data.companyName || 'My Brand')
+      setCompanyLogo(data.logo || null)
+      setStorefrontTheme(data.storefrontTheme || null)
       setStoreSlug(data.storeSlug || '')
       setStorefrontEnabled(!!data.storefrontEnabled)
       setStorefrontUrl(data.storefrontUrl)
@@ -107,6 +124,9 @@ export default function DashboardStorefrontPage() {
       setAnnouncementBar(data.storefrontAnnouncementBar || '')
       setStorefrontSeoTitle(data.storefrontSeoTitle || '')
       setStorefrontSeoDescription(data.storefrontSeoDescription || '')
+      setStorefrontOgImage(data.storefrontOgImage || '')
+      setStorefrontGoogleSiteVerification(data.storefrontGoogleSiteVerification || '')
+      setStorefrontBusinessType(data.storefrontBusinessType || 'OnlineStore')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load settings')
     } finally {
@@ -150,6 +170,9 @@ export default function DashboardStorefrontPage() {
           storefrontAnnouncementBar: announcementBar || null,
           storefrontSeoTitle: storefrontSeoTitle || null,
           storefrontSeoDescription: storefrontSeoDescription || null,
+          storefrontOgImage: storefrontOgImage || null,
+          storefrontGoogleSiteVerification: storefrontGoogleSiteVerification || null,
+          storefrontBusinessType: storefrontBusinessType || 'OnlineStore',
         },
       })
       if (data.success) {
@@ -245,31 +268,155 @@ export default function DashboardStorefrontPage() {
               </Button>
             </div>
           )}
-          <div>
-            <Label>SEO title</Label>
-            <Input
-              value={storefrontSeoTitle}
-              onChange={(e) => setStorefrontSeoTitle(e.target.value)}
-              placeholder="My Shop — Buy online"
-              maxLength={70}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">Shown in Google as the shop page title.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="flex items-center justify-between">
+                <Label>SEO Title</Label>
+                <span className={`text-[11px] ${storefrontSeoTitle.length > 60 ? 'text-amber-500 font-medium' : 'text-muted-foreground'}`}>
+                  {storefrontSeoTitle.length}/60 chars
+                </span>
+              </div>
+              <Input
+                value={storefrontSeoTitle}
+                onChange={(e) => setStorefrontSeoTitle(e.target.value)}
+                placeholder={`${companyName} — Official Store`}
+                maxLength={90}
+                className="mt-1"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Primary title tag displayed on Google Search and browser tabs.</p>
+            </div>
+
+            <div>
+              <Label>Business Schema Type</Label>
+              <select
+                value={storefrontBusinessType}
+                onChange={(e) => setStorefrontBusinessType(e.target.value)}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="OnlineStore">Online Store (E-Commerce)</option>
+                <option value="LocalBusiness">Local Business (General)</option>
+                <option value="Restaurant">Restaurant / Food &amp; Beverage</option>
+                <option value="HealthAndBeautyBusiness">Health, Salon &amp; Beauty</option>
+                <option value="ProfessionalService">Professional Services &amp; Consulting</option>
+              </select>
+              <p className="mt-1 text-[11px] text-muted-foreground">Helps Google understand your entity for Rich Results and Local Search.</p>
+            </div>
           </div>
+
           <div>
-            <Label>SEO description</Label>
+            <div className="flex items-center justify-between">
+              <Label>SEO Meta Description</Label>
+              <span className={`text-[11px] ${storefrontSeoDescription.length > 160 ? 'text-amber-500 font-medium' : 'text-muted-foreground'}`}>
+                {storefrontSeoDescription.length}/160 chars
+              </span>
+            </div>
             <Textarea
               value={storefrontSeoDescription}
               onChange={(e) => setStorefrontSeoDescription(e.target.value)}
-              rows={3}
+              rows={2}
               maxLength={320}
-              placeholder="Describe what you sell and why shoppers should buy from you."
+              placeholder={`Shop ${companyName} online. Fast WhatsApp ordering, instant checkout, and delivery or pickup.`}
+              className="mt-1 text-sm"
             />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Unique shop description beats generic “Shop online” copy for rankings and CTR.
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Shown beneath your title on Google search results. Keep it between 120–160 characters for best CTR.
             </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label>Social Share Image Banner (OG Image URL)</Label>
+              <Input
+                value={storefrontOgImage}
+                onChange={(e) => setStorefrontOgImage(e.target.value)}
+                placeholder="https://.../banner-1200x630.jpg"
+                className="mt-1"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Custom 1200x630 sharing banner when your link is shared on WhatsApp/Facebook.</p>
+            </div>
+
+            <div>
+              <Label>Google Search Console Verification Tag</Label>
+              <Input
+                value={storefrontGoogleSiteVerification}
+                onChange={(e) => setStorefrontGoogleSiteVerification(e.target.value)}
+                placeholder="google-site-verification token or code"
+                className="mt-1"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Paste your verification token from Google Search Console to index custom domains.</p>
+            </div>
+          </div>
+
+          {/* Live Search & Social Previews */}
+          <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Live Search &amp; Social Previews</h4>
+            
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Google SERP Snippet Preview */}
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Google Search Preview</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[9px] font-bold text-slate-700">
+                    {companyName.charAt(0)}
+                  </div>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">{companyName}</span>
+                  <span>›</span>
+                  <span className="truncate text-slate-500">{storeSlug || 'store'}</span>
+                </div>
+                <h5 className="mt-1 text-base font-medium text-[#1a0dab] hover:underline dark:text-[#8ab4f8] line-clamp-1 cursor-pointer">
+                  {storefrontSeoTitle || `${companyName} — Shop`}
+                </h5>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 line-clamp-2">
+                  {storefrontSeoDescription || `Shop ${companyName} online. Browse products and order for delivery or pickup with instant checkout.`}
+                </p>
+              </div>
+
+              {/* WhatsApp Social Card Preview */}
+              <div className="rounded-xl border border-slate-200 bg-[#f0f2f5] p-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
+                  <span className="font-semibold text-emerald-700 dark:text-emerald-400">WhatsApp Link Preview Card</span>
+                </div>
+                <div className="overflow-hidden rounded-lg border border-slate-300/80 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-950">
+                  {storefrontOgImage || companyLogo ? (
+                    <img
+                      src={storefrontOgImage || companyLogo || ''}
+                      alt="Preview"
+                      className="h-28 w-full object-cover bg-slate-100"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-full items-center justify-center bg-slate-100 text-xs text-slate-400 dark:bg-slate-900">
+                      Upload an OG Image or Logo for rich card preview
+                    </div>
+                  )}
+                  <div className="p-2.5">
+                    <p className="text-xs font-semibold text-slate-900 line-clamp-1 dark:text-white">
+                      {storefrontSeoTitle || `${companyName} — Shop`}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2 dark:text-slate-400">
+                      {storefrontSeoDescription || `Shop ${companyName} online.`}
+                    </p>
+                    <p className="mt-1 text-[10px] uppercase tracking-wider text-slate-400 font-mono">
+                      {storeSlug ? `relayiq.com/s/${storeSlug}` : 'relayiq.com'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      <BrandCustomizationCard
+        initialLogo={companyLogo}
+        initialTheme={storefrontTheme}
+        initialAnnouncementBar={announcementBar}
+        initialFooterText={storefrontTheme?.footer_text}
+        businessName={companyName}
+        storeSlug={storeSlug}
+        onSaved={load}
+      />
 
       <Card>
         <CardHeader>

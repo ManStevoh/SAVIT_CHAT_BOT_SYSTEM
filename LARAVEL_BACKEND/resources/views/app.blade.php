@@ -13,10 +13,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="/site.webmanifest">
     <link rel="icon" id="dynamic-favicon" href="{{ $brandFavicon ?: '/favicon-light.png?v=4' }}" type="image/png">
     <link rel="icon" href="/favicon-dark.png?v=4" type="image/png" media="(prefers-color-scheme: dark)">
     <link rel="icon" href="{{ $brandFavicon ?: '/favicon-light.png?v=4' }}" type="image/png" media="(prefers-color-scheme: light)">
-    <link rel="apple-touch-icon" href="{{ $brandFavicon ?: '/favicon-light.png?v=4' }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ $brandFavicon ?: '/favicon-light.png?v=4' }}">
     <script>
         (function() {
             function updateFavicon() {
@@ -46,6 +48,9 @@
     @endif
     @if (!empty($seo['canonical']))
     <link rel="canonical" href="{{ $seo['canonical'] }}">
+    @endif
+    @if (!empty($seo['googleSiteVerification']))
+    <meta name="google-site-verification" content="{{ $seo['googleSiteVerification'] }}">
     @endif
     <meta property="og:type" content="{{ $seo['ogType'] ?? 'website' }}">
     <meta property="og:site_name" content="{{ $seo['siteName'] ?? config('app.name') }}">

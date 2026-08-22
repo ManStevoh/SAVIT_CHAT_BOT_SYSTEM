@@ -52,7 +52,14 @@ import {
 import { setAuthCookie } from "@/lib/auth-cookie"
 import type { Company } from "@/lib/mock-data"
 
-const PLAN_OPTIONS: Company["plan"][] = ["starter", "professional", "enterprise"]
+const PLAN_OPTIONS = [
+  { value: "free", label: "Free" },
+  { value: "starter", label: "Starter" },
+  { value: "growth", label: "Growth" },
+  { value: "professional", label: "Growth (professional)" },
+  { value: "business", label: "Business" },
+  { value: "enterprise", label: "Business (enterprise)" },
+]
 const STATUS_OPTIONS: Company["status"][] = ["active", "suspended", "pending"]
 
 export default function AdminCompaniesPage() {
@@ -383,8 +390,8 @@ export default function AdminCompaniesPage() {
                 onChange={(e) => setEditForm((f) => ({ ...f, plan: e.target.value as Company["plan"] }))}
               >
                 {PLAN_OPTIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
+                  <option key={p.value} value={p.value}>
+                    {p.label}
                   </option>
                 ))}
               </select>

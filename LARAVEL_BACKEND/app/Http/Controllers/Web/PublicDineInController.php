@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\DineInTable;
+use App\Services\Cms\CmsSeoService;
 use App\Services\PlanLimitService;
 use App\Services\Storefront\StorefrontService;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +14,10 @@ use Inertia\Response;
 
 class PublicDineInController extends Controller
 {
-    public function __construct(protected StorefrontService $storefront) {}
+    public function __construct(
+        protected StorefrontService $storefront,
+        protected CmsSeoService $seo,
+    ) {}
 
     public function byToken(string $qrToken): RedirectResponse|Response
     {
@@ -39,6 +43,7 @@ class PublicDineInController extends Controller
             'company' => [
                 'name' => $company->name,
                 'logo' => $company->logo ? asset('storage/'.$company->logo) : null,
+                'theme' => is_array($company->storefront_theme) ? $company->storefront_theme : [],
             ],
             'table' => [
                 'id' => (string) $table->id,
@@ -47,6 +52,7 @@ class PublicDineInController extends Controller
             ],
             'products' => $this->storefront->catalog($company),
             'slug' => $company->store_slug,
+            'seo' => $this->seo->noindex('Dine-In Menu — Table '.$table->name.' — '.$company->name),
         ]);
     }
 
@@ -67,6 +73,7 @@ class PublicDineInController extends Controller
             'company' => [
                 'name' => $company->name,
                 'logo' => $company->logo ? asset('storage/'.$company->logo) : null,
+                'theme' => is_array($company->storefront_theme) ? $company->storefront_theme : [],
             ],
             'table' => [
                 'id' => (string) $table->id,
@@ -75,6 +82,7 @@ class PublicDineInController extends Controller
             ],
             'products' => $this->storefront->catalog($company),
             'slug' => $slug,
+            'seo' => $this->seo->noindex('Dine-In Menu — Table '.$table->name.' — '.$company->name),
         ]);
     }
 }

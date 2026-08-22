@@ -52,8 +52,10 @@ import {
   ChevronUp,
   ExternalLink,
   Copy,
+  Palette,
 } from "lucide-react"
 import { OnboardingInterviewPanel } from "@/components/agent/OnboardingInterviewPanel"
+import { BrandCustomizationCard } from "@/components/dashboard/BrandCustomizationCard"
 import { useSearchParams } from "next/navigation"
 
 function isMasked(val: unknown): boolean {
@@ -105,21 +107,24 @@ declare global {
 
 export default function SettingsPage() {
   const { mutate } = useSWRConfig()
-  const { data: settings } = useCompanySettings()
-  const { data: teamMembers = [] } = useCompanyTeam()
-  const { data: whatsappNumbers = [] } = useWhatsAppNumbers()
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams.get('tab')
-  const allowedTabs = new Set(['profile', 'whatsapp', 'ai', 'team', 'notifications', 'order-payments'])
-  const [activeTab, setActiveTab] = useState(() =>
-    tabFromUrl && allowedTabs.has(tabFromUrl) ? tabFromUrl : 'profile'
-  )
+  const allowedTabs = new Set(['profile', 'branding', 'appearance', 'whatsapp', 'ai', 'team', 'notifications', 'order-payments'])
+  const normalizeTab = (t: string | null) => (t === 'appearance' ? 'branding' : t)
+  const [activeTab, setActiveTab] = useState(() => {
+    const raw = tabFromUrl && allowedTabs.has(tabFromUrl) ? tabFromUrl : 'profile'
+    return normalizeTab(raw) || 'profile'
+  })
 
   useEffect(() => {
     if (tabFromUrl && allowedTabs.has(tabFromUrl)) {
-      setActiveTab(tabFromUrl)
+      setActiveTab(normalizeTab(tabFromUrl) || 'profile')
     }
   }, [tabFromUrl])
+
+  const { data: settings } = useCompanySettings()
+  const { data: teamMembers = [] } = useCompanyTeam({ enabled: activeTab === 'team' })
+  const { data: whatsappNumbers = [] } = useWhatsAppNumbers({ enabled: activeTab === 'whatsapp' })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [profileSuccess, setProfileSuccess] = useState(false)
@@ -146,6 +151,10 @@ export default function SettingsPage() {
   const [aiAdvancedSuccess, setAiAdvancedSuccess] = useState(false)
   const [businessName, setBusinessName] = useState("QuickBite Restaurant")
   const [industry, setIndustry] = useState<'retail' | 'restaurant' | 'services' | 'other'>('other')
+  const [businessMode, setBusinessMode] = useState<'retail' | 'services' | 'restaurant' | 'hybrid'>('hybrid')
+  const [enableProductsCatalog, setEnableProductsCatalog] = useState(true)
+  const [enableBookings, setEnableBookings] = useState(true)
+  const [enableDineIn, setEnableDineIn] = useState(false)
   const [email, setEmail] = useState("contact@quickbite.com")
   const [phone, setPhone] = useState("+1 555-0100")
   const [address, setAddress] = useState("123 Main Street, New York, NY 10001")
@@ -495,6 +504,7 @@ export default function SettingsPage() {
   const [ordersAcceptPaystack, setOrdersAcceptPaystack] = useState(false)
   const [ordersAcceptPesapal, setOrdersAcceptPesapal] = useState(false)
   const [ordersAcceptFlutterwave, setOrdersAcceptFlutterwave] = useState(false)
+  const [ordersAcceptPayPal, setOrdersAcceptPayPal] = useState(false)
   const [ordersAcceptCod, setOrdersAcceptCod] = useState(false)
   const [deliveryFeesEnabled, setDeliveryFeesEnabled] = useState(false)
   const [defaultDeliveryFee, setDefaultDeliveryFee] = useState<string>("")
@@ -525,11 +535,16 @@ export default function SettingsPage() {
   const [flutterwaveSecretHash, setFlutterwaveSecretHash] = useState('')
   const [flutterwaveCurrency, setFlutterwaveCurrency] = useState('kes')
   const [flutterwaveEnv, setFlutterwaveEnv] = useState<'sandbox' | 'production'>('sandbox')
+  const [paypalClientId, setPaypalClientId] = useState('')
+  const [paypalClientSecret, setPaypalClientSecret] = useState('')
+  const [paypalCurrency, setPaypalCurrency] = useState('usd')
+  const [paypalEnv, setPaypalEnv] = useState<'sandbox' | 'production'>('sandbox')
   const [replacingMpesaSecret, setReplacingMpesaSecret] = useState<Record<string, boolean>>({})
   const [replacingStripeSecret, setReplacingStripeSecret] = useState(false)
   const [replacingPaystackSecret, setReplacingPaystackSecret] = useState(false)
   const [replacingPesapalSecret, setReplacingPesapalSecret] = useState(false)
   const [replacingFlutterwaveSecret, setReplacingFlutterwaveSecret] = useState(false)
+  const [replacingPayPalSecret, setReplacingPayPalSecret] = useState(false)
 
   // Per-option saving and saved states for Order Payments tab
   const [optionSaving, setOptionSaving] = useState<Record<string, boolean>>({})
@@ -608,6 +623,10 @@ export default function SettingsPage() {
     if (settings) {
       if (settings.companyName != null) setBusinessName(settings.companyName)
       if (settings.industry) setIndustry(settings.industry)
+      if (settings.businessMode) setBusinessMode(settings.businessMode)
+      if (settings.enableProductsCatalog != null) setEnableProductsCatalog(settings.enableProductsCatalog)
+      if (settings.enableBookings != null) setEnableBookings(settings.enableBookings)
+      if (settings.enableDineIn != null) setEnableDineIn(settings.enableDineIn)
       if (settings.email != null) setEmail(settings.email)
       if (settings.phone != null) setPhone(settings.phone)
       if (settings.address != null) setAddress(settings.address)
@@ -706,6 +725,7 @@ export default function SettingsPage() {
       if (settings.ordersAcceptPaystack != null) setOrdersAcceptPaystack(settings.ordersAcceptPaystack)
       if (settings.ordersAcceptPesapal != null) setOrdersAcceptPesapal(settings.ordersAcceptPesapal)
       if (settings.ordersAcceptFlutterwave != null) setOrdersAcceptFlutterwave(settings.ordersAcceptFlutterwave)
+      if (settings.ordersAcceptPayPal != null) setOrdersAcceptPayPal(settings.ordersAcceptPayPal)
       if (settings.ordersAcceptCod != null) setOrdersAcceptCod(settings.ordersAcceptCod)
 
       const mpc = settings.orderPaymentMpesaConfig
@@ -774,18 +794,32 @@ export default function SettingsPage() {
         setFlutterwaveCurrency("kes")
         setFlutterwaveEnv("sandbox")
       }
+      const ppl = settings.orderPaymentPayPalConfig
+      if (ppl) {
+        if (ppl.client_id != null && ppl.client_id !== "") setPaypalClientId(ppl.client_id)
+        if (ppl.client_secret != null && ppl.client_secret !== "") setPaypalClientSecret(ppl.client_secret)
+        if (ppl.currency != null && ppl.currency !== "") setPaypalCurrency(ppl.currency)
+        if (ppl.env === "production" || ppl.env === "sandbox") setPaypalEnv(ppl.env)
+      } else if (settings.orderPaymentPayPalConfigured === false) {
+        setPaypalClientId("")
+        setPaypalClientSecret("")
+        setPaypalCurrency("usd")
+        setPaypalEnv("sandbox")
+      }
     }
   }, [settings])
 
   useEffect(() => {
+    if (activeTab !== 'ai') return
     apiRequest<{ models: Array<{ id: string; displayName: string; provider: string; inputCostPerMillion: number; outputCostPerMillion: number }> }>(
       '/api/company/ai-models'
     )
       .then((data) => setAvailableAiModels(data.models ?? []))
       .catch(() => setAvailableAiModels([]))
-  }, [])
+  }, [activeTab])
 
   useEffect(() => {
+    if (activeTab !== 'ai') return
     getCompanyAiProviders()
       .then((data) => {
         if (data.credentialMode) {
@@ -810,7 +844,7 @@ export default function SettingsPage() {
         setAiUsageSummary(null)
         setAiUsageExtras(null)
       })
-  }, [])
+  }, [activeTab])
 
   const handleByokSave = async () => {
     setByokSaving(true)
@@ -1012,6 +1046,10 @@ export default function SettingsPage() {
       decimalSeparator,
       timezone,
       industry,
+      businessMode,
+      enableProductsCatalog,
+      enableBookings,
+      enableDineIn,
       attributionRetentionDays: attributionRetentionDays.trim()
         ? Math.min(730, Math.max(30, parseInt(attributionRetentionDays, 10) || 365))
         : null,
@@ -1182,6 +1220,40 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSavePayPalConfig = async () => {
+    setOptionSavingState('paypalConfig', true)
+    const res = await updateSettings({
+      ordersAcceptPayPal: true,
+      orderPaymentPayPalConfig: {
+        client_id: paypalClientId.trim(),
+        client_secret: paypalClientSecret.trim(),
+        currency: paypalCurrency.trim() || "usd",
+        env: paypalEnv,
+      },
+    })
+    setOptionSavingState('paypalConfig', false)
+    if (res.success) {
+      setOptionSavedState('paypalConfig')
+      setReplacingPayPalSecret(false)
+      mutate("company-settings")
+    }
+  }
+
+  const handleClearPayPalConfig = async () => {
+    setOptionSavingState('paypalConfig', true)
+    const res = await updateSettings({
+      orderPaymentPayPalConfig: null,
+    })
+    setOptionSavingState('paypalConfig', false)
+    if (res.success) {
+      setOptionSavedState('paypalConfig')
+      setPaypalClientId("")
+      setPaypalClientSecret("")
+      setReplacingPayPalSecret(false)
+      mutate("company-settings")
+    }
+  }
+
   const handleSaveManualInstructions = async () => {
     setOptionSavingState('manualInstructions', true)
     const res = await updateSettings({
@@ -1245,6 +1317,10 @@ export default function SettingsPage() {
             <Building2 className="h-4 w-4" />
             Business Profile
           </TabsTrigger>
+          <TabsTrigger value="branding" className="gap-2">
+            <Palette className="h-4 w-4" />
+            Brand &amp; Appearance
+          </TabsTrigger>
           <TabsTrigger value="whatsapp" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             WhatsApp Setup
@@ -1267,6 +1343,18 @@ export default function SettingsPage() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Brand & Appearance Studio */}
+        <TabsContent value="branding">
+          <BrandCustomizationCard
+            initialLogo={settings?.logo}
+            initialTheme={settings?.storefrontTheme}
+            initialAnnouncementBar={settings?.storefrontAnnouncementBar}
+            initialFooterText={settings?.storefrontTheme?.footer_text}
+            businessName={businessName || settings?.companyName || 'My Brand'}
+            storeSlug={settings?.storeSlug || ''}
+          />
+        </TabsContent>
+
         {/* Business Profile — API: PUT /api/company/settings (companyName, email, phone) */}
         <TabsContent value="profile">
           <form className="space-y-6" onSubmit={handleProfileSubmit}>
@@ -1280,6 +1368,153 @@ export default function SettingsPage() {
                 Settings saved successfully.
               </div>
             )}
+
+            {/* Business Operating Mode & Capabilities */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle>Business Operating Mode & Capabilities</CardTitle>
+                    <CardDescription>Choose how RelayIQ tailors your AI assistant, checkout flows, and dashboard modules</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <FieldLabel className="mb-2 block">Quick Operating Preset</FieldLabel>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBusinessMode('retail')
+                        setEnableProductsCatalog(true)
+                        setEnableBookings(false)
+                        setEnableDineIn(false)
+                      }}
+                      className={`p-3.5 rounded-lg border text-left transition-all ${
+                        businessMode === 'retail'
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:border-muted-foreground/50'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm flex items-center gap-1.5">
+                        🛍️ Retail & E-Commerce
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Physical & digital goods, shopping cart, delivery & shipping.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBusinessMode('services')
+                        setEnableProductsCatalog(true)
+                        setEnableBookings(true)
+                        setEnableDineIn(false)
+                      }}
+                      className={`p-3.5 rounded-lg border text-left transition-all ${
+                        businessMode === 'services'
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:border-muted-foreground/50'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm flex items-center gap-1.5">
+                        📅 Services & Bookings
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Appointments, service schedules, consultations, no shipping fees.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBusinessMode('restaurant')
+                        setEnableProductsCatalog(true)
+                        setEnableBookings(false)
+                        setEnableDineIn(true)
+                      }}
+                      className={`p-3.5 rounded-lg border text-left transition-all ${
+                        businessMode === 'restaurant'
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:border-muted-foreground/50'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm flex items-center gap-1.5">
+                        🍽️ Restaurant & Dine-In
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Food menu, table QR ordering, takeout, no address needed at table.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBusinessMode('hybrid')
+                        setEnableProductsCatalog(true)
+                        setEnableBookings(true)
+                        setEnableDineIn(true)
+                      }}
+                      className={`p-3.5 rounded-lg border text-left transition-all ${
+                        businessMode === 'hybrid'
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:border-muted-foreground/50'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm flex items-center gap-1.5">
+                        ⚡ Hybrid / All Modules
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Full platform power: products, appointments, and dine-in tables.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 space-y-3">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Granular Capability Toggles
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <label className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
+                      <div>
+                        <div className="text-sm font-medium">Products & Catalog</div>
+                        <div className="text-xs text-muted-foreground">Sell physical/digital goods</div>
+                      </div>
+                      <Switch
+                        checked={enableProductsCatalog}
+                        onCheckedChange={(checked) => setEnableProductsCatalog(checked)}
+                      />
+                    </label>
+
+                    <label className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
+                      <div>
+                        <div className="text-sm font-medium">Service Bookings</div>
+                        <div className="text-xs text-muted-foreground">Appointment scheduling</div>
+                      </div>
+                      <Switch
+                        checked={enableBookings}
+                        onCheckedChange={(checked) => setEnableBookings(checked)}
+                      />
+                    </label>
+
+                    <label className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
+                      <div>
+                        <div className="text-sm font-medium">Dine-In Table QR</div>
+                        <div className="text-xs text-muted-foreground">Table ordering & tabs</div>
+                      </div>
+                      <Switch
+                        checked={enableDineIn}
+                        onCheckedChange={(checked) => setEnableDineIn(checked)}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Basic Information */}
             <Card>
@@ -1911,7 +2146,7 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => setWaMethod("embedded")}
                             className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                              waMethod === "embedded"
+                              (waMethod as string) === "embedded"
                                 ? "bg-background text-foreground shadow-sm"
                                 : "text-muted-foreground hover:text-foreground"
                             }`}
@@ -1922,7 +2157,7 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => setWaMethod("manual")}
                             className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                              waMethod === "manual"
+                              (waMethod as string) === "manual"
                                 ? "bg-background text-foreground shadow-sm"
                                 : "text-muted-foreground hover:text-foreground"
                             }`}
@@ -4111,6 +4346,183 @@ export default function SettingsPage() {
                             ) : (
                               <>
                                 <Check className="h-3.5 w-3.5" /> Save Flutterwave Credentials
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* PayPal Payment Card */}
+                <Card className={`transition-all duration-200 ${ordersAcceptPayPal ? 'bg-card shadow-sm' : 'opacity-85 bg-card/60'}`}>
+                  <CardContent className="p-5 space-y-4">
+                    <div className={`flex items-start justify-between gap-4 ${ordersAcceptPayPal ? 'cursor-pointer select-none' : ''}`} onClick={() => ordersAcceptPayPal && toggleSection('paypal')}>
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg p-2.5 bg-muted text-foreground shrink-0 mt-0.5">
+                          <CreditCard className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">PayPal</h4>
+                            <Badge variant="outline" className="text-xs font-medium">
+                              Cards & PayPal Balance
+                            </Badge>
+                            {optionSaving['paypalToggle'] && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            {optionSaved['paypalToggle'] && (
+                              <Badge variant="outline" className="gap-1 font-medium text-xs">
+                                <Check className="h-3 w-3" /> Saved
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Accept payments worldwide via PayPal and debit/credit cards.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={ordersAcceptPayPal}
+                          onCheckedChange={(v) => handleToggleOption('paypalToggle', setOrdersAcceptPayPal, v, 'ordersAcceptPayPal')}
+                          disabled={!ordersCollectPaymentEnabled || optionSaving['paypalToggle']}
+                        />
+                        {ordersAcceptPayPal && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleSection('paypal')
+                            }}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${!collapsedSections['paypal'] ? 'rotate-180' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Integrated PayPal Custom Configuration Box */}
+                    {!collapsedSections['paypal'] && ordersAcceptPayPal && (
+                      <div className="mt-4 pt-4 border-t border-border/60 rounded-lg bg-muted/40 p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-semibold text-foreground">PayPal REST Credentials</span>
+                          </div>
+                          {settings?.orderPaymentPayPalConfigured ? (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="gap-1 font-normal text-xs"><Check className="h-3 w-3" /> Custom PayPal Configured</Badge>
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleClearPayPalConfig}>Clear</Button>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-xs font-normal">Merchant Credentials Required</Badge>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          Enter your PayPal REST App Client ID and Secret from the PayPal Developer Dashboard.
+                        </p>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Client ID</FieldLabel>
+                            <Input
+                              placeholder="Your PayPal Client ID"
+                              value={paypalClientId}
+                              onChange={(e) => setPaypalClientId(e.target.value)}
+                            />
+                          </Field>
+
+                          <Field>
+                            <FieldLabel>Client Secret</FieldLabel>
+                            {isMasked(paypalClientSecret) && !replacingPayPalSecret ? (
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input type="text" readOnly className="font-mono text-sm" value={paypalClientSecret} />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => {
+                                    setReplacingPayPalSecret(true)
+                                    setPaypalClientSecret("")
+                                  }}
+                                >
+                                  Replace Secret
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Input
+                                  type="password"
+                                  placeholder="Your PayPal Client Secret"
+                                  value={paypalClientSecret}
+                                  onChange={(e) => setPaypalClientSecret(e.target.value)}
+                                />
+                                {replacingPayPalSecret && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs text-muted-foreground"
+                                    onClick={() => {
+                                      setReplacingPayPalSecret(false)
+                                      mutate("company-settings")
+                                    }}
+                                  >
+                                    Cancel Replace
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </Field>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Default Currency</FieldLabel>
+                            <Input
+                              placeholder="usd, eur, gbp, cad, aud"
+                              value={paypalCurrency}
+                              onChange={(e) => setPaypalCurrency(e.target.value)}
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel>Environment Mode</FieldLabel>
+                            <Select value={paypalEnv} onValueChange={(v) => setPaypalEnv(v as 'sandbox' | 'production')}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                                <SelectItem value="production">Production (Live)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        </div>
+
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={optionSaving['paypalConfig']}
+                            onClick={handleSavePayPalConfig}
+                            className="gap-1.5"
+                          >
+                            {optionSaving['paypalConfig'] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+                              </>
+                            ) : optionSaved['paypalConfig'] ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-foreground" /> Saved!
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" /> Save PayPal Credentials
                               </>
                             )}
                           </Button>

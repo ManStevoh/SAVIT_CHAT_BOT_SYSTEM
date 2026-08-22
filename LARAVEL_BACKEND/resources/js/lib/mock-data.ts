@@ -266,12 +266,16 @@ export interface Plan {
   entitlements?: {
     messages?: number | null
     messagesUnlimited?: boolean
+    maxProducts?: number | null
+    maxProductsUnlimited?: boolean
     team?: number
     whatsappNumbers?: number
     aiCostUsd?: number | null
     aiModelModes?: string[]
     allowByok?: boolean
     credentialModes?: string[]
+    crmLevel?: string
+    analyticsLevel?: string
     apiAccess?: boolean
     analytics?: boolean
     attribution?: boolean
@@ -285,6 +289,11 @@ export interface Plan {
     allowService?: boolean
     allowBookings?: boolean
     maxBookingsPerMonth?: number | null
+    allowStorefront?: boolean
+    allowLinkInBio?: boolean
+    allowDineIn?: boolean
+    allowWhatsappCampaigns?: boolean
+    requiresBranding?: boolean
   }
 }
 
@@ -294,7 +303,7 @@ export interface Company {
   email: string
   phone: string
   logo?: string
-  plan: 'starter' | 'professional' | 'enterprise'
+  plan: 'free' | 'starter' | 'growth' | 'professional' | 'business' | 'enterprise' | string
   status: 'active' | 'suspended' | 'pending'
   totalChats: number
   totalOrders: number
@@ -857,50 +866,77 @@ export const mockAIUsage: AIUsageData = {
 // Pricing plans for landing page
 export const pricingPlans = [
   {
+    id: 'free',
+    name: 'Free',
+    description: 'Get started selling on WhatsApp with essential commerce tools',
+    price: 0,
+    yearlyPrice: 0,
+    features: [
+      '1 WhatsApp connection',
+      '20 products',
+      '50 AI conversations/month',
+      'Basic storefront',
+      'Basic customer inbox',
+      'M-Pesa payment integration',
+      'RelayIQ branding',
+    ],
+    popular: false,
+  },
+  {
     id: 'starter',
     name: 'Starter',
-    description: 'Perfect for small businesses getting started',
-    price: 49,
-    yearlyPrice: 39,
+    description: 'Essential AI sales agent and commerce automation for solo sellers',
+    price: 12,
+    yearlyPrice: 10,
     features: [
-      '500 messages/month',
-      '1 WhatsApp number',
-      'Basic AI responses',
-      'Order management',
-      'Email support',
+      '1 WhatsApp connection',
+      '100 products',
+      'AI sales agent',
+      '500 AI conversations/month',
+      'Online storefront',
+      'M-Pesa + Paystack/Stripe',
+      'Bookings & appointments',
+      'Basic CRM & analytics',
+      '1 team member',
     ],
     popular: false,
   },
   {
     id: 'professional',
-    name: 'Professional',
-    description: 'For growing businesses with higher demands',
-    price: 149,
-    yearlyPrice: 119,
+    name: 'Growth',
+    description: 'For growing businesses needing higher volume and advanced CRM',
+    price: 29,
+    yearlyPrice: 24,
     features: [
-      '5,000 messages/month',
-      '3 WhatsApp numbers',
-      'Advanced AI with custom training',
-      'Product catalog integration',
-      'Analytics dashboard',
-      'Priority support',
+      '2 WhatsApp connections',
+      '1,000 products',
+      'AI sales agent',
+      '2,000 AI conversations/month',
+      'Online storefront + Dine-in QR',
+      'M-Pesa + Paystack/Stripe',
+      'Bookings & services',
+      'Advanced CRM & analytics',
+      '5 team members',
+      'API access',
     ],
     popular: true,
   },
   {
     id: 'enterprise',
-    name: 'Enterprise',
-    description: 'For large organizations with custom needs',
-    price: 499,
-    yearlyPrice: 399,
+    name: 'Business',
+    description: 'Maximum power and capacity for established brands and high-volume teams',
+    price: 79,
+    yearlyPrice: 65,
     features: [
-      'Unlimited messages',
-      'Unlimited WhatsApp numbers',
-      'Custom AI model training',
-      'API access',
-      'Dedicated account manager',
-      'SLA guarantee',
-      'Custom integrations',
+      '5 WhatsApp connections',
+      'Unlimited products',
+      'AI sales agent (custom models)',
+      '10,000 AI conversations/month',
+      'Online storefront + Dine-in QR',
+      'Unlimited bookings',
+      'Advanced CRM & analytics',
+      '15 team members',
+      'Priority support & API access',
     ],
     popular: false,
   },

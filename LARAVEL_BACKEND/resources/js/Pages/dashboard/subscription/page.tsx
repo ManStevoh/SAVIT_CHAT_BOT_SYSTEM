@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Check, CreditCard, Download, MessageSquare, Smartphone, Users, Zap } from "lucide-react"
+import { Check, CreditCard, Download, MessageSquare, Package, Smartphone, Users, Zap } from "lucide-react"
 import { useSubscription, useSubscriptionInvoices, useSubscriptionUsage, usePlans, type BillingInvoice } from "@/lib/api-hooks"
 import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout, verifyPaystackCheckout, cancelSubscription, previewCoupon, apiRequest, submitManualPaymentProof } from "@/lib/api-actions"
 import { Input } from "@/components/ui/input"
@@ -88,6 +88,9 @@ function SubscriptionPageContent() {
     price: p.price ?? p.priceDisplay ?? "—",
     features: Array.isArray(p.features) ? p.features : [],
     current: p.slug === planSlug,
+    isFree: !!p.isFree,
+    popular: !!p.popular,
+    cta: p.cta,
     checkoutAvailable: p.checkoutAvailable ?? false,
     paymentMethods: p.paymentMethods && typeof p.paymentMethods === "object" ? p.paymentMethods : {},
   }))
@@ -258,11 +261,22 @@ function SubscriptionPageContent() {
   }
 
   const usage = (usageData?.items ?? [
-    { name: "Messages", used: 0, limit: 5000 },
-    { name: "Team members", used: 0, limit: 3 },
+    { name: "Messages", used: 0, limit: 500 },
+    { name: "Products", used: 0, limit: 100 },
+    { name: "WhatsApp numbers", used: 0, limit: 1 },
+    { name: "Team members", used: 0, limit: 1 },
   ]).map((item) => ({
     ...item,
-    icon: item.name === "Messages" ? MessageSquare : Users,
+    icon:
+      item.name === "Messages"
+        ? MessageSquare
+        : item.name === "Products"
+        ? Package
+        : item.name === "WhatsApp numbers"
+        ? Smartphone
+        : item.name === "Team members"
+        ? Users
+        : Zap,
   }))
 
   const handleSubscribe = async (planId: string) => {
@@ -514,6 +528,16 @@ function SubscriptionPageContent() {
             Pay with Flutterwave
           </Button>
         )}
+        {plan.paymentMethods?.paypal && (
+          <Button
+            className="w-full mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() => handleGenericCheckout(plan.id, "paypal")}
+          >
+            Pay with PayPal
+          </Button>
+        )}
         {plan.paymentMethods?.manual && (
           <Button
             className="w-full mt-2"
@@ -710,8 +734,9 @@ function SubscriptionPageContent() {
         <CardContent>
           <div className="space-y-6">
             {usage.map((item) => {
-              const pct = item.limit > 0 ? (item.used / item.limit) * 100 : 0
-              const nearLimit = pct >= 80
+              const isUnlimited = item.limit == null
+              const pct = !isUnlimited && item.limit > 0 ? (item.used / item.limit) * 100 : 0
+              const nearLimit = !isUnlimited && pct >= 80
               return (
               <div key={item.name} className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -720,10 +745,10 @@ function SubscriptionPageContent() {
                     <span className="font-medium text-foreground">{item.name}</span>
                   </div>
                   <span className={`text-sm ${nearLimit ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
-                    {item.used.toLocaleString()} / {item.limit.toLocaleString()}
+                    {item.used.toLocaleString()} / {isUnlimited ? "Unlimited" : item.limit.toLocaleString()}
                   </span>
                 </div>
-                <Progress value={Math.min(100, pct)} className={`h-2 ${nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
+                <Progress value={isUnlimited ? 0 : Math.min(100, pct)} className={`h-2 ${nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
               </div>
             )})}
           </div>
@@ -805,7 +830,7 @@ function SubscriptionPageContent() {
               </p>
             )}
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {plans.map((plan) => (
               <div
                 key={plan.id}
@@ -816,6 +841,11 @@ function SubscriptionPageContent() {
                 {plan.current && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
                     Current Plan
+                  </Badge>
+                )}
+                {plan.popular && !plan.current && (
+                  <Badge variant="default" className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    Most Popular
                   </Badge>
                 )}
                 <div className="text-center mb-6">
@@ -836,7 +866,17 @@ function SubscriptionPageContent() {
                   ))}
                 </ul>
                 <div className="space-y-2">
-                  {plan.price === "Custom" ? (
+                  {plan.isFree ? (
+                    plan.current && !needsPaidActivation ? (
+                      <Button className="w-full" variant="secondary" disabled>
+                        Current Plan
+                      </Button>
+                    ) : (
+                      <Button className="w-full" variant="outline" disabled>
+                        Free Plan
+                      </Button>
+                    )
+                  ) : plan.price === "Custom" ? (
                     <Button asChild className="w-full" variant="outline">
                       <Link href="/contact">Contact Sales</Link>
                     </Button>

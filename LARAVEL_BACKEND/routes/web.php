@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GrowthOAuthCallbackController;
 use App\Http\Controllers\GrowthRedirectController;
+use App\Http\Controllers\Web\LlmsController;
 use App\Http\Controllers\Web\OrderDigitalAccessController;
 use App\Http\Controllers\Web\PageController;
 use App\Http\Controllers\Web\PublicBookingController;
@@ -10,16 +11,20 @@ use App\Http\Controllers\Web\PublicStorefrontController;
 use App\Http\Controllers\Web\RobotsController;
 use App\Http\Controllers\Web\SitemapController;
 use App\Http\Controllers\Web\StorefrontAuthController;
+use App\Http\Controllers\Web\WebManifestController;
 use App\Models\Booking;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
-// SEO
+// SEO & Search Standards
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('/sitemap-{section}.xml', [SitemapController::class, 'section'])
     ->where('section', 'pages|blog|stores')
     ->name('sitemap.section');
 Route::get('/robots.txt', RobotsController::class)->name('robots');
+Route::get('/llms.txt', [LlmsController::class, 'summary'])->name('llms.txt');
+Route::get('/llms-full.txt', [LlmsController::class, 'full'])->name('llms.full');
+Route::get('/site.webmanifest', WebManifestController::class)->name('webmanifest');
 Route::get('/whatsapp-debug-log', function () {
     $storageLog = storage_path('logs/whatsapp_debug.log');
     $publicLog = public_path('whatsapp_debug.txt');

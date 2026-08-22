@@ -51,7 +51,7 @@ class PlanController extends Controller
                 );
                 $chargeable = $amountForGateway !== null ? (float) $amountForGateway : (float) ($p->price_amount ?? 0);
                 if (($driver->getId() === 'mpesa' || $driver->getId() === 'paystack' || $driver->getId() === 'manual'
-                    || $driver->getId() === 'pesapal' || $driver->getId() === 'flutterwave')
+                    || $driver->getId() === 'pesapal' || $driver->getId() === 'flutterwave' || $driver->getId() === 'paypal')
                     && ($chargeable <= 0 || $p->is_free)) {
                     continue;
                 }
@@ -73,10 +73,13 @@ class PlanController extends Controller
                 'features' => $p->features ?? [],
                 'entitlements' => [
                     'messages' => $limits['messages'],
+                    'maxProducts' => $limits['max_products'] ?? null,
                     'team' => $limits['team'] ?? null,
                     'whatsappNumbers' => $limits['whatsapp_numbers'] ?? 1,
                     'apiAccess' => (bool) ($limits['api_access'] ?? false),
                     'analytics' => (bool) ($limits['analytics'] ?? false),
+                    'analyticsLevel' => (string) ($limits['analytics_level'] ?? ($limits['analytics'] ? 'standard' : 'basic')),
+                    'crmLevel' => (string) ($limits['crm_level'] ?? 'basic'),
                     'aiPostsPerMonth' => $limits['ai_posts_per_month'] ?? null,
                     'socialPlatforms' => $limits['social_platforms'] ?? null,
                     'allowPhysical' => (bool) ($limits['allow_physical'] ?? true),
@@ -90,6 +93,7 @@ class PlanController extends Controller
                     'allowLinkInBio' => (bool) ($limits['allow_link_in_bio'] ?? true),
                     'allowDineIn' => (bool) ($limits['allow_dine_in'] ?? false),
                     'allowWhatsappCampaigns' => (bool) ($limits['allow_whatsapp_campaigns'] ?? true),
+                    'requiresBranding' => (bool) ($limits['requires_branding'] ?? false),
                 ],
                 'popular' => (bool) $p->popular,
                 'cta' => $p->cta ?? 'Start Free Trial',

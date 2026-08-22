@@ -6,6 +6,7 @@ use App\Services\PlatformPayments\Contracts\PlatformPaymentDriverInterface;
 use App\Services\PlatformPayments\Drivers\PlatformFlutterwaveDriver;
 use App\Services\PlatformPayments\Drivers\PlatformManualDriver;
 use App\Services\PlatformPayments\Drivers\PlatformMpesaDriver;
+use App\Services\PlatformPayments\Drivers\PlatformPayPalDriver;
 use App\Services\PlatformPayments\Drivers\PlatformPaystackDriver;
 use App\Services\PlatformPayments\Drivers\PlatformPesapalDriver;
 use App\Services\PlatformPayments\Drivers\PlatformStripeDriver;
@@ -20,6 +21,7 @@ class PlatformPaymentRegistry
         PlatformPaystackDriver $paystack,
         PlatformPesapalDriver $pesapal,
         PlatformFlutterwaveDriver $flutterwave,
+        PlatformPayPalDriver $paypal,
         PlatformMpesaDriver $mpesa,
         PlatformManualDriver $manual,
     ) {
@@ -27,6 +29,7 @@ class PlatformPaymentRegistry
         $this->registerDriver($paystack);
         $this->registerDriver($pesapal);
         $this->registerDriver($flutterwave);
+        $this->registerDriver($paypal);
         $this->registerDriver($mpesa);
         $this->registerDriver($manual);
     }

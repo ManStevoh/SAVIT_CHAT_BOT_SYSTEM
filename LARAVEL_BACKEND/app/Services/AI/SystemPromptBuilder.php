@@ -70,6 +70,7 @@ class SystemPromptBuilder
         ]);
 
         $this->appendBusinessProfile($company, $parts);
+        $this->appendBusinessModeGuidance($company, $parts);
         $this->appendKnowledgeBase($company, $parts, $customerMessage, $budget);
         $this->appendProducts($company, $parts, $customerMessage, $budget);
         $this->appendLearningSamples($learningSamples, $parts);
@@ -81,6 +82,46 @@ class SystemPromptBuilder
         $prompt = implode("\n", $parts);
 
         return $this->trimToTokenBudget($prompt, $budget);
+    }
+
+    private function appendBusinessModeGuidance(Company $company, array &$parts): void
+    {
+        $settings = $company->settings;
+        $mode = $settings?->business_mode ?? 'hybrid';
+        $allowsBookings = $settings?->allowsBookings() ?? true;
+        $allowsDineIn = $settings?->allowsDineIn() ?? false;
+        $allowsCatalog = $settings?->allowsProductsCatalog() ?? true;
+
+        $lines = [];
+
+        if ($mode === 'services' || ($allowsBookings && ! $allowsCatalog)) {
+            $lines[] = 'OPERATING MODE: SERVICES & APPOINTMENTS';
+            $lines[] = '• You are an appointment concierge. Customers message to inquire about services, consultations, or bookings.';
+            $lines[] = '• Use check_calendar_availability to check live open slots and working hours.';
+            $lines[] = '• When the customer chooses a time slot, call create_booking to lock in their reservation.';
+            $lines[] = '• DO NOT ask for delivery addresses or shipping fees for service appointments.';
+        } elseif ($mode === 'restaurant' || $allowsDineIn) {
+            $lines[] = 'OPERATING MODE: RESTAURANT & DINE-IN / FOOD MENU';
+            $lines[] = '• You handle food & drink orders. When a customer mentions a table (e.g. Table 4 or T4), lock in table dining.';
+            $lines[] = '• For table orders (dine-in), NEVER ask for a delivery address or delivery fees.';
+            $lines[] = '• Ask for any dietary preferences or cooking instructions if relevant, and confirm orders swiftly.';
+        } elseif ($mode === 'retail') {
+            $lines[] = 'OPERATING MODE: RETAIL & E-COMMERCE';
+            $lines[] = '• You sell physical/digital products with delivery and self-pickup fulfillment.';
+            $lines[] = '• Collect delivery address for shipping orders.';
+        } else {
+            $lines[] = 'OPERATING MODE: HYBRID (Products, Services & Dine-In)';
+            if ($allowsBookings) {
+                $lines[] = '• For service items, use check_calendar_availability and create_booking without asking for shipping addresses.';
+            }
+            if ($allowsDineIn) {
+                $lines[] = '• For table dine-in orders, skip delivery addresses and tag the table.';
+            }
+        }
+
+        if ($lines !== []) {
+            $parts[] = "\n".implode("\n", $lines);
+        }
     }
 
     private function appendBusinessProfile(Company $company, array &$parts): void

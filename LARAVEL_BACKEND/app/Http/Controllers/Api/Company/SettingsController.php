@@ -95,6 +95,7 @@ class SettingsController extends Controller
             'ordersAcceptPaystack' => (bool) ($settings?->orders_accept_paystack ?? false),
             'ordersAcceptPesapal' => (bool) ($settings?->orders_accept_pesapal ?? false),
             'ordersAcceptFlutterwave' => (bool) ($settings?->orders_accept_flutterwave ?? false),
+            'ordersAcceptPayPal' => (bool) ($settings?->orders_accept_paypal ?? false),
             'ordersCollectPaymentEnabled' => ($settings?->orders_collect_payment_enabled ?? true) !== false,
             'orderPaymentManualInstructions' => $settings?->order_payment_manual_instructions ?? '',
             'orderPaymentMpesaConfigured' => $settings?->hasOrderPaymentMpesaConfig() ?? false,
@@ -102,11 +103,13 @@ class SettingsController extends Controller
             'orderPaymentPaystackConfigured' => $settings?->hasOrderPaymentPaystackConfig() ?? false,
             'orderPaymentPesapalConfigured' => $settings?->hasOrderPaymentPesapalConfig() ?? false,
             'orderPaymentFlutterwaveConfigured' => $settings?->hasOrderPaymentFlutterwaveConfig() ?? false,
+            'orderPaymentPayPalConfigured' => $settings?->hasOrderPaymentPayPalConfig() ?? false,
             'orderPaymentMpesaConfig' => $settings ? $this->maskOrderPaymentMpesaConfig($settings->order_payment_mpesa_config) : null,
             'orderPaymentStripeConfig' => $settings ? $this->maskOrderPaymentStripeConfig($settings->order_payment_stripe_config) : null,
             'orderPaymentPaystackConfig' => $settings ? $this->maskOrderPaymentPaystackConfig($settings->order_payment_paystack_config) : null,
             'orderPaymentPesapalConfig' => $settings ? $this->maskOrderPaymentPesapalConfig($settings->order_payment_pesapal_config) : null,
             'orderPaymentFlutterwaveConfig' => $settings ? $this->maskOrderPaymentFlutterwaveConfig($settings->order_payment_flutterwave_config) : null,
+            'orderPaymentPayPalConfig' => $settings ? $this->maskOrderPaymentPayPalConfig($settings->order_payment_paypal_config) : null,
             'displayCurrency' => $settings?->displayCurrencyCode() ?? 'USD',
             'currencySymbol' => $settings?->currency_symbol,
             'thousandsSeparator' => MoneyFormatter::normalizeThousands($settings?->thousands_separator),
@@ -136,6 +139,12 @@ class SettingsController extends Controller
                 ? (float) $settings->free_delivery_above
                 : null,
             'dineInEnabled' => (bool) ($settings?->dine_in_enabled ?? false),
+            'businessMode' => $settings?->business_mode ?? 'hybrid',
+            'enableProductsCatalog' => (bool) ($settings?->enable_products_catalog ?? true),
+            'enableBookings' => (bool) ($settings?->enable_bookings ?? true),
+            'enableDineIn' => (bool) ($settings?->enable_dine_in ?? false),
+            'dineInQrTarget' => $settings?->dine_in_qr_target ?? 'web_menu',
+            'dineInPaymentTiming' => $settings?->dine_in_payment_timing ?? 'pay_upfront',
             'paymentRecoveryEnabled' => ($settings?->payment_recovery_enabled ?? true) !== false,
             'paymentRecoveryHours' => $settings?->paymentRecoveryHourOffsets() ?? [1, 24, 72],
             'abandonedCartRecoveryEnabled' => (bool) ($settings?->abandoned_cart_recovery_enabled ?? false),
@@ -159,6 +168,15 @@ class SettingsController extends Controller
             'storefrontSeoDescription' => is_array($company->storefront_theme)
                 ? (string) ($company->storefront_theme['seo_description'] ?? '')
                 : '',
+            'storefrontOgImage' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['og_image'] ?? '')
+                : '',
+            'storefrontGoogleSiteVerification' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['google_site_verification'] ?? '')
+                : '',
+            'storefrontBusinessType' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['business_type'] ?? 'OnlineStore')
+                : 'OnlineStore',
         ]);
     }
 
@@ -177,6 +195,12 @@ class SettingsController extends Controller
             }
             $company->logo = $request->file('logo')->store('logos/' . $company->id, 'public');
             $company->save();
+        } elseif ($request->boolean('removeLogo') || $request->input('logo') === null && $request->has('removeLogo')) {
+            if ($company->logo) {
+                Storage::disk('public')->delete($company->logo);
+                $company->logo = null;
+                $company->save();
+            }
         }
 
         $companyValidated = $request->validate([
@@ -262,6 +286,12 @@ class SettingsController extends Controller
             'orderPaymentFlutterwaveConfig.secret_hash' => 'nullable|string|max:255',
             'orderPaymentFlutterwaveConfig.currency' => 'nullable|string|max:10',
             'orderPaymentFlutterwaveConfig.env' => 'nullable|string|in:sandbox,production',
+            'ordersAcceptPayPal' => 'sometimes|boolean',
+            'orderPaymentPayPalConfig' => 'sometimes|nullable|array',
+            'orderPaymentPayPalConfig.client_id' => 'nullable|string|max:255',
+            'orderPaymentPayPalConfig.client_secret' => 'nullable|string|max:255',
+            'orderPaymentPayPalConfig.currency' => 'nullable|string|max:10',
+            'orderPaymentPayPalConfig.env' => 'nullable|string|in:sandbox,production',
             'displayCurrency' => 'sometimes|nullable|string|size:3',
             'currencySymbol' => 'sometimes|nullable|string|max:16',
             'thousandsSeparator' => ['sometimes', 'nullable', 'string', Rule::in([',', '.', ' ', "'"])],
@@ -290,6 +320,12 @@ class SettingsController extends Controller
             'defaultDeliveryFee' => 'sometimes|nullable|numeric|min:0',
             'freeDeliveryAbove' => 'sometimes|nullable|numeric|min:0',
             'dineInEnabled' => 'sometimes|boolean',
+            'businessMode' => 'sometimes|string|in:retail,services,restaurant,hybrid',
+            'enableProductsCatalog' => 'sometimes|boolean',
+            'enableBookings' => 'sometimes|boolean',
+            'enableDineIn' => 'sometimes|boolean',
+            'dineInQrTarget' => 'sometimes|string|in:web_menu,whatsapp_chat,dual_choice',
+            'dineInPaymentTiming' => 'sometimes|string|in:pay_upfront,open_tab,customer_choice',
             'paymentRecoveryEnabled' => 'sometimes|boolean',
             'paymentRecoveryHours' => 'sometimes|nullable|array',
             'paymentRecoveryHours.*' => 'integer|min:1|max:720',
@@ -310,7 +346,12 @@ class SettingsController extends Controller
             'storefrontTheme' => 'sometimes|nullable|array',
             'storefrontTheme.primary_color' => 'sometimes|nullable|string|max:32',
             'storefrontTheme.accent_color' => 'sometimes|nullable|string|max:32',
+            'storefrontTheme.bg_color' => 'sometimes|nullable|string|max:32',
+            'storefrontTheme.font_family' => 'sometimes|nullable|string|max:50',
+            'storefrontTheme.border_radius' => 'sometimes|nullable|string|max:20',
             'storefrontTheme.announcement_bar' => 'sometimes|nullable|string|max:200',
+            'storefrontTheme.announcement_bar_bg' => 'sometimes|nullable|string|max:32',
+            'storefrontTheme.announcement_bar_text' => 'sometimes|nullable|string|max:32',
             'storefrontTheme.footer_text' => 'sometimes|nullable|string|max:255',
             'storefrontTheme.seo_title' => 'sometimes|nullable|string|max:70',
             'storefrontTheme.seo_description' => 'sometimes|nullable|string|max:320',
@@ -353,10 +394,31 @@ class SettingsController extends Controller
             || array_key_exists('storefrontTheme', $companyValidated)
             || array_key_exists('storefrontSeoTitle', $companyValidated)
             || array_key_exists('storefrontSeoDescription', $companyValidated)
+            || array_key_exists('storefrontOgImage', $companyValidated)
+            || array_key_exists('storefrontGoogleSiteVerification', $companyValidated)
+            || array_key_exists('storefrontBusinessType', $companyValidated)
         ) {
             $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
             if (array_key_exists('storefrontTheme', $companyValidated) && is_array($companyValidated['storefrontTheme'])) {
-                foreach (['primary_color', 'accent_color', 'announcement_bar', 'footer_text', 'seo_title', 'seo_description'] as $key) {
+                foreach ([
+                    'primary_color',
+                    'accent_color',
+                    'bg_color',
+                    'font_family',
+                    'border_radius',
+                    'announcement_bar',
+                    'announcement_bar_bg',
+                    'announcement_bar_text',
+                    'footer_text',
+                    'seo_title',
+                    'seo_description',
+                    'og_image',
+                    'google_site_verification',
+                    'business_type',
+                    'street_address',
+                    'city',
+                    'country',
+                ] as $key) {
                     if (array_key_exists($key, $companyValidated['storefrontTheme'])) {
                         $val = $companyValidated['storefrontTheme'][$key];
                         $theme[$key] = is_string($val) && trim($val) !== '' ? trim($val) : null;
@@ -374,6 +436,18 @@ class SettingsController extends Controller
             if (array_key_exists('storefrontSeoDescription', $companyValidated)) {
                 $seoDesc = $companyValidated['storefrontSeoDescription'];
                 $theme['seo_description'] = is_string($seoDesc) && trim($seoDesc) !== '' ? trim($seoDesc) : null;
+            }
+            if (array_key_exists('storefrontOgImage', $companyValidated)) {
+                $ogImg = $companyValidated['storefrontOgImage'];
+                $theme['og_image'] = is_string($ogImg) && trim($ogImg) !== '' ? trim($ogImg) : null;
+            }
+            if (array_key_exists('storefrontGoogleSiteVerification', $companyValidated)) {
+                $gTag = $companyValidated['storefrontGoogleSiteVerification'];
+                $theme['google_site_verification'] = is_string($gTag) && trim($gTag) !== '' ? trim($gTag) : null;
+            }
+            if (array_key_exists('storefrontBusinessType', $companyValidated)) {
+                $bType = $companyValidated['storefrontBusinessType'];
+                $theme['business_type'] = is_string($bType) && trim($bType) !== '' ? trim($bType) : 'OnlineStore';
             }
             $company->storefront_theme = array_filter(
                 $theme,
@@ -576,6 +650,9 @@ class SettingsController extends Controller
         }
         if (array_key_exists('ordersAcceptFlutterwave', $companyValidated)) {
             $settings->orders_accept_flutterwave = $companyValidated['ordersAcceptFlutterwave'];
+        }
+        if (array_key_exists('ordersAcceptPayPal', $companyValidated)) {
+            $settings->orders_accept_paypal = $companyValidated['ordersAcceptPayPal'];
         }
         if (array_key_exists('ordersCollectPaymentEnabled', $companyValidated)) {
             $settings->orders_collect_payment_enabled = $companyValidated['ordersCollectPaymentEnabled'];
@@ -811,6 +888,39 @@ class SettingsController extends Controller
                 }
             }
         }
+        if (array_key_exists('orderPaymentPayPalConfig', $companyValidated)) {
+            $v = $companyValidated['orderPaymentPayPalConfig'];
+            if ($v === null) {
+                $settings->order_payment_paypal_config = null;
+            } elseif (is_array($v)) {
+                $existing = $settings->order_payment_paypal_config ?? [];
+                $clientId = isset($v['client_id']) ? trim((string) $v['client_id']) : '';
+                if ($clientId === '') {
+                    $clientId = (string) ($existing['client_id'] ?? '');
+                }
+                $clientSecret = isset($v['client_secret']) ? trim((string) $v['client_secret']) : '';
+                if ($clientSecret === '' || $this->isMaskedSecretInput($clientSecret)) {
+                    $clientSecret = (string) ($existing['client_secret'] ?? '');
+                }
+                $currency = isset($v['currency']) ? trim((string) $v['currency']) : '';
+                if ($currency === '') {
+                    $currency = (string) ($existing['currency'] ?? 'usd');
+                }
+                $env = in_array($v['env'] ?? null, ['sandbox', 'production'], true)
+                    ? $v['env']
+                    : ($existing['env'] ?? 'sandbox');
+                if ($clientId !== '' && $clientSecret !== '') {
+                    $settings->order_payment_paypal_config = [
+                        'client_id' => $clientId,
+                        'client_secret' => $clientSecret,
+                        'currency' => $currency !== '' ? $currency : 'usd',
+                        'env' => $env,
+                    ];
+                } else {
+                    $settings->order_payment_paypal_config = null;
+                }
+            }
+        }
         if (array_key_exists('ordersAcceptCod', $companyValidated)) {
             $settings->orders_accept_cod = $companyValidated['ordersAcceptCod'];
         }
@@ -832,6 +942,32 @@ class SettingsController extends Controller
                 ], 403);
             }
             $settings->dine_in_enabled = $companyValidated['dineInEnabled'];
+        }
+        if (array_key_exists('businessMode', $companyValidated)) {
+            $settings->business_mode = $companyValidated['businessMode'];
+        }
+        if (array_key_exists('enableProductsCatalog', $companyValidated)) {
+            $settings->enable_products_catalog = (bool) $companyValidated['enableProductsCatalog'];
+        }
+        if (array_key_exists('enableBookings', $companyValidated)) {
+            $settings->enable_bookings = (bool) $companyValidated['enableBookings'];
+        }
+        if (array_key_exists('enableDineIn', $companyValidated)) {
+            if ($companyValidated['enableDineIn'] && ! PlanLimitService::companyAllowsDineIn($company)) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'dine_in_required',
+                    'message' => 'Dine-in table QR is not available on your current plan. Upgrade to Growth or Enterprise.',
+                ], 403);
+            }
+            $settings->enable_dine_in = (bool) $companyValidated['enableDineIn'];
+            $settings->dine_in_enabled = (bool) $companyValidated['enableDineIn'];
+        }
+        if (array_key_exists('dineInQrTarget', $companyValidated)) {
+            $settings->dine_in_qr_target = $companyValidated['dineInQrTarget'];
+        }
+        if (array_key_exists('dineInPaymentTiming', $companyValidated)) {
+            $settings->dine_in_payment_timing = $companyValidated['dineInPaymentTiming'];
         }
         if (array_key_exists('paymentRecoveryEnabled', $companyValidated)) {
             $settings->payment_recovery_enabled = $companyValidated['paymentRecoveryEnabled'];
@@ -970,6 +1106,23 @@ class SettingsController extends Controller
         }
         if (! empty($out['secret_hash']) && is_string($out['secret_hash'])) {
             $out['secret_hash'] = $this->maskSecretString($out['secret_hash']);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $config
+     * @return array<string, mixed>|null
+     */
+    protected function maskOrderPaymentPayPalConfig(?array $config): ?array
+    {
+        if ($config === null || $config === []) {
+            return null;
+        }
+        $out = $config;
+        if (! empty($out['client_secret']) && is_string($out['client_secret'])) {
+            $out['client_secret'] = $this->maskSecretString($out['client_secret']);
         }
 
         return $out;

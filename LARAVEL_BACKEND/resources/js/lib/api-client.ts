@@ -87,67 +87,113 @@ export interface ApiRequestOptions {
   headers?: Record<string, string>
 }
 
+// Max concurrent active requests to prevent overwhelming shared cPanel hosting (CloudLinux EP limit)
+const MAX_CONCURRENT_REQUESTS = 2
+let activeRequests = 0
+const requestQueue: Array<() => void> = []
+
+function acquireSlot(): Promise<void> {
+  if (activeRequests < MAX_CONCURRENT_REQUESTS) {
+    activeRequests++
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => {
+    requestQueue.push(() => {
+      activeRequests++
+      resolve()
+    })
+  })
+}
+
+function releaseSlot(): void {
+  activeRequests = Math.max(0, activeRequests - 1)
+  if (requestQueue.length > 0) {
+    const next = requestQueue.shift()
+    if (next) next()
+  }
+}
+
 /**
  * Call Laravel API. Uses JSON by default; send FormData for file uploads.
  * Credentials: 'include' so cookies (e.g. Sanctum) are sent.
+ * Limits concurrent requests to MAX_CONCURRENT_REQUESTS and auto-retries on 503.
  */
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers: customHeaders = {} } = options
-  const url = apiUrl(path)
+export async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+  retryCount = 0
+): Promise<T> {
+  await acquireSlot()
+  try {
+    const { method = 'GET', body, headers: customHeaders = {} } = options
+    const url = apiUrl(path)
 
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
-    ...customHeaders,
-  }
-
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-  if (csrf) {
-    headers['X-CSRF-TOKEN'] = csrf
-  }
-
-  const token = getAuthToken()
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
-  const isFormData = body instanceof FormData
-  if (!isFormData) {
-    headers['Content-Type'] = 'application/json'
-  }
-
-  const fetchOptions: RequestInit = {
-    method,
-    headers,
-    credentials: 'include',
-  }
-
-  if (body !== undefined) {
-    fetchOptions.body = isFormData ? (body as FormData) : JSON.stringify(body)
-  }
-
-  const response = await fetch(url, fetchOptions)
-  const data = await response.json().catch(() => ({}))
-
-  if (!response.ok) {
-    const code = (data as { code?: string })?.code
-    if (response.status === 403 && code === 'subscription_expired' && typeof window !== 'undefined') {
-      // Avoid reload loop: dashboard shell (navbar notifications, etc.) still calls APIs
-      // while the user is already on the renew page after an expired redirect.
-      const onSubscriptionPage = window.location.pathname.startsWith('/dashboard/subscription')
-      if (!onSubscriptionPage) {
-        window.location.assign('/dashboard/subscription?expired=1')
-        return new Promise(() => {}) as T
-      }
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      ...customHeaders,
     }
-    const message = (data as { message?: string })?.message ?? data?.errors ?? response.statusText
-    const err = new Error(typeof message === 'string' ? message : JSON.stringify(message)) as Error & { code?: string; responseData?: unknown }
-    err.code = code
-    err.responseData = data
-    throw err
-  }
 
-  return data as T
+    const csrf = typeof document !== 'undefined'
+      ? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+      : null
+    if (csrf) {
+      headers['X-CSRF-TOKEN'] = csrf
+    }
+
+    const token = getAuthToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json'
+    }
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers,
+      credentials: 'include',
+    }
+
+    if (body !== undefined) {
+      fetchOptions.body = isFormData ? (body as FormData) : JSON.stringify(body)
+    }
+
+    const response = await fetch(url, fetchOptions)
+
+    // Automatically retry on 503 (temporary concurrency limit / rate hit)
+    if (response.status === 503 && retryCount < 2 && method === 'GET') {
+      releaseSlot()
+      await new Promise((r) => setTimeout(r, 400 * (retryCount + 1)))
+      return apiRequest<T>(path, options, retryCount + 1)
+    }
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      const code = (data as { code?: string })?.code
+      if (response.status === 403 && code === 'subscription_expired' && typeof window !== 'undefined') {
+        // Avoid reload loop: dashboard shell (navbar notifications, etc.) still calls APIs
+        // while the user is already on the renew page after an expired redirect.
+        const onSubscriptionPage = window.location.pathname.startsWith('/dashboard/subscription')
+        if (!onSubscriptionPage) {
+          window.location.assign('/dashboard/subscription?expired=1')
+          return new Promise(() => {}) as T
+        }
+      }
+      const message = (data as { message?: string })?.message ?? data?.errors ?? response.statusText
+      const err = new Error(typeof message === 'string' ? message : JSON.stringify(message)) as Error & { code?: string; responseData?: unknown }
+      err.code = code
+      err.responseData = data
+      throw err
+    }
+
+    return data as T
+  } finally {
+    releaseSlot()
+  }
 }
 
 /**

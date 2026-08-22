@@ -635,6 +635,32 @@ class OrderFlowService
         }
 
         if ($step === self::STEP_PRODUCT) {
+            if ($this->wantsDineIn($lower) && ! empty($draft['items'])) {
+                $table = $this->resolveDineInTable($company, $trimmed);
+                $draft = $this->stripPickingDraft($draft);
+                $draft['fulfillment_type'] = 'dine_in';
+                if ($table) {
+                    $draft['dine_in_table_id'] = $table->id;
+                    $draft['dine_in_table_name'] = $table->name ?: ('Table '.$table->code);
+                }
+                unset($draft['delivery_address'], $draft['remembered_address']);
+                $this->setStep($chat, self::STEP_CONFIRM, $draft);
+                $summary = $this->formatDraftSummary($company, $draft, $chat);
+                $tableSuffix = isset($draft['dine_in_table_name']) ? " ({$draft['dine_in_table_name']})" : '';
+
+                return "🍽️ Dine-in selected{$tableSuffix}.\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+            }
+
+            if ($this->wantsPickup($lower) && ! empty($draft['items'])) {
+                $draft = $this->stripPickingDraft($draft);
+                $draft['fulfillment_type'] = 'pickup';
+                unset($draft['delivery_address'], $draft['remembered_address']);
+                $this->setStep($chat, self::STEP_CONFIRM, $draft);
+                $summary = $this->formatDraftSummary($company, $draft, $chat);
+
+                return "📦 Pickup selected.\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+            }
+
             if ($this->wantsDone($lower)) {
                 if (empty($draft['items'])) {
                     return 'You haven\'t added any items yet. Reply with a product number from the list, or type e.g. "2 x Coffee", or "cancel".';
@@ -705,12 +731,18 @@ class OrderFlowService
                 return "📦 Pickup selected.\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
             }
             if ($this->wantsDineIn($lower)) {
+                $table = $this->resolveDineInTable($company, $trimmed);
                 $draft['fulfillment_type'] = 'dine_in';
+                if ($table) {
+                    $draft['dine_in_table_id'] = $table->id;
+                    $draft['dine_in_table_name'] = $table->name ?: ('Table '.$table->code);
+                }
                 unset($draft['delivery_address'], $draft['remembered_address']);
                 $this->setStep($chat, self::STEP_CONFIRM, $draft);
                 $summary = $this->formatDraftSummary($company, $draft, $chat);
+                $tableSuffix = isset($draft['dine_in_table_name']) ? " ({$draft['dine_in_table_name']})" : '';
 
-                return "🍽️ Dine-in selected.\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
+                return "🍽️ Dine-in selected{$tableSuffix}.\n\n{$summary}\n\n".$this->confirmationFootnote()."\n\nWhat would you like to do next?\n1 - Confirm & place order\n2 - Cancel";
             }
 
             $scheduled = $this->tryParseSchedule($trimmed);
@@ -1474,7 +1506,39 @@ class OrderFlowService
     {
         return in_array($lower, ['dine in', 'dine-in', 'dinein', 'table', 'eat in'], true)
             || str_contains($lower, 'dine in')
-            || str_contains($lower, 'dine-in');
+            || str_contains($lower, 'dine-in')
+            || preg_match('/\b(table|ref:\s*t)\s*\w+/i', $lower);
+    }
+
+    protected function resolveDineInTable(Company $company, string $text): ?\App\Models\DineInTable
+    {
+        // Try extracting Ref: T{code} or Table {code}
+        if (preg_match('/Ref:\s*T([a-zA-Z0-9_\-]+)/i', $text, $matches)) {
+            $code = trim($matches[1]);
+            $table = \App\Models\DineInTable::where('company_id', $company->id)
+                ->where('code', $code)
+                ->where('is_active', true)
+                ->first();
+            if ($table) {
+                return $table;
+            }
+        }
+
+        if (preg_match('/\bTable\s*([a-zA-Z0-9_\-]+)/i', $text, $matches)) {
+            $codeOrName = trim($matches[1]);
+            $table = \App\Models\DineInTable::where('company_id', $company->id)
+                ->where(function ($q) use ($codeOrName) {
+                    $q->where('code', $codeOrName)
+                      ->orWhere('name', 'LIKE', "%{$codeOrName}%");
+                })
+                ->where('is_active', true)
+                ->first();
+            if ($table) {
+                return $table;
+            }
+        }
+
+        return null;
     }
 
     protected function tryParseSchedule(string $text): ?Carbon
@@ -1801,7 +1865,7 @@ class OrderFlowService
         return $raw;
     }
 
-    protected function setStep(Chat $chat, ?string $step, array $draft): void
+    public function setStep(Chat $chat, ?string $step, array $draft): void
     {
         $chat->update([
             'conversation_step' => $step,
@@ -1809,7 +1873,7 @@ class OrderFlowService
         ]);
     }
 
-    protected function clearState(Chat $chat): void
+    public function clearState(Chat $chat): void
     {
         $this->setStep($chat, self::STEP_NONE, []);
     }

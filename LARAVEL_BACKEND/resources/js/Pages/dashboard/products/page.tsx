@@ -860,6 +860,24 @@ export default function ProductsPage() {
         description="Recommended ~155 characters. Shown in search results."
       />
 
+      {/* Live Product Search & Social Snippet Preview */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-900/50">
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Live Search &amp; WhatsApp Preview</p>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Google Result</span>
+            <span>·</span>
+            <span className="truncate">/p/{formData.slug || 'product-url'}</span>
+          </div>
+          <h5 className="mt-0.5 text-sm font-medium text-[#1a0dab] hover:underline dark:text-[#8ab4f8] line-clamp-1">
+            {formData.metaTitle || formData.name || 'Product Title'}
+          </h5>
+          <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300 line-clamp-2">
+            {formData.metaDescription || formData.description || 'Order online with fast WhatsApp checkout.'}
+          </p>
+        </div>
+      </div>
+
       {(formData.productType === 'digital' || formData.productType === 'service') && (
         <>
           <InputField

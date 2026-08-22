@@ -61,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
                 CheckMpesaPaymentTool::class,
                 GetShippingQuoteTool::class,
                 CheckCalendarAvailabilityTool::class,
+                CreateBookingTool::class,
                 GetMarketingPerformanceTool::class,
                 SendWhatsAppCampaignTool::class,
                 IssueOrderRefundTool::class,

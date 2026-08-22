@@ -1815,12 +1815,16 @@ export async function completeWhatsAppEmbeddedSignup(
 export interface PlanEntitlements {
   messages?: number | null
   messagesUnlimited?: boolean
+  maxProducts?: number | null
+  maxProductsUnlimited?: boolean
   team?: number
   whatsappNumbers?: number
   aiCostUsd?: number | null
   aiModelModes?: string[]
   allowByok?: boolean
   credentialModes?: string[]
+  crmLevel?: string
+  analyticsLevel?: string
   apiAccess?: boolean
   analytics?: boolean
   attribution?: boolean
@@ -1838,6 +1842,7 @@ export interface PlanEntitlements {
   allowLinkInBio?: boolean
   allowDineIn?: boolean
   allowWhatsappCampaigns?: boolean
+  requiresBranding?: boolean
 }
 
 export interface CreatePlanData {
@@ -3189,11 +3194,14 @@ export async function updatePlatformSettings(data: UpdatePlatformSettingsData): 
   }
 }
 
+let cachedBranding: AppBranding | null = null
+
 /**
  * Get public app branding (no auth). For theme, invoices, email headers.
  * Laravel: GET /api/app-branding
  */
 export async function getAppBranding(): Promise<AppBranding> {
+  if (cachedBranding) return cachedBranding
   if (useMockApi()) {
     await delay(100)
     return {
@@ -3205,10 +3213,20 @@ export async function getAppBranding(): Promise<AppBranding> {
       requireEmailVerification: false,
     }
   }
-  const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) || ''
-  const res = await fetch(`${baseUrl}/api/app-branding`, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error('Failed to load app branding')
-  return res.json()
+  try {
+    const data = await apiRequest<AppBranding>('/api/app-branding')
+    cachedBranding = data
+    return data
+  } catch {
+    return {
+      applicationName: 'RelayIQ',
+      appLogo: null,
+      appFavicon: null,
+      primaryColor: null,
+      secondaryColor: null,
+      requireEmailVerification: false,
+    }
+  }
 }
 
 /**

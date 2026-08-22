@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { ChartCard } from '@/components/shared/chart-card'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useAnalytics, useOrders, useChats, useCompanySettings, useSubscription } from '@/lib/api-hooks'
+import { useDashboardSummary } from '@/lib/api-hooks'
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import { CHART_ACCENT, CHART_PRIMARY } from '@/lib/chart-colors'
 import { MessageSquare, ShoppingCart, Users, Bot, ArrowRight } from 'lucide-react'
@@ -47,23 +47,25 @@ function DashboardPageContent() {
   const trialStarted = searchParams.get('trial_started') === '1'
   const [chartPeriod, setChartPeriod] = useState('7d')
   const [firstName, setFirstName] = useState<string | null>(null)
-  const { data: subscription } = useSubscription()
 
   useEffect(() => {
     setFirstName(getStoredName())
   }, [])
 
-  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useAnalytics(chartPeriod)
-  const { data: ordersData, isLoading: ordersLoading } = useOrders({ limit: 5 })
-  const { data: chats, isLoading: chatsLoading } = useChats({ limit: 5 })
-  const { data: companySettings } = useCompanySettings()
+  // Single combined request — replaces 6 separate parallel API calls
+  const { data: summary, isLoading, error: summaryError, mutate } = useDashboardSummary(chartPeriod)
+
+  const analytics     = summary?.analytics
+  const ordersData    = summary?.recentOrders ?? []
+  const chats         = summary?.recentChats ?? []
+  const subscription  = summary?.subscription
+  const companySettings = summary?.settings
+
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
-
   const formatCurrency = (value: number) =>
-    formatCurrencyAmount(value, catalogCurrency, currencyDisplayFromSettings(companySettings))
+    formatCurrencyAmount(value, catalogCurrency, currencyDisplayFromSettings(companySettings as Parameters<typeof currencyDisplayFromSettings>[0]))
 
-  const periodLabel =
-    chartPeriod === '7d' ? '7d' : chartPeriod === '30d' ? '30d' : '90d'
+  const periodLabel = chartPeriod === '7d' ? '7d' : chartPeriod === '30d' ? '30d' : '90d'
 
   const showTrialBanner =
     trialStarted ||
@@ -71,7 +73,7 @@ function DashboardPageContent() {
 
   return (
     <div className="space-y-8">
-      <GettingStartedChecklist />
+      <GettingStartedChecklist initialData={summary?.setupStatus} />
 
       {showTrialBanner && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
@@ -115,7 +117,7 @@ function DashboardPageContent() {
           change={analytics?.messagesChange}
           changeLabel="vs previous period"
           icon={MessageSquare}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
@@ -124,7 +126,7 @@ function DashboardPageContent() {
           change={analytics?.ordersChange}
           changeLabel="vs previous period"
           icon={ShoppingCart}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
@@ -133,7 +135,7 @@ function DashboardPageContent() {
           change={analytics?.customersChange}
           changeLabel="vs previous period"
           icon={Users}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
@@ -142,17 +144,17 @@ function DashboardPageContent() {
           change={analytics?.revenueChange}
           changeLabel="vs previous period"
           icon={Bot}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           formatter={formatCurrency}
         />
       </StatsGrid>
 
-      {analyticsError && (
+      {summaryError && (
         <Card className="border-destructive/40 bg-destructive/5 shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm font-medium text-destructive">Failed to load analytics data</p>
-            <p className="mt-1 text-sm text-muted-foreground">{analyticsError.message}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => window.location.reload()}>
+            <p className="text-sm font-medium text-destructive">Failed to load dashboard data</p>
+            <p className="mt-1 text-sm text-muted-foreground">{summaryError.message}</p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => mutate()}>
               Try again
             </Button>
           </CardContent>
@@ -165,7 +167,7 @@ function DashboardPageContent() {
           data={analytics?.messagesPerDay}
           type="line"
           color={CHART_PRIMARY}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           showPeriodSelector
           period={chartPeriod}
           onPeriodChange={setChartPeriod}
@@ -175,7 +177,7 @@ function DashboardPageContent() {
           data={analytics?.ordersPerDay}
           type="bar"
           color={CHART_ACCENT}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           showPeriodSelector
           period={chartPeriod}
           onPeriodChange={setChartPeriod}
@@ -196,7 +198,7 @@ function DashboardPageContent() {
             </Button>
           </CardHeader>
           <CardContent className="pt-0">
-            {ordersLoading ? (
+            {isLoading ? (
               <div className="space-y-3">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="flex items-center justify-between">
@@ -208,9 +210,9 @@ function DashboardPageContent() {
                   </div>
                 ))}
               </div>
-            ) : ordersData?.orders && ordersData.orders.length > 0 ? (
+            ) : ordersData && ordersData.length > 0 ? (
               <div className="divide-y divide-border/60">
-                {ordersData.orders.slice(0, 4).map((order) => (
+                {ordersData.slice(0, 4).map((order) => (
                   <div
                     key={order.id}
                     className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
@@ -257,7 +259,7 @@ function DashboardPageContent() {
             </Button>
           </CardHeader>
           <CardContent className="pt-0">
-            {chatsLoading ? (
+            {isLoading ? (
               <div className="space-y-3">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="flex items-start gap-3">
@@ -316,7 +318,7 @@ function DashboardPageContent() {
           <CardDescription className="text-xs">Best selling products this period</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          {analyticsLoading ? (
+          {isLoading ? (
             <div className="space-y-3">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="flex items-center justify-between">

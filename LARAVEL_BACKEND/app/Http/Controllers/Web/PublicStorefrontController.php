@@ -234,6 +234,7 @@ class PublicStorefrontController extends Controller
             'slug' => $slug,
             'company' => $this->companyPayload($company, $request, $waPrefill),
             'cart' => $cart,
+            'related' => $this->storefront->activeProducts($company)->take(6)->map(fn ($p) => $this->storefront->serializeProduct($p))->values()->all(),
             'seo' => $this->seo->noindex('Cart — '.$company->name),
         ]);
     }
@@ -511,6 +512,7 @@ class PublicStorefrontController extends Controller
                 'whatsappNumber' => $company->settings?->whatsapp_number,
                 'storefrontEnabled' => (bool) $company->storefront_enabled,
                 'storeSlug' => $company->store_slug,
+                'theme' => is_array($company->storefront_theme) ? $company->storefront_theme : [],
             ],
             'seo' => [
                 'title' => $title.' — '.$company->name,
@@ -597,6 +599,14 @@ class PublicStorefrontController extends Controller
                         session()->flash('errors', ['method' => $result['error'] ?? 'Could not start Flutterwave payment.']);
                         break;
 
+                    case 'paypal':
+                        $result = $this->orderPayment->createPayPalPaymentLinkForOrder($order);
+                        if ($result['success'] && ! empty($result['url'])) {
+                            return redirect()->away($result['url']);
+                        }
+                        session()->flash('errors', ['method' => $result['error'] ?? 'Could not start PayPal payment.']);
+                        break;
+
                     case 'cod':
                         $order->update(['payment_method' => 'cod', 'status' => 'confirmed']);
 
@@ -649,7 +659,7 @@ class PublicStorefrontController extends Controller
         $order->ensurePublicTokens();
 
         $validated = $request->validate([
-            'method' => 'required|string|in:cod,stripe,paystack,mpesa,pesapal,flutterwave,manual',
+            'method' => 'required|string|in:cod,stripe,paystack,mpesa,pesapal,flutterwave,paypal,manual',
             'phone' => 'nullable|string|max:40',
             'email' => 'nullable|email|max:255',
         ]);
@@ -717,6 +727,14 @@ class PublicStorefrontController extends Controller
                 }
 
                 return back()->withErrors(['method' => $result['error'] ?? 'Could not start Flutterwave payment.']);
+
+            case 'paypal':
+                $result = $this->orderPayment->createPayPalPaymentLinkForOrder($order);
+                if ($result['success'] && ! empty($result['url'])) {
+                    return Inertia::location($result['url']);
+                }
+
+                return back()->withErrors(['method' => $result['error'] ?? 'Could not start PayPal payment.']);
 
             case 'mpesa':
                 $phone = $validated['phone'] ?? $order->customer_phone;
@@ -817,6 +835,8 @@ class PublicStorefrontController extends Controller
             'displayRate' => $displayRate,
             'theme' => is_array($company->storefront_theme) ? $company->storefront_theme : [],
             'customDomain' => $company->custom_domain,
+            'freeDeliveryAbove' => $settings?->free_delivery_above !== null ? (float) $settings->free_delivery_above : null,
+            'supportedLocales' => ['en' => 'English', 'sw' => 'Kiswahili'],
             'authCustomer' => $authCustomer ? [
                 'id' => $authCustomer->id,
                 'name' => $authCustomer->name,
@@ -983,13 +1003,14 @@ class PublicStorefrontController extends Controller
                 'category' => $driver->getCategory(),
                 'instructions' => $driver->getInstructions($company, $order),
                 'requiresPhone' => $driver->getId() === 'mpesa',
-                'requiresEmail' => in_array($driver->getId(), ['paystack', 'stripe', 'pesapal', 'flutterwave'], true),
+                'requiresEmail' => in_array($driver->getId(), ['paystack', 'stripe', 'pesapal', 'flutterwave', 'paypal'], true),
             ], $drivers),
             'cod' => ! empty($activeMap['cod']),
             'stripe' => ! empty($activeMap['stripe']),
             'paystack' => ! empty($activeMap['paystack']),
             'pesapal' => ! empty($activeMap['pesapal']),
             'flutterwave' => ! empty($activeMap['flutterwave']),
+            'paypal' => ! empty($activeMap['paypal']),
             'mpesa' => ! empty($activeMap['mpesa']),
             'manual' => ! empty($activeMap['manual']),
         ];
