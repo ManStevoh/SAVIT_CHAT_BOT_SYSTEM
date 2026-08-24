@@ -226,6 +226,15 @@ export default function SettingsPage() {
   const [copiedWebhook, setCopiedWebhook] = useState(false)
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
   const toggleSection = (id: string) => setCollapsedSections((prev) => ({ ...prev, [id]: !prev[id] }))
+  /** Only show Manual setup when Admin has enabled it (API: manualConnectEnabled). */
+  const manualConnectEnabled = waStatus?.manualConnectEnabled === true
+
+  useEffect(() => {
+    if (!manualConnectEnabled && waMethod === "manual") {
+      setWaMethod("embedded")
+      if (waStep === 2) setWaStep(1)
+    }
+  }, [manualConnectEnabled, waMethod, waStep])
 
   const loadWhatsAppTemplates = async () => {
     try {
@@ -1758,7 +1767,9 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>WhatsApp Business</CardTitle>
               <CardDescription>
-                Connect via Facebook (recommended) or paste Meta API credentials manually if your administrator enabled that option.
+                {manualConnectEnabled
+                  ? "Connect via Facebook (recommended) or paste Meta API credentials manually if your administrator enabled that option."
+                  : "Connect WhatsApp with Facebook Embedded Signup — no Meta Developer account needed."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1910,7 +1921,7 @@ export default function SettingsPage() {
                         </p>
                       </div>
 
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className={`grid gap-4 ${manualConnectEnabled ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
                         {/* Method Option A: Embedded Signup */}
                         <div
                           onClick={() => setWaMethod("embedded")}
@@ -1937,7 +1948,8 @@ export default function SettingsPage() {
                           </ul>
                         </div>
 
-                        {/* Method Option B: Manual Credentials */}
+                        {/* Method Option B: Manual Credentials — admin must enable */}
+                        {manualConnectEnabled ? (
                         <div
                           onClick={() => setWaMethod("manual")}
                           className={`rounded-lg border p-5 cursor-pointer transition-all space-y-3 ${
@@ -1962,6 +1974,7 @@ export default function SettingsPage() {
                             <li>Includes simple PDF setup guide for non-developers</li>
                           </ul>
                         </div>
+                        ) : null}
                       </div>
 
                       {waMethod === "embedded" ? (
@@ -1990,8 +2003,8 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {/* STEP 2: PREREQUISITES — Manual path only */}
-                  {waStep === 2 && (
+                  {/* STEP 2: PREREQUISITES — Manual path only (hidden when admin disabled manual) */}
+                  {waStep === 2 && manualConnectEnabled && (
                     <div className="space-y-5">
                       <div>
                         <h3 className="text-base font-semibold text-foreground">Prerequisites & Readiness Checklist</h3>
@@ -2198,6 +2211,7 @@ export default function SettingsPage() {
                                 {waEmbeddedLoading ? "Opening Meta Window…" : "Continue with Facebook"}
                               </Button>
                             </div>
+                            {manualConnectEnabled ? (
                             <button
                               type="button"
                               onClick={() => {
@@ -2208,9 +2222,10 @@ export default function SettingsPage() {
                             >
                               Need a custom Meta Developer app? Use Manual Setup →
                             </button>
+                            ) : null}
                           </div>
                         </div>
-                      ) : (
+                      ) : manualConnectEnabled ? (
                         <form onSubmit={handleManualConnect} className="space-y-5 border rounded-lg p-5 bg-background">
                           {/* PDF Guide Callout */}
                           <div className="rounded-md border bg-muted/20 p-3 flex items-center justify-between gap-3 text-xs">
@@ -2401,7 +2416,7 @@ export default function SettingsPage() {
                             </Button>
                           </div>
                         </form>
-                      )}
+                      ) : null}
                     </div>
                   )}
 

@@ -87,7 +87,7 @@ class PublicStorefrontController extends Controller
             'wishlist' => $this->currentWishlist($company),
             'locale' => $locale,
             'chrome' => self::CHROME_STRINGS[$locale] ?? self::CHROME_STRINGS['en'],
-            'seo' => $this->seo->forStorefrontCatalog($company),
+            'seo' => $this->seo->forStorefrontCatalog($company, null, $filters),
         ]);
     }
 

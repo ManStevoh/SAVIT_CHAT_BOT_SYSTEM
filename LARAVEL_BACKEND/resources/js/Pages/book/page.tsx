@@ -89,7 +89,7 @@ export default function PublicBookPage({
 
   return (
     <>
-      <SeoHead seo={seo} fallbackTitle={`Book Appointment — ${company.name}`} />
+      <SeoHead seo={seo} fallbackTitle={`Book with ${company.name}`} />
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 py-10 text-slate-900">
       <div className="mx-auto max-w-3xl space-y-8">
         <header className="space-y-2">

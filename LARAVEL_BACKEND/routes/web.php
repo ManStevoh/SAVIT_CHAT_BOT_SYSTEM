@@ -79,6 +79,7 @@ Route::get('/debug.txt', function () {
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/solutions', [PageController::class, 'solutions'])->name('solutions');
+Route::get('/features', [PageController::class, 'features'])->name('features');
 Route::get('/pricing', [PageController::class, 'pricing'])->name('pricing');
 Route::get('/about', [PageController::class, 'about'])->name('about');
 Route::get('/contact', [PageController::class, 'contact'])->name('contact');
@@ -86,6 +87,13 @@ Route::get('/blog', [PageController::class, 'blog'])->name('blog');
 Route::get('/blog/{slug}', [PageController::class, 'blogShow'])->name('blog.show');
 Route::get('/privacy', [PageController::class, 'privacy'])->name('privacy');
 Route::get('/terms', [PageController::class, 'terms'])->name('terms');
+Route::get('/whatsapp-ai-sales-agent', [PageController::class, 'whatsappAiSalesAgent'])->name('seo.whatsapp-ai-sales-agent');
+Route::get('/whatsapp-sales-automation', [PageController::class, 'whatsappSalesAutomation'])->name('seo.whatsapp-sales-automation');
+Route::get('/whatsapp-chatbot', [PageController::class, 'whatsappChatbot'])->name('seo.whatsapp-chatbot');
+Route::get('/whatsapp-commerce', [PageController::class, 'whatsappCommerce'])->name('seo.whatsapp-commerce');
+Route::get('/whatsapp-lead-generation', [PageController::class, 'whatsappLeadGeneration'])->name('seo.whatsapp-lead-generation');
+Route::get('/ai-customer-service', [PageController::class, 'aiCustomerService'])->name('seo.ai-customer-service');
+Route::get('/whatsapp-for-ecommerce', [PageController::class, 'whatsappForEcommerce'])->name('seo.whatsapp-for-ecommerce');
 Route::get('/order-paid', [PageController::class, 'orderPaid'])->name('order-paid');
 
 // Auth pages

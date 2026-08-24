@@ -21,7 +21,7 @@ type Props = {
 export default function BookingConfirmationPage({ company, booking, seo }: Props) {
   return (
     <>
-      <SeoHead seo={seo} fallbackTitle="Booking Confirmed" />
+      <SeoHead seo={seo} fallbackTitle={`Booking confirmation — ${company.name || 'RelayIQ'}`} />
       <div className="min-h-screen bg-slate-50 px-4 py-16">
       <div className="mx-auto max-w-lg space-y-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Confirmed</p>

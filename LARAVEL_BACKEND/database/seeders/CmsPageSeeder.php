@@ -35,6 +35,7 @@ class CmsPageSeeder extends Seeder
                         'content' => [
                             'links' => [
                                 ['label' => 'Home', 'href' => '/'],
+                                ['label' => 'Features', 'href' => '/features'],
                                 ['label' => 'Solutions', 'href' => '/solutions'],
                                 ['label' => 'Pricing', 'href' => '/pricing'],
                                 ['label' => 'About us', 'href' => '/about'],
@@ -64,9 +65,11 @@ class CmsPageSeeder extends Seeder
                             'copyright' => '© ' . date('Y') . ' Essem Digital Innovation Limited. All rights reserved.',
                             'navLinks' => [
                                 ['label' => 'Home', 'href' => '/'],
+                                ['label' => 'Features', 'href' => '/features'],
+                                ['label' => 'AI Sales Agent', 'href' => '/whatsapp-ai-sales-agent'],
+                                ['label' => 'WhatsApp Automation', 'href' => '/whatsapp-sales-automation'],
                                 ['label' => 'Solutions', 'href' => '/solutions'],
                                 ['label' => 'Pricing', 'href' => '/pricing'],
-                                ['label' => 'About us', 'href' => '/about'],
                                 ['label' => 'Blog', 'href' => '/blog'],
                                 ['label' => 'Contact', 'href' => '/contact'],
                             ],
@@ -92,8 +95,10 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'home',
                 'title' => 'Home',
-                'meta_title' => 'RelayIQ — AI Commerce OS for WhatsApp & the Web',
-                'meta_description' => 'Sell physical & digital products, take bookings, run dine-in tables, collect M-Pesa/Paystack/Stripe, and grow with a storefront + WhatsApp AI agent — one platform.',
+                'meta_title' => 'RelayIQ | AI Sales Agent for WhatsApp',
+                'meta_description' => 'Turn WhatsApp conversations into sales with RelayIQ. AI-powered sales automation that answers customers, recommends products, follows up with leads and helps businesses close more sales.',
+                'og_title' => 'RelayIQ | Turn WhatsApp Conversations Into Sales With AI',
+                'og_description' => 'AI sales agent for WhatsApp — engage customers, recommend products, follow up leads, and close more sales automatically.',
                 'sections' => [
                     [
                         'section_key' => 'hero',
@@ -101,15 +106,15 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 1,
                         'content' => [
                             'kicker' => 'FREE 14-DAY TRIAL',
-                            'title' => 'Your AI commerce OS for WhatsApp — and beyond.',
-                            'description' => 'Not a menu bot. A fluent agent that sells physical & digital products, takes bookings, runs dine-in tables, powers your storefront, collects payment, and hands off to your team when needed.',
+                            'title' => 'Turn WhatsApp Conversations Into Sales With AI',
+                            'description' => 'RelayIQ is an AI-powered WhatsApp sales assistant that engages customers, answers questions, recommends products, follows up with leads, and helps businesses close more sales automatically.',
                             'primaryCtaText' => 'Start free trial',
                             'primaryCtaHref' => '/register',
-                            'secondaryCtaText' => 'Explore solutions',
-                            'secondaryCtaHref' => '/solutions',
+                            'secondaryCtaText' => 'See how it works',
+                            'secondaryCtaHref' => '/whatsapp-ai-sales-agent',
                             'showFlowSimulation' => true,
                             'imageUrl' => $heroImage,
-                            'imageAlt' => 'RelayIQ WhatsApp commerce agent illustration',
+                            'imageAlt' => 'RelayIQ AI sales agent for WhatsApp converting chats into orders',
                         ],
                     ],
                     [
@@ -117,18 +122,18 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Capabilities grid',
                         'sort_order' => 2,
                         'content' => [
-                            'title' => 'Many solutions. One roof.',
-                            'description' => 'Conversation, catalog, payments, bookings, dine-in, storefront, and growth — wired together so every channel sells the same way.',
+                            'title' => 'Your AI sales agent for WhatsApp',
+                            'description' => 'Automate WhatsApp sales without losing the human touch — catalog-aware replies, payments, follow-ups, and team handoff.',
                             'items' => [
-                                ['icon' => 'bot', 'title' => 'AI commerce agent', 'description' => 'Fluent sales & support with memory — not rigid numbered menus.'],
-                                ['icon' => 'package', 'title' => 'Sell anything', 'description' => 'Physical goods, digital files & licenses, and bookable services in one catalog.'],
-                                ['icon' => 'payment', 'title' => 'Pay in the chat', 'description' => 'M-Pesa, Paystack, and Stripe — customers pay without leaving WhatsApp.'],
-                                ['icon' => 'booking', 'title' => 'Bookings & services', 'description' => 'Qualify needs, share availability, and convert requests into confirmed bookings.'],
-                                ['icon' => 'dinein', 'title' => 'Dine-in tables', 'description' => 'QR table ordering for restaurants — guest scans, orders, pays, kitchen notified.'],
-                                ['icon' => 'store', 'title' => 'Web storefront', 'description' => 'A full shop for browsers: cart, checkout, coupons, tracking — same catalog as WhatsApp.'],
-                                ['icon' => 'growth', 'title' => 'Growth Engine', 'description' => 'AI posts, social publishing, campaigns, and WhatsApp referral attribution.'],
-                                ['icon' => 'inbox', 'title' => 'Team inbox', 'description' => 'AI handles the front line; humans take over any thread instantly.'],
-                                ['icon' => 'delivery', 'title' => 'Delivery & taxes', 'description' => 'Zones, fees, and tax rules so quotes and checkout stay accurate.'],
+                                ['icon' => 'bot', 'title' => 'Answer customers instantly', 'description' => 'AI replies grounded in your catalog, FAQs, and order history — not rigid numbered menus.'],
+                                ['icon' => 'package', 'title' => 'Recommend products automatically', 'description' => 'Suggest physical goods, digital products, and bookable services from one live catalog.'],
+                                ['icon' => 'payment', 'title' => 'Convert conversations into sales', 'description' => 'Collect M-Pesa, Paystack, or Stripe in the same chat thread where the sale started.'],
+                                ['icon' => 'booking', 'title' => 'Capture and qualify leads', 'description' => 'Qualify needs, share availability, and turn interest into confirmed bookings or orders.'],
+                                ['icon' => 'inbox', 'title' => 'Follow up with customers', 'description' => 'Automate reminders and campaigns while your team takes over any thread instantly.'],
+                                ['icon' => 'store', 'title' => 'Sell beyond the chat', 'description' => 'Same catalog on web storefront and dine-in QR — WhatsApp stays your sales conversation channel.'],
+                                ['icon' => 'growth', 'title' => 'Measure what drives sales', 'description' => 'Growth Engine posts, WhatsApp campaigns, and referral attribution tied to real orders.'],
+                                ['icon' => 'dinein', 'title' => 'Built for modern businesses', 'description' => 'Retail, ecommerce, restaurants, services, and schools — one WhatsApp commerce platform.'],
+                                ['icon' => 'delivery', 'title' => 'Delivery & taxes included', 'description' => 'Zones, fees, and tax rules so quotes and checkout stay accurate.'],
                             ],
                         ],
                     ],
@@ -137,12 +142,12 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Intro card',
                         'sort_order' => 3,
                         'content' => [
-                            'title' => 'Not a chatbot. A commerce operating system.',
-                            'description' => 'RelayIQ runs the full customer journey across WhatsApp and the web: discover → recommend → order or book → pay → fulfill (ship, download, or dine-in) → follow up. It learns from conversations so every reply gets sharper over time.',
-                            'ctaText' => 'See all solutions',
-                            'ctaHref' => '/solutions',
+                            'title' => 'Automate your WhatsApp sales',
+                            'description' => 'RelayIQ runs the full journey: discover → recommend → order or book → pay → fulfill → follow up. It learns from conversations so every reply gets sharper — while humans stay in control.',
+                            'ctaText' => 'Explore WhatsApp AI sales agent',
+                            'ctaHref' => '/whatsapp-ai-sales-agent',
                             'imageUrl' => $introImage,
-                            'imageAlt' => 'RelayIQ commerce OS overview',
+                            'imageAlt' => 'Automate WhatsApp sales with RelayIQ AI agent',
                         ],
                     ],
                     [
@@ -280,12 +285,14 @@ class CmsPageSeeder extends Seeder
                         'label' => 'Call to action',
                         'sort_order' => 13,
                         'content' => [
-                            'title' => 'Put an AI employee on your WhatsApp today',
-                            'description' => '14-day free trial on Starter and Growth. No credit card required to start. Explore solutions first if you want the full picture.',
+                            'title' => 'Ready to turn WhatsApp into your AI sales channel?',
+                            'description' => '14-day free trial on Starter and Growth. No credit card required to start. Explore the AI sales agent or pricing if you want the full picture.',
                             'ctaText' => 'Start free trial',
                             'ctaHref' => '/register',
+                            'secondaryCtaText' => 'AI sales agent',
+                            'secondaryCtaHref' => '/whatsapp-ai-sales-agent',
                             'imageUrl' => $ctaImage,
-                            'imageAlt' => 'Start RelayIQ free trial',
+                            'imageAlt' => 'Start RelayIQ free trial for WhatsApp AI sales',
                         ],
                     ],
                 ],
@@ -675,22 +682,38 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'pricing',
                 'title' => 'Pricing',
-                'meta_title' => 'Pricing — RelayIQ',
-                'meta_description' => 'Starter, Growth, and Enterprise plans for WhatsApp commerce. 14-day free trial on Starter and Growth.',
+                'meta_title' => 'WhatsApp AI Sales Automation Pricing — RelayIQ',
+                'meta_description' => 'RelayIQ pricing for WhatsApp AI sales automation. Compare Starter, Growth, and Enterprise — messages, AI agent, storefront, bookings, campaigns, and team seats. 14-day free trial.',
+                'og_title' => 'WhatsApp AI Sales Automation Pricing — RelayIQ',
                 'sections' => [
                     [
                         'section_key' => 'hero',
                         'label' => 'Hero',
                         'sort_order' => 1,
                         'content' => [
-                            'title' => 'Pricing that scales with your sales',
-                            'description' => 'Start with a free trial. Upgrade when volume, bookings, storefront traffic, or Growth Engine needs grow.',
+                            'title' => 'WhatsApp AI sales automation pricing',
+                            'description' => 'Plans for businesses that want an AI sales agent on WhatsApp — from first reply to paid order. Start free on Starter and Growth; scale messages, seats, bookings, and campaigns as you grow.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Pricing SEO intro',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'What every plan includes',
+                            'html' => '<p>RelayIQ pricing is built around <strong>WhatsApp sales automation</strong>: an AI agent that answers customers, recommends products, captures leads, and helps close sales — with human handoff when needed.</p>
+<ul>
+<li><strong>Starter</strong> — AI sales agent, physical &amp; digital catalog, web storefront, payments, and core WhatsApp campaigns. Best for teams launching WhatsApp commerce.</li>
+<li><strong>Growth</strong> — Everything in Starter plus bookings, dine-in QR, higher message limits, advanced AI, and more campaigns. Best for scaling sales volume.</li>
+<li><strong>Enterprise</strong> — Custom limits, onboarding, and SLAs for multi-location or high-volume operations.</li>
+</ul>
+<p>Compare features below, then <a href="/register">start your free trial</a> or explore the <a href="/whatsapp-ai-sales-agent">AI sales agent for WhatsApp</a>.</p>',
                         ],
                     ],
                     [
                         'section_key' => 'pricing_plans',
                         'label' => 'Pricing plans',
-                        'sort_order' => 2,
+                        'sort_order' => 3,
                         'content' => [
                             'usePlansApi' => true,
                             'popularBadge' => 'Most Popular',
@@ -699,14 +722,14 @@ class CmsPageSeeder extends Seeder
                     [
                         'section_key' => 'compare_features',
                         'label' => 'Compare features',
-                        'sort_order' => 3,
+                        'sort_order' => 4,
                         'content' => [
-                            'title' => 'Compare features',
+                            'title' => 'Compare WhatsApp automation features',
                             'columns' => [
                                 [
                                     'name' => 'Starter',
                                     'features' => [
-                                        'AI commerce agent + memory',
+                                        'AI sales agent + memory',
                                         'Physical & digital catalog',
                                         'Web storefront + link-in-bio',
                                         'M-Pesa / Paystack / Stripe',
@@ -750,7 +773,7 @@ class CmsPageSeeder extends Seeder
                     [
                         'section_key' => 'faq',
                         'label' => 'FAQ',
-                        'sort_order' => 4,
+                        'sort_order' => 5,
                         'content' => [
                             'title' => 'Frequently asked questions',
                         ],
@@ -758,9 +781,9 @@ class CmsPageSeeder extends Seeder
                     [
                         'section_key' => 'cta',
                         'label' => 'Call to action',
-                        'sort_order' => 5,
+                        'sort_order' => 6,
                         'content' => [
-                            'title' => 'Ready to put AI on your WhatsApp?',
+                            'title' => 'Ready to turn WhatsApp into your AI sales channel?',
                             'description' => 'Start your trial and connect WhatsApp in minutes.',
                             'ctaText' => 'Start free trial',
                             'ctaHref' => '/register',
@@ -917,6 +940,397 @@ class CmsPageSeeder extends Seeder
                             'title' => 'Ready to run commerce under one roof?',
                             'description' => 'Start free on Starter or Growth — or talk to us about Enterprise.',
                             'ctaText' => 'Get started',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'features',
+                'title' => 'Features',
+                'meta_title' => 'WhatsApp Sales Automation Features — RelayIQ',
+                'meta_description' => 'Explore RelayIQ WhatsApp sales automation features: AI sales agent, product recommendations, lead capture, follow-ups, team inbox, payments, storefront, and analytics.',
+                'og_title' => 'WhatsApp Sales Automation Features — RelayIQ',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'usePageHero' => true,
+                            'title' => 'WhatsApp sales automation features',
+                            'description' => 'Everything your WhatsApp sales team needs — AI replies, recommendations, lead qualification, payments, human handoff, and commerce tools in one platform.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'capabilities',
+                        'label' => 'Feature list',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'Everything your WhatsApp sales team needs',
+                            'description' => 'Built for AI + WhatsApp + sales — not a generic chatbot toolkit.',
+                            'items' => [
+                                ['icon' => 'bot', 'title' => 'AI sales agent', 'description' => 'Fluent conversations with memory, grounded in catalog and FAQs.'],
+                                ['icon' => 'package', 'title' => 'Product recommendations', 'description' => 'Suggest the right SKU, variant, or service from live inventory.'],
+                                ['icon' => 'inbox', 'title' => 'Lead management', 'description' => 'Capture intent, qualify buyers, and route hot leads to humans.'],
+                                ['icon' => 'growth', 'title' => 'Customer follow-up', 'description' => 'Automate reminders, win-backs, and WhatsApp campaigns.'],
+                                ['icon' => 'payment', 'title' => 'WhatsApp commerce', 'description' => 'Orders and M-Pesa / Paystack / Stripe checkout in-chat.'],
+                                ['icon' => 'store', 'title' => 'Team inbox', 'description' => 'AI on the front line; humans take over any thread instantly.'],
+                                ['icon' => 'booking', 'title' => 'Bookings & services', 'description' => 'Qualify needs and convert into confirmed appointments.'],
+                                ['icon' => 'delivery', 'title' => 'Conversation analytics', 'description' => 'See what drives chats, orders, and revenue.'],
+                                ['icon' => 'dinein', 'title' => 'AI knowledge base', 'description' => 'FAQs and business DNA keep answers accurate and on-brand.'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Features deep dive',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'How RelayIQ features work together',
+                            'html' => '<p>Most tools give you a chatbot <em>or</em> a shop. RelayIQ connects <a href="/whatsapp-ai-sales-agent">AI sales agent</a>, <a href="/whatsapp-sales-automation">WhatsApp automation</a>, catalog, payments, and inbox so every conversation can become a sale.</p>
+<p>Start with Embedded Signup, add products, enable payments, then let the agent handle FAQs while your team focuses on high-value deals. Explore <a href="/pricing">pricing</a> or <a href="/register">start free</a>.</p>',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'CTA',
+                        'sort_order' => 4,
+                        'content' => [
+                            'title' => 'Ready to automate WhatsApp sales?',
+                            'description' => 'Connect WhatsApp and activate your AI sales agent in minutes.',
+                            'ctaText' => 'Start free trial',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'whatsapp-ai-sales-agent',
+                'title' => 'WhatsApp AI Sales Agent',
+                'meta_title' => 'AI Sales Agent for WhatsApp — RelayIQ',
+                'meta_description' => 'What is a WhatsApp AI sales agent? RelayIQ engages customers, answers questions, recommends products, qualifies leads, follows up, and helps close sales on WhatsApp.',
+                'og_title' => 'AI Sales Agent for WhatsApp — RelayIQ',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'usePageHero' => true,
+                            'title' => 'AI sales agent for WhatsApp',
+                            'description' => 'Turn chats into revenue. RelayIQ’s AI sales agent answers instantly, recommends products, captures leads, follows up, and hands off to your team when a human should close.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Article',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'What is a WhatsApp AI sales agent?',
+                            'html' => '<p>A WhatsApp AI sales agent is software that holds real sales conversations on WhatsApp — not a menu bot. It understands your catalog, answers product questions, recommends items, collects order details, and can trigger payment — while your team stays one click away.</p>
+<h3>How RelayIQ’s AI agent sells</h3>
+<ul>
+<li><strong>Engage</strong> — Instant replies to inbound WhatsApp messages</li>
+<li><strong>Recommend</strong> — Catalog-aware product and service suggestions</li>
+<li><strong>Qualify</strong> — Capture needs, budget signals, and lead details</li>
+<li><strong>Follow up</strong> — Reminders and campaigns that bring buyers back</li>
+<li><strong>Convert</strong> — In-chat checkout with M-Pesa, Paystack, or Stripe</li>
+<li><strong>Handoff</strong> — Humans take over VIP or complex deals from the team inbox</li>
+</ul>
+<p>Compared with a basic chatbot, an AI sales agent is measured on <em>sales outcomes</em>: replies that move buyers forward. Learn more about <a href="/whatsapp-sales-automation">WhatsApp sales automation</a>, see <a href="/features">all features</a>, or <a href="/pricing">compare plans</a>.</p>',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'capabilities',
+                        'label' => 'Agent capabilities',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'Built to close sales — not just reply',
+                            'description' => 'Everything an AI sales agent needs on WhatsApp.',
+                            'items' => [
+                                ['icon' => 'bot', 'title' => 'Conversational AI', 'description' => 'Natural language with memory across the thread.'],
+                                ['icon' => 'package', 'title' => 'Live catalog', 'description' => 'Stock, variants, prices, and digital goods.'],
+                                ['icon' => 'payment', 'title' => 'Payments', 'description' => 'Checkout without leaving WhatsApp.'],
+                                ['icon' => 'inbox', 'title' => 'Human handoff', 'description' => 'Team inbox with full conversation history.'],
+                                ['icon' => 'growth', 'title' => 'Follow-ups', 'description' => 'Campaigns and win-backs that reopen deals.'],
+                                ['icon' => 'store', 'title' => 'Analytics', 'description' => 'Track chats that become orders.'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'section_key' => 'faq',
+                        'label' => 'FAQ',
+                        'sort_order' => 4,
+                        'content' => ['title' => 'Frequently asked questions'],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'CTA',
+                        'sort_order' => 5,
+                        'content' => [
+                            'title' => 'Put an AI sales agent on your WhatsApp',
+                            'description' => '14-day free trial. Connect WhatsApp and start selling.',
+                            'ctaText' => 'Start free trial',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'whatsapp-sales-automation',
+                'title' => 'WhatsApp Sales Automation',
+                'meta_title' => 'WhatsApp Sales Automation — RelayIQ',
+                'meta_description' => 'Automate WhatsApp sales with AI: instant replies, product recommendations, lead capture, follow-ups, and in-chat payments. See how RelayIQ works.',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'usePageHero' => true,
+                            'title' => 'WhatsApp sales automation',
+                            'description' => 'Automate the sales work that burns out teams — first replies, FAQs, recommendations, follow-ups — while keeping humans for high-value closes.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Article',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'How to automate WhatsApp sales with AI',
+                            'html' => '<p>WhatsApp sales automation means your buyers get fast, accurate answers 24/7 — and your team spends time closing, not copy-pasting FAQs.</p>
+<ol>
+<li>Connect WhatsApp Business (Embedded Signup)</li>
+<li>Add catalog, FAQs, and payment methods</li>
+<li>Let the <a href="/whatsapp-ai-sales-agent">AI sales agent</a> handle routine conversations</li>
+<li>Escalate complex deals to the team inbox</li>
+<li>Measure which chats become paid orders</li>
+</ol>
+<p>RelayIQ also powers <a href="/whatsapp-commerce">WhatsApp commerce</a> and a web storefront from the same catalog. <a href="/pricing">See pricing</a>.</p>',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'how_to_join',
+                        'label' => 'How it works',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'How RelayIQ works',
+                            'description' => 'From signup to your first AI-assisted sale.',
+                            'ctaText' => 'Create your account',
+                            'ctaHref' => '/register',
+                            'imageUrl' => $stepsImage,
+                            'imageAlt' => 'Three steps to automate WhatsApp sales with RelayIQ',
+                            'steps' => [
+                                ['title' => 'Connect WhatsApp', 'description' => 'Sign up and connect your WhatsApp Business number.'],
+                                ['title' => 'Train your AI', 'description' => 'Add products, FAQs, and business basics.'],
+                                ['title' => 'Start selling', 'description' => 'AI handles replies and orders; your team takes over when needed.'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'CTA',
+                        'sort_order' => 4,
+                        'content' => [
+                            'title' => 'Automate WhatsApp sales this week',
+                            'description' => 'Start free — no credit card required on eligible plans.',
+                            'ctaText' => 'Start free trial',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'whatsapp-chatbot',
+                'title' => 'WhatsApp Chatbot',
+                'meta_title' => 'WhatsApp Chatbot for Sales — RelayIQ',
+                'meta_description' => 'Looking for a WhatsApp chatbot for sales? RelayIQ goes beyond menus — an AI sales agent that recommends products, takes orders, and collects payment on WhatsApp.',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'usePageHero' => true,
+                            'title' => 'WhatsApp chatbot for sales',
+                            'description' => 'Skip rigid 1-2-3 menus. RelayIQ is a WhatsApp chatbot built to sell — with catalog awareness, payments, and human handoff.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Article',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'AI chatbot vs AI sales agent',
+                            'html' => '<p>Many “WhatsApp chatbots” only deflect tickets. An <strong>AI sales agent</strong> is different: it is measured on recommendations, lead quality, and closed orders.</p>
+<p>RelayIQ combines chatbot convenience with sales outcomes — see <a href="/whatsapp-ai-sales-agent">AI sales agent for WhatsApp</a> and <a href="/features">features</a>.</p>',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'CTA',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'Replace menu bots with a sales agent',
+                            'description' => 'Start your RelayIQ trial and connect WhatsApp.',
+                            'ctaText' => 'Start free trial',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'whatsapp-commerce',
+                'title' => 'WhatsApp Commerce',
+                'meta_title' => 'WhatsApp Commerce Platform — RelayIQ',
+                'meta_description' => 'Run WhatsApp commerce with RelayIQ: catalog, in-chat payments, orders, storefront, and AI that helps customers buy without leaving WhatsApp.',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'usePageHero' => true,
+                            'title' => 'WhatsApp commerce platform',
+                            'description' => 'Sell physical, digital, and bookable products on WhatsApp — with the same catalog on your web storefront.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Article',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'WhatsApp commerce that actually checks out',
+                            'html' => '<p>WhatsApp commerce works when customers can discover, decide, and pay in one thread. RelayIQ connects catalog, AI recommendations, M-Pesa/Paystack/Stripe, and order tracking.</p>
+<p>Also explore <a href="/whatsapp-for-ecommerce">WhatsApp for ecommerce</a> and <a href="/whatsapp-sales-automation">sales automation</a>.</p>',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'CTA',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'Launch WhatsApp commerce',
+                            'description' => 'One catalog for chat and web. Start free.',
+                            'ctaText' => 'Start free trial',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'whatsapp-lead-generation',
+                'title' => 'WhatsApp Lead Generation',
+                'meta_title' => 'WhatsApp Lead Generation with AI — RelayIQ',
+                'meta_description' => 'Generate and qualify WhatsApp leads with AI. RelayIQ captures intent, asks the right questions, and routes hot leads to your team.',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'usePageHero' => true,
+                            'title' => 'WhatsApp lead generation',
+                            'description' => 'Turn inbound WhatsApp interest into qualified leads — automatically — then close with humans when it counts.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Article',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'Capture and qualify leads on WhatsApp',
+                            'html' => '<p>Every unread WhatsApp message is a lost lead. RelayIQ’s AI engages instantly, asks qualifying questions, and syncs context into your team inbox.</p>
+<p>Pair with <a href="/whatsapp-ai-sales-agent">AI sales agent</a> workflows and <a href="/pricing">Growth campaigns</a> for follow-up.</p>',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'CTA',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'Stop losing WhatsApp leads',
+                            'description' => 'Activate AI lead capture on your number.',
+                            'ctaText' => 'Start free trial',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'ai-customer-service',
+                'title' => 'AI Customer Service',
+                'meta_title' => 'WhatsApp Customer Service Automation — RelayIQ',
+                'meta_description' => 'Automate WhatsApp customer service with AI that knows your catalog and FAQs — and hands off to humans when needed.',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'usePageHero' => true,
+                            'title' => 'WhatsApp customer service automation',
+                            'description' => 'Resolve FAQs instantly, keep order status accurate, and escalate to your team with full context.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Article',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'Support that still sells',
+                            'html' => '<p>Great WhatsApp support protects revenue. RelayIQ answers with facts from FAQs, orders, and catalog — then can recommend the next purchase when the moment is right.</p>
+<p>See <a href="/features">features</a> and <a href="/whatsapp-sales-automation">sales automation</a>.</p>',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'CTA',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'Automate WhatsApp support',
+                            'description' => 'Start free and connect your number.',
+                            'ctaText' => 'Start free trial',
+                            'ctaHref' => '/register',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'whatsapp-for-ecommerce',
+                'title' => 'WhatsApp for Ecommerce',
+                'meta_title' => 'WhatsApp for Ecommerce Sales — RelayIQ',
+                'meta_description' => 'Use WhatsApp for ecommerce: AI product advice, carts, M-Pesa checkout, and a matching web storefront from one RelayIQ catalog.',
+                'sections' => [
+                    [
+                        'section_key' => 'hero',
+                        'label' => 'Hero',
+                        'sort_order' => 1,
+                        'content' => [
+                            'usePageHero' => true,
+                            'title' => 'WhatsApp for ecommerce',
+                            'description' => 'Advise shoppers on WhatsApp, take payment in-chat, and keep the same catalog on your storefront for SEO and browsing.',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'prose',
+                        'label' => 'Article',
+                        'sort_order' => 2,
+                        'content' => [
+                            'title' => 'How to use WhatsApp for ecommerce sales',
+                            'html' => '<p>Ecommerce brands win on WhatsApp when advice and checkout happen together. RelayIQ connects inventory, AI recommendations, payments, and order tracking — plus a browser storefront for self-serve shoppers.</p>
+<p>Related: <a href="/whatsapp-commerce">WhatsApp commerce</a>, <a href="/whatsapp-ai-sales-agent">AI sales agent</a>, <a href="/pricing">pricing</a>.</p>',
+                        ],
+                    ],
+                    [
+                        'section_key' => 'cta',
+                        'label' => 'CTA',
+                        'sort_order' => 3,
+                        'content' => [
+                            'title' => 'Sell on WhatsApp and the web',
+                            'description' => 'One catalog. Two front doors. Start free.',
+                            'ctaText' => 'Start free trial',
                             'ctaHref' => '/register',
                         ],
                     ],
@@ -1081,15 +1495,15 @@ class CmsPageSeeder extends Seeder
 
         // Keep landing FAQs aligned with the product story (overwrite seeded defaults).
         $faqs = [
-            ['question' => 'How does RelayIQ work on WhatsApp?', 'answer' => 'Connect your WhatsApp Business number, add your catalog and FAQs, and our AI commerce agent handles replies, orders, payments, and handoff to your team — with memory that improves over time.'],
-            ['question' => 'What can I sell?', 'answer' => 'Physical products, digital goods (download links and license keys), bookable services, and bundles — all from one catalog the AI understands. The same catalog powers WhatsApp, your web storefront, and dine-in QR menus.'],
-            ['question' => 'Do you only work on WhatsApp?', 'answer' => 'WhatsApp is the primary conversation channel, but RelayIQ also includes a full web storefront, public booking pages, and dine-in table QR ordering — so customers can buy wherever they prefer.'],
-            ['question' => 'What is dine-in / table QR?', 'answer' => 'For restaurants, you create tables and print QR codes. Guests scan, order from your menu, and staff see the table name on the order. Pair it with WhatsApp for delivery and takeaway.'],
-            ['question' => 'What payment methods are supported?', 'answer' => 'M-Pesa (including your own Till/PayBill), Paystack, and Stripe. Customers can pay in the conversation flow or on the storefront checkout.'],
-            ['question' => 'Is there a free trial?', 'answer' => 'Yes. Starter and Growth include a 14-day free trial. Enterprise is custom — contact sales.'],
-            ['question' => 'Can my team take over conversations?', 'answer' => 'Yes. Agents can jump into any thread from the team inbox. The AI pauses until you hand the chat back.'],
-            ['question' => 'What is the Growth Engine?', 'answer' => 'AI-assisted posts, social publishing, WhatsApp campaigns, and referral attribution so you can measure which content drives chats and orders.'],
-            ['question' => 'Where do I sign up?', 'answer' => 'Click Sign up in the navigation or visit /register to create your account and start your free trial. Prefer the full map first? Visit /solutions.'],
+            ['question' => 'What is a WhatsApp AI sales agent?', 'answer' => 'It is AI that holds real sales conversations on WhatsApp — answering questions, recommending products, capturing leads, following up, and helping close orders — with human handoff when needed. RelayIQ is built for that sales outcome, not just ticket deflection.'],
+            ['question' => 'How does RelayIQ automate WhatsApp sales?', 'answer' => 'Connect your WhatsApp Business number, add your catalog and FAQs, enable payments, and the AI agent handles first replies, recommendations, and order capture while your team inbox stays ready for complex deals.'],
+            ['question' => 'What can I sell on WhatsApp?', 'answer' => 'Physical products, digital goods (downloads and license keys), bookable services, and bundles — from one catalog that also powers your web storefront and dine-in QR menus.'],
+            ['question' => 'Is RelayIQ just a WhatsApp chatbot?', 'answer' => 'No. Chatbots often stop at FAQs. RelayIQ is an AI sales agent plus commerce: catalog, in-chat payments, storefront, bookings, campaigns, and team handoff.'],
+            ['question' => 'What payment methods are supported?', 'answer' => 'M-Pesa (including your own Till/PayBill), Paystack, and Stripe. Customers can pay in the conversation or on the storefront checkout.'],
+            ['question' => 'Is there a free trial?', 'answer' => 'Yes. Starter and Growth include a 14-day free trial. Enterprise is custom — contact sales. See /pricing for plan details.'],
+            ['question' => 'Can my team take over conversations?', 'answer' => 'Yes. Agents jump into any thread from the shared inbox. The AI pauses until you hand the chat back.'],
+            ['question' => 'Do you only work on WhatsApp?', 'answer' => 'WhatsApp is the primary sales conversation channel. RelayIQ also includes a web storefront, booking pages, and dine-in table QR ordering from the same catalog.'],
+            ['question' => 'Where do I sign up?', 'answer' => 'Click Sign up or visit /register. Prefer to learn first? Read /whatsapp-ai-sales-agent or /features.'],
         ];
         LandingFaq::query()->delete();
         foreach ($faqs as $i => $faq) {

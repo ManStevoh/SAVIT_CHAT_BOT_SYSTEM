@@ -76,7 +76,7 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           />
         )
       }
-      if (pageSlug === "pricing" || pageSlug === "solutions") {
+      if (pageSlug === "pricing" || pageSlug === "solutions" || pageSlug === "features" || content.usePageHero === true) {
         return <LandoPageHero title={str(content.title)} description={str(content.description)} />
       }
       return (
@@ -237,6 +237,23 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
     case "faq":
       return (
         <LandoFaqSection title={str(content.title)} faqs={pageData.faqs ?? []} />
+      )
+
+    case "prose":
+      return (
+        <section className="bg-background py-12 lg:py-16">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+            {str(content.title) ? (
+              <h2 className="mb-6 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                {str(content.title)}
+              </h2>
+            ) : null}
+            <div
+              className="prose prose-slate max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-a:text-primary"
+              dangerouslySetInnerHTML={{ __html: str(content.html || content.body) }}
+            />
+          </div>
+        </section>
       )
 
     case "mission":

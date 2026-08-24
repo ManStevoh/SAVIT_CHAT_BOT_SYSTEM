@@ -212,4 +212,63 @@ class SeoRoadmapTest extends TestCase
         $this->get('/sitemap-blog.xml')->assertOk();
         $this->get('/sitemap-stores.xml')->assertOk();
     }
+
+    public function test_seo_landing_pages_and_features_are_indexable(): void
+    {
+        foreach ([
+            'features',
+            'whatsapp-ai-sales-agent',
+            'whatsapp-sales-automation',
+            'whatsapp-chatbot',
+            'whatsapp-commerce',
+            'whatsapp-lead-generation',
+            'ai-customer-service',
+            'whatsapp-for-ecommerce',
+        ] as $slug) {
+            CmsPage::updateOrCreate(
+                ['slug' => $slug],
+                [
+                    'title' => $slug,
+                    'meta_title' => 'SEO '.$slug,
+                    'meta_description' => 'Description for '.$slug,
+                    'is_published' => true,
+                ]
+            );
+        }
+
+        $this->get('/features')->assertOk()->assertSee('SEO features', false);
+        $this->get('/whatsapp-ai-sales-agent')->assertOk()->assertSee('SEO whatsapp-ai-sales-agent', false);
+        $this->get('/whatsapp-sales-automation')->assertOk();
+        $this->get('/sitemap.xml')->assertOk()->assertSee('/whatsapp-ai-sales-agent', false);
+    }
+
+    public function test_software_application_schema_only_on_home_and_pricing(): void
+    {
+        CmsPage::create([
+            'slug' => 'about',
+            'title' => 'About',
+            'meta_title' => 'About — RelayIQ',
+            'meta_description' => 'About page',
+            'is_published' => true,
+        ]);
+        CmsPage::create([
+            'slug' => 'home',
+            'title' => 'Home',
+            'meta_title' => 'Home — RelayIQ',
+            'meta_description' => 'Home page',
+            'is_published' => true,
+        ]);
+
+        $this->get('/about')->assertOk()->assertDontSee('SoftwareApplication', false);
+        $this->get('/')->assertOk()->assertSee('SoftwareApplication', false);
+    }
+
+    public function test_filtered_storefront_catalog_is_noindex(): void
+    {
+        $this->makeCompany(['store_slug' => 'filter-shop']);
+
+        $this->get('/s/filter-shop?q=mug')
+            ->assertOk()
+            ->assertSee('noindex', false);
+    }
 }

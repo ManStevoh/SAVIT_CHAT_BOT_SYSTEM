@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useId, useRef } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
 
 declare global {
   interface Window {
     grecaptcha?: {
+      ready?: (cb: () => void) => void
       render: (
         container: HTMLElement,
         parameters: { sitekey: string; callback?: (token: string) => void; "expired-callback"?: () => void }
@@ -27,6 +28,10 @@ function loadRecaptchaScript(): Promise<void> {
   scriptPromise = new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>('script[data-essem-recaptcha="1"]')
     if (existing) {
+      if (window.grecaptcha?.render) {
+        resolve()
+        return
+      }
       existing.addEventListener("load", () => resolve())
       existing.addEventListener("error", () => reject(new Error("Failed to load reCAPTCHA")))
       return
@@ -44,6 +49,29 @@ function loadRecaptchaScript(): Promise<void> {
   return scriptPromise
 }
 
+function waitForGrecaptcha(): Promise<NonNullable<Window["grecaptcha"]>> {
+  return new Promise((resolve, reject) => {
+    const start = Date.now()
+    const tick = () => {
+      if (window.grecaptcha?.render) {
+        const g = window.grecaptcha
+        if (typeof g.ready === "function") {
+          g.ready(() => resolve(g))
+        } else {
+          resolve(g)
+        }
+        return
+      }
+      if (Date.now() - start > 10000) {
+        reject(new Error("reCAPTCHA timed out"))
+        return
+      }
+      window.setTimeout(tick, 50)
+    }
+    tick()
+  })
+}
+
 type RecaptchaWidgetProps = {
   onChange: (token: string | null) => void
   className?: string
@@ -53,44 +81,67 @@ export function RecaptchaWidget({ onChange, className }: RecaptchaWidgetProps) {
   const branding = useAppBranding()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const widgetIdRef = useRef<number | null>(null)
+  const onChangeRef = useRef(onChange)
   const reactId = useId()
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  onChangeRef.current = onChange
 
   const enabled = Boolean(branding.recaptchaEnabled && branding.recaptchaSiteKey)
 
   useEffect(() => {
     if (!enabled || !branding.recaptchaSiteKey || !containerRef.current) {
-      onChange(null)
+      onChangeRef.current(null)
       return
     }
 
     let cancelled = false
+    setLoadError(null)
 
     loadRecaptchaScript()
-      .then(() => {
-        if (cancelled || !containerRef.current || !window.grecaptcha) return
+      .then(() => waitForGrecaptcha())
+      .then((grecaptcha) => {
+        if (cancelled || !containerRef.current) return
         if (widgetIdRef.current !== null) {
-          window.grecaptcha.reset(widgetIdRef.current)
+          try {
+            grecaptcha.reset(widgetIdRef.current)
+          } catch {
+            /* ignore */
+          }
           return
         }
         containerRef.current.innerHTML = ""
-        widgetIdRef.current = window.grecaptcha.render(containerRef.current, {
+        widgetIdRef.current = grecaptcha.render(containerRef.current, {
           sitekey: branding.recaptchaSiteKey!,
-          callback: (token: string) => onChange(token),
-          "expired-callback": () => onChange(null),
+          callback: (token: string) => onChangeRef.current(token),
+          "expired-callback": () => onChangeRef.current(null),
         })
       })
       .catch(() => {
-        onChange(null)
+        if (cancelled) return
+        onChangeRef.current(null)
+        setLoadError(
+          "Captcha could not load. Check that this domain is allowed on your Google reCAPTCHA site key, disable blockers for google.com, then refresh."
+        )
       })
 
     return () => {
       cancelled = true
     }
-  }, [enabled, branding.recaptchaSiteKey, onChange, reactId])
+  }, [enabled, branding.recaptchaSiteKey, reactId])
 
   if (!enabled) return null
 
-  return <div ref={containerRef} className={className} data-recaptcha-widget={reactId} />
+  return (
+    <div className={className}>
+      <div ref={containerRef} data-recaptcha-widget={reactId} />
+      {loadError ? (
+        <p className="mt-2 text-sm text-destructive" role="alert">
+          {loadError}
+        </p>
+      ) : null}
+    </div>
+  )
 }
 
 export function resetRecaptchaWidget(): void {

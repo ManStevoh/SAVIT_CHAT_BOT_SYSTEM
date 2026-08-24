@@ -37,6 +37,46 @@ class PageController extends Controller
         return $this->marketing('Solutions/page', 'solutions');
     }
 
+    public function features(): Response
+    {
+        return $this->marketingPage('features', 'Features — RelayIQ');
+    }
+
+    public function whatsappAiSalesAgent(): Response
+    {
+        return $this->marketingPage('whatsapp-ai-sales-agent', 'AI Sales Agent for WhatsApp — RelayIQ');
+    }
+
+    public function whatsappSalesAutomation(): Response
+    {
+        return $this->marketingPage('whatsapp-sales-automation', 'WhatsApp Sales Automation — RelayIQ');
+    }
+
+    public function whatsappChatbot(): Response
+    {
+        return $this->marketingPage('whatsapp-chatbot', 'WhatsApp Chatbot for Sales — RelayIQ');
+    }
+
+    public function whatsappCommerce(): Response
+    {
+        return $this->marketingPage('whatsapp-commerce', 'WhatsApp Commerce — RelayIQ');
+    }
+
+    public function whatsappLeadGeneration(): Response
+    {
+        return $this->marketingPage('whatsapp-lead-generation', 'WhatsApp Lead Generation — RelayIQ');
+    }
+
+    public function aiCustomerService(): Response
+    {
+        return $this->marketingPage('ai-customer-service', 'WhatsApp Customer Service Automation — RelayIQ');
+    }
+
+    public function whatsappForEcommerce(): Response
+    {
+        return $this->marketingPage('whatsapp-for-ecommerce', 'WhatsApp for Ecommerce — RelayIQ');
+    }
+
     public function contact(): Response
     {
         return $this->marketing('Contact/page', 'contact');
@@ -108,6 +148,17 @@ class PageController extends Controller
     private function marketing(string $component, string $slug): Response
     {
         return Inertia::render($component, [
+            'seo' => $this->seo->forSlug($slug),
+            'cms' => $this->cmsPayloads->forSlug($slug),
+            'cmsGlobal' => $this->cmsPayloads->forSlug('global'),
+        ]);
+    }
+
+    private function marketingPage(string $slug, ?string $fallbackTitle = null): Response
+    {
+        return Inertia::render('Marketing/page', [
+            'slug' => $slug,
+            'fallbackTitle' => $fallbackTitle,
             'seo' => $this->seo->forSlug($slug),
             'cms' => $this->cmsPayloads->forSlug($slug),
             'cmsGlobal' => $this->cmsPayloads->forSlug('global'),

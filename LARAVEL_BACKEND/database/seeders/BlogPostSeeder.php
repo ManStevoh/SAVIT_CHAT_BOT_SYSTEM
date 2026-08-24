@@ -143,5 +143,104 @@ HTML,
                 'published_at' => now()->subDay(),
             ]
         );
+
+        BlogPost::updateOrCreate(
+            ['slug' => 'what-is-a-whatsapp-ai-sales-agent'],
+            [
+                'title' => 'What is a WhatsApp AI sales agent?',
+                'excerpt' => 'How an AI sales agent differs from a menu chatbot — and why that difference drives revenue on WhatsApp.',
+                'body' => <<<'HTML'
+<p>A WhatsApp AI sales agent holds real sales conversations: it answers product questions, recommends items, qualifies leads, follows up, and can take payment — while humans stay available for high-value closes.</p>
+<h2>Chatbot vs sales agent</h2>
+<p>Chatbots often deflect tickets with menus. Sales agents are measured on outcomes: recommendations, qualified leads, and paid orders.</p>
+<h2>What RelayIQ includes</h2>
+<ul>
+<li>Catalog-aware AI replies</li>
+<li>In-chat payments (M-Pesa, Paystack, Stripe)</li>
+<li>Team inbox handoff</li>
+<li>Matching web storefront from the same catalog</li>
+</ul>
+<p>Read the product page: <a href="/whatsapp-ai-sales-agent">AI sales agent for WhatsApp</a>, or <a href="/register">start free</a>.</p>
+HTML,
+                'cover_image' => $whatsappCover,
+                'meta_title' => 'What Is a WhatsApp AI Sales Agent? — RelayIQ',
+                'meta_description' => 'Learn what a WhatsApp AI sales agent is, how it differs from a chatbot, and how RelayIQ turns conversations into sales.',
+                'og_image' => $whatsappCover,
+                'is_published' => true,
+                'published_at' => now()->subHours(12),
+            ]
+        );
+
+        BlogPost::updateOrCreate(
+            ['slug' => 'how-to-automate-whatsapp-sales-with-ai'],
+            [
+                'title' => 'How to automate WhatsApp sales with AI',
+                'excerpt' => 'A practical setup path: connect WhatsApp, ground the AI in your catalog, enable payments, and keep humans in control.',
+                'body' => <<<'HTML'
+<p>Automating WhatsApp sales is not about removing people — it is about removing delay on the first reply and the follow-up.</p>
+<ol>
+<li>Connect WhatsApp Business</li>
+<li>Add products, FAQs, and payment methods</li>
+<li>Let AI handle FAQs and recommendations</li>
+<li>Escalate complex deals to your inbox</li>
+<li>Measure chats that become orders</li>
+</ol>
+<p>Deep dive: <a href="/whatsapp-sales-automation">WhatsApp sales automation</a>. Compare <a href="/pricing">pricing</a>.</p>
+HTML,
+                'cover_image' => $catalogCover,
+                'meta_title' => 'How to Automate WhatsApp Sales With AI — RelayIQ',
+                'meta_description' => 'Step-by-step guide to automate WhatsApp sales with AI: catalog, payments, follow-ups, and human handoff.',
+                'og_image' => $catalogCover,
+                'is_published' => true,
+                'published_at' => now()->subHours(10),
+            ]
+        );
+
+        BlogPost::updateOrCreate(
+            ['slug' => 'ai-chatbot-vs-ai-sales-agent'],
+            [
+                'title' => 'AI chatbot vs AI sales agent: what\'s the difference?',
+                'excerpt' => 'If your WhatsApp bot only answers FAQs, you have a chatbot. If it recommends, qualifies, and helps close — you have a sales agent.',
+                'body' => <<<'HTML'
+<p>Both can reply on WhatsApp. Only one is designed to move buyers toward a purchase.</p>
+<h2>Chatbot strengths</h2>
+<p>Fast FAQs, ticket deflection, scripted flows.</p>
+<h2>Sales agent strengths</h2>
+<p>Product recommendations, lead qualification, checkout, follow-ups, and analytics tied to revenue.</p>
+<p>RelayIQ is built as an AI sales agent. See <a href="/whatsapp-chatbot">WhatsApp chatbot for sales</a> and <a href="/whatsapp-ai-sales-agent">AI sales agent</a>.</p>
+HTML,
+                'cover_image' => $whatsappCover,
+                'meta_title' => 'AI Chatbot vs AI Sales Agent — RelayIQ',
+                'meta_description' => 'Understand the difference between a WhatsApp chatbot and an AI sales agent — and which drives more sales.',
+                'og_image' => $whatsappCover,
+                'is_published' => true,
+                'published_at' => now()->subHours(8),
+            ]
+        );
+
+        BlogPost::updateOrCreate(
+            ['slug' => 'how-to-use-whatsapp-for-ecommerce-sales'],
+            [
+                'title' => 'How to use WhatsApp for ecommerce sales',
+                'excerpt' => 'Combine conversational selling on WhatsApp with a browser storefront — one catalog, two front doors.',
+                'body' => <<<'HTML'
+<p>Ecommerce brands win on WhatsApp when advice and checkout happen in the same thread. Pair that with a storefront for SEO and self-serve browsing.</p>
+<h2>Playbook</h2>
+<ul>
+<li>Advise and recommend in WhatsApp</li>
+<li>Take M-Pesa or card payment in-chat</li>
+<li>Publish the same SKUs on a web storefront</li>
+<li>Track which channel drives paid orders</li>
+</ul>
+<p>More: <a href="/whatsapp-for-ecommerce">WhatsApp for ecommerce</a> · <a href="/whatsapp-commerce">WhatsApp commerce</a>.</p>
+HTML,
+                'cover_image' => $catalogCover,
+                'meta_title' => 'How to Use WhatsApp for Ecommerce Sales — RelayIQ',
+                'meta_description' => 'Practical guide to ecommerce on WhatsApp: AI advice, in-chat checkout, and a matching storefront.',
+                'og_image' => $catalogCover,
+                'is_published' => true,
+                'published_at' => now()->subHours(6),
+            ]
+        );
     }
 }

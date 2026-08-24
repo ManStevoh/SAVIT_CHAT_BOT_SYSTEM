@@ -128,7 +128,9 @@ class CmsSeoService
                 ],
                 $pageSpecificNode,
                 $this->breadcrumbNode($breadcrumbs),
-                $this->softwareApplicationNode($base, $siteName, $description),
+                in_array($page->slug, ['home', 'pricing'], true)
+                    ? $this->softwareApplicationNode($base, $siteName, $description)
+                    : null,
                 $this->faqNode($page),
             ])),
         ];
@@ -170,9 +172,10 @@ class CmsSeoService
     /**
      * Catalog / shop SEO for a tenant storefront.
      *
+     * @param  array{q?: mixed, sort?: mixed, category?: mixed, in_stock?: mixed, min_price?: mixed, max_price?: mixed, type?: mixed}|null  $filters
      * @return array<string, mixed>
      */
-    public function forStorefrontCatalog(Company $company, ?string $forcedBase = null): array
+    public function forStorefrontCatalog(Company $company, ?string $forcedBase = null, ?array $filters = null): array
     {
         if ($company->custom_domain && $company->custom_domain_verified_at) {
             $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
@@ -193,7 +196,8 @@ class CmsSeoService
         $customOg = !empty($theme['og_image']) ? $this->absoluteUrl($theme['og_image']) : null;
         $ogImage = $customOg ?: ($company->logo ? asset('storage/'.$company->logo) : $this->defaultOgImage());
         $siteName = $company->name;
-        $googleVerification = !empty($theme['google_site_verification']) ? trim((string) $theme['google_site_verification']) : null;
+        $isFiltered = $this->storefrontCatalogIsFiltered($filters);
+        $googleVerification = ! empty($theme['google_site_verification']) ? trim((string) $theme['google_site_verification']) : null;
 
         $storeType = $theme['business_type'] ?? 'OnlineStore';
         $storeNode = [
@@ -205,7 +209,7 @@ class CmsSeoService
             'description' => $description,
         ];
 
-        if (!empty($company->address) || !empty($theme['street_address'])) {
+        if (! empty($company->address) || ! empty($theme['street_address'])) {
             $storeNode['address'] = [
                 '@type' => 'PostalAddress',
                 'streetAddress' => $theme['street_address'] ?? $company->address,
@@ -228,7 +232,7 @@ class CmsSeoService
             'title' => $title,
             'description' => $description,
             'canonical' => $canonical,
-            'robots' => 'index, follow',
+            'robots' => $isFiltered ? 'noindex, follow' : 'index, follow',
             'ogTitle' => $title,
             'ogDescription' => $description,
             'ogImage' => $ogImage,
@@ -236,10 +240,42 @@ class CmsSeoService
             'ogUrl' => $canonical,
             'siteName' => $siteName,
             'twitterCard' => 'summary_large_image',
-            'jsonLd' => $jsonLd,
+            'jsonLd' => $isFiltered ? null : $jsonLd,
             'googleSiteVerification' => $googleVerification,
             'skipAppTitleSuffix' => true,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $filters
+     */
+    private function storefrontCatalogIsFiltered(?array $filters): bool
+    {
+        if ($filters === null || $filters === []) {
+            return false;
+        }
+
+        foreach (['q', 'category', 'type', 'min_price', 'max_price'] as $key) {
+            $value = $filters[$key] ?? null;
+            if (is_string($value) && trim($value) !== '' && strtolower(trim($value)) !== 'all') {
+                return true;
+            }
+            if (is_numeric($value)) {
+                return true;
+            }
+        }
+
+        $inStock = $filters['in_stock'] ?? null;
+        if ($inStock === true || $inStock === 1 || $inStock === '1' || $inStock === 'true') {
+            return true;
+        }
+
+        $sort = $filters['sort'] ?? null;
+        if (is_string($sort) && trim($sort) !== '' && ! in_array($sort, ['name_asc', ''], true)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -785,9 +821,12 @@ class CmsSeoService
         $ogImage = $payload['ogImage'] ?? null;
         $payload['ogLocale'] = $payload['ogLocale'] ?? str_replace('-', '_', (string) config('app.locale', 'en'));
         $payload['twitterSite'] = $payload['twitterSite'] ?? $this->twitterSiteHandle();
-        if (is_string($ogImage) && $ogImage !== '') {
-            $payload['ogImageWidth'] = $payload['ogImageWidth'] ?? 1200;
-            $payload['ogImageHeight'] = $payload['ogImageHeight'] ?? 630;
+        // Only advertise OG dimensions when the caller already set them (known asset).
+        if (! isset($payload['ogImageWidth']) || ! isset($payload['ogImageHeight'])) {
+            unset($payload['ogImageWidth'], $payload['ogImageHeight']);
+        }
+        if ((! is_string($ogImage) || $ogImage === '') && $this->defaultOgImage()) {
+            $payload['ogImage'] = $this->defaultOgImage();
         }
 
         return $payload;
@@ -812,12 +851,44 @@ class CmsSeoService
     {
         $defaults = [
             'home' => [
-                'title' => 'RelayIQ — AI WhatsApp Sales & Order Automation',
-                'description' => 'Turn WhatsApp into your best sales channel. AI replies, order flows, and payments without leaving the chat.',
+                'title' => 'RelayIQ | AI Sales Agent for WhatsApp',
+                'description' => 'Turn WhatsApp conversations into sales with RelayIQ. AI-powered sales automation that answers customers, recommends products, follows up with leads and helps businesses close more sales.',
             ],
             'pricing' => [
-                'title' => 'Pricing — RelayIQ',
-                'description' => 'Simple plans for WhatsApp commerce teams. Start free and scale as you grow.',
+                'title' => 'WhatsApp AI Sales Automation Pricing — RelayIQ',
+                'description' => 'RelayIQ pricing for WhatsApp AI sales automation. Compare Starter, Growth, and Enterprise plans. 14-day free trial.',
+            ],
+            'features' => [
+                'title' => 'WhatsApp Sales Automation Features — RelayIQ',
+                'description' => 'AI sales agent, product recommendations, lead capture, follow-ups, team inbox, payments, and WhatsApp commerce features.',
+            ],
+            'whatsapp-ai-sales-agent' => [
+                'title' => 'AI Sales Agent for WhatsApp — RelayIQ',
+                'description' => 'Engage customers, recommend products, qualify leads, follow up, and close sales on WhatsApp with RelayIQ.',
+            ],
+            'whatsapp-sales-automation' => [
+                'title' => 'WhatsApp Sales Automation — RelayIQ',
+                'description' => 'Automate WhatsApp sales with AI replies, recommendations, follow-ups, and in-chat payments.',
+            ],
+            'whatsapp-chatbot' => [
+                'title' => 'WhatsApp Chatbot for Sales — RelayIQ',
+                'description' => 'A WhatsApp chatbot built for sales — catalog-aware AI, orders, and payments.',
+            ],
+            'whatsapp-commerce' => [
+                'title' => 'WhatsApp Commerce Platform — RelayIQ',
+                'description' => 'Run WhatsApp commerce with catalog, payments, orders, and AI that helps customers buy in chat.',
+            ],
+            'whatsapp-lead-generation' => [
+                'title' => 'WhatsApp Lead Generation — RelayIQ',
+                'description' => 'Generate and qualify WhatsApp leads with AI, then route hot leads to your team.',
+            ],
+            'ai-customer-service' => [
+                'title' => 'WhatsApp Customer Service Automation — RelayIQ',
+                'description' => 'Automate WhatsApp customer service with AI grounded in FAQs, orders, and catalog.',
+            ],
+            'whatsapp-for-ecommerce' => [
+                'title' => 'WhatsApp for Ecommerce — RelayIQ',
+                'description' => 'Use WhatsApp for ecommerce sales with AI advice, checkout, and a matching web storefront.',
             ],
             'about' => [
                 'title' => 'About us — RelayIQ',
@@ -894,7 +965,7 @@ class CmsSeoService
                 '@type' => 'Offer',
                 'url' => $base.'/pricing',
                 'price' => '0',
-                'priceCurrency' => 'USD',
+                'priceCurrency' => strtoupper((string) config('pricing.default_currency', 'KES')),
                 'description' => 'Free trial available',
             ]];
         }
@@ -910,19 +981,21 @@ class CmsSeoService
                 '@type' => 'Offer',
                 'url' => $base.'/pricing',
                 'price' => '0',
-                'priceCurrency' => 'USD',
+                'priceCurrency' => strtoupper((string) config('pricing.default_currency', 'KES')),
                 'description' => 'Free trial available',
             ]];
         }
 
-        return $plans->map(function (Plan $plan) use ($base) {
+        $currency = strtoupper((string) config('pricing.default_currency', 'KES'));
+
+        return $plans->map(function (Plan $plan) use ($base, $currency) {
             $isCustom = ! $plan->is_free && (float) $plan->price_amount <= 0;
             $offer = [
                 '@type' => 'Offer',
                 'name' => $plan->name,
                 'url' => $base.'/pricing',
                 'description' => $plan->description ?: ($plan->is_free ? 'Free plan' : null),
-                'priceCurrency' => 'USD',
+                'priceCurrency' => $currency,
             ];
             if ($isCustom) {
                 $offer['priceSpecification'] = [
@@ -1037,21 +1110,23 @@ class CmsSeoService
 
     private function defaultOgImage(): ?string
     {
-        if (! Schema::hasTable('platform_settings')) {
-            return null;
+        if (Schema::hasTable('platform_settings')) {
+            try {
+                $settings = PlatformSetting::query()->first();
+                if ($settings && ! empty($settings->app_logo) && Storage::disk('public')->exists($settings->app_logo)) {
+                    return asset('storage/'.$settings->app_logo);
+                }
+            } catch (\Throwable) {
+                // fall through to bundled brand asset
+            }
         }
 
-        try {
-            $settings = PlatformSetting::query()->first();
-        } catch (\Throwable) {
-            return null;
+        $bundled = public_path('images/branding/relaysiq-full-logo.png');
+        if (is_file($bundled)) {
+            return asset('images/branding/relaysiq-full-logo.png');
         }
 
-        if ($settings && ! empty($settings->app_logo) && Storage::disk('public')->exists($settings->app_logo)) {
-            return asset('storage/'.$settings->app_logo);
-        }
-
-        return null;
+        return asset('images/branding/relaysiq-app-icon.png');
     }
 
     private function appBaseUrl(): string
