@@ -30,8 +30,11 @@ export function LandoNavbar({
   return (
     <nav className="lando-nav fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-muted/95 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <Link href="/" onClick={() => setOpen(false)} className="min-w-0 shrink">
+        <Link href="/" onClick={() => setOpen(false)} className="min-w-0 shrink flex items-center gap-2">
           <AppLogoAndName variant="navbar" className="font-bold text-foreground" />
+          <span className="hidden sm:inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-primary">
+            v2.0
+          </span>
         </Link>
 
         <div className="hidden md:flex md:items-center md:gap-8">
