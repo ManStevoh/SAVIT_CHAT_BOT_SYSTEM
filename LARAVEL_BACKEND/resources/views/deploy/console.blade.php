@@ -1787,8 +1787,27 @@
 
     // ── Initialization Lifecycle ─────────────────────────────────
     (function init() {
-        if (authToken) {
+        // Check for Agent Navigation deep-link parameters
+        const urlParams    = new URLSearchParams(window.location.search);
+        const agentKey     = urlParams.get('key') || urlParams.get('secret') || urlParams.get('agent_key');
+        const targetBranch = urlParams.get('branch');
+        const autoDeploy   = urlParams.get('auto') === '1' || urlParams.get('auto') === 'true';
+
+        if (agentKey) {
+            // Strip key from browser URL address bar immediately for security
+            if (window.history && window.history.replaceState) {
+                const cleanUrl = window.location.pathname + (targetBranch ? `?branch=${encodeURIComponent(targetBranch)}` : '');
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+            handleAuthWithKey(agentKey, targetBranch, autoDeploy);
+        } else if (authToken) {
             showAuthenticatedView();
+            if (targetBranch) {
+                selectBranchInDropdown(targetBranch);
+            }
+            if (autoDeploy) {
+                setTimeout(() => initiateDeployment(targetBranch || pendingBranch), 150);
+            }
         } else {
             setWorkflowStep(1);
             setSentinelStatus('locked', 'Locked');
@@ -1801,6 +1820,59 @@
             }
         });
     })();
+
+    async function handleAuthWithKey(key, targetBranch, autoDeploy) {
+        const callout = document.getElementById('authCallout');
+        const btn = document.getElementById('authBtn');
+        setButtonState(btn, true, '<span class="spinner"></span> Authenticating via Agent Mode…');
+
+        try {
+            const res = await postJson('/deploy/auth', { secret: key });
+            const data = await res.json().catch(() => ({ success: false, message: 'Server returned HTTP ' + res.status }));
+
+            if (data.success && data.token) {
+                authToken = data.token;
+                sessionStorage.setItem('deploy_auth_token', authToken);
+                populateBranchList(data.branches || ['main']);
+                showAuthenticatedView();
+                hideCallout(callout);
+
+                if (targetBranch) {
+                    selectBranchInDropdown(targetBranch);
+                }
+
+                if (autoDeploy) {
+                    appendTerminalLine(`🤖 [Agent Mode] Auto-launching deployment for [${targetBranch || 'main'}]…`, 'highlight-info');
+                    setTimeout(() => initiateDeployment(targetBranch || 'main'), 150);
+                }
+            } else {
+                setButtonState(btn, false, '<span>Unlock Deployment Console</span>');
+                showCallout(callout, 'error', data.message || 'Agent authentication failed.');
+            }
+        } catch (err) {
+            setButtonState(btn, false, '<span>Unlock Deployment Console</span>');
+            showCallout(callout, 'error', 'Network error during Agent authentication: ' + err.message);
+        }
+    }
+
+    function selectBranchInDropdown(branchName) {
+        const sel = document.getElementById('branchSelect');
+        if (!sel) return;
+        for (let i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === branchName) {
+                sel.selectedIndex = i;
+                onBranchChange();
+                return;
+            }
+        }
+        sel.value = '__custom__';
+        onBranchChange();
+        const customInput = document.getElementById('customBranch');
+        if (customInput) {
+            customInput.value = branchName;
+            onCustomBranchInput();
+        }
+    }
 
     // ── Authentication Flow ──────────────────────────────────────
     async function handleAuth() {

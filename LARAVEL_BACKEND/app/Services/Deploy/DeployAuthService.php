@@ -24,6 +24,29 @@ class DeployAuthService
     }
 
     /**
+     * Validate an agent key against DEPLOY_AGENT_KEY or DEPLOY_SECRET.
+     */
+    public function validateAgentKey(string $key): bool
+    {
+        if (empty($key)) {
+            return false;
+        }
+
+        $agentKey = (string) config('deploy.agent_key');
+        $secret   = (string) config('deploy.secret');
+
+        if (! empty($agentKey) && hash_equals($agentKey, $key)) {
+            return true;
+        }
+
+        if (! empty($secret) && hash_equals($secret, $key)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Issue a short-lived, opaque deploy auth token.
      * Stored in the application cache with a configurable TTL.
      */

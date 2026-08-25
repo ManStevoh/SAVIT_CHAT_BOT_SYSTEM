@@ -82,6 +82,7 @@ Route::get('/deploy', [WebDeployController::class, 'index'])->name('deploy.index
 Route::post('/deploy/auth', [WebDeployController::class, 'auth'])->name('deploy.auth')->middleware('throttle:10,1');
 Route::post('/deploy/start', [WebDeployController::class, 'start'])->name('deploy.start')->middleware('throttle:5,1');
 Route::match(['get', 'post'], '/deploy/stream', [WebDeployController::class, 'stream'])->name('deploy.stream')->middleware('throttle:10,1');
+Route::match(['get', 'post'], '/deploy/agent', [WebDeployController::class, 'agentTrigger'])->name('deploy.agent')->middleware('throttle:10,1');
 Route::get('/deploy/status/{token}', [WebDeployController::class, 'status'])->name('deploy.status')->middleware('throttle:120,1');
 Route::post('/deploy/run', [WebDeployController::class, 'run'])->name('deploy.run')->middleware('throttle:5,1');
 

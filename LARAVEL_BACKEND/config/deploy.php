@@ -4,12 +4,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Deploy Secret
+    | Deploy Secret & Agent Key
     |--------------------------------------------------------------------------
     | Required — no fallback default. If DEPLOY_SECRET is not set, the /deploy
     | route returns 503 rather than exposing a hardcoded credential.
+    | DEPLOY_AGENT_KEY allows dedicated programmatic / AI agent navigation.
     */
-    'secret' => env('DEPLOY_SECRET'),
+    'secret'     => env('DEPLOY_SECRET'),
+    'agent_key'  => env('DEPLOY_AGENT_KEY', env('DEPLOY_SECRET')),
+    'remote_url' => env('DEPLOY_REMOTE_URL'),
 
     /*
     |--------------------------------------------------------------------------
