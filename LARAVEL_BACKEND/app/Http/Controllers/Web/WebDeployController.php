@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Artisan;
 
 class WebDeployController extends Controller
 {
@@ -45,11 +44,6 @@ class WebDeployController extends Controller
 
     private function getAvailableBranches(): array
     {
-        $repoRoot = base_path('..');
-        if (! is_dir($repoRoot.'/.git') && is_dir(base_path('.git'))) {
-            $repoRoot = base_path();
-        }
-
         $branches = [
             'main',
             'feature/mobile-companion-ken-merge',
@@ -60,114 +54,93 @@ class WebDeployController extends Controller
             'monorepo',
         ];
 
-        try {
-            // Fetch live branch list from git
-            $output = shell_exec(sprintf('cd %s && git branch -r 2>&1', escapeshellarg($repoRoot)));
-            if ($output) {
-                $lines = explode("\n", (string) $output);
-                foreach ($lines as $line) {
-                    $clean = trim($line);
-                    if (str_contains($clean, '->') || ! str_starts_with($clean, 'origin/')) {
-                        continue;
-                    }
-                    $name = str_replace('origin/', '', $clean);
-                    if ($name && ! in_array($name, $branches, true)) {
-                        $branches[] = $name;
-                    }
-                }
-            }
-        } catch (\Throwable) {
-            // Fallback list
-        }
-
-        // Always ensure main is first
-        usort($branches, function ($a, $b) {
-            if ($a === 'main') return -1;
-            if ($b === 'main') return 1;
-            return strcmp($a, $b);
-        });
-
         return array_values(array_unique($branches));
     }
 
     private function executeDeploy(string $secret, string $branch): JsonResponse
     {
-        $expectedSecret = env('DEPLOY_SECRET', self::DEFAULT_SECRET);
+        try {
+            $expectedSecret = env('DEPLOY_SECRET', self::DEFAULT_SECRET);
 
-        if (! hash_equals($expectedSecret, $secret)) {
+            if (! hash_equals($expectedSecret, $secret)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized: Invalid deploy password.',
+                    'logs' => ['[AUTH_ERROR] Invalid password provided. Please verify password.'],
+                ], 403);
+            }
+
+            $cleanBranch = preg_replace('/[^a-zA-Z0-9_\-\/]/', '', $branch) ?: 'main';
+            $logs = [];
+            $startTime = microtime(true);
+
+            $logs[] = '🚀 [' . date('Y-m-d H:i:s') . "] Initializing deployment for branch: [{$cleanBranch}]";
+
+            // If the executable deploy script exists on the server, execute it directly
+            $deployScript = '/home/qkbghwib/deploy';
+            if (is_executable($deployScript)) {
+                $logs[] = "⚡ Executing server deployment pipeline: {$deployScript}";
+                $cmd = sprintf('%s %s 2>&1', escapeshellarg($deployScript), escapeshellarg($cleanBranch));
+                $output = shell_exec($cmd);
+
+                if ($output) {
+                    $lines = explode("\n", trim((string) $output));
+                    foreach ($lines as $line) {
+                        if (trim($line) !== '') {
+                            $logs[] = trim($line);
+                        }
+                    }
+                }
+            } else {
+                // Fallback: Run commands in sequence
+                $repoRoot = base_path('..');
+                if (! is_dir($repoRoot . '/.git') && is_dir(base_path('.git'))) {
+                    $repoRoot = base_path();
+                }
+
+                $logs[] = "📂 Project root: {$repoRoot}";
+
+                // Git fetch
+                $fetchOutput = shell_exec(sprintf('cd %s && git fetch origin %s 2>&1', escapeshellarg($repoRoot), escapeshellarg($cleanBranch)));
+                $logs[] = "📥 [git fetch]: " . trim((string) $fetchOutput);
+
+                // Git reset
+                $resetOutput = shell_exec(sprintf('cd %s && git reset --hard origin/%s 2>&1', escapeshellarg($repoRoot), escapeshellarg($cleanBranch)));
+                $logs[] = "🔄 [git reset]: " . trim((string) $resetOutput);
+
+                // Laravel artisan optimize & migrate
+                $artisanPath = base_path('artisan');
+                $phpBin = PHP_BINARY ?: 'php';
+                $artisanCmd = sprintf('cd %s && %s %s migrate --force 2>&1 && %s %s optimize:clear 2>&1 && %s %s optimize 2>&1 && %s %s view:cache 2>&1',
+                    escapeshellarg(base_path()),
+                    escapeshellarg($phpBin), escapeshellarg($artisanPath),
+                    escapeshellarg($phpBin), escapeshellarg($artisanPath),
+                    escapeshellarg($phpBin), escapeshellarg($artisanPath),
+                    escapeshellarg($phpBin), escapeshellarg($artisanPath)
+                );
+                $artisanOutput = shell_exec($artisanCmd);
+                $logs[] = "⚡ [artisan]: " . trim((string) $artisanOutput);
+            }
+
+            $duration = round(microtime(true) - $startTime, 2);
+            $logs[] = "✅ [SUCCESS] Deployment completed in {$duration}s!";
+
+            return response()->json([
+                'success' => true,
+                'duration' => "{$duration}s",
+                'branch' => $cleanBranch,
+                'logs' => $logs,
+            ]);
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized: Invalid deploy password.',
-                'logs' => ['[AUTH_ERROR] Invalid password provided.'],
-            ], 403);
+                'message' => 'Deployment exception: ' . $e->getMessage(),
+                'logs' => [
+                    '❌ Error occurred: ' . $e->getMessage(),
+                    'Location: ' . $e->getFile() . ':' . $e->getLine(),
+                ],
+            ], 500);
         }
-
-        // Sanitize branch name
-        $cleanBranch = preg_replace('/[^a-zA-Z0-9_\-\/]/', '', $branch) ?: 'main';
-        $logs = [];
-        $startTime = microtime(true);
-
-        $logs[] = "🚀 [".date('Y-m-d H:i:s')."] Starting Web Deployment for branch: [{$cleanBranch}]";
-
-        // Determine repo root directory (parent of LARAVEL_BACKEND or base_path)
-        $repoRoot = base_path('..');
-        if (! is_dir($repoRoot.'/.git') && is_dir(base_path('.git'))) {
-            $repoRoot = base_path();
-        }
-
-        $logs[] = "📂 Project root: {$repoRoot}";
-
-        // Step 1: Git fetch & reset
-        $gitFetchCmd = sprintf('cd %s && git fetch origin %s 2>&1', escapeshellarg($repoRoot), escapeshellarg($cleanBranch));
-        $gitFetchOutput = shell_exec($gitFetchCmd);
-        $logs[] = "📥 [git fetch]: ".trim((string) $gitFetchOutput);
-
-        $gitResetCmd = sprintf('cd %s && git reset --hard origin/%s 2>&1', escapeshellarg($repoRoot), escapeshellarg($cleanBranch));
-        $gitResetOutput = shell_exec($gitResetCmd);
-        $logs[] = "🔄 [git reset]: ".trim((string) $gitResetOutput);
-
-        // Step 2: Database migrations
-        try {
-            Artisan::call('migrate', ['--force' => true]);
-            $logs[] = "🗄️ [migrate]: ".trim(Artisan::output());
-        } catch (\Throwable $e) {
-            $logs[] = "⚠️ [migrate_error]: ".$e->getMessage();
-        }
-
-        // Step 3: Storage symlink
-        try {
-            Artisan::call('storage:link');
-            $logs[] = "🔗 [storage:link]: ".trim(Artisan::output());
-        } catch (\Throwable $e) {
-            $logs[] = "🔗 [storage:link]: Link active";
-        }
-
-        // Step 4: Production caches
-        try {
-            Artisan::call('optimize:clear');
-            $logs[] = "🧹 [optimize:clear]: ".trim(Artisan::output());
-
-            Artisan::call('optimize');
-            $logs[] = "⚡ [optimize]: ".trim(Artisan::output());
-
-            Artisan::call('view:cache');
-            $logs[] = "👁️ [view:cache]: Views compiled successfully";
-
-            Artisan::call('event:cache');
-            $logs[] = "📡 [event:cache]: Events compiled successfully";
-        } catch (\Throwable $e) {
-            $logs[] = "⚠️ [cache_error]: ".$e->getMessage();
-        }
-
-        $duration = round(microtime(true) - $startTime, 2);
-        $logs[] = "✅ [SUCCESS] Deployment completed in {$duration}s!";
-
-        return response()->json([
-            'success' => true,
-            'duration' => "{$duration}s",
-            'branch' => $cleanBranch,
-            'logs' => $logs,
-        ]);
     }
 
     private function renderDeployHtml(array $branches = ['main']): string
@@ -176,7 +149,7 @@ class WebDeployController extends Controller
         foreach ($branches as $b) {
             $label = $b === 'main' ? "main (Production — Recommended)" : $b;
             $selected = $b === 'main' ? 'selected' : '';
-            $optionsHtml .= '<option value="'.htmlspecialchars($b, ENT_QUOTES).'" '.$selected.'>'.htmlspecialchars($label).'</option>';
+            $optionsHtml .= '<option value="' . htmlspecialchars($b, ENT_QUOTES) . '" ' . $selected . '>' . htmlspecialchars($label) . '</option>';
         }
         $optionsHtml .= '<option value="__custom__">+ Enter custom branch name...</option>';
 
@@ -387,8 +360,8 @@ class WebDeployController extends Controller
 
                 if (data.logs && Array.isArray(data.logs)) {
                     terminal.innerHTML = data.logs.map(function(log) {
-                        const isSuccess = log.indexOf('[SUCCESS]') !== -1;
-                        const isError = log.indexOf('[AUTH_ERROR]') !== -1 || log.indexOf('error') !== -1 || log.indexOf('Unauthorized') !== -1;
+                        const isSuccess = log.indexOf('[SUCCESS]') !== -1 || log.indexOf('✅') !== -1;
+                        const isError = log.indexOf('[AUTH_ERROR]') !== -1 || log.indexOf('Error') !== -1 || log.indexOf('Unauthorized') !== -1 || log.indexOf('❌') !== -1;
                         const cls = isSuccess ? 'log-line success' : (isError ? 'log-line error' : 'log-line');
                         return '<div class="' + cls + '">' + escapeHtml(log) + '</div>';
                     }).join('');
@@ -407,7 +380,7 @@ class WebDeployController extends Controller
                     btn.innerHTML = '<span>⚡ Deploy to Live Site</span>';
                 }
             } catch (err) {
-                terminal.innerHTML += '<div class="log-line error">❌ Network or server error: ' + escapeHtml(err.message) + '</div>';
+                terminal.innerHTML += '<div class="log-line error">❌ Network error: ' + escapeHtml(err.message) + '</div>';
                 btn.disabled = false;
                 btn.innerHTML = '<span>⚡ Deploy to Live Site</span>';
             }
