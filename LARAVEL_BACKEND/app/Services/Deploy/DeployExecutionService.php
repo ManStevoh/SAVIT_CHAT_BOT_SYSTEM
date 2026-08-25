@@ -247,16 +247,28 @@ class DeployExecutionService
      *
      * @param  string[]  $logs
      */
-    private function runPipeline(string $branch, array &$logs, string $statusFile): void
+    /**
+     * Core deploy pipeline. Mutates $logs and flushes them line-by-line to $statusFile.
+     *
+     * @param  string[]  $logs
+     */
+    private function runPipeline(string $branch, array &$logs, string $statusFile, ?callable $onLine = null): void
     {
         $deployScript = (string) config('deploy.script_path');
 
+        $emitLine = function (string $line) use (&$logs, $statusFile, $branch, $onLine) {
+            $logs[] = $line;
+            $this->flushLogs($statusFile, 'running', $branch, $logs);
+            if ($onLine !== null) {
+                $onLine($line);
+            }
+        };
+
         if (is_file($deployScript) && is_executable($deployScript)) {
             // ── cPanel shell script path ──────────────────────────────
-            $logs[] = "⚡ Running deploy pipeline: {$deployScript}";
-            $this->flushLogs($statusFile, 'running', $branch, $logs);
+            $emitLine("⚡ Running deploy pipeline: {$deployScript}");
 
-            $this->runStreamingCommand($deployScript . ' ' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch);
+            $this->runStreamingCommand($deployScript . ' ' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch, $onLine);
         } else {
             // ── Built-in git + artisan fallback ───────────────────────
             $repoRoot = base_path('..');
@@ -264,22 +276,18 @@ class DeployExecutionService
                 $repoRoot = base_path();
             }
 
-            $logs[] = "📂 Project root: {$repoRoot}";
-            $this->flushLogs($statusFile, 'running', $branch, $logs);
+            $emitLine("📂 Project root: {$repoRoot}");
 
             // Step 1: Git fetch
-            $logs[] = "📥 [git fetch] Fetching branch [{$branch}]...";
-            $this->flushLogs($statusFile, 'running', $branch, $logs);
-            $this->runStreamingCommand('cd ' . escapeshellarg($repoRoot) . ' && git fetch origin ' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch);
+            $emitLine("📥 [git fetch] Fetching branch [{$branch}]...");
+            $this->runStreamingCommand('cd ' . escapeshellarg($repoRoot) . ' && git fetch origin ' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch, $onLine);
 
             // Step 2: Git reset
-            $logs[] = "🔄 [git reset] Resetting to origin/{$branch}...";
-            $this->flushLogs($statusFile, 'running', $branch, $logs);
-            $this->runStreamingCommand('cd ' . escapeshellarg($repoRoot) . ' && git reset --hard origin/' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch);
+            $emitLine("🔄 [git reset] Resetting to origin/{$branch}...");
+            $this->runStreamingCommand('cd ' . escapeshellarg($repoRoot) . ' && git reset --hard origin/' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch, $onLine);
 
             // Step 3: Database migrations
-            $logs[] = "🗄️  [migrate] Running database migrations...";
-            $this->flushLogs($statusFile, 'running', $branch, $logs);
+            $emitLine("🗄️  [migrate] Running database migrations...");
             try {
                 Artisan::call('migrate', ['--force' => true]);
                 $migrateOut = trim(Artisan::output());
@@ -287,45 +295,92 @@ class DeployExecutionService
                     foreach (explode("\n", $migrateOut) as $mLine) {
                         $mTrim = trim($mLine);
                         if ($mTrim !== '') {
-                            $logs[] = $mTrim;
+                            $emitLine($mTrim);
                         }
                     }
                 }
             } catch (\Throwable $e) {
-                $logs[] = '⚠️  [migrate]: ' . $e->getMessage();
+                $emitLine('⚠️  [migrate]: ' . $e->getMessage());
             }
-            $this->flushLogs($statusFile, 'running', $branch, $logs);
 
             // Step 4: Storage link
             try {
                 Artisan::call('storage:link');
-                $logs[] = '🔗 [storage:link]: Storage symlink active';
+                $emitLine('🔗 [storage:link]: Storage symlink active');
             } catch (\Throwable) {
-                $logs[] = '🔗 [storage:link]: Already linked';
+                $emitLine('🔗 [storage:link]: Already linked');
             }
-            $this->flushLogs($statusFile, 'running', $branch, $logs);
+
             // Step 5: Cache optimisation
             try {
                 Artisan::call('optimize:clear');
-                $logs[] = '🧹 [optimize:clear]: Cleared configuration, routes, and views';
-                $this->flushLogs($statusFile, 'running', $branch, $logs);
+                $emitLine('🧹 [optimize:clear]: Cleared configuration, routes, and views');
 
                 Artisan::call('optimize');
-                $logs[] = '⚡ [optimize]: Compiled bootstrap cache';
-                $this->flushLogs($statusFile, 'running', $branch, $logs);
+                $emitLine('⚡ [optimize]: Compiled bootstrap cache');
 
                 Artisan::call('view:cache');
-                $logs[] = '👁️  [view:cache]: Blade views compiled';
-                $this->flushLogs($statusFile, 'running', $branch, $logs);
+                $emitLine('👁️  [view:cache]: Blade views compiled');
 
                 Artisan::call('event:cache');
-                $logs[] = '📡 [event:cache]: Events and listeners cached';
-                $this->flushLogs($statusFile, 'running', $branch, $logs);
+                $emitLine('📡 [event:cache]: Events and listeners cached');
             } catch (\Throwable $e) {
-                $logs[] = '⚠️  [cache]: ' . $e->getMessage();
-                $this->flushLogs($statusFile, 'running', $branch, $logs);
+                $emitLine('⚠️  [cache]: ' . $e->getMessage());
             }
         }
+    }
+
+    /**
+     * Run the deploy with real-time callback for each log line (for HTTP Server-Sent Events).
+     *
+     * @return array<string, mixed>
+     */
+    public function runStreamed(string $branch, callable $onLine): array
+    {
+        $deployToken = Str::random(32);
+        $this->ensureStatusDir();
+
+        $statusFile = $this->statusFile($deployToken);
+        $this->writeStatus($statusFile, 'running', $branch, []);
+        $this->acquireLock($deployToken, $branch);
+
+        $logs      = [];
+        $startTime = microtime(true);
+        $success   = false;
+        $duration  = 0.0;
+
+        try {
+            $this->runPipeline($branch, $logs, $statusFile, $onLine);
+            $duration = round(microtime(true) - $startTime, 2);
+            $successLine = "✅ [SUCCESS] Deployment completed in {$duration}s!";
+            $logs[]   = $successLine;
+            $onLine($successLine);
+            $success  = true;
+            $this->writeStatus($statusFile, 'complete', $branch, $logs, $duration);
+        } catch (\Throwable $e) {
+            $duration = round(microtime(true) - $startTime, 2);
+            $errLine = '❌ [EXCEPTION] ' . $e->getMessage();
+            $logs[]  = $errLine;
+            $onLine($errLine);
+            $this->writeStatus($statusFile, 'failed', $branch, $logs, $duration);
+        } finally {
+            $this->releaseLock();
+            $this->audit->log([
+                'token'      => $deployToken,
+                'branch'     => $branch,
+                'status'     => $success ? 'success' : 'failed',
+                'duration'   => $duration,
+                'ip'         => request()->ip(),
+                'timestamp'  => now()->toIso8601String(),
+            ]);
+        }
+
+        return [
+            'success'  => $success,
+            'status'   => $success ? 'complete' : 'failed',
+            'duration' => $duration,
+            'logs'     => $logs,
+        ];
     }
 
     /**
@@ -346,10 +401,10 @@ class DeployExecutionService
      *
      * @param  string[]  $logs
      */
-    private function runStreamingCommand(string $cmd, array &$logs, string $statusFile, string $branch): void
+    private function runStreamingCommand(string $cmd, array &$logs, string $statusFile, string $branch, ?callable $onLine = null): void
     {
         $buffer = '';
-        $onOutput = function (string $chunk) use (&$logs, &$buffer, $statusFile, $branch) {
+        $onOutput = function (string $chunk) use (&$logs, &$buffer, $statusFile, $branch, $onLine) {
             $buffer .= $chunk;
             $lines = explode("\n", $buffer);
             $buffer = array_pop($lines) ?? '';
@@ -359,6 +414,9 @@ class DeployExecutionService
                 if ($trimmed !== '') {
                     $logs[] = $trimmed;
                     $flushed = true;
+                    if ($onLine !== null) {
+                        $onLine($trimmed);
+                    }
                 }
             }
             if ($flushed) {
@@ -375,7 +433,11 @@ class DeployExecutionService
                     $onOutput($chunk);
                 });
                 if (trim($buffer) !== '') {
-                    $logs[] = trim($buffer);
+                    $trimmed = trim($buffer);
+                    $logs[] = $trimmed;
+                    if ($onLine !== null) {
+                        $onLine($trimmed);
+                    }
                     $this->flushLogs($statusFile, 'running', $branch, $logs);
                 }
                 return;
@@ -400,7 +462,7 @@ class DeployExecutionService
                         $read = [$pipes[1], $pipes[2]];
                         $write = null;
                         $except = null;
-                        $changed = stream_select($read, $write, $except, 0, 100000);
+                        $changed = stream_select($read, $write, $except, 0, 50000);
                         if ($changed > 0) {
                             foreach ($read as $pipe) {
                                 $chunk = fread($pipe, 4096);
@@ -425,7 +487,11 @@ class DeployExecutionService
                     proc_close($proc);
 
                     if (trim($buffer) !== '') {
-                        $logs[] = trim($buffer);
+                        $trimmed = trim($buffer);
+                        $logs[] = $trimmed;
+                        if ($onLine !== null) {
+                            $onLine($trimmed);
+                        }
                         $this->flushLogs($statusFile, 'running', $branch, $logs);
                     }
                     return;
@@ -456,6 +522,9 @@ class DeployExecutionService
                 $lTrim = trim($l);
                 if ($lTrim !== '') {
                     $logs[] = $lTrim;
+                    if ($onLine !== null) {
+                        $onLine($lTrim);
+                    }
                 }
             }
             $this->flushLogs($statusFile, 'running', $branch, $logs);

@@ -1374,7 +1374,7 @@
             Execution Engine
         </span>
         <span class="telemetry-value" style="color: #16a34a;">
-            {{ $backgroundMode ? 'Async Background Polling' : 'Synchronous Engine' }}
+            Real-Time Live Stream
         </span>
     </div>
 
@@ -1995,10 +1995,17 @@
         appendTerminalLine(`🚀 [${new Date().toISOString()}] Initiating deployment pipeline for [${branch}]…`, 'highlight-info');
 
         try {
-            const res = await postJson('/deploy/start', { token: authToken, branch });
-            const data = await res.json().catch(() => ({ success: false, message: 'Server returned HTTP ' + res.status }));
+            const res = await fetch('/deploy/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream, application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                },
+                body: JSON.stringify({ token: authToken, branch })
+            });
 
-            if (res.status === 401 || data.message?.includes('expired') || data.message?.includes('Session')) {
+            if (res.status === 401) {
                 stopStopwatch();
                 appendTerminalLine('❌ [AUTH_ERROR] Session expired or invalid. Please re-authenticate.', 'highlight-error');
                 handleSessionExpired();
@@ -2013,7 +2020,51 @@
                 return;
             }
 
-            // Handle synchronous execution mode (e.g. servers without shell_exec background spawning)
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('text/event-stream') && res.body && res.body.getReader) {
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+                let allLogs = [];
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop() || '';
+
+                    for (const evt of events) {
+                        const cleanEvt = evt.trim();
+                        if (!cleanEvt.startsWith('data:')) continue;
+                        try {
+                            const data = JSON.parse(cleanEvt.substring(5).trim());
+                            if (data.type === 'log' && data.line) {
+                                allLogs.push(data.line);
+                                appendTerminalLine(data.line);
+                                analyzePipelineStages(allLogs);
+                            } else if (data.type === 'done') {
+                                stopStopwatch();
+                                onDeploymentFinished(data.success, data.message, branch, data.duration);
+                                return;
+                            } else if (data.type === 'error') {
+                                stopStopwatch();
+                                appendTerminalLine(`❌ [DEPLOY_ERROR] ${data.message || 'Deployment execution failed.'}`, 'highlight-error');
+                                onDeploymentFinished(false, data.message || 'Deployment failed.', branch, 0);
+                                return;
+                            }
+                        } catch (e) {}
+                    }
+                }
+                stopStopwatch();
+                return;
+            }
+
+            // Fallback for non-streaming response
+            const data = await res.json().catch(() => ({ success: false, message: 'Server returned HTTP ' + res.status }));
+
+            // Handle synchronous execution mode fallback
             if (data.synchronous) {
                 stopStopwatch();
                 renderNewLogs(data.logs || []);

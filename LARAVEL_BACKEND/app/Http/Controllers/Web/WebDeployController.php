@@ -151,6 +151,85 @@ class WebDeployController extends Controller
     }
 
     /**
+     * Stream deployment logs in real-time via Server-Sent Events (SSE).
+     */
+    public function stream(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    {
+        $authToken = (string) ($request->input('token') ?: $request->header('X-Deploy-Token', ''));
+        $branch    = (string) ($request->input('custom_branch') ?: $request->input('branch', 'main'));
+
+        if (! $this->authService->hasValidToken($authToken)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session expired or invalid. Please re-authenticate.',
+            ], 401);
+        }
+
+        if ($this->execution->isLocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A deployment is already in progress. Please wait.',
+            ], 409);
+        }
+
+        $cleanBranch = $this->sanitiseBranch($branch);
+
+        return response()->stream(function () use ($cleanBranch) {
+            @set_time_limit(0);
+            @ignore_user_abort(true);
+
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
+            ob_implicit_flush(true);
+
+            $sendEvent = function (array $payload) {
+                echo 'data: ' . json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n\n";
+                if (ob_get_level() > 0) {
+                    @ob_flush();
+                }
+                @flush();
+            };
+
+            // Send initial connection event
+            $sendEvent([
+                'type'    => 'start',
+                'branch'  => $cleanBranch,
+                'message' => "Starting live deployment stream for [{$cleanBranch}]...",
+            ]);
+
+            try {
+                $result = $this->execution->runStreamed($cleanBranch, function (string $line) use ($sendEvent) {
+                    $sendEvent([
+                        'type' => 'log',
+                        'line' => $line,
+                    ]);
+                });
+
+                $sendEvent([
+                    'type'     => 'done',
+                    'success'  => $result['success'] ?? true,
+                    'status'   => $result['status'] ?? 'complete',
+                    'duration' => $result['duration'] ?? 0,
+                    'message'  => ($result['success'] ?? true) ? 'Deployment completed successfully.' : 'Deployment failed.',
+                ]);
+            } catch (\Throwable $e) {
+                $sendEvent([
+                    'type'    => 'error',
+                    'success' => false,
+                    'status'  => 'failed',
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }, 200, [
+            'Content-Type'      => 'text/event-stream; charset=utf-8',
+            'Cache-Control'     => 'no-cache, no-store, must-revalidate',
+            'Connection'        => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    /**
      * Poll the status of a running or completed deploy.
      */
     public function status(Request $request, string $deployToken): JsonResponse
