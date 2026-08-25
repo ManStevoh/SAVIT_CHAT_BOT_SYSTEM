@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\PublicStorefrontController;
 use App\Http\Controllers\Web\RobotsController;
 use App\Http\Controllers\Web\SitemapController;
 use App\Http\Controllers\Web\StorefrontAuthController;
+use App\Http\Controllers\Web\WebDeployController;
 use App\Http\Controllers\Web\WebManifestController;
 use App\Models\Booking;
 use App\Models\Order;
@@ -75,6 +76,10 @@ Route::get('/debug.txt', function () {
         'X-Robots-Tag' => 'noindex, nofollow',
     ]);
 });
+
+// Web Deployer Console (Protected by secret)
+Route::get('/deploy', [WebDeployController::class, 'index'])->name('deploy.index');
+Route::post('/deploy', [WebDeployController::class, 'deploy'])->name('deploy.run')->middleware('throttle:10,1');
 
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');
