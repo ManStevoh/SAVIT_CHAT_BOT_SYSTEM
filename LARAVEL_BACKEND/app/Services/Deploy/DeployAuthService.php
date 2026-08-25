@@ -63,27 +63,78 @@ class DeployAuthService
     }
 
     /**
+     * Discover the CLI PHP binary path for background artisan commands.
+     */
+    public static function findPhpBinary(): string
+    {
+        $configured = (string) config('deploy.php_path', env('PHP_CLI_PATH', ''));
+        if (! empty($configured)) {
+            return $configured;
+        }
+
+        if (PHP_SAPI === 'cli' && ! empty(PHP_BINARY) && is_executable(PHP_BINARY)) {
+            return PHP_BINARY;
+        }
+
+        $candidates = [
+            '/usr/local/bin/php',
+            '/usr/bin/php',
+            '/bin/php',
+            '/opt/cpanel/ea-php83/root/usr/bin/php',
+            '/opt/cpanel/ea-php82/root/usr/bin/php',
+            '/opt/cpanel/ea-php81/root/usr/bin/php',
+            '/opt/cpanel/ea-php80/root/usr/bin/php',
+            '/opt/alt/php83/usr/bin/php',
+            '/opt/alt/php82/usr/bin/php',
+            '/opt/alt/php81/usr/bin/php',
+            '/opt/alt/php80/usr/bin/php',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (@is_file($candidate) && @is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        if (function_exists('exec')) {
+            $output = [];
+            @exec('which php 2>/dev/null', $output);
+            if (! empty($output[0]) && @is_file($output[0]) && @is_executable($output[0])) {
+                return $output[0];
+            }
+        }
+
+        return PHP_BINARY ?: 'php';
+    }
+
+    /**
      * Test whether the current PHP environment can spawn background processes.
      * Used by the auth endpoint so the frontend can choose polling vs synchronous mode.
      */
     public function canSpawnBackground(): bool
     {
-        if (! function_exists('shell_exec')) {
+        if (! function_exists('shell_exec') && ! function_exists('exec')) {
             return false;
         }
 
         try {
             $testFile = storage_path('framework/deploy_bg_test_' . Str::random(8) . '.txt');
-            @shell_exec('echo 1 > ' . escapeshellarg($testFile) . ' 2>/dev/null &');
+            $cmd = 'nohup echo 1 > ' . escapeshellarg($testFile) . ' 2>&1 &';
 
-            // Give the OS up to 300ms to write the file
-            $deadline = microtime(true) + 0.3;
+            if (function_exists('shell_exec')) {
+                @shell_exec($cmd);
+            } elseif (function_exists('exec')) {
+                @exec($cmd);
+            }
+
+            // Give the OS up to 800ms to write the test marker file
+            $deadline = microtime(true) + 0.8;
             while (microtime(true) < $deadline) {
                 if (file_exists($testFile)) {
                     @unlink($testFile);
                     return true;
                 }
-                usleep(20_000);
+                usleep(25_000);
             }
         } catch (\Throwable) {}
 

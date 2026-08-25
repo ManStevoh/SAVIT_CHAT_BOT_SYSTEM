@@ -114,9 +114,9 @@ class DeployExecutionService
             '⏳ Deploy queued for branch: [' . $branch . '] — spawning background process…',
         ]);
 
-        $phpBin  = PHP_BINARY;
+        $phpBin  = DeployAuthService::findPhpBinary();
         $artisan = base_path('artisan');
-        $cmd     = escapeshellarg($phpBin)
+        $cmd     = 'nohup ' . escapeshellarg($phpBin)
             . ' ' . escapeshellarg($artisan)
             . ' deploy:run '
             . escapeshellarg($deployToken)

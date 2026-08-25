@@ -39,6 +39,7 @@ return [
     | Paths
     |--------------------------------------------------------------------------
     */
+    'php_path'   => env('PHP_CLI_PATH'),
     'lock_path'  => storage_path('framework/deploy.lock'),
     'status_dir' => storage_path('framework/deploy'),
     'audit_log'  => storage_path('logs/deploy.log'),
