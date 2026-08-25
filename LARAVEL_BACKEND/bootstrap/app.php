@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
         $middleware->statefulApi();
+        $middleware->validateCsrfTokens(except: [
+            'deploy',
+            'deploy/*',
+        ]);
         $middleware->encryptCookies(except: [
             'pricing_currency',
         ]);

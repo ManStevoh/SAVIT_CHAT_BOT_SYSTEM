@@ -38,7 +38,7 @@ class WebDeployController extends Controller
     public function deploy(Request $request): JsonResponse
     {
         $secret = (string) ($request->input('secret') ?: $request->header('X-Deploy-Secret', ''));
-        $branch = (string) $request->input('branch', 'main');
+        $branch = (string) ($request->input('custom_branch') ?: $request->input('branch', 'main'));
 
         return $this->executeDeploy($secret, $branch);
     }
@@ -50,10 +50,18 @@ class WebDeployController extends Controller
             $repoRoot = base_path();
         }
 
-        $branches = ['main'];
+        $branches = [
+            'main',
+            'feature/mobile-companion-ken-merge',
+            'feature/mobile-companion-v1',
+            'feature/inertia-unified',
+            'backend',
+            'ken',
+            'monorepo',
+        ];
 
         try {
-            // Fetch branch list from git
+            // Fetch live branch list from git
             $output = shell_exec(sprintf('cd %s && git branch -r 2>&1', escapeshellarg($repoRoot)));
             if ($output) {
                 $lines = explode("\n", (string) $output);
@@ -170,6 +178,7 @@ class WebDeployController extends Controller
             $selected = $b === 'main' ? 'selected' : '';
             $optionsHtml .= '<option value="'.htmlspecialchars($b, ENT_QUOTES).'" '.$selected.'>'.htmlspecialchars($label).'</option>';
         }
+        $optionsHtml .= '<option value="__custom__">+ Enter custom branch name...</option>';
 
         $template = <<<'HTML'
 <!DOCTYPE html>
@@ -320,11 +329,15 @@ class WebDeployController extends Controller
                     <label for="secret">Deployment Password</label>
                     <input type="password" id="secret" name="secret" placeholder="Enter deploy password" required autofocus autocomplete="current-password" />
                 </div>
-                <div class="field" style="margin-bottom: 20px;">
+                <div class="field" style="margin-bottom: 14px;">
                     <label for="branch">Select Branch to Deploy</label>
-                    <select id="branch" name="branch">
+                    <select id="branch" name="branch" onchange="toggleCustomBranch(this)">
                         {{OPTIONS_HTML}}
                     </select>
+                </div>
+                <div id="customBranchField" class="field" style="margin-bottom: 14px; display: none;">
+                    <label for="custom_branch">Custom Branch Name</label>
+                    <input type="text" id="custom_branch" name="custom_branch" placeholder="e.g. feature/my-new-feature" />
                 </div>
                 <button type="submit" id="deployBtn" class="btn">
                     <span>⚡ Deploy to Live Site</span>
@@ -336,12 +349,24 @@ class WebDeployController extends Controller
     </div>
 
     <script>
+        function toggleCustomBranch(select) {
+            const customField = document.getElementById('customBranchField');
+            if (select.value === '__custom__') {
+                customField.style.display = 'flex';
+                document.getElementById('custom_branch').focus();
+            } else {
+                customField.style.display = 'none';
+            }
+        }
+
         async function handleDeploy(e) {
             e.preventDefault();
             const btn = document.getElementById('deployBtn');
             const terminal = document.getElementById('terminal');
             const secret = document.getElementById('secret').value;
-            const branch = document.getElementById('branch').value;
+            const branchSelect = document.getElementById('branch').value;
+            const customBranch = document.getElementById('custom_branch').value.trim();
+            const branch = (branchSelect === '__custom__' && customBranch) ? customBranch : (branchSelect === '__custom__' ? 'main' : branchSelect);
 
             btn.disabled = true;
             btn.innerHTML = '<span>⏳ Deploying ' + escapeHtml(branch) + '...</span>';
