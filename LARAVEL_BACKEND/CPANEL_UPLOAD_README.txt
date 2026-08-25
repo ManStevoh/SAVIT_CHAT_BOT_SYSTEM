@@ -1,26 +1,26 @@
 Essem Chat — cPanel upload package
 ==================================
 
-DOMAIN: https://ai.essemdigital.com
+DOMAINS: https://relayiq.app
 DOCUMENT ROOT must point to:  .../LARAVEL_BACKEND/public   (NOT the parent folder)
 
 STEP 1 — Upload & extract
 -------------------------
 1. Upload this zip to cPanel File Manager (e.g. into /home/youruser/)
 2. Extract so you have: /home/youruser/LARAVEL_BACKEND/
-3. In cPanel → Domains, set ai.essemdigital.com document root to:
+3. In cPanel → Domains, set relayiq.app document root to:
    /home/youruser/LARAVEL_BACKEND/public
 
 STEP 2 — Create .env
 --------------------
 Copy .env.example to .env in LARAVEL_BACKEND/ and edit:
 
-  APP_NAME="Essem Chat"
+  APP_NAME="RelayIQ"
   APP_ENV=production
   APP_DEBUG=false
-  APP_URL=https://ai.essemdigital.com
-  FRONTEND_URL=https://ai.essemdigital.com
-  SANCTUM_STATEFUL_DOMAINS=ai.essemdigital.com
+  APP_URL=https://relayiq.app
+  FRONTEND_URL=https://relayiq.app
+  SANCTUM_STATEFUL_DOMAINS=relayiq.app
 
   DB_CONNECTION=mysql
   DB_HOST=localhost
@@ -92,19 +92,26 @@ This one SHOULD stay on cron permanently (not the same as Step 3):
 (If your host requires full path + cd, use:)
   * * * * * cd /home/youruser/LARAVEL_BACKEND && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1
 
-STEP 5 — Queue worker (WhatsApp campaigns + AI replies)
+STEP 5 — Queue worker (campaigns / Growth / optional AI queue mode)
 -------------------------------------------------------
-Ideal: Supervisor or a host “long-running process” (if your plan includes it):
+WhatsApp AI auto-replies do NOT need a queue worker by default — they run after the
+webhook/dashboard HTTP response in the same PHP process.
+
+A queue worker is still useful for WhatsApp campaigns, Growth Engine, and notifications:
   php artisan queue:work --sleep=3 --tries=3
 
-**No SSH?** Some hosts cannot run a permanent queue worker. Workaround — cron every 1–5 minutes:
+To force AI replies onto the queue instead: WHATSAPP_AUTO_REPLY_VIA_QUEUE=true in .env
+(then a worker is required for bot replies).
+
+**No SSH?** Cron every 1–5 minutes still works for campaign/other jobs:
   */5 * * * * cd /home/youruser/LARAVEL_BACKEND && /usr/local/bin/php artisan queue:work --stop-when-empty --max-time=240 >> /dev/null 2>&1
-This processes pending jobs in batches (slower than a real worker, but works on basic cPanel).
+
+Or set QUEUE_CONNECTION=sync to run all jobs inline (no worker; slower requests).
 
 STEP 6 — Verify
 ---------------
-  https://ai.essemdigital.com/up          → should return OK
-  https://ai.essemdigital.com             → landing page loads (no [::1]:5173 errors)
+  https://relayiq.app/up          → should return OK
+  https://relayiq.app             → landing page loads (no [::1]:5173 errors)
 
 Default super admin (if you run db:seed):
   Email: superadmin@essem.local

@@ -36,6 +36,8 @@ export interface Chat {
   aiHandled: boolean
   /** When set, an agent is handling this chat; bot is paused. Clear via "Hand back to bot". */
   agentHandlingAt?: string | null
+  /** True when an agent currently owns the chat (bot should not auto-reply). */
+  isAgentHandling?: boolean
   isAttributed?: boolean
   attribution?: { socialPostId: string | null; postTitle: string; platform: string | null } | null
 }
@@ -44,17 +46,28 @@ export interface Message {
   id: string
   chatId: string
   content: string
-  messageType?: 'text' | 'image' | 'file'
+  messageType?: 'text' | 'image' | 'file' | 'audio'
   attachmentUrl?: string | null
   attachmentName?: string | null
   attachmentMime?: string | null
   attachmentSize?: number | null
+  voiceTranscript?: string | null
+  voiceDuration?: number | null
   sender: 'customer' | 'bot' | 'agent'
   timestamp: string
-  status: 'sent' | 'delivered' | 'read'
+  status: 'sent' | 'delivered' | 'read' | 'failed' | 'received'
   replySource?: string | null
   learningFeedback?: number | null
   learningSampleId?: string | null
+  replyToMessageId?: string | null
+  aiRequestLogId?: string | null
+  promptAvailable?: boolean
+  replyTo?: {
+    id: string
+    content: string
+    sender: string
+    messageType?: string
+  } | null
 }
 
 export interface Order {
@@ -62,7 +75,25 @@ export interface Order {
   orderNumber: string
   customerName: string
   customerPhone: string
+  customerEmail?: string | null
+  deliveryAddress?: string | null
+  fulfillmentType?: 'delivery' | 'pickup' | 'dine_in' | string
+  dineInTableName?: string | null
+  orderNotes?: string | null
+  trackingNumber?: string | null
+  courierName?: string | null
+  shippedAt?: string | null
+  deliveryFee?: number
   products: OrderProduct[]
+  subtotal?: number
+  taxTotal?: number
+  taxBreakdown?: Array<{
+    name: string
+    code?: string | null
+    rate: number
+    inclusive: boolean
+    amount: number
+  }>
   total: number
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   paymentStatus: 'pending' | 'paid' | 'refunded'
@@ -77,6 +108,11 @@ export interface OrderProduct {
   name: string
   quantity: number
   price: number
+  taxAmount?: number
+  lineSubtotal?: number
+  taxName?: string | null
+  taxRate?: number | null
+  taxInclusive?: boolean
 }
 
 export interface Customer {
@@ -117,10 +153,35 @@ export interface ProductImage {
 export interface Product {
   id: string
   name: string
+  slug?: string | null
   description: string
+  metaTitle?: string | null
+  metaDescription?: string | null
   price: number
+  compareAtPrice?: number | null
+  onSale?: boolean
+  taxRateId?: string | null
   category: string
+  productType?: 'physical' | 'digital' | 'service'
+  fulfillmentType?: 'shipping' | 'download' | 'link' | 'booking' | 'manual'
   image?: string
+  trackInventory?: boolean
+  requiresDeliveryAddress?: boolean
+  accessUrl?: string | null
+  serviceBookingUrl?: string | null
+  fulfillmentInstructions?: string | null
+  hasDigitalFile?: boolean
+  digitalFileUrl?: string | null
+  digitalFileName?: string | null
+  digitalFileMime?: string | null
+  digitalFileSize?: number | null
+  licenseKeyMode?: 'none' | 'auto' | 'pool'
+  licenseKeyPrefix?: string | null
+  accessExpiresDays?: number | null
+  maxDownloads?: number | null
+  bookable?: boolean
+  bookingDurationMinutes?: number | null
+  licenseKeysAvailable?: number
   stock: number
   status: 'active' | 'inactive'
   createdAt: string
@@ -144,11 +205,17 @@ export interface Subscription {
   companyId: string
   companyName: string
   plan: 'starter' | 'professional' | 'enterprise'
+  planName?: string
   status: 'active' | 'cancelled' | 'expired' | 'trial'
   startDate: string
   endDate: string
   amount: number
   billingCycle: 'monthly' | 'yearly'
+  paymentMethod?: string | null
+  currency?: string | null
+  daysRemaining?: number
+  isExpiringSoon?: boolean
+  accessEndsLabel?: string
 }
 
 /** What happens to the customer account when trial ends */
@@ -164,6 +231,8 @@ export interface PaymentGateway {
   slug: string
   name: string
   isEnabled: boolean
+  isReady?: boolean
+  missingFields?: string[]
   config: Record<string, string | number>
 }
 
@@ -174,6 +243,7 @@ export interface Plan {
   price?: string
   priceDisplay?: string
   priceAmount?: number | null
+  currency?: string
   description?: string
   features: string[]
   popular: boolean
@@ -183,7 +253,7 @@ export interface Plan {
   /** When true, user can start checkout for this plan (Stripe and/or M-Pesa) */
   checkoutAvailable?: boolean
   /** Which payment methods are available */
-  paymentMethods?: { stripe?: boolean; mpesa?: boolean; paystack?: boolean }
+  paymentMethods?: { stripe?: boolean; mpesa?: boolean; paystack?: boolean; pesapal?: boolean; flutterwave?: boolean; manual?: boolean }
   /** Plan is free (no payment required) */
   isFree?: boolean
   /** Paid plan offers a trial period */
@@ -192,6 +262,39 @@ export interface Plan {
   trialDays?: number | null
   /** What happens when trial elapses: downgrade, suspend, require_payment, cancel, or custom */
   trialElapsedAction?: string | null
+  /** Enforceable limits / feature gates (admin-editable) */
+  entitlements?: {
+    messages?: number | null
+    messagesUnlimited?: boolean
+    maxProducts?: number | null
+    maxProductsUnlimited?: boolean
+    team?: number
+    whatsappNumbers?: number
+    aiCostUsd?: number | null
+    aiModelModes?: string[]
+    allowByok?: boolean
+    credentialModes?: string[]
+    crmLevel?: string
+    analyticsLevel?: string
+    apiAccess?: boolean
+    analytics?: boolean
+    attribution?: boolean
+    aiPostsPerMonth?: number
+    aiImagesPerMonth?: number
+    socialPlatforms?: number
+    growthEnabled?: boolean
+    agentCommerce?: boolean
+    allowPhysical?: boolean
+    allowDigital?: boolean
+    allowService?: boolean
+    allowBookings?: boolean
+    maxBookingsPerMonth?: number | null
+    allowStorefront?: boolean
+    allowLinkInBio?: boolean
+    allowDineIn?: boolean
+    allowWhatsappCampaigns?: boolean
+    requiresBranding?: boolean
+  }
 }
 
 export interface Company {
@@ -200,7 +303,7 @@ export interface Company {
   email: string
   phone: string
   logo?: string
-  plan: 'starter' | 'professional' | 'enterprise'
+  plan: 'free' | 'starter' | 'growth' | 'professional' | 'business' | 'enterprise' | string
   status: 'active' | 'suspended' | 'pending'
   totalChats: number
   totalOrders: number
@@ -226,6 +329,10 @@ export interface User {
   status: 'active' | 'inactive'
   lastLogin: string
   createdAt: string
+  termsAcceptedAt?: string | null
+  marketingConsent?: boolean
+  marketingConsentAt?: string | null
+  selectedPlanId?: string | null
 }
 
 export interface SystemLog {
@@ -759,50 +866,77 @@ export const mockAIUsage: AIUsageData = {
 // Pricing plans for landing page
 export const pricingPlans = [
   {
+    id: 'free',
+    name: 'Free',
+    description: 'Get started selling on WhatsApp with essential commerce tools',
+    price: 0,
+    yearlyPrice: 0,
+    features: [
+      '1 WhatsApp connection',
+      '20 products',
+      '50 AI conversations/month',
+      'Basic storefront',
+      'Basic customer inbox',
+      'M-Pesa payment integration',
+      'RelayIQ branding',
+    ],
+    popular: false,
+  },
+  {
     id: 'starter',
     name: 'Starter',
-    description: 'Perfect for small businesses getting started',
-    price: 49,
-    yearlyPrice: 39,
+    description: 'Essential AI sales agent and commerce automation for solo sellers',
+    price: 12,
+    yearlyPrice: 10,
     features: [
-      '500 messages/month',
-      '1 WhatsApp number',
-      'Basic AI responses',
-      'Order management',
-      'Email support',
+      '1 WhatsApp connection',
+      '100 products',
+      'AI sales agent',
+      '500 AI conversations/month',
+      'Online storefront',
+      'M-Pesa + Paystack/Stripe',
+      'Bookings & appointments',
+      'Basic CRM & analytics',
+      '1 team member',
     ],
     popular: false,
   },
   {
     id: 'professional',
-    name: 'Professional',
-    description: 'For growing businesses with higher demands',
-    price: 149,
-    yearlyPrice: 119,
+    name: 'Growth',
+    description: 'For growing businesses needing higher volume and advanced CRM',
+    price: 29,
+    yearlyPrice: 24,
     features: [
-      '5,000 messages/month',
-      '3 WhatsApp numbers',
-      'Advanced AI with custom training',
-      'Product catalog integration',
-      'Analytics dashboard',
-      'Priority support',
+      '2 WhatsApp connections',
+      '1,000 products',
+      'AI sales agent',
+      '2,000 AI conversations/month',
+      'Online storefront + Dine-in QR',
+      'M-Pesa + Paystack/Stripe',
+      'Bookings & services',
+      'Advanced CRM & analytics',
+      '5 team members',
+      'API access',
     ],
     popular: true,
   },
   {
     id: 'enterprise',
-    name: 'Enterprise',
-    description: 'For large organizations with custom needs',
-    price: 499,
-    yearlyPrice: 399,
+    name: 'Business',
+    description: 'Maximum power and capacity for established brands and high-volume teams',
+    price: 79,
+    yearlyPrice: 65,
     features: [
-      'Unlimited messages',
-      'Unlimited WhatsApp numbers',
-      'Custom AI model training',
-      'API access',
-      'Dedicated account manager',
-      'SLA guarantee',
-      'Custom integrations',
+      '5 WhatsApp connections',
+      'Unlimited products',
+      'AI sales agent (custom models)',
+      '10,000 AI conversations/month',
+      'Online storefront + Dine-in QR',
+      'Unlimited bookings',
+      'Advanced CRM & analytics',
+      '15 team members',
+      'Priority support & API access',
     ],
     popular: false,
   },

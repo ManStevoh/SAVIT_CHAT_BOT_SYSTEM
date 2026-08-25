@@ -30,7 +30,9 @@ final class UsageMeterService
         $limits = $this->entitlements->limitsForCompany($company);
 
         return match ($meterKey) {
-            'messages' => (int) ($limits['messages'] ?? 5000),
+            'messages' => array_key_exists('messages', $limits) && $limits['messages'] === null
+                ? null
+                : (int) ($limits['messages'] ?? 5000),
             'team' => (int) ($limits['team'] ?? 3),
             default => null,
         };

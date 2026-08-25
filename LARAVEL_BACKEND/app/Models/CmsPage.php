@@ -12,6 +12,11 @@ class CmsPage extends Model
         'title',
         'meta_title',
         'meta_description',
+        'og_image',
+        'og_title',
+        'og_description',
+        'canonical_url',
+        'robots',
         'is_published',
     ];
 

@@ -15,6 +15,7 @@ function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
+  const initialEmail = searchParams.get("email") ?? ""
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -74,7 +75,7 @@ function ResetPasswordForm() {
 
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium text-black">Email</Label>
-          <Input id="email" name="email" type="email" placeholder="Your email address" required className={landoInputClass} />
+          <Input id="email" name="email" type="email" defaultValue={initialEmail} placeholder="Your email address" required className={landoInputClass} />
         </div>
 
         <div className="space-y-2">
@@ -126,7 +127,7 @@ function ResetPasswordForm() {
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Remember your password?{" "}
-        <Link href="/login" className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign in</Link>
+        <Link href="/login" className="font-medium text-primary hover:text-primary/80">Sign in</Link>
       </p>
     </div>
   )

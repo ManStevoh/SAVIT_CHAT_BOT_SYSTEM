@@ -16,6 +16,7 @@ use App\Models\WhatsAppAccount;
 use App\Services\AI\AiModelResolver;
 use App\Services\AI\OpenAiClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -348,6 +349,21 @@ class AiFullFlowTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('providers.0.slug', 'openai')
             ->assertJsonStructure(['providers' => [['id', 'slug', 'name', 'models']]]);
+    }
+
+    public function test_admin_ai_config_survives_undecryptable_provider_keys(): void
+    {
+        $provider = $this->seedAiProvider();
+        DB::table('ai_providers')->where('id', $provider->id)->update([
+            'api_key' => 'plaintext-not-encrypted',
+        ]);
+
+        Sanctum::actingAs($this->adminUser());
+
+        $this->getJson('/api/admin/ai-config')
+            ->assertOk()
+            ->assertJsonPath('providers.0.slug', 'openai')
+            ->assertJsonPath('providers.0.apiKeyConfigured', false);
     }
 
     public function test_admin_can_update_provider_key(): void

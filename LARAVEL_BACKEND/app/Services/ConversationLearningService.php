@@ -9,6 +9,7 @@ use App\Services\AI\AiLearningConfig;
 use App\Services\AI\LearningEmbeddingService;
 use App\Services\AI\LearningPiiRedactor;
 use App\Services\AI\LearningRerankerService;
+use App\Services\AI\ReplyGuardService;
 use App\Services\AI\VectorCandidateFilter;
 
 /**
@@ -21,6 +22,7 @@ class ConversationLearningService
         protected LearningPiiRedactor $piiRedactor,
         protected LearningEmbeddingService $embeddingService,
         protected LearningRerankerService $reranker,
+        protected ReplyGuardService $replyGuard,
     ) {}
 
     public function storeSample(
@@ -63,6 +65,17 @@ class ConversationLearningService
             ? ConversationLearningSample::STATUS_PENDING
             : ConversationLearningSample::STATUS_APPROVED;
 
+        // Guard against hallucinated prices entering the learning loop
+        $reviewNotes = null;
+        $company = Company::find($companyId);
+        if ($company && $status === ConversationLearningSample::STATUS_APPROVED) {
+            $guardedReply = $this->replyGuard->guardPrices($company, $assistantReply);
+            if ($guardedReply !== $assistantReply) {
+                $status = ConversationLearningSample::STATUS_PENDING;
+                $reviewNotes = 'auto_flagged: reply contained unverified price';
+            }
+        }
+
         $sample = ConversationLearningSample::create([
             'company_id' => $companyId,
             'customer_message' => $customerMessage,
@@ -73,6 +86,7 @@ class ConversationLearningService
             'language' => $language,
             'chat_id' => $chatId,
             'message_id' => $messageId,
+            'review_notes' => $reviewNotes,
         ]);
 
         if ($status === ConversationLearningSample::STATUS_APPROVED) {

@@ -34,7 +34,7 @@ export function IntegrationsSection() {
         <SectionHeader
           label="Integrations"
           title="Payments, AI, and messaging in one place"
-          description="No duct-taping five tools together. Everything routes through Essem Chat."
+          description="No duct-taping five tools together. Everything routes through RelayIQ."
         />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

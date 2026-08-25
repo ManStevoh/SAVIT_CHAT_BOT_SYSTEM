@@ -37,12 +37,12 @@ return [
         // Agent brain — reasoning, tools, reflection
         'agent_reasoning' => [
             'capability' => AiModel::CAPABILITY_REASONING,
-            'prefer' => 'quality',
+            'prefer' => 'cost',
             'dedicated' => true,
         ],
         'agent_commerce' => [
             'capability' => AiModel::CAPABILITY_REASONING,
-            'prefer' => 'quality',
+            'prefer' => 'cost',
             'dedicated' => true,
         ],
         'agent_reflection' => [

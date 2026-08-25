@@ -19,6 +19,8 @@ class WhatsAppAccount extends Model
         'credit_line_shared_at',
         'access_token',
         'verify_token',
+        'meta_app_secret',
+        'connected_via',
         'status',
         'onboarding_status',
         'onboarding_error',
@@ -42,6 +44,8 @@ class WhatsAppAccount extends Model
 
     protected $hidden = [
         'access_token',
+        'verify_token',
+        'meta_app_secret',
         'registration_pin',
     ];
 
@@ -64,8 +68,44 @@ class WhatsAppAccount extends Model
         $this->attributes['access_token'] = $value ? Crypt::encryptString($value) : null;
     }
 
+    public function getMetaAppSecretAttribute(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($value);
+        } catch (\Throwable) {
+            return $value;
+        }
+    }
+
+    public function setMetaAppSecretAttribute(?string $value): void
+    {
+        $trimmed = trim((string) $value);
+        $this->attributes['meta_app_secret'] = $trimmed !== '' ? Crypt::encryptString($trimmed) : null;
+    }
+
+    public function hasMetaAppSecret(): bool
+    {
+        $raw = $this->attributes['meta_app_secret'] ?? null;
+
+        return $raw !== null && $raw !== '';
+    }
+
+    public function isManualConnection(): bool
+    {
+        return ($this->connected_via ?? '') === 'manual';
+    }
+
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        $status = strtolower((string) $this->status);
+        if (in_array($status, ['disconnected', 'inactive', 'disabled', 'failed'], true)) {
+            return false;
+        }
+
+        return $status !== '';
     }
 }

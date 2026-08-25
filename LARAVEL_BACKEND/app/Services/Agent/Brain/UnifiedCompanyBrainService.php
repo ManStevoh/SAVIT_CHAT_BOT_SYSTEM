@@ -90,14 +90,19 @@ final class UnifiedCompanyBrainService
             return '';
         }
 
-        $snapshot = $this->getLatestSnapshot($company);
+        // Auto-refresh if stale (non-blocking — uses cached if refresh fails)
+        $snapshot = $this->refreshIfStale($company, (int) config('agent.brain.max_age_minutes', 60));
         if (! $snapshot || ! $snapshot->summary_text) {
             return '';
         }
 
         $age = $snapshot->snapshot_at?->diffForHumans() ?? 'recently';
+        $staleWarning = '';
+        if ($snapshot->snapshot_at && $snapshot->snapshot_at->lt(now()->subHours(2))) {
+            $staleWarning = " ⚠️ Data may be outdated — use tools for real-time figures.";
+        }
 
-        return "Unified company brain (updated {$age}):\n".$snapshot->summary_text;
+        return "Unified company brain (updated {$age}{$staleWarning}):\n".$snapshot->summary_text;
     }
 
     public function refreshIfStale(Company $company, int $maxAgeMinutes = 60): ?CompanyBrainSnapshot

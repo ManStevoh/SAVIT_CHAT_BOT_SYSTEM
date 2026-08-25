@@ -21,8 +21,15 @@ final class CustomerMemoryService
         }
 
         $lines = ["Customer profile (persistent memory):"];
+        $totalChars = 0;
+        $maxChars = 2000; // Cap memory context at ~500 tokens
         foreach ($memories as $memory) {
-            $lines[] = "- [{$memory->category}] {$memory->memory_key}: {$memory->memory_value}";
+            $line = "- [{$memory->category}] {$memory->memory_key}: {$memory->memory_value}";
+            $totalChars += mb_strlen($line);
+            if ($totalChars > $maxChars) {
+                break;
+            }
+            $lines[] = $line;
         }
 
         return implode("\n", $lines);

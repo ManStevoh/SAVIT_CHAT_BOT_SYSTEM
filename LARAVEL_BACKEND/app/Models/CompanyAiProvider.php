@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class CompanyAiProvider extends Model
 {
@@ -41,6 +43,16 @@ class CompanyAiProvider extends Model
 
     public function hasConfiguredApiKey(): bool
     {
-        return filled($this->api_key);
+        try {
+            return filled($this->api_key);
+        } catch (DecryptException $e) {
+            Log::warning('company_ai_provider.api_key_decrypt_failed', [
+                'id' => $this->id,
+                'company_id' => $this->company_id,
+                'ai_provider_id' => $this->ai_provider_id,
+            ]);
+
+            return false;
+        }
     }
 }

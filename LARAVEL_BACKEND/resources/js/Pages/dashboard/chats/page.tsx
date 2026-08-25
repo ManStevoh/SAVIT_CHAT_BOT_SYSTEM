@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useChats, useMessages, useProducts } from '@/lib/api-hooks'
-import { sendMessage, handBackToBot, createOrderFromChat, submitMessageLearningFeedback } from '@/lib/api-actions'
+import { useChats, useMessages, useProducts, useCompanySettings } from '@/lib/api-hooks'
+import { sendMessage, handBackToBot, createOrderFromChat, previewOrderTotals, submitMessageLearningFeedback, downloadPromptLog, clearChatHistory } from '@/lib/api-actions'
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
 import {
   Search,
@@ -29,6 +30,15 @@ import {
   X,
   ThumbsUp,
   ThumbsDown,
+  Check,
+  CheckCheck,
+  Reply,
+  Download,
+  Code,
+  Sparkles,
+  Trash2,
+  FileText,
+  Circle,
 } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
@@ -62,14 +72,29 @@ export default function ChatsPage() {
   const [messageInput, setMessageInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [isHandingBack, setIsHandingBack] = useState(false)
+  const [isClearingHistory, setIsClearingHistory] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [createOrderOpen, setCreateOrderOpen] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState('')
   const [orderQuantity, setOrderQuantity] = useState('1')
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
+  const [orderPreview, setOrderPreview] = useState<{
+    subtotal: number
+    taxTotal: number
+    total: number
+    taxBreakdown: Array<{ name: string; code?: string | null; rate: number; amount: number }>
+  } | null>(null)
   const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null)
   const [feedbackBusy, setFeedbackBusy] = useState<string | null>(null)
-  const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' })
+  const { data: companySettings } = useCompanySettings()
+  const formatMoney = (value: number) =>
+    formatCurrencyAmount(
+      value,
+      normalizeCurrencyCode(companySettings?.displayCurrency),
+      currencyDisplayFromSettings(companySettings)
+    )
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null)
+  const { data: products = [], isLoading: productsLoading } = useProducts({ status: 'active' }, { enabled: createOrderOpen })
 
   const {
     data: chats,
@@ -84,6 +109,41 @@ export default function ChatsPage() {
 
   const selectedChat =
     chats?.find((c) => c.id === selectedChatId) || (!isMobile ? (chats?.[0] ?? null) : null)
+
+  useEffect(() => {
+    if (!createOrderOpen) {
+      setOrderPreview(null)
+      return
+    }
+    const selected = products.find((p) => p.id === selectedProductId)
+    const qty = Number.parseInt(orderQuantity, 10)
+    if (!selected || !Number.isFinite(qty) || qty < 1) {
+      setOrderPreview(null)
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      const res = await previewOrderTotals({
+        items: [{
+          productId: selected.id,
+          price: Number(selected.price) || 0,
+          quantity: qty,
+          taxRateId: selected.taxRateId ?? null,
+        }],
+      })
+      if (cancelled || !res.success) return
+      setOrderPreview({
+        subtotal: Number(res.subtotal ?? 0),
+        taxTotal: Number(res.taxTotal ?? 0),
+        total: Number(res.total ?? 0),
+        taxBreakdown: Array.isArray(res.taxBreakdown) ? res.taxBreakdown : [],
+      })
+    }, 250)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [createOrderOpen, selectedProductId, orderQuantity, products])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -120,11 +180,13 @@ export default function ChatsPage() {
         chatId: selectedChatId,
         content: messageInput,
         attachment: selectedAttachment ?? undefined,
+        replyToMessageId: replyingTo?.id,
       })
 
       if (result.success) {
         setMessageInput('')
         setSelectedAttachment(null)
+        setReplyingTo(null)
         mutate(['messages', selectedChatId])
         if (result.whatsappSent === false && result.whatsappError) {
           toast({
@@ -139,22 +201,65 @@ export default function ChatsPage() {
     } finally {
       setIsSending(false)
     }
-  }, [messageInput, selectedAttachment, selectedChatId, mutate, toast])
+  }, [messageInput, selectedAttachment, selectedChatId, replyingTo, mutate, toast])
+
+  useEffect(() => {
+    setReplyingTo(null)
+  }, [selectedChatId])
 
   const handleHandBackToBot = useCallback(async () => {
     if (!selectedChatId) return
     setIsHandingBack(true)
     try {
       const result = await handBackToBot(selectedChatId)
-      if (result.success) {
-        mutate(['chats', { status: statusFilter, search: searchQuery }])
-      }
+      mutate(['chats', { status: statusFilter, search: searchQuery, attributedOnly }])
+      mutate(['messages', selectedChatId])
+      window.setTimeout(() => mutate(['messages', selectedChatId]), 800)
+      toast({
+        title: result.message ?? (result.success ? 'AI reply sent' : 'AI reply failed'),
+        variant: result.success ? 'default' : 'destructive',
+      })
     } catch (e) {
       console.error('Hand back failed:', e)
+      toast({
+        title: 'Could not ask AI to reply',
+        variant: 'destructive',
+      })
     } finally {
       setIsHandingBack(false)
     }
-  }, [selectedChatId, statusFilter, searchQuery, mutate])
+  }, [selectedChatId, statusFilter, searchQuery, attributedOnly, mutate, toast])
+
+  const handleClearHistory = useCallback(async () => {
+    if (!selectedChatId) return
+    if (!window.confirm("Are you sure you want to clear all conversation history and AI model context for this chat? This cannot be undone.")) {
+      return
+    }
+    setIsClearingHistory(true)
+    try {
+      const res = await clearChatHistory(selectedChatId)
+      if (res.success) {
+        mutate(['messages', selectedChatId])
+        mutate(['chats', { status: statusFilter, search: searchQuery, attributedOnly }])
+        toast({
+          title: res.message || 'Conversation history and model memory cleared.',
+        })
+      } else {
+        toast({
+          title: res.message || 'Failed to clear chat history.',
+          variant: 'destructive',
+        })
+      }
+    } catch (e) {
+      console.error('Clear history failed:', e)
+      toast({
+        title: 'Could not clear chat history.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsClearingHistory(false)
+    }
+  }, [selectedChatId, statusFilter, searchQuery, attributedOnly, mutate, toast])
 
   // Handle keyboard shortcut for sending
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -175,7 +280,19 @@ export default function ChatsPage() {
     e.target.value = ''
   }
 
-  const isAgentHandling = selectedChat?.agentHandlingAt != null
+  const isAgentHandling = selectedChat?.isAgentHandling ?? selectedChat?.agentHandlingAt != null
+  const needsAiReply = (() => {
+    if (!messages?.length) return false
+    let lastCustomerId: string | null = null
+    for (const msg of messages) {
+      if (msg.sender === 'customer') lastCustomerId = msg.id
+    }
+    if (!lastCustomerId) return false
+    const lastCustomerIndex = messages.findIndex((m) => m.id === lastCustomerId)
+    return !messages.slice(lastCustomerIndex + 1).some((m) => m.sender === 'bot' || m.sender === 'agent')
+  })()
+  const showAskAi = isAgentHandling
+  const showRetryAi = !isAgentHandling && needsAiReply
 
   const handleCreateOrder = useCallback(() => {
     if (!selectedChat) return
@@ -206,7 +323,12 @@ export default function ChatsPage() {
     try {
       const result = await createOrderFromChat({
         chatId: selectedChatId,
-        items: [{ name: selectedProduct.name, quantity: qty, price: Number(selectedProduct.price) || 0 }],
+        items: [{
+          productId: selectedProduct.id,
+          name: selectedProduct.name,
+          quantity: qty,
+          price: Number(selectedProduct.price) || 0,
+        }],
         sendWhatsApp: true,
       })
       if (result.success) {
@@ -429,13 +551,12 @@ export default function ChatsPage() {
                     {selectedChat.customerName}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {selectedChat.aiHandled && (
+                    {!isAgentHandling ? (
                       <div className="flex items-center gap-1 text-xs text-primary">
                         <Bot className="h-3 w-3" />
-                        AI is handling
+                        AI auto-reply
                       </div>
-                    )}
-                    {isAgentHandling && (
+                    ) : (
                       <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                         <User className="h-3 w-3" />
                         Agent handling
@@ -446,6 +567,42 @@ export default function ChatsPage() {
                 </div>
               </div>
               <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+                {showAskAi && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleHandBackToBot}
+                    disabled={isHandingBack}
+                  >
+                    <Bot className="mr-1.5 h-3.5 w-3.5" />
+                    {isHandingBack ? 'Handing back…' : 'Hand back to AI'}
+                  </Button>
+                )}
+                {showRetryAi && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleHandBackToBot}
+                    disabled={isHandingBack}
+                    title="AI should reply automatically; use this only if a reply is stuck"
+                  >
+                    <Bot className="mr-1.5 h-3.5 w-3.5" />
+                    {isHandingBack ? 'Retrying…' : 'Retry AI'}
+                  </Button>
+                )}
+                {companySettings?.devModeEnabled && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearHistory}
+                    disabled={isClearingHistory}
+                    title="Developer Mode: Clear UI history & AI model memory"
+                    className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {isClearingHistory ? 'Clearing…' : 'Clear History'}
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" className="hidden md:inline-flex">
                   <Phone className="h-4 w-4" />
                 </Button>
@@ -465,9 +622,20 @@ export default function ChatsPage() {
                     <DropdownMenuItem onClick={handleViewCustomerProfile}>
                       View Customer Profile
                     </DropdownMenuItem>
-                    {isAgentHandling && (
+                    {showAskAi && (
                       <DropdownMenuItem onClick={handleHandBackToBot} disabled={isHandingBack}>
-                        {isHandingBack ? 'Handing back…' : 'Hand back to bot'}
+                        {isHandingBack ? 'Handing back…' : 'Hand back to AI'}
+                      </DropdownMenuItem>
+                    )}
+                    {showRetryAi && (
+                      <DropdownMenuItem onClick={handleHandBackToBot} disabled={isHandingBack}>
+                        {isHandingBack ? 'Retrying…' : 'Retry AI reply'}
+                      </DropdownMenuItem>
+                    )}
+                    {companySettings?.devModeEnabled && (
+                      <DropdownMenuItem onClick={handleClearHistory} disabled={isClearingHistory} className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Clear History & Model Memory
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -508,17 +676,25 @@ export default function ChatsPage() {
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex ${
+                      className={`group flex ${
                         msg.sender === 'customer' ? 'justify-end' : 'justify-start'
                       }`}
                     >
                       <div
-                        className={`w-fit max-w-full rounded-2xl px-4 py-2 sm:max-w-[85%] lg:max-w-[70%] ${
+                        className={`relative w-fit max-w-full rounded-2xl px-4 py-2 sm:max-w-[85%] lg:max-w-[70%] ${
                           msg.sender === 'customer'
                             ? 'rounded-br-md bg-primary text-primary-foreground'
                             : 'rounded-bl-md bg-secondary text-secondary-foreground'
                         }`}
                       >
+                        <button
+                          type="button"
+                          className="absolute -top-2 right-1 hidden rounded-full border border-border/60 bg-background p-1 text-muted-foreground shadow-sm group-hover:inline-flex hover:text-foreground"
+                          title="Reply"
+                          onClick={() => setReplyingTo(msg)}
+                        >
+                          <Reply className="h-3 w-3" />
+                        </button>
                         {msg.sender === 'bot' && (
                           <div className="mb-1 flex items-center gap-1 text-xs text-primary">
                             <Bot className="h-3 w-3" />
@@ -531,11 +707,18 @@ export default function ChatsPage() {
                             Agent
                           </div>
                         )}
+                        {msg.replyTo && (
+                          <div className="mb-2 rounded-md border-l-2 border-primary/70 bg-background/20 px-2 py-1 text-xs opacity-90">
+                            <p className="line-clamp-2 whitespace-pre-wrap [overflow-wrap:anywhere]">
+                              {msg.replyTo.content || '[Attachment]'}
+                            </p>
+                          </div>
+                        )}
                         <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere] break-all">
                           {msg.content}
                         </p>
                         {msg.attachmentUrl && (
-                          <div className="mt-2">
+                          <div className="mt-2 space-y-1.5">
                             {msg.messageType === 'image' ? (
                               <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer">
                                 <img
@@ -544,6 +727,16 @@ export default function ChatsPage() {
                                   className="max-h-52 max-w-full rounded-lg border border-border/50 object-contain"
                                 />
                               </a>
+                            ) : msg.messageType === 'audio' || (msg.attachmentMime && msg.attachmentMime.includes('audio')) ? (
+                              <div className="space-y-1.5 rounded-lg border border-border/50 p-2 bg-background/30 max-w-sm">
+                                <audio controls src={msg.attachmentUrl} className="w-full h-8" />
+                                {(msg.voiceTranscript || msg.content.includes('(transcribed):')) && (
+                                  <div className="rounded bg-muted/60 p-2 text-xs text-foreground font-sans">
+                                    <span className="font-semibold text-primary block text-[11px] mb-0.5">🎤 Transcribed Voice Note</span>
+                                    {msg.voiceTranscript ?? msg.content.replace(/^Owner\/customer voice note \(transcribed\):\s*/i, '')}
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <a
                                 href={msg.attachmentUrl}
@@ -558,13 +751,24 @@ export default function ChatsPage() {
                           </div>
                         )}
                         <span
-                          className={`mt-1 block text-[10px] ${
+                          className={`mt-1 flex items-center gap-1 text-[10px] ${
                             msg.sender === 'customer'
                               ? 'text-primary-foreground/70'
                               : 'text-muted-foreground'
                           }`}
                         >
                           {msg.timestamp}
+                          {msg.sender !== 'customer' && (
+                            msg.status === 'failed' ? (
+                              <AlertCircle className="h-3 w-3 text-destructive" />
+                            ) : msg.status === 'read' ? (
+                              <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
+                            ) : msg.status === 'delivered' ? (
+                              <CheckCheck className="h-3.5 w-3.5" />
+                            ) : (
+                              <Check className="h-3.5 w-3.5" />
+                            )
+                          )}
                         </span>
                         {msg.sender === 'bot' && (msg.learningSampleId || msg.replySource === 'openai' || msg.replySource === 'faq') && (
                           <div className="mt-2 flex items-center gap-1 border-t border-border/30 pt-2">
@@ -613,6 +817,37 @@ export default function ChatsPage() {
                             </Button>
                           </div>
                         )}
+                        {msg.sender === 'bot' && (
+                          <div className="mt-2 flex items-center gap-1.5 border-t border-border/30 pt-1.5">
+                            {msg.promptAvailable || companySettings?.devModeEnabled ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => selectedChatId && downloadPromptLog(selectedChatId, msg.id, 'txt')}
+                                  className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 cursor-pointer"
+                                >
+                                  <Download className="h-3 w-3" />
+                                  Download Prompt (.txt)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => selectedChatId && downloadPromptLog(selectedChatId, msg.id, 'json')}
+                                  className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent cursor-pointer"
+                                >
+                                  .json
+                                </button>
+                              </>
+                            ) : (
+                              <a
+                                href="/dashboard/settings"
+                                className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-amber-500 underline underline-offset-2"
+                              >
+                                <Code className="h-3 w-3 text-amber-500/70" />
+                                Enable Developer Mode in Settings to download AI prompts
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -628,6 +863,28 @@ export default function ChatsPage() {
                 className="sr-only"
                 onChange={handleAttachmentSelected}
               />
+              {replyingTo && (
+                <div className="mb-2 flex items-start justify-between rounded-md border border-border/60 bg-secondary/40 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-primary">
+                      Replying to {replyingTo.sender === 'customer' ? 'customer' : replyingTo.sender}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {replyingTo.content || '[Attachment]'}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => setReplyingTo(null)}
+                    aria-label="Cancel reply"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Button asChild variant="ghost" size="icon">
                   <label htmlFor="chat-attachment-input" aria-label="Attach a file" className="cursor-pointer">
@@ -838,17 +1095,49 @@ export default function ChatsPage() {
               readOnly
             />
           </div>
-          <div className="rounded-md bg-secondary/40 p-3 text-sm">
-            Total:{' '}
-            <span className="font-semibold text-foreground">
-              {(() => {
-                const qty = Number.parseInt(orderQuantity, 10)
-                const selected = products.find((p) => p.id === selectedProductId)
-                const price = Number(selected?.price ?? 0)
-                if (!Number.isFinite(qty) || !Number.isFinite(price) || qty < 1 || price < 0) return '0.00'
-                return (qty * price).toFixed(2)
-              })()}
-            </span>
+          <div className="rounded-md bg-secondary/40 p-3 text-sm space-y-1">
+            {orderPreview && orderPreview.taxTotal > 0 ? (
+              <>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatMoney(orderPreview.subtotal)}</span>
+                </div>
+                {orderPreview.taxBreakdown.length > 0
+                  ? orderPreview.taxBreakdown.map((row, idx) => (
+                      <div key={`${row.name}-${idx}`} className="flex justify-between text-muted-foreground">
+                        <span>{(row.code || row.name)} ({row.rate}%)</span>
+                        <span>{formatMoney(Number(row.amount))}</span>
+                      </div>
+                    ))
+                  : (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Tax</span>
+                        <span>{formatMoney(orderPreview.taxTotal)}</span>
+                      </div>
+                    )}
+                <div className="flex justify-between font-semibold text-foreground pt-1">
+                  <span>Total</span>
+                  <span>{formatMoney(orderPreview.total)}</span>
+                </div>
+              </>
+            ) : (
+              <div>
+                Total:{' '}
+                <span className="font-semibold text-foreground">
+                  {orderPreview
+                    ? formatMoney(orderPreview.total)
+                    : (() => {
+                        const qty = Number.parseInt(orderQuantity, 10)
+                        const selected = products.find((p) => p.id === selectedProductId)
+                        const price = Number(selected?.price ?? 0)
+                        if (!Number.isFinite(qty) || !Number.isFinite(price) || qty < 1 || price < 0) {
+                          return formatMoney(0)
+                        }
+                        return formatMoney(qty * price)
+                      })()}
+                </span>
+              </div>
+            )}
           </div>
           {!productsLoading && products.length === 0 && (
             <p className="text-xs text-destructive">

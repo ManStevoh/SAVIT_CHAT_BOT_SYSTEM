@@ -5,6 +5,7 @@ namespace App\Services\AI;
 use App\Models\AiModel;
 use App\Models\AiRequestLog;
 use App\Models\Company;
+use App\Models\CompanySetting;
 use App\Models\PlatformSetting;
 use App\Services\AI\Drivers\OpenAiDriver;
 use App\Services\AI\Drivers\Contracts\AiProviderDriver;
@@ -40,6 +41,12 @@ class AiGateway
     ): OpenAiChatResult {
         $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, $useCase);
         if ($resolved === null) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AI_GATEWAY_RESOLVE_FAILED', [
+                'use_case' => $useCase,
+                'company_id' => $company?->id,
+                'chat_id' => $chatId,
+                'reason' => 'No AI provider or model configured for chat capability',
+            ]);
             $result = new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -51,7 +58,20 @@ class AiGateway
             return $result;
         }
 
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('AI_GATEWAY_RESOLVED_MODEL', [
+            'use_case' => $useCase,
+            'company_id' => $company?->id,
+            'chat_id' => $chatId,
+            'model_key' => $resolved->model->model_key,
+            'provider' => $resolved->provider->name,
+            'credential_source' => $resolved->credentialSource,
+        ]);
+
         if ($company && $resolved->credentialSource === 'platform' && ! $this->billing->isWithinPlatformAiBudget($company)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AI_GATEWAY_BUDGET_EXCEEDED', [
+                'company_id' => $company->id,
+                'use_case' => $useCase,
+            ]);
             $result = new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -67,6 +87,10 @@ class AiGateway
         }
 
         if (! $this->consumeRateLimit($company?->id)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AI_GATEWAY_RATE_LIMIT_EXCEEDED', [
+                'company_id' => $company?->id,
+                'use_case' => $useCase,
+            ]);
             $result = new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -86,10 +110,118 @@ class AiGateway
         $driver = $this->driverFactory->driverFor($resolved->provider);
         $result = $driver->chatCompletion($resolved, $messages, $maxTokens, $temperature, $jsonMode, $timeoutSeconds);
         $result = $this->withCost($resolved->model, $result);
-        $this->persistLog($result, $useCase, $company?->id, $chatId, $resolved);
+        $logId = $this->persistLog($result, $useCase, $company?->id, $chatId, $resolved, $messages);
+
+        if ($result->success) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('AI_GATEWAY_COMPLETION_SUCCESS', [
+                'company_id' => $company?->id,
+                'chat_id' => $chatId,
+                'use_case' => $useCase,
+                'model' => $result->model,
+                'prompt_tokens' => $result->promptTokens,
+                'completion_tokens' => $result->completionTokens,
+                'latency_ms' => $result->latencyMs,
+                'content_preview' => mb_substr((string) $result->content, 0, 150),
+            ]);
+        } else {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AI_GATEWAY_COMPLETION_FAILED', [
+                'company_id' => $company?->id,
+                'chat_id' => $chatId,
+                'use_case' => $useCase,
+                'model' => $result->model,
+                'error' => $result->error,
+                'http_status' => $result->httpStatus,
+            ]);
+        }
+
+        if ($logId !== null) {
+            $result = new OpenAiChatResult(
+                content: $result->content,
+                success: $result->success,
+                model: $result->model,
+                promptTokens: $result->promptTokens,
+                completionTokens: $result->completionTokens,
+                totalTokens: $result->totalTokens,
+                latencyMs: $result->latencyMs,
+                httpStatus: $result->httpStatus,
+                error: $result->error,
+                providerId: $result->providerId,
+                modelId: $result->modelId,
+                estimatedCostUsd: $result->estimatedCostUsd,
+                toolCalls: $result->toolCalls,
+                finishReason: $result->finishReason,
+                logId: $logId,
+            );
+        }
 
         return $result;
     }
+
+    /**
+     * Complete prompt with strict JSON schema mode.
+     */
+    public function completeWithJson(
+        string $prompt,
+        array $schema,
+        ?Company $company = null,
+        string $useCase = 'intent_classification',
+        float $temperature = 0.0,
+        ?string $model = null,
+        ?int $chatId = null,
+    ): array {
+        $messages = [
+            ['role' => 'system', 'content' => $prompt],
+        ];
+
+        $result = $this->chatCompletion(
+            messages: $messages,
+            useCase: $useCase,
+            company: $company,
+            chatId: $chatId,
+            temperature: $temperature,
+            jsonMode: true,
+        );
+
+        return [
+            'content' => $result->content,
+            'success' => $result->success,
+            'model' => $result->model,
+            'error' => $result->error,
+        ];
+    }
+
+    public function chatCompletionWithTools(
+        array $messages,
+        array $tools,
+        string $useCase,
+        ?Company $company = null,
+        ?int $chatId = null,
+        ?int $maxTokens = null,
+        ?float $temperature = null,
+        int $timeoutSeconds = 30,
+    ): OpenAiChatResult {
+        $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, $useCase);
+        if ($resolved === null) {
+            return new OpenAiChatResult(
+                content: null,
+                success: false,
+                model: 'unknown',
+                error: 'No AI provider or model configured',
+            );
+        }
+
+        $maxTokens ??= (int) ($resolved->model->max_output_tokens ?: 512);
+        $driver = $this->driverFactory->driverFor($resolved->provider);
+
+        if ($driver instanceof \App\Services\AI\Drivers\Contracts\SupportsToolCalling) {
+            $result = $driver->chatCompletionWithTools($resolved, $messages, $tools, $maxTokens, $temperature, $timeoutSeconds);
+        } else {
+            $result = $driver->chatCompletion($resolved, $messages, $maxTokens, $temperature, false, $timeoutSeconds);
+        }
+
+        return $this->withCost($resolved->model, $result);
+    }
+
 
     /**
      * @return array<int, float>|null
@@ -192,7 +324,7 @@ class AiGateway
         return $result;
     }
 
-    public function transcribeAudio(string $filePath, string $filename, Company $company): TranscribeResult
+    public function transcribeAudio(string $filePath, string $filename, Company $company, ?string $prompt = null): TranscribeResult
     {
         $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_STT, AiUseCase::SPEECH_TO_TEXT);
         if ($resolved === null) {
@@ -241,7 +373,7 @@ class AiGateway
         }
 
         $started = microtime(true);
-        $result = $driver->transcribe($resolved, $filePath, $filename);
+        $result = $driver->transcribe($resolved, $filePath, $filename, $prompt);
         $latencyMs = (int) round((microtime(true) - $started) * 1000);
 
         $transcribe = new TranscribeResult(
@@ -368,15 +500,21 @@ class AiGateway
         ?int $companyId,
         ?int $chatId = null,
         ?ResolvedAiModel $resolved = null,
-    ): void {
+        ?array $messages = null,
+    ): ?int {
         $credentialSource = $resolved?->credentialSource;
         $selectionSource = $resolved?->selectionSource;
         $billed = $credentialSource !== null
             ? $this->billing->billedCostUsd($result->estimatedCostUsd, $credentialSource)
             : null;
 
+        $promptPayload = null;
+        if ($messages !== null) {
+            $promptPayload = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        }
+
         try {
-            AiRequestLog::create([
+            $log = AiRequestLog::create([
                 'company_id' => $companyId,
                 'ai_provider_id' => $result->providerId,
                 'ai_model_id' => $result->modelId,
@@ -394,10 +532,14 @@ class AiGateway
                 'success' => $result->success,
                 'http_status' => $result->httpStatus,
                 'error_message' => $result->error ? mb_substr($result->error, 0, 500) : null,
+                'prompt_payload' => $promptPayload,
                 'created_at' => now(),
             ]);
+
+            return (int) $log->id;
         } catch (\Throwable $e) {
             Log::warning('Failed to persist AI request log', ['error' => $e->getMessage()]);
+            return null;
         }
     }
 

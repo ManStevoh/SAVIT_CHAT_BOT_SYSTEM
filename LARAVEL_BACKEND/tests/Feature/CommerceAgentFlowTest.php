@@ -154,7 +154,7 @@ class CommerceAgentFlowTest extends TestCase
         $this->assertDatabaseHas('messages', [
             'chat_id' => $chat->id,
             'sender' => 'bot',
-            'reply_source' => 'agent_cognitive',
+            'reply_source' => 'agent_os',
         ]);
         $this->assertDatabaseHas('messages', [
             'chat_id' => $chat->id,
@@ -474,7 +474,7 @@ class CommerceAgentFlowTest extends TestCase
             'Any laptops?',
         );
 
-        $this->assertSame('agent_cognitive', $result['route']);
+        $this->assertSame('agent_os', $result['route']);
         $this->assertGreaterThanOrEqual(1, AgentToolInvocation::where('company_id', $company->id)->count());
     }
 }

@@ -6,6 +6,8 @@ import {
   LandoFeatureBlock,
   LandoHowToJoin,
   LandoCtaSection,
+  LandoCapabilities,
+  LandoGrowthEngine,
 } from "./sections"
 import {
   LandoTrustedCompanies,
@@ -19,6 +21,12 @@ import {
   LandoTeam,
   LandoContactSection,
 } from "./content-sections"
+import {
+  LandoSolutionPillars,
+  LandoIndustries,
+  LandoDemoGallery,
+  LandoOutcomes,
+} from "./solution-sections"
 
 type Content = Record<string, unknown>
 
@@ -68,7 +76,7 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           />
         )
       }
-      if (pageSlug === "pricing") {
+      if (pageSlug === "pricing" || pageSlug === "solutions" || pageSlug === "features" || content.usePageHero === true) {
         return <LandoPageHero title={str(content.title)} description={str(content.description)} />
       }
       return (
@@ -83,6 +91,15 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
           showFlowSimulation={content.showFlowSimulation === true}
+        />
+      )
+
+    case "capabilities":
+      return (
+        <LandoCapabilities
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
         />
       )
 
@@ -107,11 +124,17 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           ctaHref={str(content.ctaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
+          imagePosition="right"
         />
       )
 
     case "feature_1":
     case "feature_2":
+    case "feature_3":
+    case "feature_4": {
+      // Always zigzag: feature_1/3 image-left, feature_2/4 image-right.
+      const featureNum = Number(sectionKey.replace("feature_", "")) || 1
+      const imagePosition = featureNum % 2 === 0 ? "right" : "left"
       return (
         <LandoFeatureBlock
           label={str(content.label)}
@@ -121,7 +144,23 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           ctaHref={str(content.ctaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
-          imagePosition={content.imagePosition === "right" ? "right" : "left"}
+          imagePosition={imagePosition}
+        />
+      )
+    }
+
+    case "growth_engine":
+      return (
+        <LandoGrowthEngine
+          label={str(content.label)}
+          title={str(content.title)}
+          description={str(content.description)}
+          points={arr<string>(content.points)}
+          ctaText={str(content.ctaText)}
+          ctaHref={str(content.ctaHref)}
+          imageUrl={str(content.imageUrl)}
+          imageAlt={str(content.imageAlt)}
+          imagePosition="left"
         />
       )
 
@@ -135,6 +174,43 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
           steps={arr(content.steps)}
+          imagePosition="right"
+        />
+      )
+
+    case "solution_pillars":
+      return (
+        <LandoSolutionPillars
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
+        />
+      )
+
+    case "industries":
+      return (
+        <LandoIndustries
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
+        />
+      )
+
+    case "demos":
+      return (
+        <LandoDemoGallery
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
+        />
+      )
+
+    case "outcomes":
+      return (
+        <LandoOutcomes
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
         />
       )
 
@@ -163,11 +239,35 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
         <LandoFaqSection title={str(content.title)} faqs={pageData.faqs ?? []} />
       )
 
+    case "prose":
+      return (
+        <section className="bg-background py-12 lg:py-16">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+            {str(content.title) ? (
+              <h2 className="mb-6 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                {str(content.title)}
+              </h2>
+            ) : null}
+            <div
+              className="prose prose-slate max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-a:text-primary"
+              dangerouslySetInnerHTML={{ __html: str(content.html || content.body) }}
+            />
+          </div>
+        </section>
+      )
+
     case "mission":
       return <LandoMission title={str(content.title)} description={str(content.description)} />
 
     case "efficiency":
-      return <LandoEfficiency title={str(content.title)} />
+      return (
+        <LandoEfficiency
+          title={str(content.title)}
+          description={str(content.description) || undefined}
+          ctaText={str(content.ctaText) || undefined}
+          ctaHref={str(content.ctaHref) || undefined}
+        />
+      )
 
     case "team":
       return (

@@ -22,17 +22,26 @@ final class OwnerVoiceCommandService
 
     public function isOwnerPhone(Company $company, string $phone): bool
     {
-        $normalized = $this->normalizePhone($phone);
-        if ($normalized === '') {
+        try {
+            $normalized = $this->normalizePhone($phone);
+            if ($normalized === '') {
+                return false;
+            }
+
+            return User::query()
+                ->where('company_id', $company->id)
+                ->where('role', 'company_owner')
+                ->whereNotNull('phone')
+                ->get()
+                ->contains(fn (User $u) => $this->normalizePhone((string) $u->phone) === $normalized);
+        } catch (\Throwable $e) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('OWNER_PHONE_CHECK_SKIPPED', [
+                'company_id' => $company->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return false;
         }
-
-        return User::query()
-            ->where('company_id', $company->id)
-            ->where('role', 'company_owner')
-            ->whereNotNull('phone')
-            ->get()
-            ->contains(fn (User $u) => $this->normalizePhone((string) $u->phone) === $normalized);
     }
 
     /**
@@ -117,14 +126,8 @@ final class OwnerVoiceCommandService
             ];
         }
 
-        return [
-            'handled' => true,
-            'reply' => "Owner command received. Try:\n"
-                ."• \"Why are sales down?\"\n"
-                ."• \"Refund order ORD-123\"\n"
-                ."• \"Send campaign 5\"\n"
-                .'Or open Executive AI in your dashboard.',
-        ];
+        // No owner-command keyword match — fall through to the AI commerce agent.
+        return ['handled' => false, 'reply' => null];
     }
 
     private function matchesAnalytics(string $text): bool

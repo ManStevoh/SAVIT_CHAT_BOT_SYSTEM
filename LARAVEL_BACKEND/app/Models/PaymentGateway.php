@@ -20,20 +20,28 @@ class PaymentGateway extends Model
     ];
 
     /**
-     * Get merged config for a gateway (DB + env fallback). Cached per slug.
+     * Get merged config for a gateway (defaults + env + non-empty DB values). Cached per slug.
+     * Empty DB strings do not wipe env credentials — that previously made “Active” gateways unusable.
      */
     public static function getConfig(string $slug): array
     {
         $cacheKey = "payment_gateway_config:{$slug}";
 
         return Cache::remember($cacheKey, 300, function () use ($slug) {
-            $gateway = self::where('slug', $slug)->first();
             $defaults = self::defaultConfig($slug);
-            if (! $gateway || ! $gateway->config) {
-                return array_merge($defaults, self::configFromEnv($slug));
+            $fromEnv = self::configFromEnv($slug);
+            $gateway = self::where('slug', $slug)->first();
+            $fromDb = is_array($gateway?->config) ? $gateway->config : [];
+
+            $merged = array_merge($defaults, $fromEnv);
+            foreach ($fromDb as $key => $value) {
+                if ($value === null || $value === '') {
+                    continue;
+                }
+                $merged[$key] = $value;
             }
 
-            return array_merge($defaults, $gateway->config);
+            return $merged;
         });
     }
 
@@ -51,6 +59,47 @@ class PaymentGateway extends Model
     }
 
     /**
+     * Whether required credentials/details are present for this gateway to accept payments.
+     *
+     * @return array{ready: bool, missing: list<string>}
+     */
+    public static function readiness(string $slug): array
+    {
+        $cfg = self::getConfig($slug);
+        $required = match ($slug) {
+            'stripe' => ['secret'],
+            'paystack' => ['secret_key'],
+            'pesapal' => ['consumer_key', 'consumer_secret'],
+            'flutterwave' => ['secret_key'],
+            'paypal' => ['client_id', 'client_secret'],
+            'mpesa' => ['shortcode', 'passkey'],
+            'manual' => [], // bank_name OR account_number OR instructions
+            default => [],
+        };
+
+        if ($slug === 'manual') {
+            $ready = ! empty($cfg['instructions']) || ! empty($cfg['bank_name']) || ! empty($cfg['account_number']);
+            $missing = $ready ? [] : ['bank_name or account_number or instructions'];
+
+            return ['ready' => $ready, 'missing' => $missing];
+        }
+
+        $missing = [];
+        foreach ($required as $key) {
+            if (empty($cfg[$key])) {
+                $missing[] = $key;
+            }
+        }
+
+        return ['ready' => $missing === [], 'missing' => $missing];
+    }
+
+    public static function isReady(string $slug): bool
+    {
+        return self::isEnabled($slug) && self::readiness($slug)['ready'];
+    }
+
+    /**
      * Default config keys per gateway (structure only).
      */
     public static function defaultConfig(string $slug): array
@@ -61,7 +110,8 @@ class PaymentGateway extends Model
                 'secret' => '',
                 'webhook_secret' => '',
                 'trial_days' => 14,
-                'currency' => 'usd',
+                'currency' => 'kes',
+                'env' => 'sandbox',
             ],
             'mpesa' => [
                 'consumer_key' => '',
@@ -70,12 +120,45 @@ class PaymentGateway extends Model
                 'passkey' => '',
                 'env' => 'sandbox',
                 'callback_url' => '',
+                'currency' => 'kes',
             ],
             'paystack' => [
                 'public_key' => '',
                 'secret_key' => '',
-                'currency' => 'ngn',
+                'currency' => 'kes',
+                'env' => 'sandbox',
                 'callback_url' => '',
+            ],
+            'pesapal' => [
+                'consumer_key' => '',
+                'consumer_secret' => '',
+                'env' => 'sandbox',
+                'currency' => 'kes',
+                'ipn_id' => '',
+                'callback_url' => '',
+            ],
+            'flutterwave' => [
+                'public_key' => '',
+                'secret_key' => '',
+                'secret_hash' => '',
+                'currency' => 'kes',
+                'env' => 'sandbox',
+                'callback_url' => '',
+            ],
+            'paypal' => [
+                'client_id' => '',
+                'client_secret' => '',
+                'webhook_id' => '',
+                'currency' => 'usd',
+                'env' => 'sandbox',
+            ],
+            'manual' => [
+                'bank_name' => '',
+                'account_name' => '',
+                'account_number' => '',
+                'instructions' => '',
+                'currency' => 'kes',
+                'env' => 'sandbox',
             ],
             default => [],
         };
@@ -92,7 +175,8 @@ class PaymentGateway extends Model
                 'secret' => env('STRIPE_SECRET', ''),
                 'webhook_secret' => env('STRIPE_WEBHOOK_SECRET', ''),
                 'trial_days' => (int) env('STRIPE_TRIAL_DAYS', 14),
-                'currency' => env('STRIPE_CURRENCY', 'usd'),
+                'currency' => env('STRIPE_CURRENCY', 'kes'),
+                'env' => env('STRIPE_ENV', 'sandbox'),
             ],
             'mpesa' => [
                 'consumer_key' => env('MPESA_CONSUMER_KEY', ''),
@@ -101,12 +185,37 @@ class PaymentGateway extends Model
                 'passkey' => env('MPESA_PASSKEY', ''),
                 'env' => env('MPESA_ENV', 'sandbox'),
                 'callback_url' => env('MPESA_CALLBACK_URL', ''),
+                'currency' => env('MPESA_CURRENCY', 'kes'),
             ],
             'paystack' => [
                 'public_key' => env('PAYSTACK_PUBLIC_KEY', ''),
                 'secret_key' => env('PAYSTACK_SECRET_KEY', ''),
-                'currency' => env('PAYSTACK_CURRENCY', 'ngn'),
+                'currency' => env('PAYSTACK_CURRENCY', 'kes'),
+                'env' => env('PAYSTACK_ENV', 'sandbox'),
                 'callback_url' => env('PAYSTACK_CALLBACK_URL', ''),
+            ],
+            'pesapal' => [
+                'consumer_key' => env('PESAPAL_CONSUMER_KEY', ''),
+                'consumer_secret' => env('PESAPAL_CONSUMER_SECRET', ''),
+                'env' => env('PESAPAL_ENV', 'sandbox'),
+                'currency' => env('PESAPAL_CURRENCY', 'kes'),
+                'ipn_id' => env('PESAPAL_IPN_ID', ''),
+                'callback_url' => env('PESAPAL_CALLBACK_URL', ''),
+            ],
+            'paypal' => [
+                'client_id' => env('PAYPAL_CLIENT_ID', ''),
+                'client_secret' => env('PAYPAL_CLIENT_SECRET', ''),
+                'webhook_id' => env('PAYPAL_WEBHOOK_ID', ''),
+                'currency' => env('PAYPAL_CURRENCY', 'usd'),
+                'env' => env('PAYPAL_ENV', 'sandbox'),
+            ],
+            'manual' => [
+                'bank_name' => env('PLATFORM_BANK_NAME', ''),
+                'account_name' => env('PLATFORM_BANK_ACCOUNT_NAME', ''),
+                'account_number' => env('PLATFORM_BANK_ACCOUNT_NUMBER', ''),
+                'instructions' => env('PLATFORM_BANK_INSTRUCTIONS', ''),
+                'currency' => env('PLATFORM_BANK_CURRENCY', 'kes'),
+                'env' => env('PLATFORM_BANK_ENV', 'sandbox'),
             ],
             default => [],
         };

@@ -13,11 +13,13 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             SuperAdminSeeder::class,
+            AdminSeeder::class,
             PlanSeeder::class,
             CompanySeeder::class,
             PaymentGatewaySeeder::class,
             EnterprisePlatformSeeder::class,
             CmsPageSeeder::class,
+            BlogPostSeeder::class,
         ]);
     }
 }

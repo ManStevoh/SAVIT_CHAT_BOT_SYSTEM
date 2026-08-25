@@ -32,6 +32,11 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'status',
         'avatar',
         'role',
+        'terms_accepted_at',
+        'marketing_consent',
+        'marketing_consent_at',
+        'selected_plan_id',
+        'wants_immediate_payment',
     ];
 
     /**
@@ -54,6 +59,10 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
+            'marketing_consent_at' => 'datetime',
+            'marketing_consent' => 'boolean',
+            'wants_immediate_payment' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -73,8 +82,8 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
      */
     public function sendPasswordResetNotification($token): void
     {
-        $frontendUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/');
-        $url = $frontendUrl . '/reset-password?token=' . $token;
+        $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+        $url = $frontendUrl . '/reset-password?token=' . urlencode((string) $token) . '&email=' . urlencode($this->email);
         $appName = MailService::applicationName();
         $subject = '[' . $appName . '] Reset your password';
         $html = '<p>You are receiving this because we received a password reset request for your account.</p>';
@@ -90,10 +99,21 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
      */
     public function sendEmailVerificationNotification(): void
     {
+        $params = [
+            'id' => $this->id,
+            'hash' => sha1($this->email),
+        ];
+
+        // Preserve Subscribe intent so verify → login lands on plan payment.
+        if ($this->wants_immediate_payment && $this->selected_plan_id) {
+            $params['plan'] = (string) $this->selected_plan_id;
+            $params['pay'] = '1';
+        }
+
         $verificationUrl = URL::temporarySignedRoute(
             'api.verification.verify',
             now()->addMinutes(60),
-            ['id' => $this->id, 'hash' => sha1($this->email)]
+            $params
         );
         App::make(MailService::class)->sendWelcomeVerificationEmail($this, $verificationUrl);
     }

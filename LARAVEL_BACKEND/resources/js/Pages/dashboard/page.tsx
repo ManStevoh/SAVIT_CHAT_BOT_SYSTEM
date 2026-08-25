@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { ChartCard } from '@/components/shared/chart-card'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useAnalytics, useOrders, useChats, useCompanySettings } from '@/lib/api-hooks'
-import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
+import { useDashboardSummary } from '@/lib/api-hooks'
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import { CHART_ACCENT, CHART_PRIMARY } from '@/lib/chart-colors'
 import { MessageSquare, ShoppingCart, Users, Bot, ArrowRight } from 'lucide-react'
+import { GettingStartedChecklist } from '@/components/dashboard/GettingStartedChecklist'
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -33,6 +35,16 @@ function getStoredName(): string | null {
 }
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading dashboard…</div>}>
+      <DashboardPageContent />
+    </Suspense>
+  )
+}
+
+function DashboardPageContent() {
+  const searchParams = useSearchParams()
+  const trialStarted = searchParams.get('trial_started') === '1'
   const [chartPeriod, setChartPeriod] = useState('7d')
   const [firstName, setFirstName] = useState<string | null>(null)
 
@@ -40,19 +52,49 @@ export default function DashboardPage() {
     setFirstName(getStoredName())
   }, [])
 
-  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useAnalytics(chartPeriod)
-  const { data: ordersData, isLoading: ordersLoading } = useOrders({ limit: 5 })
-  const { data: chats, isLoading: chatsLoading } = useChats({ limit: 5 })
-  const { data: companySettings } = useCompanySettings()
+  // Single combined request — replaces 6 separate parallel API calls
+  const { data: summary, isLoading, error: summaryError, mutate } = useDashboardSummary(chartPeriod)
+
+  const analytics     = summary?.analytics
+  const ordersData    = summary?.recentOrders ?? []
+  const chats         = summary?.recentChats ?? []
+  const subscription  = summary?.subscription
+  const companySettings = summary?.settings
+
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
+  const formatCurrency = (value: number) =>
+    formatCurrencyAmount(value, catalogCurrency, currencyDisplayFromSettings(companySettings as Parameters<typeof currencyDisplayFromSettings>[0]))
 
-  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
+  const periodLabel = chartPeriod === '7d' ? '7d' : chartPeriod === '30d' ? '30d' : '90d'
 
-  const periodLabel =
-    chartPeriod === '7d' ? '7d' : chartPeriod === '30d' ? '30d' : '90d'
+  const showTrialBanner =
+    trialStarted ||
+    (subscription?.status === 'trial' && (subscription.daysRemaining ?? 0) > 0)
 
   return (
     <div className="space-y-8">
+      <GettingStartedChecklist initialData={summary?.setupStatus} />
+
+      {showTrialBanner && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+          <p className="font-medium">
+            Welcome — your free trial
+            {subscription?.planName ? ` of ${subscription.planName}` : ''} is active
+            {typeof subscription?.daysRemaining === 'number'
+              ? ` (${subscription.daysRemaining} day${subscription.daysRemaining === 1 ? '' : 's'} left)`
+              : ''}
+            .
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            Connect WhatsApp and explore the product. You can upgrade anytime from{' '}
+            <Link href="/dashboard/subscription" className="font-medium text-primary underline">
+              Subscription
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -75,7 +117,7 @@ export default function DashboardPage() {
           change={analytics?.messagesChange}
           changeLabel="vs previous period"
           icon={MessageSquare}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
@@ -84,7 +126,7 @@ export default function DashboardPage() {
           change={analytics?.ordersChange}
           changeLabel="vs previous period"
           icon={ShoppingCart}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
@@ -93,7 +135,7 @@ export default function DashboardPage() {
           change={analytics?.customersChange}
           changeLabel="vs previous period"
           icon={Users}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           formatter={(v) => v.toLocaleString()}
         />
         <StatsCard
@@ -102,17 +144,17 @@ export default function DashboardPage() {
           change={analytics?.revenueChange}
           changeLabel="vs previous period"
           icon={Bot}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           formatter={formatCurrency}
         />
       </StatsGrid>
 
-      {analyticsError && (
+      {summaryError && (
         <Card className="border-destructive/40 bg-destructive/5 shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm font-medium text-destructive">Failed to load analytics data</p>
-            <p className="mt-1 text-sm text-muted-foreground">{analyticsError.message}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => window.location.reload()}>
+            <p className="text-sm font-medium text-destructive">Failed to load dashboard data</p>
+            <p className="mt-1 text-sm text-muted-foreground">{summaryError.message}</p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => mutate()}>
               Try again
             </Button>
           </CardContent>
@@ -125,7 +167,7 @@ export default function DashboardPage() {
           data={analytics?.messagesPerDay}
           type="line"
           color={CHART_PRIMARY}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           showPeriodSelector
           period={chartPeriod}
           onPeriodChange={setChartPeriod}
@@ -135,7 +177,7 @@ export default function DashboardPage() {
           data={analytics?.ordersPerDay}
           type="bar"
           color={CHART_ACCENT}
-          isLoading={analyticsLoading}
+          isLoading={isLoading}
           showPeriodSelector
           period={chartPeriod}
           onPeriodChange={setChartPeriod}
@@ -156,7 +198,7 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent className="pt-0">
-            {ordersLoading ? (
+            {isLoading ? (
               <div className="space-y-3">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="flex items-center justify-between">
@@ -168,9 +210,9 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-            ) : ordersData?.orders && ordersData.orders.length > 0 ? (
+            ) : ordersData && ordersData.length > 0 ? (
               <div className="divide-y divide-border/60">
-                {ordersData.orders.slice(0, 4).map((order) => (
+                {ordersData.slice(0, 4).map((order) => (
                   <div
                     key={order.id}
                     className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
@@ -217,7 +259,7 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent className="pt-0">
-            {chatsLoading ? (
+            {isLoading ? (
               <div className="space-y-3">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="flex items-start gap-3">
@@ -276,7 +318,7 @@ export default function DashboardPage() {
           <CardDescription className="text-xs">Best selling products this period</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          {analyticsLoading ? (
+          {isLoading ? (
             <div className="space-y-3">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="flex items-center justify-between">

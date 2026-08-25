@@ -9,12 +9,13 @@ use App\Services\AI\AiBillingService;
 use App\Services\AI\AiDriverFactory;
 use App\Services\AI\AiModelResolver;
 use App\Services\AI\AiUseCase;
+use App\Services\AI\Drivers\Contracts\SupportsToolCalling;
 use App\Services\AI\Drivers\OpenAiDriver;
 use App\Services\AI\OpenAiChatResult;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
- * Tool-capable chat completions (OpenAI-compatible providers only).
+ * Tool-capable chat completions (OpenAI, Anthropic, Gemini).
  */
 class AgentChatService
 {
@@ -43,6 +44,13 @@ class AgentChatService
             $resolved = $this->resolver->resolve($company, AiModel::CAPABILITY_CHAT, $useCase);
         }
         if ($resolved === null) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AGENT_CHAT_RESOLVE_FAILED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'use_case' => $useCase,
+                'reason' => 'No AI provider configured for company',
+            ]);
+
             return new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -51,7 +59,20 @@ class AgentChatService
             );
         }
 
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('AGENT_CHAT_RESOLVED_MODEL', [
+            'company_id' => $company->id,
+            'chat_id' => $chatId,
+            'model_key' => $resolved->model->model_key,
+            'provider' => $resolved->provider->name,
+            'credential_source' => $resolved->credentialSource,
+        ]);
+
         if ($resolved->credentialSource === 'platform' && ! $this->billing->isWithinPlatformAiBudget($company)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AGENT_CHAT_BUDGET_EXCEEDED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+            ]);
+
             return new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -62,6 +83,11 @@ class AgentChatService
         }
 
         if (! $this->consumeRateLimit($company->id)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AGENT_CHAT_RATE_LIMIT_EXCEEDED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+            ]);
+
             return new OpenAiChatResult(
                 content: null,
                 success: false,
@@ -72,12 +98,17 @@ class AgentChatService
         }
 
         $driver = $this->driverFactory->driverFor($resolved->provider);
-        if (! $driver instanceof OpenAiDriver) {
+        if (! $driver instanceof SupportsToolCalling) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AGENT_CHAT_DRIVER_NO_TOOLS', [
+                'company_id' => $company->id,
+                'provider' => $resolved->provider->name,
+            ]);
+
             return new OpenAiChatResult(
                 content: null,
                 success: false,
                 model: $resolved->model->model_key,
-                error: 'Agent tool mode requires an OpenAI-compatible chat provider.',
+                error: 'Agent tool mode requires a provider that supports function/tool calling (OpenAI-compatible, Anthropic, or Gemini).',
             );
         }
 
@@ -91,6 +122,23 @@ class AgentChatService
             $temperature,
             $timeoutSeconds,
         );
+
+        if ($result->success) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('AGENT_CHAT_COMPLETION_SUCCESS', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'model' => $result->model,
+                'tool_calls_count' => count($result->toolCalls),
+                'content_preview' => mb_substr((string) $result->content, 0, 150),
+            ]);
+        } else {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AGENT_CHAT_COMPLETION_FAILED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'model' => $result->model,
+                'error' => $result->error,
+            ]);
+        }
 
         $cost = $resolved->model->estimateCostUsd($result->promptTokens, $result->completionTokens);
         $result = new OpenAiChatResult(
@@ -110,7 +158,27 @@ class AgentChatService
             finishReason: $result->finishReason,
         );
 
-        $this->persistLog($result, $company->id, $chatId, $resolved->credentialSource, $useCase);
+        $logId = $this->persistLog($result, $company->id, $chatId, $resolved->credentialSource, $useCase, $messages);
+
+        if ($logId !== null) {
+            $result = new OpenAiChatResult(
+                content: $result->content,
+                success: $result->success,
+                model: $result->model,
+                promptTokens: $result->promptTokens,
+                completionTokens: $result->completionTokens,
+                totalTokens: $result->totalTokens,
+                latencyMs: $result->latencyMs,
+                httpStatus: $result->httpStatus,
+                error: $result->error,
+                providerId: $result->providerId,
+                modelId: $result->modelId,
+                estimatedCostUsd: $cost,
+                toolCalls: $result->toolCalls,
+                finishReason: $result->finishReason,
+                logId: $logId,
+            );
+        }
 
         return $result;
     }
@@ -215,13 +283,19 @@ class AgentChatService
         ?int $chatId,
         ?string $credentialSource,
         string $useCase = AiUseCase::AGENT_COMMERCE,
-    ): void {
+        ?array $messages = null,
+    ): ?int {
         $billed = $credentialSource !== null
             ? $this->billing->billedCostUsd($result->estimatedCostUsd, $credentialSource)
             : null;
 
+        $promptPayload = null;
+        if ($messages !== null) {
+            $promptPayload = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        }
+
         try {
-            AiRequestLog::create([
+            $log = AiRequestLog::create([
                 'company_id' => $companyId,
                 'ai_provider_id' => $result->providerId,
                 'ai_model_id' => $result->modelId,
@@ -238,17 +312,20 @@ class AgentChatService
                 'success' => $result->success,
                 'http_status' => $result->httpStatus,
                 'error_message' => $result->error ? mb_substr($result->error, 0, 500) : null,
+                'prompt_payload' => $promptPayload,
                 'created_at' => now(),
             ]);
+
+            return (int) $log->id;
         } catch (\Throwable) {
-            // non-fatal
+            return null;
         }
     }
 
     protected function consumeRateLimit(int $companyId): bool
     {
         $key = 'ai-agent:company:'.$companyId.':'.now()->format('YmdHi');
-        $limit = 60;
+        $limit = (int) config('agent.rate_limit_per_minute', 60);
         if (RateLimiter::tooManyAttempts($key, $limit)) {
             return false;
         }

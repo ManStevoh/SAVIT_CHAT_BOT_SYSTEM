@@ -9,11 +9,16 @@ export function useAppBranding(): AppBranding {
   const ctx = useContext(AppBrandingContext)
   return (
     ctx ?? {
-      applicationName: "Essem Chat",
+      applicationName: "RelayIQ",
       appLogo: null,
       primaryColor: null,
       secondaryColor: null,
       requireEmailVerification: false,
+      cookieBannerEnabled: true,
+      cookieBannerText: null,
+      cookiePolicyUrl: "/privacy",
+      recaptchaEnabled: false,
+      recaptchaSiteKey: null,
     }
   )
 }
@@ -34,6 +39,8 @@ export function AppBrandingProvider({ children }: { children: React.ReactNode })
       root.style.setProperty("--primary", branding.primaryColor)
       root.style.setProperty("--ring", branding.primaryColor)
       root.style.setProperty("--accent", branding.primaryColor)
+      // Accent is used as a solid brand wash; keep readable contrast on hover/fill.
+      root.style.setProperty("--accent-foreground", "#ffffff")
       root.style.setProperty("--sidebar-primary", branding.primaryColor)
       root.style.setProperty("--chart-1", branding.primaryColor)
       root.style.setProperty("--wa-brand", branding.primaryColor)
@@ -47,6 +54,7 @@ export function AppBrandingProvider({ children }: { children: React.ReactNode })
       root.style.removeProperty("--primary")
       root.style.removeProperty("--ring")
       root.style.removeProperty("--accent")
+      root.style.removeProperty("--accent-foreground")
       root.style.removeProperty("--sidebar-primary")
       root.style.removeProperty("--chart-1")
       root.style.removeProperty("--wa-brand")

@@ -20,38 +20,94 @@ class WhatsAppMessageSenderService
      * @param  WhatsAppAccount  $account  Company's WhatsApp account (phone_number_id + access_token)
      * @param  string  $to  Recipient phone number with country code, no + (e.g. 201234567890)
      * @param  string  $text  Message body (max 4096 chars for text)
+     * @param  string|null  $contextMessageId  Meta wamid to quote/reply to
      * @return array{success: bool, message_id?: string, error?: string}
      */
-    public function sendText(WhatsAppAccount $account, string $to, string $text): array
-    {
+    public function sendText(
+        WhatsAppAccount $account,
+        string $to,
+        string $text,
+        ?string $contextMessageId = null,
+        bool $bypassCtaConversion = false,
+    ): array {
         $to = preg_replace('/\D/', '', $to);
         if ($to === '') {
             return ['success' => false, 'error' => 'Invalid recipient phone number'];
         }
 
+        $text = self::cleanMarkdownLinksForWhatsApp($text);
+
+        // Auto-convert any outgoing message containing a valid HTTP/HTTPS link to native Meta CTA URL button
+        if (! $bypassCtaConversion && preg_match('~(https?://[^\s]+)~i', $text, $match)) {
+            $extractedUrl = trim($match[1], "().,;[]");
+            if (filter_var($extractedUrl, FILTER_VALIDATE_URL)) {
+                $ctaButtonText = $this->determineCtaButtonText($extractedUrl, $text);
+                $ctaResult = $this->sendInteractiveCtaUrl(
+                    $account,
+                    $to,
+                    $text,
+                    $ctaButtonText,
+                    $extractedUrl
+                );
+
+                if (! empty($ctaResult['success'])) {
+                    return $ctaResult;
+                }
+            }
+        }
+
         $url = $this->graphUrl() . '/' . $account->phone_number_id . '/messages';
+
+        $textPayload = [
+            'body' => mb_substr($text, 0, 4096),
+        ];
+        if (preg_match('~https?://~i', $text)) {
+            $textPayload['preview_url'] = true;
+        }
+
         $body = [
             'messaging_product' => 'whatsapp',
             'recipient_type' => 'individual',
             'to' => $to,
             'type' => 'text',
-            'text' => [
-                'body' => mb_substr($text, 0, 4096),
-            ],
+            'text' => $textPayload,
         ];
 
-        $response = Http::withToken($account->access_token)
-            ->timeout(15)
-            ->post($url, $body);
+        $contextMessageId = trim((string) $contextMessageId);
+        if ($contextMessageId !== '') {
+            $body['context'] = ['message_id' => $contextMessageId];
+        }
+
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('META_API_SEND_REQUEST', [
+            'phone_number_id' => $account->phone_number_id,
+            'to' => $to,
+            'text_length' => strlen($text),
+            'has_token' => filled($account->access_token),
+            'context_message_id' => $contextMessageId,
+        ]);
+
+        $response = $this->postWithCPanelRetry($url, $account->access_token, $body, 15);
 
         if ($response->successful()) {
             $data = $response->json();
             $messageId = $data['messages'][0]['id'] ?? null;
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('META_API_SEND_SUCCESS', [
+                'phone_number_id' => $account->phone_number_id,
+                'to' => $to,
+                'whatsapp_message_id' => $messageId,
+            ]);
             return ['success' => true, 'message_id' => $messageId];
         }
 
         $errorBody = $response->json();
         $errorMessage = $errorBody['error']['message'] ?? $response->body();
+        \App\Services\WhatsApp\WhatsAppDebugLogger::error('META_API_SEND_FAILED', [
+            'phone_number_id' => $account->phone_number_id,
+            'to' => $to,
+            'status' => $response->status(),
+            'error' => $errorMessage,
+            'response_body' => $errorBody,
+        ]);
         Log::warning('WhatsApp send message failed', [
             'phone_number_id' => $account->phone_number_id,
             'to' => $to,
@@ -393,5 +449,293 @@ class WhatsAppMessageSenderService
         ]);
 
         return ['success' => false, 'error' => $errorMessage];
+    }
+
+    /**
+     * Send WhatsApp interactive CTA URL button message (e.g. for payments, invoices, storefront).
+     *
+     * @return array{success: bool, message_id?: string, error?: string}
+     */
+    public function sendInteractiveCtaUrl(
+        WhatsAppAccount $account,
+        string $to,
+        string $bodyText,
+        string $buttonText,
+        string $url,
+        ?string $headerText = null,
+        ?string $footerText = null,
+    ): array {
+        $to = preg_replace('/\D/', '', $to);
+        if ($to === '') {
+            return ['success' => false, 'error' => 'Invalid recipient phone number'];
+        }
+
+        $cleanBody = $this->cleanBodyTextForCta($bodyText, $url);
+
+        $interactive = [
+            'type' => 'cta_url',
+            'body' => ['text' => mb_substr($cleanBody, 0, 1024)],
+            'action' => [
+                'name' => 'cta_url',
+                'parameters' => [
+                    'display_text' => mb_substr($buttonText, 0, 20),
+                    'url' => $url,
+                ],
+            ],
+        ];
+
+        if ($headerText !== null && $headerText !== '') {
+            $interactive['header'] = ['type' => 'text', 'text' => mb_substr($headerText, 0, 60)];
+        }
+        if ($footerText !== null && $footerText !== '') {
+            $interactive['footer'] = ['text' => mb_substr($footerText, 0, 60)];
+        }
+
+        $endpointUrl = $this->graphUrl() . '/' . $account->phone_number_id . '/messages';
+        $response = $this->postWithCPanelRetry($endpointUrl, $account->access_token, [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => $interactive,
+        ], 20);
+
+        if ($response->successful()) {
+            $messageId = $response->json('messages.0.id');
+            return ['success' => true, 'message_id' => $messageId];
+        }
+
+        $errorMessage = $response->json('error.message') ?? $response->body();
+        Log::warning('WhatsApp interactive CTA URL send failed, falling back to text', [
+            'to' => $to,
+            'url' => $url,
+            'error' => $errorMessage,
+        ]);
+
+        // Fallback to sending formatted text with preview_url
+        if (str_contains($bodyText, $url)) {
+            $fallbackText = $bodyText;
+        } else {
+            $fallbackText = rtrim($bodyText) . "\n\n" . ($buttonText ? "🔗 *{$buttonText}:*\n" : "") . $url;
+        }
+        return $this->sendText($account, $to, $fallbackText, bypassCtaConversion: true);
+    }
+
+    /**
+     * Determine intelligent display label for Meta CTA URL button (max 20 chars).
+     */
+    public function determineCtaButtonText(string $url, string $contextText = ''): string
+    {
+        $lowerUrl = strtolower($url);
+        $lowerContext = strtolower($contextText);
+
+        if (str_contains($lowerUrl, 'pesapal')) {
+            return 'Pay via Pesapal';
+        }
+        if (str_contains($lowerUrl, 'paystack')) {
+            return 'Pay via Paystack';
+        }
+        if (str_contains($lowerUrl, 'stripe')) {
+            return 'Pay via Stripe';
+        }
+        if (str_contains($lowerUrl, 'flutterwave')) {
+            return 'Pay via Flutterwave';
+        }
+        if (str_contains($lowerUrl, '/download/') || str_contains($lowerContext, 'download')) {
+            return 'Download File';
+        }
+        if (str_contains($lowerUrl, '/access') || str_contains($lowerContext, 'access portal')) {
+            return 'Access Portal';
+        }
+        if (str_contains($lowerUrl, 'receipt') || str_contains($lowerContext, 'receipt')) {
+            return 'View Receipt';
+        }
+        if (str_contains($lowerUrl, '/invoice/') || str_contains($lowerContext, 'invoice')) {
+            return 'View Invoice';
+        }
+        if (str_contains($lowerUrl, '/pay/')) {
+            return 'Pay Online';
+        }
+        if (str_contains($lowerUrl, '/cart')) {
+            return 'View Cart';
+        }
+        if (str_contains($lowerUrl, '/track')) {
+            return 'Track Order';
+        }
+        if (str_contains($lowerUrl, '/s/')) {
+            return 'Shop Online';
+        }
+
+        return 'Open Link';
+    }
+
+    /**
+     * Intelligently send a WhatsApp message, using interactive CTA URL buttons when links are detected,
+     * or standard text with preview_url as fallback.
+     *
+     * @return array{success: bool, message_id?: string, error?: string}
+     */
+    public function sendSmartReply(
+        WhatsAppAccount $account,
+        string $to,
+        string $text,
+        ?string $ctaUrl = null,
+        ?string $ctaButtonText = null,
+    ): array {
+        if (empty($ctaUrl) && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|receipt|/orders/|/s/|pesapaliframe)[^\s]*)~i', $text, $match)) {
+            $ctaUrl = trim($match[1], "().,;[]");
+        }
+
+        if (! empty($ctaUrl)) {
+            if (empty($ctaButtonText)) {
+                $lowerUrl = strtolower($ctaUrl);
+                if (str_contains($lowerUrl, 'pesapal')) {
+                    $ctaButtonText = 'Pay via Pesapal';
+                } elseif (str_contains($lowerUrl, 'paystack')) {
+                    $ctaButtonText = 'Pay via Paystack';
+                } elseif (str_contains($lowerUrl, 'stripe')) {
+                    $ctaButtonText = 'Pay via Stripe';
+                } elseif (str_contains($lowerUrl, 'flutterwave')) {
+                    $ctaButtonText = 'Pay via Flutterwave';
+                } elseif (str_contains($lowerUrl, '/pay/')) {
+                    $ctaButtonText = 'Pay Online';
+                } elseif (str_contains($lowerUrl, '/invoice/')) {
+                    $ctaButtonText = 'View Invoice';
+                } elseif (str_contains($lowerUrl, 'receipt')) {
+                    $ctaButtonText = 'View Receipt';
+                } elseif (str_contains($lowerUrl, '/cart')) {
+                    $ctaButtonText = 'View Cart';
+                } elseif (str_contains($lowerUrl, '/track')) {
+                    $ctaButtonText = 'Track Order';
+                } else {
+                    $ctaButtonText = 'Shop Online';
+                }
+            }
+
+            $ctaResult = $this->sendInteractiveCtaUrl(
+                $account,
+                $to,
+                $text,
+                $ctaButtonText,
+                $ctaUrl
+            );
+
+            if (! empty($ctaResult['success'])) {
+                return $ctaResult;
+            }
+        }
+
+        return $this->sendText($account, $to, $text);
+    }
+
+    /**
+     * Outbound HTTP POST with native single-threaded PHP DNS fallback for cPanel libcurl limits.
+     */
+    protected function postWithCPanelRetry(string $url, string $token, array $body, int $timeoutSeconds = 20): \Illuminate\Http\Client\Response
+    {
+        $parsedUrl = parse_url($url);
+        $host = $parsedUrl['host'] ?? '';
+        $port = ($parsedUrl['scheme'] ?? 'https') === 'https' ? 443 : 80;
+
+        $curlOpts = [
+            CURLOPT_NOSIGNAL => 1,
+            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+        ];
+
+        $execPost = function () use ($url, $token, $body, &$curlOpts, $timeoutSeconds, $host, $port) {
+            try {
+                return Http::withToken($token)
+                    ->withOptions([
+                        'force_ip_resolve' => 'v4',
+                        'curl' => $curlOpts,
+                    ])
+                    ->timeout($timeoutSeconds)
+                    ->post($url, $body);
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                if (! str_contains($e->getMessage(), 'getaddrinfo') && ! str_contains($e->getMessage(), 'cURL error 6')) {
+                    throw $e;
+                }
+
+                // Perform single-threaded PHP DNS resolution to bypass cURL getaddrinfo worker thread spawning
+                $ip = gethostbyname($host);
+                if ($ip && $ip !== $host) {
+                    $curlOpts[CURLOPT_RESOLVE] = ["{$host}:{$port}:{$ip}"];
+                }
+
+                return Http::withToken($token)
+                    ->withOptions([
+                        'force_ip_resolve' => 'v4',
+                        'curl' => $curlOpts,
+                    ])
+                    ->timeout($timeoutSeconds)
+                    ->post($url, $body);
+            }
+        };
+
+        $response = $execPost();
+
+        // Retry automatically on Meta API Pair Rate Limit (#131056) or transient HTTP 429 / 5xx error
+        if (! $response->successful()) {
+            $json = $response->json();
+            $errCode = $json['error']['code'] ?? null;
+
+            if ($errCode === 131056 || $response->status() === 429 || $response->status() >= 500) {
+                Log::warning('Meta API pair rate limit (#131056) or status '.$response->status().' hit. Pausing 1.5s before retry...', [
+                    'to' => $body['to'] ?? null,
+                    'error_code' => $errCode,
+                ]);
+
+                usleep(1500000); // Pause 1.5 seconds for Meta rate limit burst window to clear
+                $response = $execPost();
+            }
+        }
+
+        return $response;
+    }
+
+    /**
+     * Remove redundant raw links and URL label headers from message body text when native CTA URL button is present.
+     */
+    protected function cleanBodyTextForCta(string $text, string $targetUrl): string
+    {
+        $lines = explode("\n", $text);
+        $filtered = [];
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') {
+                $filtered[] = '';
+                continue;
+            }
+
+            if (str_contains($line, $targetUrl)) {
+                $cleanedLine = str_replace($targetUrl, '', $line);
+                $cleanedLine = preg_replace('/(?:📄|💳|🛍️|🔗)?\s*\*?(?:View Invoice|View Receipt|Pay Online|Shop Online|Download|Access portal|Receipt|Invoice)\*?:?\s*$/iu', '', trim($cleanedLine));
+                $cleanedLine = trim($cleanedLine);
+                if ($cleanedLine !== '') {
+                    $filtered[] = $cleanedLine;
+                }
+                continue;
+            }
+
+            if (preg_match('/^(?:📄\s*\*?(?:Invoice|Receipt|View Invoice|View Receipt)\*?:?|💳\s*\*?Pay Online\*?:?|Pay online:?|Invoice:?|View invoice \/ receipt:?|Instructions:\s*Pay online.*|Please complete payment here:?)$/iu', $trimmed)) {
+                continue;
+            }
+
+            $filtered[] = $line;
+        }
+
+        $clean = implode("\n", $filtered);
+        $clean = trim(preg_replace('/\n{3,}/', "\n\n", $clean));
+
+        return $clean !== '' ? $clean : $text;
+    }
+
+    /**
+     * Clean markdown links [label](url) into plain URLs so WhatsApp renders them cleanly without raw markdown brackets.
+     */
+    public static function cleanMarkdownLinksForWhatsApp(string $text): string
+    {
+        return preg_replace('/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/i', '$2', $text);
     }
 }

@@ -29,13 +29,32 @@ class EmailVerificationController extends Controller
             return $this->redirectToFrontend('/login', ['error' => 'invalid_hash']);
         }
 
-        if ($user->hasVerifiedEmail()) {
-            return $this->redirectToFrontend('/login', ['verified' => '1']);
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
         }
 
-        $user->markEmailAsVerified();
+        return $this->redirectToFrontend('/login', $this->postVerifyQuery($request, $user));
+    }
 
-        return $this->redirectToFrontend('/login', ['verified' => '1']);
+    /**
+     * @return array<string, string>
+     */
+    private function postVerifyQuery(Request $request, User $user): array
+    {
+        $query = ['verified' => '1'];
+
+        $plan = $request->query('plan') ?: ($user->wants_immediate_payment ? $user->selected_plan_id : null);
+        $pay = $request->query('pay') === '1'
+            || ($user->wants_immediate_payment && $user->selected_plan_id);
+
+        if ($plan) {
+            $query['plan'] = (string) $plan;
+        }
+        if ($pay && $plan) {
+            $query['pay'] = '1';
+        }
+
+        return $query;
     }
 
     private function redirectToFrontend(string $path, array $query = []): RedirectResponse

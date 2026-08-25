@@ -2,16 +2,16 @@
 title: Home
 layout: default
 nav_order: 1
-description: "Essem Chat Bot — WhatsApp AI Commerce & Growth Engine"
+description: "RelayIQ — WhatsApp AI Commerce & Growth Engine"
 permalink: /
 ---
 
-# Essem Chat Bot Documentation
+# RelayIQ Documentation
 
 > **Enable docs site:** [Settings → Pages](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/settings/pages) → Deploy from branch → `main` → `/docs` → Save.  
 > **URL:** https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/
 
-Welcome to the official documentation for **Essem Chat Bot (SAVIT)** — the **digital nervous system of a business**: WhatsApp commerce, continuous AI cognition, growth attribution, and owner intelligence in one platform.
+Welcome to the official documentation for **RelayIQ** — the **digital nervous system of a business**: WhatsApp commerce, continuous AI cognition, growth attribution, and owner intelligence in one platform.
 
 ## What is SAVIT?
 
@@ -33,7 +33,7 @@ Strategic vision: [Digital Nervous System](technical/SAVIT_DIGITAL_NERVOUS_SYSTE
 
 | Component | URL |
 |-----------|-----|
-| Web application (UI + API) | [essemchat.essemglobalsolutions.com](https://essemchat.essemglobalsolutions.com) |
+| Web application (UI + API) | [relayiq.app](https://relayiq.app) |
 
 ## Documentation sections
 
@@ -64,9 +64,13 @@ Architecture, API reference, database schema, deployment, environment variables,
 Customer (WhatsApp)  →  Meta Cloud API  →  Laravel (API + Inertia UI)  →  AI / FAQ / Orders
                                               ↓
 Company Dashboard (React)  ←  REST API  ←  Database + Queue Jobs
+                                              ↑
+                         Essem Mobile (Flutter) — company companion
 
 Growth Engine: Social Post → Attribution Link → WhatsApp → Order → Revenue
 ```
+
+Mobile vision: [Mobile App V1 Vision](technical/MOBILE_APP_V1_VISION.md)
 
 ## Legacy reference documents
 

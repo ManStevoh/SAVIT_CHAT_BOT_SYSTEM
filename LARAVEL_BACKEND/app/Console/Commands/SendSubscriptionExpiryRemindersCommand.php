@@ -2,80 +2,41 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Plan;
-use App\Models\Subscription;
-use App\Services\MailService;
+use App\Services\SubscriptionLifecycleService;
 use Illuminate\Console\Command;
 
 class SendSubscriptionExpiryRemindersCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'subscription:expiry-reminders
-                            {--days=7,3 : Comma-separated days before expiry to send reminders (e.g. 7,3)}';
+                            {--days=7,3,1 : Comma-separated days before expiry to send reminders}
+                            {--expire : Also mark ended active/cancelled subscriptions as expired}';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Send email reminders to companies whose subscription is about to expire';
+    protected $description = 'Send subscription expiry reminders (email + in-app) and optionally expire ended subscriptions';
 
     public function __construct(
-        protected MailService $mailService
+        protected SubscriptionLifecycleService $lifecycle
     ) {
         parent::__construct();
     }
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
-        $daysOption = $this->option('days');
-        $daysList = array_map('intval', array_filter(explode(',', $daysOption), fn ($d) => $d > 0));
-        if (empty($daysList)) {
-            $daysList = [7, 3];
+        $daysOption = (string) $this->option('days');
+        $daysList = array_values(array_filter(
+            array_map('intval', explode(',', $daysOption)),
+            fn ($d) => $d > 0
+        ));
+        if ($daysList === []) {
+            $daysList = [7, 3, 1];
         }
 
-        $today = now()->startOfDay();
-        $sent = 0;
+        $result = $this->lifecycle->sendExpiryReminders($daysList);
+        $this->info("Reminders sent: {$result['sent']} (skipped: {$result['skipped']}).");
 
-        foreach ($daysList as $daysLeft) {
-            $targetDate = $today->copy()->addDays($daysLeft);
-            $subscriptions = Subscription::with('company')
-                ->whereIn('status', ['active', 'trial'])
-                ->whereDate('end_date', $targetDate)
-                ->get();
-
-            foreach ($subscriptions as $subscription) {
-                $company = $subscription->company;
-                if (! $company?->email) {
-                    continue;
-                }
-
-                $planName = Plan::where('slug', $subscription->plan)->first()?->name ?? ucfirst($subscription->plan);
-                $endDateFormatted = $subscription->end_date->format('F j, Y');
-
-                try {
-                    $this->mailService->sendSubscriptionExpiringSoon(
-                        $company->email,
-                        $planName,
-                        $endDateFormatted,
-                        $daysLeft
-                    );
-                    $sent++;
-                    $this->info("Sent expiry reminder to {$company->email} (expires in {$daysLeft} days).");
-                } catch (\Throwable $e) {
-                    $this->error("Failed to send to {$company->email}: {$e->getMessage()}");
-                }
-            }
+        if ($this->option('expire')) {
+            $expired = $this->lifecycle->expireEndedSubscriptions();
+            $this->info("Expired subscriptions marked: {$expired}.");
         }
-
-        $this->info("Done. Sent {$sent} reminder(s).");
 
         return self::SUCCESS;
     }

@@ -43,7 +43,7 @@ export function TestimonialsSection() {
           description={
             isSample
               ? "Add real testimonials in Admin → Testimonials. Examples shown below."
-              : "Feedback from businesses using Essem Chat."
+              : "Feedback from businesses using RelayIQ."
           }
         />
 

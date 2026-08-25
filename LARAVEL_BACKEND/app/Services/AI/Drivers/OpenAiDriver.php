@@ -8,7 +8,7 @@ use App\Services\AI\OpenAiChatResult;
 use App\Services\AI\SynthesizeResult;
 use App\Services\AI\TranscribeResult;
 
-class OpenAiDriver extends AbstractAiDriver
+class OpenAiDriver extends AbstractAiDriver implements \App\Services\AI\Drivers\Contracts\SupportsToolCalling
 {
     public function chatCompletion(
         ResolvedAiModel $resolved,
@@ -171,19 +171,25 @@ class OpenAiDriver extends AbstractAiDriver
         ResolvedAiModel $resolved,
         string $filePath,
         string $filename,
+        ?string $prompt = null,
         int $timeoutSeconds = 60,
     ): TranscribeResult {
         $base = rtrim($resolved->apiBaseUrl ?: $resolved->provider->api_base_url ?: 'https://api.openai.com/v1', '/');
         $started = microtime(true);
 
+        $payload = [
+            'model' => $resolved->model->model_key,
+            'response_format' => 'text',
+        ];
+        if (! empty($prompt)) {
+            $payload['prompt'] = mb_substr($prompt, 0, 1000);
+        }
+
         try {
             $response = \Illuminate\Support\Facades\Http::withToken($resolved->apiKey)
                 ->timeout($timeoutSeconds)
                 ->attach('file', file_get_contents($filePath), $filename)
-                ->post("{$base}/audio/transcriptions", [
-                    'model' => $resolved->model->model_key,
-                    'response_format' => 'text',
-                ]);
+                ->post("{$base}/audio/transcriptions", $payload);
         } catch (\Throwable $e) {
             return new TranscribeResult(
                 text: null,
@@ -288,5 +294,34 @@ class OpenAiDriver extends AbstractAiDriver
     private function elapsed(float $started): int
     {
         return (int) round((microtime(true) - $started) * 1000);
+    }
+
+    protected function postWithRetry(
+        string $url,
+        string $apiKey,
+        array $payload,
+        int $timeoutSeconds,
+        array $headers = [],
+    ): ?\Illuminate\Http\Client\Response {
+        $maxAttempts = 2;
+        $response = null;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $req = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                ->timeout($timeoutSeconds);
+            if (! empty($headers)) {
+                $req = $req->withHeaders($headers);
+            }
+            $response = $req->post($url, $payload);
+
+            if ($response->status() === 429 && $attempt < $maxAttempts) {
+                // Sleep 2.5s for rate limit recovery
+                usleep(2500000);
+                continue;
+            }
+
+            return $response;
+        }
+
+        return $response;
     }
 }

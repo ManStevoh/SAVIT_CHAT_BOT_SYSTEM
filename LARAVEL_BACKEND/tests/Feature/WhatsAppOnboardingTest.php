@@ -142,6 +142,8 @@ class WhatsAppOnboardingTest extends TestCase
             'accessToken' => 'manual-token',
             'whatsappBusinessAccountId' => 'waba-manual',
             'displayPhoneNumber' => '+254712345678',
+            'metaAppSecret' => 'company-meta-app-secret',
+            'webhookVerifyToken' => 'company-verify-token',
         ]);
 
         $response->assertOk()->assertJsonPath('success', true);
@@ -150,6 +152,44 @@ class WhatsAppOnboardingTest extends TestCase
         $this->assertNotNull($account);
         $this->assertSame('active', $account->status);
         $this->assertSame('phone-manual', $account->phone_number_id);
+        $this->assertSame('manual', $account->connected_via);
+        $this->assertSame('tech_provider', $account->meta_billing_model);
+        $this->assertTrue($account->hasMetaAppSecret());
+        $this->assertSame('company-meta-app-secret', $account->meta_app_secret);
+        $this->assertSame('company-verify-token', $account->verify_token);
+    }
+
+    public function test_manual_connect_uses_provided_registration_pin(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/phone-manual*' => Http::response([
+                'id' => 'phone-manual',
+                'display_phone_number' => '+254712345678',
+                'quality_rating' => 'GREEN',
+            ], 200),
+            'graph.facebook.com/*/waba-manual/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/phone-manual/register' => Http::response(['success' => true], 200),
+        ]);
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+            'whatsappBusinessAccountId' => 'waba-manual',
+            'registrationPin' => '654321',
+            'metaAppSecret' => 'company-meta-app-secret',
+            'webhookVerifyToken' => 'company-verify-token',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), 'phone-manual/register')) {
+                return true;
+            }
+
+            return ($request['pin'] ?? null) === '654321'
+                && ($request['messaging_product'] ?? null) === 'whatsapp';
+        });
     }
 
     public function test_manual_connect_disabled_when_admin_toggles_off(): void
@@ -311,7 +351,7 @@ class WhatsAppOnboardingTest extends TestCase
         $this->assertNull($account->credit_line_shared_at);
     }
 
-    public function test_solution_partner_manual_connect_shares_credit_line(): void
+    public function test_solution_partner_platform_mode_does_not_share_credit_on_manual_connect(): void
     {
         PlatformSetting::query()->update([
             'whatsapp_billing_model' => 'solution_partner',
@@ -327,10 +367,6 @@ class WhatsAppOnboardingTest extends TestCase
                 'display_phone_number' => '+254712345678',
             ], 200),
             'graph.facebook.com/*/waba-manual/subscribed_apps' => Http::response(['success' => true], 200),
-            'graph.facebook.com/*/credit-line-1/whatsapp_credit_sharing_and_attach*' => Http::response([
-                'allocation_config_id' => 'alloc-manual',
-                'waba_id' => 'waba-manual',
-            ], 200),
             'graph.facebook.com/*/phone-manual/register' => Http::response(['success' => true], 200),
         ]);
 
@@ -341,11 +377,17 @@ class WhatsAppOnboardingTest extends TestCase
             'phoneNumberId' => 'phone-manual',
             'accessToken' => 'manual-token',
             'whatsappBusinessAccountId' => 'waba-manual',
+            'metaAppSecret' => 'company-meta-app-secret',
+            'webhookVerifyToken' => 'company-verify-token',
         ])->assertOk();
 
         $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
-        $this->assertSame('solution_partner', $account->meta_billing_model);
-        $this->assertSame('alloc-manual', $account->credit_allocation_config_id);
+        $this->assertSame('tech_provider', $account->meta_billing_model);
+        $this->assertNull($account->credit_allocation_config_id);
+        $this->assertNull($account->credit_line_shared_at);
+        $this->assertSame('manual', $account->connected_via);
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'whatsapp_credit_sharing_and_attach'));
     }
 
     public function test_solution_partner_disconnect_revokes_credit_line(): void
@@ -435,12 +477,25 @@ class WhatsAppOnboardingTest extends TestCase
             ->assertStatus(503)
             ->assertJsonPath('code', 'platform_billing_not_ready');
 
+        // Manual/BYO must still work even when platform SP billing is incomplete.
+        Http::fake([
+            'graph.facebook.com/*/phone-1*' => Http::response([
+                'id' => 'phone-1',
+                'display_phone_number' => '+254700000001',
+            ], 200),
+            'graph.facebook.com/*/waba-1/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/phone-1/register' => Http::response(['success' => true], 200),
+        ]);
+
         $this->postJson('/api/company/whatsapp/connect', [
             'phoneNumberId' => 'phone-1',
             'accessToken' => 'token',
+            'whatsappBusinessAccountId' => 'waba-1',
+            'metaAppSecret' => 'company-meta-app-secret',
+            'webhookVerifyToken' => 'company-verify-token',
         ])
-            ->assertStatus(503)
-            ->assertJsonPath('code', 'platform_billing_not_ready');
+            ->assertOk()
+            ->assertJsonPath('success', true);
     }
 
     public function test_admin_can_save_billing_model_settings(): void
@@ -481,5 +536,119 @@ class WhatsAppOnboardingTest extends TestCase
             ->assertJsonPath('metaBillingModel', 'solution_partner')
             ->assertJsonPath('requiresMetaPaymentMethod', false)
             ->assertJsonPath('platformBillingReady', false);
+    }
+
+    public function test_manual_connect_without_waba_does_not_activate(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/phone-manual*' => Http::response([
+                'id' => 'phone-manual',
+                'display_phone_number' => '+254700000001',
+                'quality_rating' => 'GREEN',
+            ], 200),
+            'graph.facebook.com/*/me*' => Http::response(['whatsapp_business_accounts' => ['data' => []]], 200),
+        ]);
+
+        Sanctum::actingAs($this->companyUser());
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+            'metaAppSecret' => 'company-meta-app-secret',
+            'webhookVerifyToken' => 'company-verify-token',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseMissing('whatsapp_accounts', [
+            'phone_number_id' => 'phone-manual',
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_resubscribe_webhooks_repairs_active_account(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/waba-fix/subscribed_apps' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        WhatsAppAccount::create([
+            'company_id' => $user->company_id,
+            'phone_number_id' => 'phone-fix',
+            'access_token' => 'token-fix',
+            'display_phone_number' => '+254763032390',
+            'whatsapp_business_account_id' => 'waba-fix',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'connected_via' => 'embedded',
+            'webhook_subscribed_at' => null,
+            'phone_registered_at' => now(),
+            'connected_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/webhooks/subscribe')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('webhookSubscribed', true);
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertNotNull($account?->webhook_subscribed_at);
+
+        $this->getJson('/api/company/whatsapp/status')
+            ->assertOk()
+            ->assertJsonPath('connected', true)
+            ->assertJsonPath('webhookSubscribed', true);
+    }
+
+    public function test_manual_connect_stores_custom_webhook_verify_token(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/phone-manual*' => Http::response([
+                'id' => 'phone-manual',
+                'display_phone_number' => '+254700000001',
+                'quality_rating' => 'GREEN',
+            ], 200),
+            'graph.facebook.com/*/waba-manual/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/phone-manual/register' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+            'whatsappBusinessAccountId' => 'waba-manual',
+            'webhookVerifyToken' => 'my-meta-app-verify',
+            'metaAppSecret' => 'company-meta-app-secret',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->first();
+        $this->assertSame('my-meta-app-verify', $account?->verify_token);
+        $this->assertSame('company-meta-app-secret', $account?->meta_app_secret);
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), 'waba-manual/subscribed_apps')) {
+                return false;
+            }
+            $body = $request->data();
+
+            return ($body['verify_token'] ?? null) === 'my-meta-app-verify'
+                && ! empty($body['override_callback_uri']);
+        });
+    }
+
+    public function test_manual_connect_rejects_missing_verify_token_and_app_secret(): void
+    {
+        Sanctum::actingAs($this->companyUser());
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-manual',
+            'accessToken' => 'manual-token',
+            'whatsappBusinessAccountId' => 'waba-manual',
+        ])->assertUnprocessable();
     }
 }

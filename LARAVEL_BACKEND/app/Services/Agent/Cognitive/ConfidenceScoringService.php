@@ -75,7 +75,7 @@ final class ConfidenceScoringService
         return match ($action) {
             'auto_respond' => "Confidence: {$pct}% — respond directly with your best plan.",
             'clarify' => "Confidence: {$pct}% — ask one clarifying question before committing.",
-            'escalate' => "Confidence: {$pct}% — prefer transfer_to_human or ask for essential missing details.",
+            'escalate' => "Confidence: {$pct}% — try tools for any do-action first; only transfer_to_human if tools cannot fulfill or the customer wants a person. Otherwise ask one essential clarifying question.",
             default => '',
         };
     }

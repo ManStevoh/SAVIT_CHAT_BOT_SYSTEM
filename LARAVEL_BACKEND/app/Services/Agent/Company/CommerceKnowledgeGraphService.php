@@ -2,6 +2,7 @@
 
 namespace App\Services\Agent\Company;
 
+use App\Models\CompanySetting;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\Agent\Company\ProductGraphService;
@@ -19,6 +20,8 @@ final class CommerceKnowledgeGraphService
     public function traceCustomer(int $companyId, string $customerPhone, ?string $query = null, ?string $currency = 'USD'): array
     {
         $phone = preg_replace('/\D+/', '', $customerPhone) ?? $customerPhone;
+        $settings = CompanySetting::query()->where('company_id', $companyId)->first();
+        $format = static fn (float $amount): string => MoneyFormatter::formatFromSettings($amount, $settings);
 
         $orders = Order::query()
             ->where('company_id', $companyId)
@@ -55,7 +58,7 @@ final class CommerceKnowledgeGraphService
                     $related[$p->id] = [
                         'id' => $p->id,
                         'name' => $p->name,
-                        'price' => MoneyFormatter::format((float) $p->price, $currency),
+                        'price' => $format((float) $p->price),
                         'stock' => $p->stock,
                         'category' => $p->category,
                         'linked_via' => $term,
@@ -73,7 +76,7 @@ final class CommerceKnowledgeGraphService
                     'order_number' => $o->order_number,
                     'status' => $o->status,
                     'payment_status' => $o->payment_status,
-                    'total' => MoneyFormatter::format((float) $o->total, $currency),
+                    'total' => $format((float) $o->total),
                     'date' => $o->created_at?->toDateString(),
                     'products' => $o->orderProducts->map(fn ($i) => "{$i->quantity}x {$i->name}")->all(),
                 ])->all(),

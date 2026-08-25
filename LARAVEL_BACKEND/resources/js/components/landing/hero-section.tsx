@@ -68,7 +68,7 @@ export function HeroSection() {
                   EC
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-white">Essem Assistant</div>
+                  <div className="text-sm font-medium text-white">RelayIQ Assistant</div>
                   <div className="text-xs text-white/70">online</div>
                 </div>
               </div>

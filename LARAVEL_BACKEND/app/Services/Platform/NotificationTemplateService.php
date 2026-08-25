@@ -60,6 +60,27 @@ final class NotificationTemplateService
                 ($data['amount'] ?? '').' '.($data['currency'] ?? 'USD').' via '.($data['gateway'] ?? 'gateway'),
                 'success',
             ],
+            'subscription.confirmed' => [
+                'Subscription confirmed',
+                'Plan '.($data['plan'] ?? '').' active until '.($data['end_date'] ?? ''),
+                'success',
+            ],
+            'subscription.trial_started' => [
+                'Free trial started',
+                'Your '.($data['plan'] ?? 'plan').' trial is active for '.($data['days'] ?? '14').' days (ends '.($data['end_date'] ?? '').').',
+                'success',
+            ],
+            'subscription.expiring' => [
+                'Subscription expiring soon',
+                'Your '.($data['plan'] ?? 'plan').' subscription ends on '.($data['end_date'] ?? '').
+                    (isset($data['days_left']) ? ' ('.$data['days_left'].' days left)' : ''),
+                'warning',
+            ],
+            'subscription.expired' => [
+                'Subscription expired',
+                'Your '.($data['plan'] ?? 'plan').' subscription ended on '.($data['end_date'] ?? '').'. Renew to restore access.',
+                'warning',
+            ],
             'alert.low_stock' => [
                 'Low stock alert',
                 (string) ($data['summary'] ?? 'Review inventory'),

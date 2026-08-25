@@ -54,10 +54,7 @@ class WhatsAppController extends Controller
 
     public function connect(Request $request): JsonResponse
     {
-        if ($billingBlock = $this->billingNotReadyResponse()) {
-            return $billingBlock;
-        }
-
+        // Manual/BYO connect must not depend on platform Solution Partner billing readiness.
         if (! WhatsAppPlatformConfig::isManualConnectEnabled()) {
             return response()->json([
                 'success' => false,
@@ -70,6 +67,9 @@ class WhatsAppController extends Controller
             'accessToken' => 'required|string|max:2000',
             'displayPhoneNumber' => 'nullable|string|max:30',
             'whatsappBusinessAccountId' => 'nullable|string|max:100',
+            'registrationPin' => 'nullable|digits:6',
+            'webhookVerifyToken' => 'required|string|max:255',
+            'metaAppSecret' => 'required|string|max:512',
         ]);
 
         $user = $request->user();
@@ -84,6 +84,9 @@ class WhatsAppController extends Controller
             $validated['accessToken'],
             $validated['whatsappBusinessAccountId'] ?? null,
             $validated['displayPhoneNumber'] ?? null,
+            $validated['registrationPin'] ?? null,
+            $validated['webhookVerifyToken'],
+            $validated['metaAppSecret'],
         );
 
         $status = $result['success'] ? 200 : 422;
@@ -182,27 +185,81 @@ class WhatsAppController extends Controller
             ->where('status', 'active')
             ->first();
 
+        $accountBillingModel = $account?->meta_billing_model
+            ? WhatsAppBillingModel::normalize((string) $account->meta_billing_model)
+            : WhatsAppPlatformConfig::billingModel();
+        $isManual = $account?->connected_via === 'manual';
+        // Manual/BYO accounts pay Meta directly; platform SP readiness only matters for Embedded Signup.
+        $platformBillingReady = $isManual
+            ? true
+            : (WhatsAppPlatformConfig::isSolutionPartnerBilling()
+                ? WhatsAppPlatformConfig::isSolutionPartnerBillingReady()
+                : true);
+
         return response()->json([
             'connected' => (bool) $account,
             'phoneNumberId' => $account?->phone_number_id,
             'displayPhoneNumber' => $account?->display_phone_number,
+            'whatsappBusinessAccountId' => $account?->whatsapp_business_account_id,
             'onboardingStatus' => $account?->onboarding_status,
             'displayNameStatus' => $account?->display_name_status,
             'qualityRating' => $account?->quality_rating,
             'webhookSubscribed' => $account?->webhook_subscribed_at !== null,
             'phoneRegistered' => $account?->phone_registered_at !== null,
             'creditLineShared' => $account?->credit_line_shared_at !== null,
+            'hasMetaAppSecret' => $account ? $account->hasMetaAppSecret() : false,
+            'hasWebhookVerifyToken' => $account ? trim((string) ($account->verify_token ?? '')) !== '' : false,
+            'connectedVia' => $account?->connected_via,
             'onboardingError' => $account?->onboarding_error,
             'embeddedSignupEnabled' => WhatsAppPlatformConfig::isEmbeddedSignupEnabled(),
             'manualConnectEnabled' => WhatsAppPlatformConfig::isManualConnectEnabled(),
             'webhookUrl' => WhatsAppPlatformConfig::webhookCallbackUrl(),
-            'metaBillingModel' => WhatsAppPlatformConfig::billingModel(),
-            'metaBillingModelLabel' => WhatsAppBillingModel::label(WhatsAppPlatformConfig::billingModel()),
-            'requiresMetaPaymentMethod' => ! WhatsAppPlatformConfig::isSolutionPartnerBilling(),
-            'platformBillingReady' => WhatsAppPlatformConfig::isSolutionPartnerBilling()
-                ? WhatsAppPlatformConfig::isSolutionPartnerBillingReady()
-                : true,
+            'metaBillingModel' => $accountBillingModel,
+            'metaBillingModelLabel' => WhatsAppBillingModel::label($accountBillingModel),
+            'requiresMetaPaymentMethod' => $accountBillingModel !== WhatsAppBillingModel::SOLUTION_PARTNER,
+            'platformBillingReady' => $platformBillingReady,
         ]);
+    }
+
+    public function resubscribeWebhooks(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $companyId = $user->company_id;
+        if (! $companyId) {
+            return response()->json(['success' => false, 'message' => 'No company.'], 403);
+        }
+
+        $account = WhatsAppAccount::where('company_id', $companyId)
+            ->where('status', 'active')
+            ->first();
+
+        if (! $account) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active WhatsApp connection found.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'metaAppSecret' => 'nullable|string|max:512',
+            'webhookVerifyToken' => 'nullable|string|max:255',
+        ]);
+
+        $result = $this->onboarding->resubscribeWebhooks(
+            $account,
+            $validated['metaAppSecret'] ?? null,
+            $validated['webhookVerifyToken'] ?? null,
+        );
+        $status = $result['success'] ? 200 : 422;
+        $fresh = ($result['account'] ?? $account)->fresh();
+
+        return response()->json([
+            'success' => $result['success'],
+            'message' => $result['message'] ?? null,
+            'webhookSubscribed' => $fresh?->webhook_subscribed_at !== null,
+            'hasMetaAppSecret' => $fresh ? $fresh->hasMetaAppSecret() : false,
+            'hasWebhookVerifyToken' => $fresh ? trim((string) ($fresh->verify_token ?? '')) !== '' : false,
+        ], $status);
     }
 
     public function numbers(Request $request): JsonResponse

@@ -2,13 +2,16 @@
 
 namespace App\Services\AI\Drivers;
 
+use App\Services\AI\Drivers\Contracts\SupportsToolCalling;
 use App\Services\AI\EmbedResult;
+use App\Services\AI\GeminiToolPayloadConverter;
+use App\Services\AI\OpenAiChatResult;
 use App\Services\AI\ResolvedAiModel;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
-class GoogleGeminiDriver extends AbstractAiDriver
+class GoogleGeminiDriver extends AbstractAiDriver implements SupportsToolCalling
 {
     public function chatCompletion(
         ResolvedAiModel $resolved,
@@ -81,6 +84,78 @@ class GoogleGeminiDriver extends AbstractAiDriver
             (int) ($usage['candidatesTokenCount'] ?? 0),
             $this->elapsed($started),
             $response->status(),
+        );
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $messages
+     * @param  array<int, array<string, mixed>>  $tools
+     */
+    public function chatCompletionWithTools(
+        ResolvedAiModel $resolved,
+        array $messages,
+        array $tools,
+        int $maxTokens,
+        ?float $temperature,
+        int $timeoutSeconds,
+    ): OpenAiChatResult {
+        $base = rtrim($resolved->apiBaseUrl ?: $resolved->provider->api_base_url ?: 'https://generativelanguage.googleapis.com/v1beta', '/');
+        $model = $resolved->model->model_key;
+        $started = microtime(true);
+        $apiKey = $resolved->apiKey;
+        $converter = new GeminiToolPayloadConverter;
+        $converted = $converter->contents($messages);
+
+        $payload = [
+            'contents' => $converted['contents'],
+            'tools' => [$converter->toolConfig($tools)],
+        ];
+        if ($converted['system'] !== '') {
+            $payload['systemInstruction'] = ['parts' => [['text' => $converted['system']]]];
+        }
+        $generationConfig = ['maxOutputTokens' => $maxTokens];
+        if ($temperature !== null) {
+            $generationConfig['temperature'] = $temperature;
+        }
+        $payload['generationConfig'] = $generationConfig;
+
+        $url = "{$base}/models/{$model}:generateContent?key=".urlencode($apiKey);
+
+        try {
+            $response = $this->postJson($url, $payload, $timeoutSeconds);
+        } catch (\Throwable $e) {
+            return $this->failedResult($resolved, $this->elapsed($started), null, $e->getMessage());
+        }
+
+        if ($response === null || ! $response->successful()) {
+            return $this->failedResult(
+                $resolved,
+                $this->elapsed($started),
+                $response?->status(),
+                $response ? $this->errorMessage($response) : 'Request failed',
+            );
+        }
+
+        $data = $response->json();
+        $parts = is_array($data['candidates'][0]['content']['parts'] ?? null)
+            ? $data['candidates'][0]['content']['parts']
+            : [];
+        $parsed = $converter->parseParts($parts);
+        $usage = $data['usageMetadata'] ?? [];
+
+        return new OpenAiChatResult(
+            content: $parsed['content'],
+            success: true,
+            model: $resolved->model->model_key,
+            promptTokens: (int) ($usage['promptTokenCount'] ?? 0),
+            completionTokens: (int) ($usage['candidatesTokenCount'] ?? 0),
+            totalTokens: (int) ($usage['totalTokenCount'] ?? 0),
+            latencyMs: $this->elapsed($started),
+            httpStatus: $response->status(),
+            providerId: $resolved->provider->id,
+            modelId: $resolved->model->id,
+            toolCalls: $parsed['toolCalls'],
+            finishReason: (string) ($data['candidates'][0]['finishReason'] ?? ''),
         );
     }
 

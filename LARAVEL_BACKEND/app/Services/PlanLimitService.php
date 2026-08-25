@@ -21,12 +21,117 @@ final class PlanLimitService
 
     public static function getMessageLimitForPlan(string $plan): int
     {
-        return (int) (self::getLimitsForPlan($plan)['messages'] ?? 5000);
+        $limit = self::getLimitsForPlan($plan)['messages'] ?? 5000;
+
+        // null = unlimited; callers that need a numeric UI value use a large sentinel.
+        return $limit === null ? PHP_INT_MAX : (int) $limit;
+    }
+
+    public static function hasUnlimitedMessages(Company $company): bool
+    {
+        return self::entitlements()->hasUnlimitedMessages($company);
     }
 
     public static function getTeamLimitForPlan(string $plan): int
     {
-        return (int) (self::getLimitsForPlan($plan)['team'] ?? 3);
+        return (int) (self::getLimitsForPlan($plan)['team'] ?? 1);
+    }
+
+    public static function getMaxProductsForPlan(string $plan): ?int
+    {
+        $limit = self::getLimitsForPlan($plan)['max_products'] ?? 100;
+
+        return $limit === null ? null : (int) $limit;
+    }
+
+    public static function getMaxProducts(Company $company): ?int
+    {
+        return self::entitlements()->maxProducts($company);
+    }
+
+    public static function canAddProduct(Company $company, int $count = 1): bool
+    {
+        return self::entitlements()->canAddProduct($company, $count);
+    }
+
+    public static function getCrmLevel(Company $company): string
+    {
+        return self::entitlements()->crmLevel($company);
+    }
+
+    public static function getAnalyticsLevel(Company $company): string
+    {
+        return self::entitlements()->analyticsLevel($company);
+    }
+
+    public static function isBrandingRequired(Company $company): bool
+    {
+        return self::entitlements()->requiresBranding($company);
+    }
+
+    public static function getWhatsAppNumberLimitForPlan(string $plan): int
+    {
+        return max(1, (int) (self::getLimitsForPlan($plan)['whatsapp_numbers'] ?? 1));
+    }
+
+    public static function planHasApiAccess(string $plan): bool
+    {
+        return (bool) (self::getLimitsForPlan($plan)['api_access'] ?? false);
+    }
+
+    public static function planHasAnalytics(string $plan): bool
+    {
+        return (bool) (self::getLimitsForPlan($plan)['analytics'] ?? false);
+    }
+
+    public static function companyHasApiAccess(Company $company): bool
+    {
+        return self::entitlements()->hasApiAccess($company);
+    }
+
+    public static function companyHasAnalytics(Company $company): bool
+    {
+        return self::entitlements()->hasAnalyticsAccess($company);
+    }
+
+    public static function companyAllowsProductType(Company $company, string $type): bool
+    {
+        return self::entitlements()->allowsProductType($company, $type);
+    }
+
+    public static function companyAllowsBookings(Company $company): bool
+    {
+        return self::entitlements()->allowsBookings($company);
+    }
+
+    public static function companyAllowsStorefront(Company $company): bool
+    {
+        return self::entitlements()->allowsStorefront($company);
+    }
+
+    public static function companyAllowsLinkInBio(Company $company): bool
+    {
+        return self::entitlements()->allowsLinkInBio($company);
+    }
+
+    public static function companyAllowsDineIn(Company $company): bool
+    {
+        return self::entitlements()->allowsDineIn($company);
+    }
+
+    public static function companyAllowsWhatsappCampaigns(Company $company): bool
+    {
+        return self::entitlements()->allowsWhatsappCampaigns($company);
+    }
+
+    public static function getMaxBookingsPerMonth(Company $company): ?int
+    {
+        return self::entitlements()->maxBookingsPerMonth($company);
+    }
+
+    public static function canConnectWhatsApp(Company $company, ?string $phoneNumberId = null): bool
+    {
+        return self::entitlements()->canConnectWhatsAppNumber($company, $phoneNumberId);
     }
 
     public static function getAiCostLimitForPlan(string $plan): ?float
@@ -131,8 +236,12 @@ final class PlanLimitService
 
     public static function isWithinMessageLimit(Company $company): bool
     {
+        if (self::entitlements()->hasUnlimitedMessages($company)) {
+            return true;
+        }
+
         $used = self::getMessagesUsedInCurrentPeriod($company);
-        $limit = self::entitlements()->messageLimit($company);
+        $limit = self::entitlements()->messageLimit($company) ?? 5000;
 
         return $used < $limit;
     }

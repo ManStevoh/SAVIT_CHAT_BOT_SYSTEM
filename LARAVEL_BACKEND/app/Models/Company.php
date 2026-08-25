@@ -10,12 +10,23 @@ class Company extends Model
 {
     protected $fillable = [
         'name',
+        'store_slug',
+        'storefront_enabled',
+        'link_in_bio_enabled',
+        'link_in_bio_headline',
+        'link_in_bio_bio',
+        'link_in_bio_links',
+        'custom_domain',
+        'custom_domain_verified_at',
+        'storefront_theme',
+        'storefront_sections',
         'email',
         'phone',
         'address',
         'logo',
         'plan',
         'status',
+        'setup_checklist_dismissed_at',
         'growth_pilot_at',
         'first_attributed_sale_at',
         'growth_demo_mode',
@@ -25,6 +36,13 @@ class Company extends Model
     ];
 
     protected $casts = [
+        'storefront_enabled' => 'boolean',
+        'link_in_bio_enabled' => 'boolean',
+        'link_in_bio_links' => 'array',
+        'storefront_theme' => 'array',
+        'storefront_sections' => 'array',
+        'custom_domain_verified_at' => 'datetime',
+        'setup_checklist_dismissed_at' => 'datetime',
         'growth_pilot_at' => 'datetime',
         'first_attributed_sale_at' => 'datetime',
         'growth_demo_mode' => 'boolean',
@@ -46,9 +64,24 @@ class Company extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function taxRates(): HasMany
+    {
+        return $this->hasMany(TaxRate::class);
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function deliveryZones(): HasMany
+    {
+        return $this->hasMany(DeliveryZone::class);
+    }
+
+    public function dineInTables(): HasMany
+    {
+        return $this->hasMany(DineInTable::class);
     }
 
     public function faqs(): HasMany

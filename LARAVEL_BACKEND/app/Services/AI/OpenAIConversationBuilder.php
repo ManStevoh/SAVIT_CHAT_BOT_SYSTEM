@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Services\Conversation\CustomerMessageClassifier;
 use App\Services\Conversation\ConversationGreetingService;
 use App\Services\ConversationLearningService;
+use App\Support\MessageSanitizer;
 
 /**
  * Builds the full messages array for OpenAI Chat Completions API.
@@ -109,9 +110,7 @@ class OpenAIConversationBuilder
 
     private function sanitizeUserMessage(string $message): string
     {
-        $clean = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $message) ?? '';
-
-        return mb_substr(trim($clean), 0, 4000);
+        return MessageSanitizer::sanitize($message);
     }
 
     private function resolveReplyLanguage(Company $company, ?int $chatId): ?string

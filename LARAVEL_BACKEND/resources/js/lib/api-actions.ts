@@ -14,17 +14,51 @@ import type {
   Subscription,
   GrowthPost,
 } from './mock-data'
-import type { BusinessDnaSettings } from './api-hooks'
-import type { IntelligenceReasoningResult } from './api-hooks'
+import type { BusinessDnaSettings, IntelligenceReasoningResult } from './api-hooks'
 import { mockSubscriptions } from './mock-data'
-import { useMockApi, apiRequest, apiUrl } from './api-client'
+import { useMockApi, apiRequest, apiUrl, getAuthToken } from './api-client'
 
-export { apiRequest, apiUrl, resolveBackendMediaUrl } from './api-client'
+export type { IntelligenceReasoningResult } from './api-hooks'
+export { apiRequest, apiUrl, getAuthToken, resolveBackendMediaUrl } from './api-client'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+/**
+ * Append a value to FormData in a Laravel-friendly way.
+ * Booleans must be "1"/"0" (not "true"/"false"); nested objects use bracket keys.
+ */
+function appendToFormData(form: FormData, key: string, value: unknown): void {
+  if (value === undefined || value === null) return
+  if (value instanceof File) {
+    form.append(key, value)
+    return
+  }
+  if (typeof value === 'boolean') {
+    form.append(key, value ? '1' : '0')
+    return
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => appendToFormData(form, `${key}[${index}]`, item))
+    return
+  }
+  if (typeof value === 'object') {
+    Object.entries(value as Record<string, unknown>).forEach(([childKey, childValue]) => {
+      appendToFormData(form, `${key}[${childKey}]`, childValue)
+    })
+    return
+  }
+  form.append(key, String(value))
+}
+
 function handleApiError(e: unknown): { success: false; message: string; code?: string } {
-  const err = e as Error & { code?: string }
+  const err = e as Error & { code?: string; responseData?: { message?: string; errors?: Record<string, string[]> } }
+  const data = err?.responseData
+  if (data?.errors && typeof data.errors === 'object') {
+    const first = Object.values(data.errors).flat().find((m) => typeof m === 'string' && m.trim() !== '')
+    if (first) {
+      return { success: false, message: first, code: err?.code }
+    }
+  }
   return {
     success: false,
     message: err instanceof Error ? err.message : 'Request failed',
@@ -50,6 +84,11 @@ export interface RegisterData {
   password: string
   confirmPassword: string
   acceptTerms: boolean
+  marketingConsent?: boolean
+  planId?: string
+  /** trial (default) | subscribe — subscribe forces post-login payment for the selected plan */
+  intent?: "trial" | "subscribe"
+  recaptchaToken?: string
 }
 
 export interface ForgotPasswordData {
@@ -106,7 +145,18 @@ export async function login(credentials: LoginCredentials): Promise<{ success: b
  * Register new company
  * Laravel: POST /api/auth/register
  */
-export async function register(data: RegisterData): Promise<{ success: boolean; message?: string }> {
+export async function register(data: RegisterData): Promise<{
+  success: boolean
+  message?: string
+  requireEmailVerification?: boolean
+  trialStarted?: boolean
+  trialDays?: number | null
+  trialPlan?: string | null
+  trialPlanName?: string | null
+  requiresPayment?: boolean
+  selectedPlanId?: string | null
+  postLoginPath?: string | null
+}> {
   if (useMockApi()) {
     await delay(2000)
     if (data.password !== data.confirmPassword) {
@@ -115,10 +165,15 @@ export async function register(data: RegisterData): Promise<{ success: boolean; 
     if (!data.acceptTerms) {
       return { success: false, message: 'You must accept the terms and conditions' }
     }
-    return { success: true, message: 'Registration successful! Please check your email to verify your account.' }
+    return {
+      success: true,
+      message: 'Registration successful! Please check your email to verify your account.',
+      trialStarted: true,
+      trialDays: 14,
+      postLoginPath: '/dashboard?trial_started=1',
+    }
   }
   try {
-    // Laravel's 'confirmed' rule expects password_confirmation; backend also accepts confirmPassword
     const body = {
       companyName: data.companyName,
       name: data.name,
@@ -128,8 +183,11 @@ export async function register(data: RegisterData): Promise<{ success: boolean; 
       password_confirmation: data.confirmPassword,
       confirmPassword: data.confirmPassword,
       acceptTerms: data.acceptTerms,
+      marketingConsent: !!data.marketingConsent,
+      planId: data.planId || undefined,
+      intent: data.intent || undefined,
     }
-    return await apiRequest<{ success: boolean; message?: string }>('/api/auth/register', {
+    return await apiRequest('/api/auth/register', {
       method: 'POST',
       body,
     })
@@ -311,11 +369,13 @@ export interface SendMessageData {
   chatId: string
   content?: string
   attachment?: File
+  replyToMessageId?: string
 }
 
 export interface CreateOrderFromChatData {
   chatId: string
   items: Array<{
+    productId?: number | string
     name: string
     quantity: number
     price: number
@@ -344,14 +404,20 @@ export async function sendMessage(data: SendMessageData): Promise<{
       return { success: false, message: 'Message text or attachment is required' }
     }
 
-    const body: { content: string } | FormData = hasAttachment
+    const body: { content: string; replyToMessageId?: string } | FormData = hasAttachment
       ? (() => {
-          const formData = new FormData()
-          formData.append('content', trimmedContent)
-          formData.append('attachment', data.attachment as File)
-          return formData
-        })()
-      : { content: trimmedContent }
+        const formData = new FormData()
+        formData.append('content', trimmedContent)
+        formData.append('attachment', data.attachment as File)
+        if (data.replyToMessageId) {
+          formData.append('replyToMessageId', data.replyToMessageId)
+        }
+        return formData
+      })()
+      : {
+        content: trimmedContent,
+        ...(data.replyToMessageId ? { replyToMessageId: data.replyToMessageId } : {}),
+      }
 
     return await apiRequest<{
       success: boolean
@@ -371,18 +437,22 @@ export async function sendMessage(data: SendMessageData): Promise<{
  * Hand back chat to bot (clear agent_handling_at so auto-reply resumes).
  * Laravel: POST /api/company/chats/:chatId/hand-back
  */
-export async function handBackToBot(chatId: string): Promise<{ success: boolean; message?: string }> {
+export async function handBackToBot(
+  chatId: string
+): Promise<{ success: boolean; message?: string; reprocessed?: boolean; replied?: boolean }> {
   if (useMockApi()) {
     await delay(300)
-    return { success: true, message: 'Chat handed back to bot.' }
+    return { success: true, message: 'Chat handed back to bot.', reprocessed: true, replied: true }
   }
   try {
-    return await apiRequest<{ success: boolean; message?: string }>(
-      `/api/company/chats/${chatId}/hand-back`,
-      { method: 'POST' }
-    )
+    return await apiRequest<{
+      success: boolean
+      message?: string
+      reprocessed?: boolean
+      replied?: boolean
+    }>(`/api/company/chats/${chatId}/hand-back`, { method: 'POST' })
   } catch (e) {
-    return handleApiError(e)
+    return { ...handleApiError(e), success: false }
   }
 }
 
@@ -425,15 +495,25 @@ export async function markAllNotificationsRead(): Promise<{ success: boolean; me
 export async function updateOrderStatus(
   orderId: string,
   status: Order['status'],
-  paymentStatus?: 'pending' | 'paid' | 'refunded'
+  paymentStatus?: 'pending' | 'paid' | 'refunded',
+  shippingData?: { courierName?: string; trackingNumber?: string; deliveryAddress?: string }
 ): Promise<{ success: boolean; message?: string; whatsappSent?: boolean; whatsappError?: string | null }> {
   if (useMockApi()) {
     await delay(800)
     return { success: true, message: 'Order updated successfully', whatsappSent: true, whatsappError: null }
   }
   try {
-    const body: { status: Order['status']; paymentStatus?: string } = { status }
+    const body: {
+      status: Order['status']
+      paymentStatus?: string
+      courierName?: string
+      trackingNumber?: string
+      deliveryAddress?: string
+    } = { status }
     if (paymentStatus !== undefined) body.paymentStatus = paymentStatus
+    if (shippingData?.courierName !== undefined) body.courierName = shippingData.courierName
+    if (shippingData?.trackingNumber !== undefined) body.trackingNumber = shippingData.trackingNumber
+    if (shippingData?.deliveryAddress !== undefined) body.deliveryAddress = shippingData.deliveryAddress
     return await apiRequest<{ success: boolean; message?: string; whatsappSent?: boolean; whatsappError?: string | null }>(`/api/company/orders/${orderId}`, {
       method: 'PATCH',
       body,
@@ -460,6 +540,58 @@ export async function updateOrderPaymentStatus(
       method: 'PATCH',
       body: { paymentStatus },
     })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Preview order money (subtotal / tax / total) without creating an order.
+ * Laravel: POST /api/company/orders/preview-totals
+ */
+export async function previewOrderTotals(data: {
+  items: Array<{
+    productId?: number | string | null
+    price: number
+    quantity: number
+    taxRateId?: number | string | null
+  }>
+}): Promise<{
+  success: boolean
+  subtotal?: number
+  taxTotal?: number
+  total?: number
+  taxBreakdown?: Array<{
+    name: string
+    code?: string | null
+    rate: number
+    inclusive: boolean
+    amount: number
+  }>
+  message?: string
+}> {
+  if (useMockApi()) {
+    await delay(100)
+    const catalog = data.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+    return { success: true, subtotal: catalog, taxTotal: 0, total: catalog, taxBreakdown: [] }
+  }
+  try {
+    const res = await apiRequest<{
+      subtotal: number
+      taxTotal: number
+      total: number
+      taxBreakdown: Array<{
+        name: string
+        code?: string | null
+        rate: number
+        inclusive: boolean
+        amount: number
+      }>
+    }>('/api/company/orders/preview-totals', {
+      method: 'POST',
+      body: data,
+    })
+    return { success: true, ...res }
   } catch (e) {
     return handleApiError(e)
   }
@@ -507,10 +639,31 @@ export async function createOrderFromChat(
 export interface CreateProductData {
   name: string
   description: string
+  metaTitle?: string | null
+  metaDescription?: string | null
+  slug?: string | null
   price: number
+  compareAtPrice?: number | null
+  taxRateId?: string | null
   category: string
+  productType?: 'physical' | 'digital' | 'service'
+  fulfillmentType?: 'shipping' | 'download' | 'link' | 'booking' | 'manual'
+  trackInventory?: boolean
+  requiresDeliveryAddress?: boolean
+  accessUrl?: string
+  serviceBookingUrl?: string
+  fulfillmentInstructions?: string
+  licenseKeyMode?: 'none' | 'auto' | 'pool'
+  licenseKeyPrefix?: string
+  accessExpiresDays?: number | null
+  maxDownloads?: number | null
+  bookable?: boolean
+  bookingDurationMinutes?: number | null
+  licenseKeys?: string
+  clearDigitalFile?: boolean
   stock: number
   image?: File
+  digitalFile?: File
 }
 
 /**
@@ -536,14 +689,36 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
     }
   }
   try {
-    if (data.image) {
+    if (data.image || data.digitalFile) {
       const formData = new FormData()
       formData.append('name', data.name)
       formData.append('description', data.description)
+      if (data.metaTitle != null) formData.append('metaTitle', data.metaTitle)
+      if (data.metaDescription != null) formData.append('metaDescription', data.metaDescription)
+      if (data.slug != null) formData.append('slug', data.slug)
       formData.append('price', String(data.price))
+      if (data.compareAtPrice != null && data.compareAtPrice !== undefined && !Number.isNaN(data.compareAtPrice)) {
+        formData.append('compareAtPrice', String(data.compareAtPrice))
+      }
+      if (data.taxRateId) formData.append('taxRateId', data.taxRateId)
       formData.append('category', data.category)
+      if (data.productType) formData.append('productType', data.productType)
+      if (data.fulfillmentType) formData.append('fulfillmentType', data.fulfillmentType)
+      if (data.trackInventory !== undefined) formData.append('trackInventory', data.trackInventory ? '1' : '0')
+      if (data.requiresDeliveryAddress !== undefined) formData.append('requiresDeliveryAddress', data.requiresDeliveryAddress ? '1' : '0')
+      if (data.accessUrl) formData.append('accessUrl', data.accessUrl)
+      if (data.serviceBookingUrl) formData.append('serviceBookingUrl', data.serviceBookingUrl)
+      if (data.fulfillmentInstructions) formData.append('fulfillmentInstructions', data.fulfillmentInstructions)
+      if (data.licenseKeyMode) formData.append('licenseKeyMode', data.licenseKeyMode)
+      if (data.licenseKeyPrefix) formData.append('licenseKeyPrefix', data.licenseKeyPrefix)
+      if (data.accessExpiresDays != null) formData.append('accessExpiresDays', String(data.accessExpiresDays))
+      if (data.maxDownloads != null) formData.append('maxDownloads', String(data.maxDownloads))
+      if (data.bookable !== undefined) formData.append('bookable', data.bookable ? '1' : '0')
+      if (data.bookingDurationMinutes != null) formData.append('bookingDurationMinutes', String(data.bookingDurationMinutes))
+      if (data.licenseKeys) formData.append('licenseKeys', data.licenseKeys)
       formData.append('stock', String(data.stock))
-      formData.append('image', data.image)
+      if (data.image) formData.append('image', data.image)
+      if (data.digitalFile) formData.append('digitalFile', data.digitalFile)
       return await apiRequest<{ success: boolean; product?: Product; message?: string }>('/api/company/products', {
         method: 'POST',
         body: formData,
@@ -551,7 +726,32 @@ export async function createProduct(data: CreateProductData): Promise<{ success:
     }
     return await apiRequest<{ success: boolean; product?: Product; message?: string }>('/api/company/products', {
       method: 'POST',
-      body: { name: data.name, description: data.description, price: data.price, category: data.category, stock: data.stock },
+      body: {
+        name: data.name,
+        description: data.description,
+        metaTitle: data.metaTitle ?? null,
+        metaDescription: data.metaDescription ?? null,
+        slug: data.slug ?? null,
+        price: data.price,
+        compareAtPrice: data.compareAtPrice ?? null,
+        taxRateId: data.taxRateId ?? null,
+        category: data.category,
+        productType: data.productType,
+        fulfillmentType: data.fulfillmentType,
+        trackInventory: data.trackInventory,
+        requiresDeliveryAddress: data.requiresDeliveryAddress,
+        accessUrl: data.accessUrl,
+        serviceBookingUrl: data.serviceBookingUrl,
+        fulfillmentInstructions: data.fulfillmentInstructions,
+        licenseKeyMode: data.licenseKeyMode,
+        licenseKeyPrefix: data.licenseKeyPrefix,
+        accessExpiresDays: data.accessExpiresDays,
+        maxDownloads: data.maxDownloads,
+        bookable: data.bookable,
+        bookingDurationMinutes: data.bookingDurationMinutes,
+        licenseKeys: data.licenseKeys,
+        stock: data.stock,
+      },
     })
   } catch (e) {
     return handleApiError(e)
@@ -571,15 +771,16 @@ export async function updateProduct(
     return { success: true, message: 'Product updated successfully' }
   }
   try {
-    if (data.image) {
+    if (data.image || data.digitalFile || data.clearDigitalFile) {
       const formData = new FormData()
       Object.entries(data).forEach(([key, value]) => {
-        if (value === undefined || value === null) return
-        if (key === 'image' && value instanceof File) {
-          formData.append('image', value)
-        } else {
-          formData.append(key, String(value))
+        if (value === undefined) return
+        if (value === null || value === '') {
+          // Explicit null/empty clears nullable fields (e.g. accessExpiresDays, accessUrl).
+          formData.append(key, '')
+          return
         }
+        appendToFormData(formData, key, value)
       })
       // Multipart file uploads must use POST: PHP does not populate uploaded files for PUT.
       return await apiRequest<{ success: boolean; message?: string; product?: Product }>(
@@ -820,6 +1021,192 @@ export async function createFAQ(data: CreateFAQData): Promise<{ success: boolean
   }
 }
 
+export interface CreateTaxRateData {
+  name: string
+  code?: string | null
+  rate: number
+  isInclusive?: boolean
+  isDefault?: boolean
+  isActive?: boolean
+}
+
+export async function createTaxRate(
+  data: CreateTaxRateData
+): Promise<{ success: boolean; taxRate?: import('./api-hooks').TaxRate; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return {
+      success: true,
+      taxRate: {
+        id: Math.random().toString(36).slice(2),
+        name: data.name,
+        code: data.code ?? null,
+        rate: data.rate,
+        isInclusive: Boolean(data.isInclusive),
+        isDefault: Boolean(data.isDefault),
+        isActive: data.isActive !== false,
+      },
+      message: 'Tax rate created',
+    }
+  }
+  try {
+    return await apiRequest('/api/company/tax-rates', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateTaxRate(
+  taxRateId: string,
+  data: Partial<CreateTaxRateData>
+): Promise<{ success: boolean; taxRate?: import('./api-hooks').TaxRate; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, message: 'Tax rate updated' }
+  }
+  try {
+    return await apiRequest(`/api/company/tax-rates/${taxRateId}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteTaxRate(taxRateId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, message: 'Tax rate deleted' }
+  }
+  try {
+    return await apiRequest(`/api/company/tax-rates/${taxRateId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface CreateDineInTableData {
+  name: string
+  code?: string | null
+  seats?: number | null
+  isActive?: boolean
+}
+
+export async function createDineInTable(
+  data: CreateDineInTableData
+): Promise<{ success: boolean; table?: import('./api-hooks').DineInTable; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return {
+      success: true,
+      table: {
+        id: Math.random().toString(36).slice(2),
+        name: data.name,
+        code: data.code ?? null,
+        seats: data.seats ?? null,
+        isActive: data.isActive !== false,
+        qrToken: Math.random().toString(36).slice(2),
+        orderUrl: '#',
+      },
+      message: 'Table created',
+    }
+  }
+  try {
+    return await apiRequest('/api/company/dine-in-tables', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateDineInTable(
+  tableId: string,
+  data: Partial<CreateDineInTableData>
+): Promise<{ success: boolean; table?: import('./api-hooks').DineInTable; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, message: 'Table updated' }
+  }
+  try {
+    return await apiRequest(`/api/company/dine-in-tables/${tableId}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteDineInTable(tableId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, message: 'Table deleted' }
+  }
+  try {
+    return await apiRequest(`/api/company/dine-in-tables/${tableId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface DeliveryZoneFormData {
+  name: string
+  fee: number
+  minOrderAmount?: number | null
+  keywords?: string[]
+  isActive?: boolean
+  sortOrder?: number
+}
+
+export async function createDeliveryZone(
+  data: DeliveryZoneFormData
+): Promise<{ success: boolean; zone?: import('./api-hooks').DeliveryZone; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return {
+      success: true,
+      zone: {
+        id: Math.random().toString(36).slice(2),
+        name: data.name,
+        fee: data.fee,
+        minOrderAmount: data.minOrderAmount ?? null,
+        keywords: data.keywords ?? [],
+        isActive: data.isActive !== false,
+        sortOrder: data.sortOrder ?? 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      message: 'Delivery zone created',
+    }
+  }
+  try {
+    return await apiRequest('/api/company/delivery-zones', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateDeliveryZone(
+  zoneId: string,
+  data: Partial<DeliveryZoneFormData>
+): Promise<{ success: boolean; zone?: import('./api-hooks').DeliveryZone; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, message: 'Delivery zone updated' }
+  }
+  try {
+    return await apiRequest(`/api/company/delivery-zones/${zoneId}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteDeliveryZone(zoneId: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, message: 'Delivery zone deleted' }
+  }
+  try {
+    return await apiRequest(`/api/company/delivery-zones/${zoneId}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 /**
  * Update FAQ
  * Laravel: PUT /api/company/faqs/:faqId
@@ -883,17 +1270,23 @@ export interface UpdateSettingsData {
   agentCommerceEnabled?: boolean
   agentProactiveEnabled?: boolean
   agentVoiceReplyEnabled?: boolean
+  agentVoiceReplyMode?: 'voice_only' | 'dual_text_and_voice' | 'text_only'
+  agentVoiceId?: string
   agentMorningBriefWhatsappEnabled?: boolean
   ownerWhatsappPhone?: string | null
   agentBusinessGoals?: string[]
   businessDna?: BusinessDnaSettings | null
   digitalTwin?: Record<string, string> | null
   agentCouncilEnabled?: boolean
+  devModeEnabled?: boolean
   autoReplyEnabled?: boolean
   notificationsEnabled?: boolean
   ordersAcceptMpesa?: boolean
   ordersAcceptStripe?: boolean
   ordersAcceptPaystack?: boolean
+  ordersAcceptPesapal?: boolean
+  ordersAcceptFlutterwave?: boolean
+  ordersAcceptCod?: boolean
   attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
   orderPaymentManualInstructions?: string | null
@@ -908,10 +1301,54 @@ export interface UpdateSettingsData {
   orderPaymentStripeConfig?: {
     secret?: string
     currency?: string
+    env?: 'sandbox' | 'production'
+  } | null
+  orderPaymentPaystackConfig?: {
+    secret_key?: string
+    public_key?: string
+    currency?: string
+    env?: 'sandbox' | 'production'
+  } | null
+  orderPaymentPesapalConfig?: {
+    consumer_key?: string
+    consumer_secret?: string
+    currency?: string
+    env?: 'sandbox' | 'production'
+  } | null
+  orderPaymentFlutterwaveConfig?: {
+    secret_key?: string
+    public_key?: string
+    secret_hash?: string
+    currency?: string
+    env?: 'sandbox' | 'production'
   } | null
   /** ISO 4217 (3 letters), e.g. USD, KES — shown in dashboard and WhatsApp */
   displayCurrency?: string
+  currencySymbol?: string | null
+  thousandsSeparator?: string
+  decimalSeparator?: string
+  taxEnabled?: boolean
   industry?: 'retail' | 'restaurant' | 'services' | 'other'
+  storeSlug?: string | null
+  storefrontEnabled?: boolean
+  linkInBioEnabled?: boolean
+  linkInBioHeadline?: string | null
+  linkInBioBio?: string | null
+  linkInBioLinks?: { label: string; url: string }[]
+  deliveryFeesEnabled?: boolean
+  defaultDeliveryFee?: number
+  freeDeliveryAbove?: number | null
+  dineInEnabled?: boolean
+  paymentRecoveryEnabled?: boolean
+  paymentRecoveryHours?: number[]
+  birthdayAutomationEnabled?: boolean
+  birthdayCouponPercent?: number
+  birthdayMessageTemplate?: string | null
+  winbackAutomationEnabled?: boolean
+  winbackDaysInactive?: number
+  spamOrderProtectionEnabled?: boolean
+  spamMaxOrdersPerHour?: number
+  spamMaxOrdersPerDay?: number
 }
 
 /**
@@ -927,12 +1364,12 @@ export async function updateSettings(data: UpdateSettingsData): Promise<{ succes
     if (data.logo) {
       const formData = new FormData()
       Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          formData.append(key, value instanceof File ? value : String(value))
-        }
+        if (value === undefined || value === null) return
+        appendToFormData(formData, key, value)
       })
+      // Multipart file uploads must use POST: PHP does not populate uploaded files for PUT.
       return await apiRequest<{ success: boolean; message?: string }>('/api/company/settings', {
-        method: 'PUT',
+        method: 'POST',
         body: formData,
       })
     }
@@ -947,12 +1384,39 @@ export async function updateSettings(data: UpdateSettingsData): Promise<{ succes
   }
 }
 
+/**
+ * Dismiss the Getting Started checklist on the company dashboard
+ * Laravel: POST /api/company/setup-status/dismiss
+ */
+export async function dismissSetupChecklist(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>('/api/company/setup-status/dismiss', {
+      method: 'POST',
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 /** Payload for connecting WhatsApp via Meta Cloud API */
 export interface ConnectWhatsAppPayload {
   phoneNumberId: string
   accessToken: string
   displayPhoneNumber?: string
   whatsappBusinessAccountId?: string
+  /** Existing Meta two-step verification PIN (6 digits), if already set on the number */
+  registrationPin?: string
+  /** Custom Meta webhook verify token for this company's app (required for manual BYO Meta app) */
+  webhookVerifyToken: string
+  /**
+   * App Secret from the same Meta Developer app that issued accessToken.
+   * Required for manual connect so inbound webhooks can be signature-verified.
+   */
+  metaAppSecret: string
 }
 
 /**
@@ -985,12 +1449,19 @@ export interface WhatsAppStatus {
   connected: boolean
   phoneNumberId: string | null
   displayPhoneNumber: string | null
+  whatsappBusinessAccountId?: string | null
   onboardingStatus?: string | null
   displayNameStatus?: string | null
   qualityRating?: string | null
   webhookSubscribed?: boolean
   phoneRegistered?: boolean
   creditLineShared?: boolean
+  /** True when this account stores its own Meta App Secret (manual/BYO app). */
+  hasMetaAppSecret?: boolean
+  /** True when this account stores a company webhook verify token. */
+  hasWebhookVerifyToken?: boolean
+  /** How the WhatsApp account was connected: manual | embedded */
+  connectedVia?: string | null
   onboardingError?: string | null
   embeddedSignupEnabled?: boolean
   manualConnectEnabled?: boolean
@@ -1048,6 +1519,30 @@ export async function disconnectWhatsApp(): Promise<{ success: boolean; message?
   }
   try {
     return await apiRequest<{ success: boolean; message?: string }>('/api/company/whatsapp/disconnect', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/** Repair inbound messaging by subscribing the Meta app to the company's WABA webhooks. */
+export async function resubscribeWhatsAppWebhooks(payload?: {
+  metaAppSecret?: string
+  webhookVerifyToken?: string
+}): Promise<{
+  success: boolean
+  message?: string
+  webhookSubscribed?: boolean
+  hasMetaAppSecret?: boolean
+}> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true, message: 'Webhook subscribed.', webhookSubscribed: true, hasMetaAppSecret: true }
+  }
+  try {
+    return await apiRequest('/api/company/whatsapp/webhooks/subscribe', {
+      method: 'POST',
+      body: payload ?? {},
+    })
   } catch (e) {
     return handleApiError(e)
   }
@@ -1317,6 +1812,39 @@ export async function completeWhatsAppEmbeddedSignup(
 // SUPER ADMIN ACTIONS
 // ============================================
 
+export interface PlanEntitlements {
+  messages?: number | null
+  messagesUnlimited?: boolean
+  maxProducts?: number | null
+  maxProductsUnlimited?: boolean
+  team?: number
+  whatsappNumbers?: number
+  aiCostUsd?: number | null
+  aiModelModes?: string[]
+  allowByok?: boolean
+  credentialModes?: string[]
+  crmLevel?: string
+  analyticsLevel?: string
+  apiAccess?: boolean
+  analytics?: boolean
+  attribution?: boolean
+  aiPostsPerMonth?: number
+  aiImagesPerMonth?: number
+  socialPlatforms?: number
+  growthEnabled?: boolean
+  agentCommerce?: boolean
+  allowPhysical?: boolean
+  allowDigital?: boolean
+  allowService?: boolean
+  allowBookings?: boolean
+  maxBookingsPerMonth?: number | null
+  allowStorefront?: boolean
+  allowLinkInBio?: boolean
+  allowDineIn?: boolean
+  allowWhatsappCampaigns?: boolean
+  requiresBranding?: boolean
+}
+
 export interface CreatePlanData {
   name: string
   slug: string
@@ -1332,6 +1860,7 @@ export interface CreatePlanData {
   hasTrial?: boolean
   trialDays?: number | null
   trialElapsedAction?: string | null
+  entitlements?: PlanEntitlements
 }
 
 export interface UpdatePlanData {
@@ -1349,6 +1878,7 @@ export interface UpdatePlanData {
   hasTrial?: boolean
   trialDays?: number | null
   trialElapsedAction?: string | null
+  entitlements?: PlanEntitlements
 }
 
 /**
@@ -1405,6 +1935,7 @@ export interface AdminUpdateSubscriptionPayload {
   status: 'active' | 'trial' | 'cancelled' | 'expired'
   plan?: string
   billingCycle?: 'monthly' | 'yearly'
+  amount?: number
 }
 
 /**
@@ -1425,12 +1956,18 @@ export async function adminUpdateSubscription(
     if (payload.status === 'cancelled' || payload.status === 'expired') {
       mockSubscriptions[idx] = { ...cur, status: payload.status === 'expired' ? 'expired' : 'cancelled' }
     } else if (payload.plan) {
+      const nextAmount =
+        payload.amount != null
+          ? payload.amount
+          : payload.status === 'trial'
+            ? 0
+            : cur.amount
       mockSubscriptions[idx] = {
         ...cur,
         plan: payload.plan as Subscription['plan'],
         status: payload.status,
         billingCycle: payload.billingCycle ?? cur.billingCycle,
-        amount: payload.status === 'trial' ? 0 : cur.amount,
+        amount: nextAmount,
       }
     }
     return { success: true, message: 'Subscription updated.', subscription: mockSubscriptions[idx] }
@@ -1442,6 +1979,114 @@ export async function adminUpdateSubscription(
     )
   } catch (e) {
     return { ...handleApiError(e), success: false }
+  }
+}
+
+// ——— Admin Subscription Offers (coupons) ———
+
+export interface SubscriptionOffer {
+  id: string
+  name: string
+  code: string
+  description?: string | null
+  discountType: 'percent' | 'fixed'
+  discountValue: number
+  currency?: string | null
+  planId?: string | null
+  planName?: string | null
+  maxRedemptions?: number | null
+  redemptionCount: number
+  maxPerCompany: number
+  startsAt?: string | null
+  endsAt?: string | null
+  isActive: boolean
+  firstPaymentOnly: boolean
+  isCurrentlyValid: boolean
+}
+
+export interface SubscriptionOfferPayload {
+  name: string
+  code: string
+  description?: string | null
+  discountType: 'percent' | 'fixed'
+  discountValue: number
+  currency?: string | null
+  planId?: string | null
+  maxRedemptions?: number | null
+  maxPerCompany?: number | null
+  startsAt?: string | null
+  endsAt?: string | null
+  isActive?: boolean
+  firstPaymentOnly?: boolean
+}
+
+export async function createSubscriptionOffer(
+  payload: SubscriptionOfferPayload
+): Promise<{ success: boolean; offer?: SubscriptionOffer; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, offer: { id: '1', redemptionCount: 0, maxPerCompany: 1, isCurrentlyValid: true, firstPaymentOnly: true, isActive: true, ...payload } as SubscriptionOffer }
+  }
+  try {
+    return await apiRequest('/api/admin/subscription-offers', { method: 'POST', body: payload })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function updateSubscriptionOffer(
+  id: string,
+  payload: SubscriptionOfferPayload
+): Promise<{ success: boolean; offer?: SubscriptionOffer; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/subscription-offers/${id}`, { method: 'PUT', body: payload })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function deleteSubscriptionOffer(
+  id: string
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/subscription-offers/${id}`, { method: 'DELETE' })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function previewCoupon(
+  planId: string,
+  couponCode: string,
+  currency?: string
+): Promise<{
+  success: boolean
+  message?: string
+  code?: string
+  originalAmount?: number
+  discountAmount?: number
+  finalAmount?: number
+  currency?: string
+}> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true, code: couponCode, originalAmount: 99, discountAmount: 10, finalAmount: 89, currency: currency ?? 'KES' }
+  }
+  try {
+    return await apiRequest('/api/company/coupon/preview', {
+      method: 'POST',
+      body: { planId, couponCode, currency },
+    })
+  } catch (e) {
+    return handleApiError(e)
   }
 }
 
@@ -1499,6 +2144,60 @@ export async function deleteTestimonial(testimonialId: string): Promise<{ succes
     return await apiRequest<{ success: boolean }>(`/api/admin/testimonials/${testimonialId}`, { method: 'DELETE' })
   } catch (e) {
     return handleApiError(e)
+  }
+}
+
+export type BlogPostPayload = {
+  title: string
+  slug?: string
+  excerpt?: string | null
+  body: string
+  coverImage?: string | null
+  metaTitle?: string | null
+  metaDescription?: string | null
+  ogImage?: string | null
+  publishedAt?: string | null
+  isPublished?: boolean
+}
+
+export async function createBlogPost(
+  data: BlogPostPayload
+): Promise<{ success: boolean; post?: unknown; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, post: { id: String(Date.now()), ...data } }
+  }
+  try {
+    return await apiRequest('/api/admin/blog-posts', { method: 'POST', body: data })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function updateBlogPost(
+  id: string,
+  data: Partial<BlogPostPayload>
+): Promise<{ success: boolean; post?: unknown; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/blog-posts/${id}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function deleteBlogPost(id: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest(`/api/admin/blog-posts/${id}`, { method: 'DELETE' })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
   }
 }
 
@@ -1561,7 +2260,17 @@ export async function deleteLandingFaq(faqId: string): Promise<{ success: boolea
 
 export async function updateCmsPage(
   slug: string,
-  data: { title?: string; metaTitle?: string; metaDescription?: string; isPublished?: boolean }
+  data: {
+    title?: string
+    metaTitle?: string
+    metaDescription?: string
+    ogImage?: string | null
+    ogTitle?: string | null
+    ogDescription?: string | null
+    canonicalUrl?: string | null
+    robots?: string | null
+    isPublished?: boolean
+  }
 ): Promise<{ success: boolean; message?: string }> {
   if (useMockApi()) {
     await delay(300)
@@ -1657,18 +2366,19 @@ export async function createCheckoutSession(
  */
 export async function createMpesaCheckout(
   planId: string,
-  phone: string
-): Promise<{ success: boolean; checkoutRequestId?: string; message?: string }> {
+  phone: string,
+  couponCode?: string
+): Promise<{ success: boolean; checkoutRequestId?: string; message?: string; amount?: number }> {
   if (useMockApi()) {
     await delay(800)
     return { success: true, checkoutRequestId: 'mock-req-'.concat(planId), message: 'Enter your M-Pesa PIN on your phone.' }
   }
   try {
-    const res = await apiRequest<{ checkoutRequestId: string; message: string }>('/api/company/mpesa/initiate', {
+    const res = await apiRequest<{ checkoutRequestId: string; message: string; amount?: number }>('/api/company/mpesa/initiate', {
       method: 'POST',
-      body: { planId, phone },
+      body: { planId, phone, ...(couponCode ? { couponCode } : {}) },
     })
-    return { success: true, checkoutRequestId: res.checkoutRequestId, message: res.message }
+    return { success: true, checkoutRequestId: res.checkoutRequestId, message: res.message, amount: res.amount }
   } catch (e) {
     return { success: false, message: e instanceof Error ? e.message : 'M-Pesa initiation failed' }
   }
@@ -1680,20 +2390,66 @@ export async function createMpesaCheckout(
  */
 export async function createPaystackCheckout(
   planId: string,
-  options?: { callbackUrl?: string }
-): Promise<{ success: boolean; url?: string; reference?: string; message?: string }> {
+  options?: { callbackUrl?: string; couponCode?: string }
+): Promise<{ success: boolean; url?: string; reference?: string; message?: string; amount?: number }> {
   if (useMockApi()) {
     await delay(600)
     return { success: true, url: 'https://checkout.paystack.com/mock-placeholder', reference: 'mock-ref-' + planId }
   }
   try {
-    const res = await apiRequest<{ authorizationUrl: string; reference: string }>('/api/company/paystack/initialize', {
+    const res = await apiRequest<{ authorizationUrl: string; reference: string; amount?: number }>('/api/company/paystack/initialize', {
       method: 'POST',
       body: { planId, ...options },
     })
-    return { success: true, url: res.authorizationUrl, reference: res.reference }
+    return { success: true, url: res.authorizationUrl, reference: res.reference, amount: res.amount }
   } catch (e) {
     return { success: false, message: e instanceof Error ? e.message : 'Paystack checkout failed' }
+  }
+}
+
+/**
+ * Verify Paystack payment after redirect (webhook fallback).
+ * Laravel: POST /api/company/paystack/verify
+ */
+export async function verifyPaystackCheckout(
+  reference: string
+): Promise<{ success: boolean; message?: string; alreadyProcessed?: boolean }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, alreadyProcessed: false }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; message?: string; alreadyProcessed?: boolean }>(
+      '/api/company/paystack/verify',
+      { method: 'POST', body: { reference } }
+    )
+    return {
+      success: !!res.success,
+      message: res.message,
+      alreadyProcessed: res.alreadyProcessed,
+    }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Paystack verification failed' }
+  }
+}
+
+/**
+ * Cancel local (Paystack / M-Pesa / trial) subscription. Stripe users should use billing portal.
+ * Laravel: POST /api/company/subscription/cancel
+ */
+export async function cancelSubscription(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, message: 'Subscription cancelled.' }
+  }
+  try {
+    const res = await apiRequest<{ success: boolean; message?: string }>('/api/company/subscription/cancel', {
+      method: 'POST',
+      body: {},
+    })
+    return { success: !!res.success, message: res.message }
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Could not cancel subscription' }
   }
 }
 
@@ -1726,17 +2482,94 @@ export async function createBillingPortalSession(
 export async function updatePaymentGateway(
   slug: string,
   data: { isEnabled?: boolean; config?: Record<string, string | number> }
-): Promise<{ success: boolean; gateway?: PaymentGateway; message?: string }> {
+): Promise<{ success: boolean; gateway?: PaymentGateway; warning?: string | null; message?: string }> {
   if (useMockApi()) {
     await delay(600)
     return { success: true }
   }
   try {
-    const res = await apiRequest<{ success: boolean; gateway: PaymentGateway }>(`/api/admin/payment-gateways/${slug}`, {
+    const res = await apiRequest<{ success: boolean; gateway: PaymentGateway; warning?: string | null }>(`/api/admin/payment-gateways/${slug}`, {
       method: 'PUT',
       body: data,
     })
     return res
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export type ManualBillingPayment = {
+  id: string
+  reference: string
+  status: string
+  amount: number
+  currency: string
+  planSlug?: string | null
+  instructions?: string | null
+  bankName?: string | null
+  accountName?: string | null
+  accountNumber?: string | null
+  hasProof?: boolean
+  proofNote?: string | null
+  proofSubmittedAt?: string | null
+  createdAt?: string | null
+  companyId?: string | null
+  companyName?: string | null
+  proofOriginalName?: string | null
+  rejectionReason?: string | null
+}
+
+export async function listAdminManualPayments(): Promise<{
+  success: boolean
+  payments?: ManualBillingPayment[]
+  message?: string
+}> {
+  try {
+    return await apiRequest<{ success: boolean; payments: ManualBillingPayment[] }>('/api/admin/manual-payments')
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function approveManualPayment(id: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/admin/manual-payments/${id}/approve`, {
+      method: 'POST',
+      body: {},
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function rejectManualPayment(
+  id: string,
+  reason?: string
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/admin/manual-payments/${id}/reject`, {
+      method: 'POST',
+      body: { reason },
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function submitManualPaymentProof(
+  reference: string,
+  proof: File,
+  note?: string
+): Promise<{ success: boolean; message?: string; payment?: ManualBillingPayment }> {
+  try {
+    const form = new FormData()
+    form.append('reference', reference)
+    form.append('proof', proof)
+    if (note) form.append('note', note)
+    return await apiRequest<{ success: boolean; message?: string; payment?: ManualBillingPayment }>(
+      '/api/company/subscription/manual-payments/proof',
+      { method: 'POST', body: form }
+    )
   } catch (e) {
     return { ...handleApiError(e), success: false }
   }
@@ -1980,6 +2813,7 @@ export interface PlatformSettings {
   primaryColor?: string | null
   secondaryColor?: string | null
   appLogo?: string | null
+  appFavicon?: string | null
   supportEmail?: string | null
   maintenanceMode?: boolean
   defaultTimezone?: string | null
@@ -2018,6 +2852,7 @@ export interface PlatformSettings {
   openaiApiKey?: string | null
   openaiModel?: string | null
   openaiMaxTokens?: number | null
+  devModeEnabled?: boolean
   sessionTimeoutMinutes?: number | null
   maxLoginAttempts?: number | null
   passwordMinLength?: number | null
@@ -2031,6 +2866,12 @@ export interface PlatformSettings {
   notifyUsageAlerts?: boolean
   notifyDailySummary?: boolean
   landingTrustedCompanies?: string[]
+  cookieBannerEnabled?: boolean
+  cookieBannerText?: string | null
+  cookiePolicyUrl?: string | null
+  recaptchaEnabled?: boolean
+  recaptchaSiteKey?: string | null
+  recaptchaSecretKey?: string | null
   aiLearningConfig?: AiLearningConfig
 }
 
@@ -2039,6 +2880,7 @@ export interface UpdatePlatformSettingsData {
   primaryColor?: string
   secondaryColor?: string
   logo?: File
+  favicon?: File
   supportEmail?: string
   maintenanceMode?: boolean
   defaultTimezone?: string
@@ -2071,6 +2913,7 @@ export interface UpdatePlatformSettingsData {
   openaiApiKey?: string
   openaiModel?: string
   openaiMaxTokens?: number
+  devModeEnabled?: boolean
   sessionTimeoutMinutes?: number
   maxLoginAttempts?: number
   passwordMinLength?: number
@@ -2084,6 +2927,12 @@ export interface UpdatePlatformSettingsData {
   notifyUsageAlerts?: boolean
   notifyDailySummary?: boolean
   landingTrustedCompanies?: string[]
+  cookieBannerEnabled?: boolean
+  cookieBannerText?: string
+  cookiePolicyUrl?: string
+  recaptchaEnabled?: boolean
+  recaptchaSiteKey?: string
+  recaptchaSecretKey?: string
   aiLearningConfig?: AiLearningConfig
 }
 
@@ -2091,9 +2940,15 @@ export interface UpdatePlatformSettingsData {
 export interface AppBranding {
   applicationName: string
   appLogo: string | null
+  appFavicon?: string | null
   primaryColor: string | null
   secondaryColor: string | null
   requireEmailVerification?: boolean
+  cookieBannerEnabled?: boolean
+  cookieBannerText?: string | null
+  cookiePolicyUrl?: string | null
+  recaptchaEnabled?: boolean
+  recaptchaSiteKey?: string | null
 }
 
 /**
@@ -2276,7 +3131,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   if (useMockApi()) {
     await delay(300)
     return {
-      platformName: 'Essem Chat',
+      platformName: 'RelayIQ',
       supportEmail: 'support@chatflow.ai',
       maintenanceMode: false,
       defaultTimezone: 'UTC',
@@ -2287,7 +3142,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
       smtpEncryption: 'tls',
       smtpUser: 'apikey',
       fromEmail: 'noreply@chatflow.ai',
-      fromName: 'Essem Chat',
+      fromName: 'RelayIQ',
       sessionTimeoutMinutes: 60,
       maxLoginAttempts: 5,
       passwordMinLength: 8,
@@ -2306,8 +3161,8 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
 }
 
 /**
- * Update platform settings (admin only). Use FormData when logo is included.
- * Laravel: PUT /api/admin/settings (JSON or multipart with logo)
+ * Update platform settings (admin only). Use FormData when logo/favicon is included.
+ * Laravel: PUT /api/admin/settings (JSON or multipart with logo/favicon)
  */
 export async function updatePlatformSettings(data: UpdatePlatformSettingsData): Promise<{ success: boolean; message?: string }> {
   if (useMockApi()) {
@@ -2315,14 +3170,15 @@ export async function updatePlatformSettings(data: UpdatePlatformSettingsData): 
     return { success: true, message: 'Platform settings updated successfully' }
   }
   try {
-    const hasLogo = data.logo != null
-    if (hasLogo) {
+    const hasFiles = data.logo != null || data.favicon != null
+    if (hasFiles) {
       const form = new FormData()
-      const { logo, ...rest } = data
-      form.append('logo', logo!)
+      const { logo, favicon, ...rest } = data
+      if (logo) form.append('logo', logo)
+      if (favicon) form.append('favicon', favicon)
       Object.entries(rest).forEach(([k, v]) => {
         if (v === undefined || v === null) return
-        form.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v))
+        appendToFormData(form, k, v)
       })
       return await apiRequest<{ success: boolean; message?: string }>('/api/admin/settings', {
         method: 'POST',
@@ -2338,25 +3194,39 @@ export async function updatePlatformSettings(data: UpdatePlatformSettingsData): 
   }
 }
 
+let cachedBranding: AppBranding | null = null
+
 /**
  * Get public app branding (no auth). For theme, invoices, email headers.
  * Laravel: GET /api/app-branding
  */
 export async function getAppBranding(): Promise<AppBranding> {
+  if (cachedBranding) return cachedBranding
   if (useMockApi()) {
     await delay(100)
     return {
-      applicationName: 'Essem Chat',
+      applicationName: 'RelayIQ',
       appLogo: null,
+      appFavicon: null,
       primaryColor: null,
       secondaryColor: null,
       requireEmailVerification: false,
     }
   }
-  const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) || ''
-  const res = await fetch(`${baseUrl}/api/app-branding`, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error('Failed to load app branding')
-  return res.json()
+  try {
+    const data = await apiRequest<AppBranding>('/api/app-branding')
+    cachedBranding = data
+    return data
+  } catch {
+    return {
+      applicationName: 'RelayIQ',
+      appLogo: null,
+      appFavicon: null,
+      primaryColor: null,
+      secondaryColor: null,
+      requireEmailVerification: false,
+    }
+  }
 }
 
 /**
@@ -3192,6 +4062,132 @@ export async function uninstallMarketplaceModule(
       method: 'DELETE',
     })
     return { success: true }
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
+ * Download prompt payload for AI prompt debugging with Sanctum authentication header.
+ */
+export async function downloadPromptLog(
+  chatId: string,
+  messageId: string,
+  format: 'txt' | 'json' = 'txt'
+): Promise<boolean> {
+  const token = getAuthToken()
+  const headers: Record<string, string> = {
+    Accept: format === 'json' ? 'application/json' : 'text/plain',
+    'X-Requested-With': 'XMLHttpRequest',
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  try {
+    const res = await fetch(apiUrl(`/api/company/chats/${chatId}/messages/${messageId}/download-prompt?format=${format}`), {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+    })
+
+    if (!res.ok) {
+      return false
+    }
+
+    const blob = await res.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ai-prompt-debug-msg-${messageId}.${format}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    return true
+  } catch (e) {
+    console.error('Failed to download prompt log', e)
+    return false
+  }
+}
+
+/**
+ * Clear all chat history, active steps, and AI model context for a chat (Developer Mode).
+ */
+export async function clearChatHistory(chatId: string): Promise<{ success: boolean; message?: string }> {
+  return apiRequest<{ success: boolean; message?: string }>(
+    `/api/company/chats/${chatId}/clear-history`,
+    {
+      method: 'DELETE',
+    }
+  )
+}
+
+export type StorefrontCoupon = {
+  id: string
+  code: string
+  type: 'percent' | 'fixed'
+  value: number
+  minOrder?: number | null
+  maxRedemptions?: number | null
+  redeemedCount?: number
+  startsAt?: string | null
+  endsAt?: string | null
+  isActive: boolean
+  isCurrentlyValid?: boolean
+}
+
+export type StorefrontCouponPayload = {
+  code: string
+  type: 'percent' | 'fixed'
+  value: number
+  minOrder?: number | null
+  maxRedemptions?: number | null
+  startsAt?: string | null
+  endsAt?: string | null
+  isActive?: boolean
+}
+
+export async function listStorefrontCoupons(): Promise<StorefrontCoupon[]> {
+  try {
+    return await apiRequest<StorefrontCoupon[]>('/api/company/storefront-coupons')
+  } catch {
+    return []
+  }
+}
+
+export async function createStorefrontCoupon(
+  data: StorefrontCouponPayload
+): Promise<{ success: boolean; coupon?: StorefrontCoupon; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean; coupon: StorefrontCoupon }>('/api/company/storefront-coupons', {
+      method: 'POST',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updateStorefrontCoupon(
+  id: string,
+  data: Partial<StorefrontCouponPayload>
+): Promise<{ success: boolean; coupon?: StorefrontCoupon; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean; coupon: StorefrontCoupon }>(`/api/company/storefront-coupons/${id}`, {
+      method: 'PUT',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteStorefrontCoupon(id: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/company/storefront-coupons/${id}`, {
+      method: 'DELETE',
+    })
   } catch (e) {
     return handleApiError(e)
   }

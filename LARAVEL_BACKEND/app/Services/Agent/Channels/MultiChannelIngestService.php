@@ -67,7 +67,9 @@ final class MultiChannelIngestService
         ]);
 
         $queued = false;
-        if ($company->settings?->auto_reply_enabled && $company->settings?->agent_commerce_enabled) {
+        // Default auto-reply ON when settings row is missing.
+        $autoReplyOn = ($company->settings?->auto_reply_enabled ?? true) !== false;
+        if ($autoReplyOn && $company->settings?->agent_commerce_enabled) {
             ProcessIncomingChannelMessage::dispatch(
                 $company->id,
                 $chat->id,

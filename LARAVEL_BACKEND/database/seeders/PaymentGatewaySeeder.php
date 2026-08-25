@@ -19,7 +19,8 @@ class PaymentGatewaySeeder extends Seeder
                     'secret' => '',
                     'webhook_secret' => '',
                     'trial_days' => 14,
-                    'currency' => 'usd',
+                    'currency' => 'kes',
+                    'env' => 'sandbox',
                 ],
             ],
             [
@@ -33,6 +34,7 @@ class PaymentGatewaySeeder extends Seeder
                     'passkey' => '',
                     'env' => 'sandbox',
                     'callback_url' => '',
+                    'currency' => 'kes',
                 ],
             ],
             [
@@ -42,14 +44,66 @@ class PaymentGatewaySeeder extends Seeder
                 'config' => [
                     'public_key' => '',
                     'secret_key' => '',
-                    'currency' => 'ngn',
+                    'currency' => 'kes',
+                    'env' => 'sandbox',
                     'callback_url' => '',
+                ],
+            ],
+            [
+                'slug' => 'pesapal',
+                'name' => 'Pesapal (Cards, Mobile Money & Bank)',
+                'is_enabled' => false,
+                'config' => [
+                    'consumer_key' => '',
+                    'consumer_secret' => '',
+                    'env' => 'sandbox',
+                    'currency' => 'kes',
+                    'ipn_id' => '',
+                    'callback_url' => '',
+                ],
+            ],
+            [
+                'slug' => 'flutterwave',
+                'name' => 'Flutterwave (Cards, Mobile Money, Bank Transfer & USSD)',
+                'is_enabled' => false,
+                'config' => [
+                    'public_key' => '',
+                    'secret_key' => '',
+                    'secret_hash' => '',
+                    'currency' => 'kes',
+                    'env' => 'sandbox',
+                    'callback_url' => '',
+                ],
+            ],
+            [
+                'slug' => 'paypal',
+                'name' => 'PayPal (Cards & PayPal Balance)',
+                'is_enabled' => false,
+                'config' => [
+                    'client_id' => '',
+                    'client_secret' => '',
+                    'webhook_id' => '',
+                    'currency' => 'usd',
+                    'env' => 'sandbox',
+                ],
+            ],
+            [
+                'slug' => 'manual',
+                'name' => 'Bank Transfer / Invoice',
+                'is_enabled' => false,
+                'config' => [
+                    'bank_name' => '',
+                    'account_name' => '',
+                    'account_number' => '',
+                    'instructions' => '',
+                    'currency' => 'kes',
+                    'env' => 'sandbox',
                 ],
             ],
         ];
 
         foreach ($gateways as $data) {
-            PaymentGateway::updateOrCreate(
+            PaymentGateway::firstOrCreate(
                 ['slug' => $data['slug']],
                 $data
             );

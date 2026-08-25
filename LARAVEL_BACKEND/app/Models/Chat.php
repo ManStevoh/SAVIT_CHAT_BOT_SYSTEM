@@ -29,6 +29,11 @@ class Chat extends Model
         'crm_follow_up_count',
         'conversation_step',
         'order_draft',
+        'birthday',
+        'marketing_opt_in',
+        'last_birthday_wish_at',
+        'last_winback_at',
+        'blocked_from_ordering',
     ];
 
     protected $casts = [
@@ -38,6 +43,11 @@ class Chat extends Model
         'crm_last_follow_up_at' => 'datetime',
         'crm_follow_up_count' => 'integer',
         'order_draft' => 'array',
+        'birthday' => 'date',
+        'marketing_opt_in' => 'boolean',
+        'last_birthday_wish_at' => 'datetime',
+        'last_winback_at' => 'datetime',
+        'blocked_from_ordering' => 'boolean',
     ];
 
     /** Whether an agent is currently handling this chat (bot should not auto-reply). */
@@ -47,6 +57,26 @@ class Chat extends Model
             return false;
         }
         return $this->agent_handling_at->diffInMinutes(now(), false) < $withinMinutes;
+    }
+
+    /**
+     * Latest customer message has no later bot/agent reply — AI should answer (or be asked to).
+     */
+    public function needsAiReply(): bool
+    {
+        $lastCustomer = $this->messages()
+            ->where('sender', 'customer')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $lastCustomer) {
+            return false;
+        }
+
+        return ! $this->messages()
+            ->whereIn('sender', ['bot', 'agent'])
+            ->where('id', '>', $lastCustomer->id)
+            ->exists();
     }
 
     public function company(): BelongsTo

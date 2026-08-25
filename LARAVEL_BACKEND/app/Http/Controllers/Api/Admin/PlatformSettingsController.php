@@ -18,24 +18,47 @@ class PlatformSettingsController extends Controller
     public function show(): JsonResponse
     {
         $settings = PlatformSetting::first();
-        $data = $settings ? $settings->toArray() : [];
-        // SMTP password is hidden on model; expose only "set" indicator for frontend
+        // Use raw attributes so corrupt JSON columns cannot 500 the whole settings page.
+        $data = $settings?->getAttributes() ?? [];
+
         $smtpPasswordMasked = null;
         if ($settings && $settings->getRawOriginal('smtp_password') !== null && $settings->getRawOriginal('smtp_password') !== '') {
             $smtpPasswordMasked = '********';
         }
+
         $appLogoUrl = null;
-        if ($settings && ! empty($settings->app_logo)) {
-            $appLogoUrl = Storage::disk('public')->exists($settings->app_logo)
-                ? asset('storage/' . $settings->app_logo)
-                : null;
+        $logoPath = $data['app_logo'] ?? null;
+        if (is_string($logoPath) && $logoPath !== '') {
+            try {
+                $appLogoUrl = Storage::disk('public')->exists($logoPath)
+                    ? asset('storage/'.$logoPath)
+                    : null;
+            } catch (\Throwable) {
+                $appLogoUrl = null;
+            }
         }
-        // Map snake_case to camelCase for frontend
+
+        $appFaviconUrl = null;
+        $faviconPath = $data['app_favicon'] ?? null;
+        if (is_string($faviconPath) && $faviconPath !== '') {
+            try {
+                $appFaviconUrl = Storage::disk('public')->exists($faviconPath)
+                    ? asset('storage/'.$faviconPath)
+                    : null;
+            } catch (\Throwable) {
+                $appFaviconUrl = null;
+            }
+        }
+
+        $landingTrusted = $this->decodeJsonColumn($data['landing_trusted_companies'] ?? null);
+        $aiLearning = $this->decodeJsonColumn($data['ai_learning_config'] ?? null);
+
         $out = [
             'platformName' => $data['platform_name'] ?? null,
             'primaryColor' => $data['primary_color'] ?? null,
             'secondaryColor' => $data['secondary_color'] ?? null,
             'appLogo' => $appLogoUrl,
+            'appFavicon' => $appFaviconUrl,
             'supportEmail' => $data['support_email'] ?? null,
             'maintenanceMode' => (bool) ($data['maintenance_mode'] ?? false),
             'defaultTimezone' => $data['default_timezone'] ?? 'UTC',
@@ -74,6 +97,7 @@ class PlatformSettingsController extends Controller
             'openaiApiKey' => $this->maskSecret($settings, 'openai_api_key'),
             'openaiModel' => $data['openai_model'] ?? null,
             'openaiMaxTokens' => isset($data['openai_max_tokens']) ? (int) $data['openai_max_tokens'] : null,
+            'devModeEnabled' => (bool) ($data['dev_mode_enabled'] ?? false),
             'sessionTimeoutMinutes' => isset($data['session_timeout_minutes']) ? (int) $data['session_timeout_minutes'] : null,
             'maxLoginAttempts' => isset($data['max_login_attempts']) ? (int) $data['max_login_attempts'] : null,
             'passwordMinLength' => isset($data['password_min_length']) ? (int) $data['password_min_length'] : null,
@@ -86,10 +110,39 @@ class PlatformSettingsController extends Controller
             'notifySystemErrors' => (bool) ($data['notify_system_errors'] ?? true),
             'notifyUsageAlerts' => (bool) ($data['notify_usage_alerts'] ?? true),
             'notifyDailySummary' => (bool) ($data['notify_daily_summary'] ?? true),
-            'landingTrustedCompanies' => $data['landing_trusted_companies'] ?? [],
-            'aiLearningConfig' => array_merge(AiLearningConfig::defaults(), is_array($data['ai_learning_config'] ?? null) ? $data['ai_learning_config'] : []),
+            'landingTrustedCompanies' => is_array($landingTrusted) ? $landingTrusted : [],
+            'cookieBannerEnabled' => (bool) ($data['cookie_banner_enabled'] ?? true),
+            'cookieBannerText' => $data['cookie_banner_text'] ?? null,
+            'cookiePolicyUrl' => $data['cookie_policy_url'] ?? '/privacy',
+            'recaptchaEnabled' => (bool) ($data['recaptcha_enabled'] ?? false),
+            'recaptchaSiteKey' => $data['recaptcha_site_key'] ?? null,
+            'recaptchaSecretKey' => $this->maskSecret($settings, 'recaptcha_secret_key'),
+            'aiLearningConfig' => array_merge(
+                AiLearningConfig::defaults(),
+                is_array($aiLearning) ? $aiLearning : []
+            ),
         ];
+
         return response()->json($out);
+    }
+
+    private function decodeJsonColumn(mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_array($value)) {
+            return $value;
+        }
+        if (! is_string($value)) {
+            return null;
+        }
+
+        try {
+            return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
     }
 
     private function maskSecret(?PlatformSetting $settings, string $attribute): ?string
@@ -111,6 +164,7 @@ class PlatformSettingsController extends Controller
             'primaryColor' => 'nullable|string|max:50',
             'secondaryColor' => 'nullable|string|max:50',
             'logo' => 'nullable|image|max:2048',
+            'favicon' => 'nullable|image|max:1024',
             'supportEmail' => 'nullable|email',
             'maintenanceMode' => 'sometimes|boolean',
             'defaultTimezone' => 'nullable|string|max:50',
@@ -157,6 +211,12 @@ class PlatformSettingsController extends Controller
             'notifyDailySummary' => 'sometimes|boolean',
             'landingTrustedCompanies' => 'nullable|array',
             'landingTrustedCompanies.*' => 'string|max:255',
+            'cookieBannerEnabled' => 'sometimes|boolean',
+            'cookieBannerText' => 'nullable|string|max:2000',
+            'cookiePolicyUrl' => 'nullable|string|max:500',
+            'recaptchaEnabled' => 'sometimes|boolean',
+            'recaptchaSiteKey' => 'nullable|string|max:255',
+            'recaptchaSecretKey' => 'nullable|string|max:500',
             'aiLearningConfig' => 'sometimes|array',
             'aiLearningConfig.learningEnabled' => 'sometimes|boolean',
             'aiLearningConfig.defaultLearnFromChats' => 'sometimes|boolean',
@@ -231,11 +291,27 @@ class PlatformSettingsController extends Controller
             'notifyUsageAlerts' => 'notify_usage_alerts',
             'notifyDailySummary' => 'notify_daily_summary',
             'landingTrustedCompanies' => 'landing_trusted_companies',
+            'cookieBannerEnabled' => 'cookie_banner_enabled',
+            'cookieBannerText' => 'cookie_banner_text',
+            'cookiePolicyUrl' => 'cookie_policy_url',
+            'recaptchaEnabled' => 'recaptcha_enabled',
+            'recaptchaSiteKey' => 'recaptcha_site_key',
+            'recaptchaSecretKey' => 'recaptcha_secret_key',
+            'devModeEnabled' => 'dev_mode_enabled',
         ];
         $before = $settings->exists ? $settings->only(array_values($map)) : [];
-        $skipIfMasked = ['smtp_password', 'meta_app_secret', 'whatsapp_embedded_app_secret', 'whatsapp_credit_sharing_system_token', 'openai_api_key'];
+        // Never persist UI mask placeholders — those fields are returned as ******** on GET.
+        $skipIfMasked = [
+            'smtp_password',
+            'meta_app_secret',
+            'whatsapp_webhook_verify_token',
+            'whatsapp_embedded_app_secret',
+            'whatsapp_credit_sharing_system_token',
+            'openai_api_key',
+            'recaptcha_secret_key',
+        ];
         foreach ($validated as $key => $value) {
-            if ($key === 'logo') {
+            if ($key === 'logo' || $key === 'favicon') {
                 continue;
             }
             $col = $map[$key] ?? null;
@@ -254,6 +330,14 @@ class PlatformSettingsController extends Controller
             }
             $path = $request->file('logo')->store('app_logos', 'public');
             $settings->app_logo = $path;
+        }
+
+        if ($request->hasFile('favicon')) {
+            if ($settings->app_favicon) {
+                Storage::disk('public')->delete($settings->app_favicon);
+            }
+            $path = $request->file('favicon')->store('app_favicons', 'public');
+            $settings->app_favicon = $path;
         }
 
         if (array_key_exists('aiLearningConfig', $validated)) {

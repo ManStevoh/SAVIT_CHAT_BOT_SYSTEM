@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PaymentGateway;
 use App\Models\Plan;
 use App\Services\MpesaService;
+use App\Services\SubscriptionPricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -13,7 +14,8 @@ use Illuminate\Support\Facades\Cache;
 class MpesaCheckoutController extends Controller
 {
     public function __construct(
-        protected MpesaService $mpesa
+        protected MpesaService $mpesa,
+        protected SubscriptionPricingService $pricing,
     ) {}
 
     /**
@@ -33,6 +35,7 @@ class MpesaCheckoutController extends Controller
         $validated = $request->validate([
             'planId' => 'required|string',
             'phone' => 'required|string|min:9',
+            'couponCode' => 'sometimes|nullable|string|max:64',
         ]);
 
         $plan = Plan::find($validated['planId']);
@@ -40,7 +43,12 @@ class MpesaCheckoutController extends Controller
             return response()->json(['message' => 'Plan not found.'], 404);
         }
 
-        $amount = (float) $plan->price_amount;
+        $quote = $this->pricing->quote($plan, $company, $validated['couponCode'] ?? null, 'KES');
+        if (! ($quote['success'] ?? false)) {
+            return response()->json(['message' => $quote['message'] ?? 'Could not price this plan.'], 422);
+        }
+
+        $amount = (float) $quote['final_amount'];
         if ($amount <= 0) {
             return response()->json(['message' => 'This plan is not available for M-Pesa payment.'], 422);
         }
@@ -78,11 +86,30 @@ class MpesaCheckoutController extends Controller
             'company_id' => $company->id,
             'plan_slug' => $plan->slug,
             'expected_amount' => $amount,
+            'original_amount' => $quote['original_amount'] ?? $amount,
+            'discount_amount' => $quote['discount_amount'] ?? 0,
+            'coupon_code' => $quote['code'] ?? null,
         ], now()->addMinutes(10));
+
+        if (! empty($quote['offer'])) {
+            $this->pricing->reserveRedemption(
+                $quote['offer'],
+                $company,
+                (string) $checkoutRequestId,
+                (float) $quote['original_amount'],
+                (float) $quote['discount_amount'],
+                $amount,
+                'KES'
+            );
+        }
 
         return response()->json([
             'checkoutRequestId' => $checkoutRequestId,
             'message' => 'Enter your M-Pesa PIN on your phone to complete payment.',
+            'amount' => $amount,
+            'originalAmount' => $quote['original_amount'] ?? $amount,
+            'discountAmount' => $quote['discount_amount'] ?? 0,
+            'coupon' => $quote['code'] ?? null,
         ]);
     }
 }

@@ -34,11 +34,25 @@ class ProcessTrialTransitionsJob implements ShouldQueue
 
             $company = $subscription->company;
             if ($company) {
-                $notifications->dispatch($company, 'subscription.expiring', [
-                    'plan' => $subscription->plan,
-                    'end_date' => $subscription->end_date,
+                $planName = $plan?->name ?? ucfirst((string) $subscription->plan);
+                $endFormatted = $subscription->end_date->format('F j, Y');
+                $notifications->dispatch($company, 'subscription.expired', [
+                    'plan' => $planName,
+                    'end_date' => $endFormatted,
                     'owner_email' => $company->email,
                 ]);
+
+                if ($company->email) {
+                    try {
+                        app(\App\Services\MailService::class)->send(
+                            $company->email,
+                            '['.config('app.name').'] Your trial has ended',
+                            '<p>Your <strong>'.e($planName).'</strong> trial ended on <strong>'.e($endFormatted).'</strong>.</p><p>Choose a plan in your dashboard to continue.</p>'
+                        );
+                    } catch (\Throwable $e) {
+                        Log::warning('Trial expired email failed: '.$e->getMessage());
+                    }
+                }
 
                 $events->dispatch('subscription.expired', [
                     'subscription_id' => $subscription->id,

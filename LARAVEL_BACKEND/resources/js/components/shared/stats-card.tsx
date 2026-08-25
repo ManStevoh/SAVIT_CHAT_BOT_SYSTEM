@@ -10,6 +10,7 @@ interface StatsCardProps {
   value: string | number
   change?: number
   changeLabel?: string
+  description?: string
   icon?: LucideIcon
   isLoading?: boolean
   formatter?: (value: number) => string
@@ -20,6 +21,7 @@ export function StatsCard({
   value,
   change,
   changeLabel = 'vs last period',
+  description,
   icon: Icon,
   isLoading,
   formatter,
@@ -50,7 +52,7 @@ export function StatsCard({
             <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
               {formattedValue}
             </p>
-            {change !== undefined && (
+            {change !== undefined ? (
               <div className="flex items-center gap-1 pt-0.5">
                 {change >= 0 ? (
                   <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
@@ -70,7 +72,9 @@ export function StatsCard({
                 </span>
                 <span className="text-xs text-muted-foreground">{changeLabel}</span>
               </div>
-            )}
+            ) : description ? (
+              <p className="text-xs text-muted-foreground pt-0.5">{description}</p>
+            ) : null}
           </div>
           {Icon && (
             <Icon className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={1.5} />
@@ -83,7 +87,7 @@ export function StatsCard({
 
 interface StatsGridProps {
   children: React.ReactNode
-  columns?: 2 | 3 | 4
+  columns?: 2 | 3 | 4 | 5
 }
 
 export function StatsGrid({ children, columns = 4 }: StatsGridProps) {
@@ -91,6 +95,7 @@ export function StatsGrid({ children, columns = 4 }: StatsGridProps) {
     2: 'grid-cols-1 sm:grid-cols-2',
     3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
     4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+    5: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5',
   }
 
   return <div className={cn('grid gap-4', gridCols[columns])}>{children}</div>

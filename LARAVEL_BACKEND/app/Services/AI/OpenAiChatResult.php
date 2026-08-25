@@ -20,5 +20,6 @@ readonly class OpenAiChatResult
         /** @var array<int, array{id: string, name: string, arguments: string}> */
         public array $toolCalls = [],
         public ?string $finishReason = null,
+        public ?int $logId = null,
     ) {}
 }

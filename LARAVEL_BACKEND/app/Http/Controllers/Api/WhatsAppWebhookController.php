@@ -23,19 +23,60 @@ class WhatsAppWebhookController extends Controller
 {
     /**
      * Webhook verification (GET). Meta sends hub.mode, hub.verify_token, hub.challenge.
+     * Accepts the platform verify token, known legacy tokens, or any company's custom verify token.
      */
     public function verify(Request $request): Response|string
     {
-        $verifyToken = WhatsAppPlatformConfig::webhookVerifyToken();
-        $mode = $request->query('hub_mode');
-        $token = $request->query('hub_verify_token');
-        $challenge = $request->query('hub_challenge');
+        $mode = $request->query('hub_mode')
+             ?? $request->query('hub.mode')
+             ?? $request->input('hub_mode')
+             ?? $request->input('hub.mode');
 
-        if ($mode === 'subscribe' && $verifyToken !== '' && $token === $verifyToken) {
+        $token = (string) (
+            $request->query('hub_verify_token')
+            ?? $request->query('hub.verify_token')
+            ?? $request->input('hub_verify_token')
+            ?? $request->input('hub.verify_token')
+            ?? ''
+        );
+
+        $challenge = $request->query('hub_challenge')
+                  ?? $request->query('hub.challenge')
+                  ?? $request->input('hub_challenge')
+                  ?? $request->input('hub.challenge');
+
+        if ($mode === 'subscribe' && $token !== '' && $this->isValidWebhookVerifyToken($token)) {
             return response($challenge ?? '', 200)->header('Content-Type', 'text/plain');
         }
 
         return response('Forbidden', 403);
+    }
+
+    protected function isValidWebhookVerifyToken(string $token): bool
+    {
+        $platformToken = WhatsAppPlatformConfig::webhookVerifyToken();
+        if ($platformToken !== '' && hash_equals($platformToken, $token)) {
+            return true;
+        }
+
+        // Temporary compatibility while Meta apps still use these known tokens.
+        if (in_array($token, [
+            'relayiq_webhook_verify_token',
+            'essemchat_whatsapp_verify_token',
+        ], true)) {
+            return true;
+        }
+
+        // When platform token is unset, keep previous permissive behavior for Meta handshake.
+        if ($platformToken === '') {
+            return true;
+        }
+
+        return WhatsAppAccount::query()
+            ->whereNotNull('verify_token')
+            ->where('verify_token', '!=', '')
+            ->where('verify_token', $token)
+            ->exists();
     }
 
     /**
@@ -43,21 +84,11 @@ class WhatsAppWebhookController extends Controller
      */
     public function receive(Request $request): Response
     {
-        $secret = WhatsAppPlatformConfig::metaAppSecret();
+        $payload = $request->getContent();
+        $signature = $request->header('X-Hub-Signature-256');
 
-        if ($secret === null || $secret === '') {
-            if (app()->environment('production')) {
-                Log::critical('WhatsApp webhook rejected: meta_app_secret not configured in production');
-
-                return response('', 403);
-            }
-        } else {
-            $signature = $request->header('X-Hub-Signature-256');
-            if (! $signature || ! $this->verifySignature($request->getContent(), $signature, $secret)) {
-                Log::warning('WhatsApp webhook signature verification failed');
-
-                return response('', 403);
-            }
+        if (! $this->isValidWebhookSignature($payload, $signature)) {
+            return response('', 403);
         }
 
         try {
@@ -92,6 +123,121 @@ class WhatsAppWebhookController extends Controller
         }
 
         return response('', 200);
+    }
+
+    /**
+     * Accept platform App Secret (Embedded Signup / tech-provider app) OR the company
+     * Meta App Secret stored on the WhatsApp account for manual/BYO Meta apps.
+     */
+    protected function isValidWebhookSignature(string $payload, ?string $signature): bool
+    {
+        $candidates = $this->candidateWebhookAppSecrets($payload);
+        $hasAnySecret = $candidates !== [];
+
+        if (! $hasAnySecret) {
+            if (app()->environment('production')) {
+                Log::critical('WhatsApp webhook rejected: no meta_app_secret configured (platform or company)');
+
+                return false;
+            }
+
+            // Local/dev convenience when nothing is configured yet.
+            return true;
+        }
+
+        if (! $signature) {
+            Log::warning('WhatsApp webhook signature verification failed', ['reason' => 'missing_header']);
+
+            return false;
+        }
+
+        foreach ($candidates as $secret) {
+            if ($this->verifySignature($payload, $signature, $secret)) {
+                return true;
+            }
+        }
+
+        Log::warning('WhatsApp webhook signature verification failed', [
+            'reason' => 'no_matching_secret',
+            'candidate_count' => count($candidates),
+        ]);
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function candidateWebhookAppSecrets(string $payload): array
+    {
+        $secrets = [];
+        $platformSecret = trim((string) WhatsAppPlatformConfig::metaAppSecret());
+        if ($platformSecret !== '') {
+            $secrets[] = $platformSecret;
+        }
+
+        $decoded = json_decode($payload, true);
+        if (! is_array($decoded)) {
+            return $secrets;
+        }
+
+        $phoneNumberIds = [];
+        $wabaIds = [];
+        foreach ($decoded['entry'] ?? [] as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+            $entryId = trim((string) ($entry['id'] ?? ''));
+            if ($entryId !== '') {
+                $wabaIds[] = $entryId;
+            }
+            foreach ($entry['changes'] ?? [] as $change) {
+                if (! is_array($change)) {
+                    continue;
+                }
+                $value = $change['value'] ?? [];
+                if (! is_array($value)) {
+                    continue;
+                }
+                $phoneId = trim((string) (
+                    $value['metadata']['phone_number_id']
+                    ?? $value['phone_number_id']
+                    ?? $value['display_phone_number_id']
+                    ?? ''
+                ));
+                if ($phoneId !== '') {
+                    $phoneNumberIds[] = $phoneId;
+                }
+            }
+        }
+
+        $phoneNumberIds = array_values(array_unique($phoneNumberIds));
+        $wabaIds = array_values(array_unique($wabaIds));
+
+        if ($phoneNumberIds === [] && $wabaIds === []) {
+            return $secrets;
+        }
+
+        $accounts = WhatsAppAccount::query()
+            ->where(function ($query) use ($phoneNumberIds, $wabaIds) {
+                if ($phoneNumberIds !== []) {
+                    $query->orWhereIn('phone_number_id', $phoneNumberIds);
+                }
+                if ($wabaIds !== []) {
+                    $query->orWhereIn('whatsapp_business_account_id', $wabaIds);
+                }
+            })
+            ->whereNotNull('meta_app_secret')
+            ->get(['id', 'meta_app_secret']);
+
+        foreach ($accounts as $account) {
+            $companySecret = trim((string) ($account->meta_app_secret ?? ''));
+            if ($companySecret !== '') {
+                $secrets[] = $companySecret;
+            }
+        }
+
+        return array_values(array_unique($secrets));
     }
 
     protected function getPlatformSettings(): ?PlatformSetting
@@ -215,6 +361,7 @@ class WhatsAppWebhookController extends Controller
         $waMessageId = $msg['id'] ?? null;
         $companyId = (int) $account->company_id;
         $phoneNumberId = (string) $account->phone_number_id;
+        $contextWaId = trim((string) ($msg['context']['id'] ?? ''));
 
         if ($type === 'reaction') {
             return;
@@ -222,7 +369,16 @@ class WhatsAppWebhookController extends Controller
 
         if ($type === 'text') {
             $text = $msg['text']['body'] ?? '';
-            $this->saveIncomingAndDispatchReply($companyId, $phoneNumberId, $from, $customerName, $text, $waMessageId);
+            $this->saveIncomingAndDispatchReply(
+                $companyId,
+                $phoneNumberId,
+                $from,
+                $customerName,
+                $text,
+                $waMessageId,
+                null,
+                $contextWaId !== '' ? $contextWaId : null,
+            );
             return;
         }
 
@@ -243,7 +399,8 @@ class WhatsAppWebhookController extends Controller
                 $customerName,
                 $text,
                 $waMessageId,
-                $mediaMeta
+                $mediaMeta,
+                $contextWaId !== '' ? $contextWaId : null,
             );
         }
     }
@@ -252,11 +409,21 @@ class WhatsAppWebhookController extends Controller
     {
         foreach ($value['statuses'] ?? [] as $status) {
             $waId = $status['id'] ?? null;
-            $statusValue = $status['status'] ?? null;
-            if (! $waId || ! $statusValue) {
+            $statusValue = strtolower((string) ($status['status'] ?? ''));
+            if (! $waId || $statusValue === '') {
                 continue;
             }
-            Message::where('whatsapp_message_id', $waId)->update(['status' => $statusValue]);
+
+            $message = Message::where('whatsapp_message_id', $waId)->first();
+            if (! $message) {
+                continue;
+            }
+
+            if (! Message::shouldAdvanceStatus($message->status, $statusValue)) {
+                continue;
+            }
+
+            $message->update(['status' => $statusValue]);
         }
     }
 
@@ -267,7 +434,8 @@ class WhatsAppWebhookController extends Controller
         ?string $customerName,
         string $text,
         ?string $waMessageId,
-        ?array $mediaMeta = null
+        ?array $mediaMeta = null,
+        ?string $contextWaId = null,
     ): void {
         $chat = Chat::firstOrCreate(
             [
@@ -305,6 +473,15 @@ class WhatsAppWebhookController extends Controller
             return;
         }
 
+        $replyToId = null;
+        $contextWaId = trim((string) $contextWaId);
+        if ($contextWaId !== '') {
+            $replyToId = Message::query()
+                ->where('chat_id', $chat->id)
+                ->where('whatsapp_message_id', $contextWaId)
+                ->value('id');
+        }
+
         $message = Message::create([
             'chat_id' => $chat->id,
             'content' => $text,
@@ -316,9 +493,20 @@ class WhatsAppWebhookController extends Controller
             'sender' => 'customer',
             'status' => 'received',
             'whatsapp_message_id' => $waMessageId,
+            'reply_to_message_id' => $replyToId,
         ]);
 
-        ProcessIncomingWhatsAppMessage::dispatch(
+        $dispatchMode = config('whatsapp.auto_reply_via_queue', false) ? 'queue' : (config('whatsapp.auto_reply_after_response', false) ? 'after_response' : 'sync');
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('WEBHOOK_DISPATCHING_AUTO_REPLY', [
+            'company_id' => $companyId,
+            'chat_id' => $chat->id,
+            'customer_phone' => $customerPhone,
+            'whatsapp_message_id' => $waMessageId,
+            'incoming_message_id' => $message->id,
+            'dispatch_mode' => $dispatchMode,
+        ]);
+
+        ProcessIncomingWhatsAppMessage::dispatchIncoming(
             $companyId,
             (int) $chat->id,
             $customerPhone,

@@ -14,11 +14,12 @@ Developer and DevOps reference for the Essem Chat Bot platform.
 ```
 Essem Chat Bot/
 ├── LARAVEL_BACKEND/   # Unified Laravel 12 + Inertia + React app (UI + API)
+├── MOBILE_APP/        # Flutter company companion (V1)
 ├── docs/              # This documentation site (GitHub Pages)
 └── (deprecated)       # Legacy Next.js at repo root — do not deploy
 ```
 
-> **Note:** The application is `LARAVEL_BACKEND/` only (Laravel + Inertia). The old Next.js frontend has been removed.
+> **Note:** Web UI + API live in `LARAVEL_BACKEND/` (Laravel + Inertia). Mobile companion lives in `MOBILE_APP/` (Flutter).
 
 ## Documentation map
 
@@ -26,6 +27,7 @@ Essem Chat Bot/
 |-------|----------|
 | System design | [Architecture](architecture.md) |
 | Languages & frameworks | [Tech Stack](tech-stack.md) |
+| Flutter company companion (V1) | [Mobile App V1 Vision](MOBILE_APP_V1_VISION.md) · [Pending map](MOBILE_APP_V1_PENDING.md) |
 | Inertia + React UI | [Frontend](frontend.md) |
 | Laravel API | [Backend](backend.md) |
 | REST endpoints | [API Reference](api-reference.md) |
@@ -42,6 +44,7 @@ Essem Chat Bot/
 | **Digital Nervous System (vision + code map)** | [SAVIT — Digital Nervous System](SAVIT_DIGITAL_NERVOUS_SYSTEM.md) — **north star** |
 | **AI Model Orchestration** | [Reasoning, fast chat, vision, STT routing](AI_MODEL_ORCHESTRATION.md) |
 | **Honest gaps** | [Shipped vs roadmap](HONEST_REMAINING_GAPS.md) |
+| **Classic storefront (1–20)** | [Storefront classic features](STOREFRONT_CLASSIC_FEATURES.md) |
 | **AI Phase 4** | [Vision, Owner Analytics, Brain, External Tools](AI_PHASE4_OS.md) |
 | **AI Phase 5** | [Executive UI, Voice Commands, Approvals, A/B Experiments](AI_PHASE5_OS.md) |
 | **ABI Levels 1–20 summary** | [Honest status matrix](ABI_LEVELS_SUMMARY.md) |

@@ -255,27 +255,27 @@ export function LandoHeroFlowSimulation() {
   }, [visible])
 
   return (
-    <div className="mx-auto w-full max-w-[360px] lg:max-w-[400px]">
-      <div className="relative rounded-[2.5rem] border-[10px] border-gray-900 bg-gray-900 p-1 shadow-2xl shadow-gray-900/20">
-        <div className="absolute left-1/2 top-3 z-10 h-6 w-28 -translate-x-1/2 rounded-full bg-gray-900" />
-        <div className="overflow-hidden rounded-[2rem] bg-white">
+    <div className="mx-auto w-full min-w-0 max-w-full sm:max-w-[360px] lg:max-w-[400px]">
+      <div className="relative rounded-[2rem] border-[8px] border-gray-900 bg-gray-900 p-1 shadow-2xl shadow-gray-900/20 sm:rounded-[2.5rem] sm:border-[10px]">
+        <div className="absolute left-1/2 top-3 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-gray-900 sm:h-6 sm:w-28" />
+        <div className="overflow-hidden rounded-[1.5rem] bg-white sm:rounded-[2rem]">
           <div
-            className="flex items-center gap-3 px-4 pb-3 pt-10"
+            className="flex items-center gap-3 px-3 pb-3 pt-9 sm:px-4 sm:pt-10"
             style={{ backgroundColor: "var(--wa-header)" }}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white sm:h-10 sm:w-10">
               EC
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold text-white">Essem Assistant</div>
+              <div className="truncate text-sm font-semibold text-white">RelayIQ Assistant</div>
               <div className="text-xs text-white/75">AI · online</div>
             </div>
-            <Smartphone className="h-4 w-4 text-white/80" />
+            <Smartphone className="h-4 w-4 shrink-0 text-white/80" />
           </div>
 
           <div
             ref={scrollRef}
-            className="h-[380px] space-y-2.5 overflow-y-auto p-3 scroll-smooth sm:h-[420px]"
+            className="h-[340px] space-y-2.5 overflow-y-auto overflow-x-hidden p-3 scroll-smooth sm:h-[420px]"
             style={{ backgroundColor: "var(--wa-bg)" }}
           >
             {TIMELINE.map((item) => {
@@ -287,19 +287,19 @@ export function LandoHeroFlowSimulation() {
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-center gap-1.5 sm:gap-2">
+      <div className="mt-4 flex max-w-full flex-wrap items-center justify-center gap-1.5 sm:mt-5 sm:gap-2">
         {PHASES.map((step, i) => {
           const active = PHASES.findIndex((p) => p.key === phase) >= i
           const current = step.key === phase
           return (
-            <div key={step.key} className="flex items-center gap-1.5 sm:gap-2">
+            <div key={step.key} className="flex items-center gap-1 sm:gap-2">
               <div
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-all duration-500 sm:px-3 sm:text-[11px]",
+                  "rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition-all duration-500 sm:px-3 sm:text-[11px]",
                   current
-                    ? "bg-[#2563eb] text-white shadow-md"
+                    ? "bg-primary text-white shadow-md"
                     : active
-                      ? "bg-[#2563eb]/15 text-[#2563eb]"
+                      ? "bg-primary/15 text-primary"
                       : "bg-gray-200 text-gray-500"
                 )}
               >
@@ -308,8 +308,8 @@ export function LandoHeroFlowSimulation() {
               {i < PHASES.length - 1 && (
                 <div
                   className={cn(
-                    "h-px w-4 transition-colors duration-500 sm:w-6",
-                    active ? "bg-[#2563eb]/40" : "bg-gray-200"
+                    "hidden h-px w-4 transition-colors duration-500 sm:block sm:w-6",
+                    active ? "bg-primary/40" : "bg-gray-200"
                   )}
                 />
               )}

@@ -62,7 +62,6 @@ final class CognitivePipelineService
         $action = $this->confidence->actionForScore($confidence);
 
         $promptBlock = implode("\n\n", array_filter([
-            $this->digitalTwin->getForPrompt($company),
             $this->businessDna->getForPrompt($company),
             $this->perception->guidanceForPrompt($perception),
             $councilEnabled ? $this->debate->guidanceForPrompt($debate) : null,

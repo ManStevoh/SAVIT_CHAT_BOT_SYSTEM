@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
+use App\Models\Message;
 use App\Models\SocialPost;
+use App\Services\WhatsApp\ChatAutoReplyService;
+use App\Support\PhoneSearch;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,10 +27,13 @@ class ChatController extends Controller
             $query->where('status', $request->status);
         }
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('customer_name', 'like', "%{$search}%")
-                    ->orWhere('customer_phone', 'like', "%{$search}%");
+            $search = (string) $request->search;
+            $patterns = PhoneSearch::likePatterns($search);
+            $query->where(function ($q) use ($search, $patterns) {
+                $q->where('customer_name', 'like', "%{$search}%");
+                foreach ($patterns as $pattern) {
+                    $q->orWhere('customer_phone', 'like', $pattern);
+                }
             });
         }
 
@@ -62,6 +68,7 @@ class ChatController extends Controller
                 'status' => $chat->status,
                 'aiHandled' => (bool) $chat->ai_handled,
                 'agentHandlingAt' => $chat->agent_handling_at?->toIso8601String(),
+                'isAgentHandling' => $chat->isAgentHandling(30),
                 'isAttributed' => (bool) ($chat->social_post_id || $chat->attribution_link_id),
                 'attribution' => $post ? [
                     'socialPostId' => (string) $post->id,
@@ -75,7 +82,175 @@ class ChatController extends Controller
     }
 
     /**
+     * Find or create a chat by customer phone (mobile "Add contact" / start conversation).
+     * POST /api/company/chats/start
+     */
+    public function start(Request $request): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $validated = $request->validate([
+            'phone' => 'required|string|max:50',
+            'name' => 'nullable|string|max:255',
+        ]);
+
+        $phone = preg_replace('/\D+/', '', $validated['phone']) ?? '';
+        if ($phone === '') {
+            return response()->json([
+                'message' => 'A valid phone number is required.',
+                'errors' => ['phone' => ['A valid phone number is required.']],
+            ], 422);
+        }
+
+        $name = trim((string) ($validated['name'] ?? ''));
+        if ($name === '') {
+            $name = 'Customer';
+        }
+
+        $chat = Chat::firstOrCreate(
+            [
+                'company_id' => $companyId,
+                'customer_phone' => $phone,
+            ],
+            [
+                'customer_name' => $name,
+                'customer_avatar' => null,
+                'last_message' => null,
+                'last_message_at' => now(),
+                'unread_count' => 0,
+                'status' => 'active',
+                'ai_handled' => false,
+                // Default: AI auto-reply owns the chat. Agent takeover happens only when an agent sends.
+                'agent_handling_at' => null,
+            ]
+        );
+
+        $created = $chat->wasRecentlyCreated;
+        if (! $created && $name !== 'Customer') {
+            $chat->update(['customer_name' => $name]);
+        }
+
+        $chat->refresh();
+
+        return response()->json([
+            'success' => true,
+            'created' => $created,
+            'chat' => [
+                'id' => (string) $chat->id,
+                'customerName' => $chat->customer_name,
+                'customerPhone' => $chat->customer_phone,
+                'customerAvatar' => $chat->customer_avatar,
+                'lastMessage' => $chat->last_message ?? '',
+                'lastMessageTime' => $chat->last_message_at ? Carbon::parse($chat->last_message_at)->diffForHumans() : '',
+                'unreadCount' => (int) $chat->unread_count,
+                'status' => $chat->status,
+                'aiHandled' => (bool) $chat->ai_handled,
+                'agentHandlingAt' => $chat->agent_handling_at?->toIso8601String(),
+                'isAgentHandling' => $chat->isAgentHandling(30),
+                'needsAiReply' => $chat->needsAiReply(),
+            ],
+        ], $created ? 201 : 200);
+    }
+
+    /**
+     * Update chat customer-retention fields (birthday, marketing opt-in).
+     * PATCH /api/company/chats/{chatId}
+     */
+    public function update(Request $request, string $chatId): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $chat = Chat::where('id', $chatId)->where('company_id', $companyId)->first();
+        if (! $chat) {
+            return response()->json(['message' => 'Chat not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'birthday' => 'sometimes|nullable|date',
+            'marketingOptIn' => 'sometimes|boolean',
+            'customerName' => 'sometimes|nullable|string|max:255',
+        ]);
+
+        if (array_key_exists('birthday', $validated)) {
+            $chat->birthday = $validated['birthday'];
+        }
+        if (array_key_exists('marketingOptIn', $validated)) {
+            $chat->marketing_opt_in = $validated['marketingOptIn'];
+        }
+        if (array_key_exists('customerName', $validated) && trim((string) $validated['customerName']) !== '') {
+            $chat->customer_name = trim($validated['customerName']);
+        }
+        $chat->save();
+
+        return response()->json([
+            'success' => true,
+            'chat' => [
+                'id' => (string) $chat->id,
+                'birthday' => $chat->birthday?->toDateString(),
+                'marketingOptIn' => (bool) $chat->marketing_opt_in,
+                'blockedFromOrdering' => (bool) $chat->blocked_from_ordering,
+            ],
+        ]);
+    }
+
+    /**
+     * Block this chat/number from placing further orders (manual spam control).
+     * POST /api/company/chats/{chatId}/block-ordering
+     */
+    public function blockOrdering(Request $request, string $chatId): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $chat = Chat::where('id', $chatId)->where('company_id', $companyId)->first();
+        if (! $chat) {
+            return response()->json(['message' => 'Chat not found.'], 404);
+        }
+
+        $chat->update(['blocked_from_ordering' => true]);
+
+        return response()->json([
+            'success' => true,
+            'blockedFromOrdering' => true,
+        ]);
+    }
+
+    /**
+     * Unblock this chat/number from placing orders.
+     * POST /api/company/chats/{chatId}/unblock-ordering
+     */
+    public function unblockOrdering(Request $request, string $chatId): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $chat = Chat::where('id', $chatId)->where('company_id', $companyId)->first();
+        if (! $chat) {
+            return response()->json(['message' => 'Chat not found.'], 404);
+        }
+
+        $chat->update(['blocked_from_ordering' => false]);
+
+        return response()->json([
+            'success' => true,
+            'blockedFromOrdering' => false,
+        ]);
+    }
+
+    /**
      * Clear agent_handling_at for this chat so the bot can auto-reply again (hand back to bot).
+     * Also re-processes the latest unanswered customer message so the bot replies immediately
+     * without waiting for another inbound WhatsApp message.
      * POST /api/company/chats/{chatId}/hand-back
      */
     public function handBack(Request $request, string $chatId): JsonResponse
@@ -91,10 +266,46 @@ class ChatController extends Controller
         }
 
         $chat->update(['agent_handling_at' => null]);
+        $chat->load(['company.settings', 'company.whatsappAccount']);
+
+        $botCountBefore = Message::query()
+            ->where('chat_id', $chat->id)
+            ->where('sender', 'bot')
+            ->count();
+
+        $reprocessed = app(ChatAutoReplyService::class)->replyToLatestUnansweredCustomer($chat, force: true);
+
+        $botCountAfter = Message::query()
+            ->where('chat_id', $chat->id)
+            ->where('sender', 'bot')
+            ->count();
+        $replied = $botCountAfter > $botCountBefore;
+
+        if (! $reprocessed) {
+            $settings = $chat->company?->settings;
+            $account = $chat->company?->whatsappAccount;
+            $message = 'Chat handed back to bot. Auto-reply will resume for the next customer message.';
+            if ($settings && $settings->auto_reply_enabled === false) {
+                $message = 'Chat unlocked, but auto-reply is disabled in Settings.';
+            } elseif (! $account || ! $account->isActive()) {
+                $message = 'Chat unlocked, but WhatsApp is not connected/active.';
+            }
+
+            return response()->json([
+                'success' => true,
+                'reprocessed' => false,
+                'replied' => false,
+                'message' => $message,
+            ]);
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Chat handed back to bot. Auto-reply will resume for new messages.',
-        ]);
+            'success' => $replied,
+            'reprocessed' => true,
+            'replied' => $replied,
+            'message' => $replied
+                ? 'AI reply sent to the customer.'
+                : 'Asked AI to reply, but no message was sent. Check subscription, message limits, and AI provider settings.',
+        ], $replied ? 200 : 422);
     }
 }

@@ -15,21 +15,27 @@ export function useRouter() {
 }
 
 export function usePathname(): string {
-  const { url } = usePage()
   try {
+    const { url } = usePage()
     return new URL(url, window.location.origin).pathname
   } catch {
-    return url
+    return typeof window !== 'undefined' ? window.location.pathname : ''
   }
 }
 
 export function useSearchParams() {
-  const { url } = usePage()
+  let currentUrl = ''
+  try {
+    const page = usePage()
+    currentUrl = page.url
+  } catch {
+    currentUrl = typeof window !== 'undefined' ? window.location.href : ''
+  }
 
   return useMemo(() => {
     let params: URLSearchParams
     try {
-      params = new URL(url, window.location.origin).searchParams
+      params = new URL(currentUrl, window.location.origin).searchParams
     } catch {
       params = new URLSearchParams()
     }
@@ -41,7 +47,7 @@ export function useSearchParams() {
       toString: () => params.toString(),
       forEach: (fn: (value: string, key: string) => void) => params.forEach(fn),
     }
-  }, [url])
+  }, [currentUrl])
 }
 
 export function useParams<T extends Record<string, string> = Record<string, string>>(): T {

@@ -17,9 +17,9 @@ use Illuminate\Support\Facades\Storage;
  */
 class SystemPromptBuilder
 {
-    private const MAX_FAQS_IN_PROMPT = 40;
+    private const MAX_FAQS_IN_PROMPT = 50;
 
-    private const MAX_PRODUCTS_IN_PROMPT = 30;
+    private const MAX_PRODUCTS_IN_PROMPT = 40;
 
     public function __construct(
         private AiLearningConfig $learningConfig,
@@ -42,8 +42,8 @@ class SystemPromptBuilder
         $budget = $this->learningConfig->maxPromptTokens();
 
         $parts = [
-            "You are the WhatsApp assistant for {$name}. You are the primary way customers get help — answer naturally in full sentences, like a knowledgeable team member.",
-            "Tone: {$tone}. Keep replies concise for WhatsApp (usually 2–5 short lines). Plain text only — no markdown, no **bold**, no bullet symbols unless listing products.",
+            "You are the primary AI employee and conversation OS for {$name}. You represent the owner with customers on WhatsApp — fluent, human, confident, and accurate.",
+            "Tone: {$tone}. Format your responses cleanly for WhatsApp using WhatsApp markdown (*bold* for product names and section titles, _italic_ for subtle tips, bullet points •, and line breaks between sections). Never output massive unformatted walls of text.",
         ];
 
         if ($replyLanguage !== null && $replyLanguage !== '') {
@@ -52,14 +52,25 @@ class SystemPromptBuilder
         }
 
         $parts = array_merge($parts, [
-            'Use the business profile, knowledge base, and product catalog below as your single source of truth. Synthesize answers in your own words — do not copy-paste robotically.',
-            'If information is missing, say you will confirm with the team. Never invent prices, stock, delivery zones, or policies.',
-            'When customers ask about hours, location, delivery, refunds, or orders, answer from the profile and knowledge base. If they want to buy, guide them: reply "order" or "2" to start, or "prices" / "1" for the numbered catalog.',
-            'Remember conversation context. If they thanked you or said ok, respond briefly and warmly without repeating the whole catalog.',
-            'For product recommendations, reference real items and prices from the catalog only.',
+            'You are NOT a rigid menu bot. Hold a real conversation: greet warmly, ask clarifying questions when needed, remember what they already said, and guide them toward helpful outcomes (answers, purchases, support).',
+            'Use the business profile, knowledge base, product catalog, and learned examples below as your source of truth. Synthesize in your own words — never invent prices, stock, delivery zones, or policies.',
+            'CRITICAL - CATALOG REQUESTS: Only present the full product catalog list if the customer explicitly asks to see the catalog, menu, products list, or asks "what do you sell?". DO NOT re-send or dump the full catalog list when answering questions, offering help, or handling store inquiries.',
+            'CRITICAL - LOCATION & STORE INFO: When a customer asks where your shop/store is located (e.g. "where is your shop located", "what is your address?"), answer with your physical location or address directly from the business profile. DO NOT call get_catalog or re-send the catalog list.',
+            'CRITICAL - HELP WITH ORDERING: When a customer asks for help ordering (e.g. "i want help with the order", "how do I order?"), explain clearly in 1-2 friendly sentences how to order (e.g. "To place an order, simply reply with the product number (e.g., 1 or 2) or tell me the item name you\'d like to buy!"). DO NOT re-dump the catalog.',
+            'CRITICAL - PRODUCT INQUIRIES & AVAILABILITY: When a customer asks if an item is available (e.g. "do you have rubber shoes?", "can I get X on your shop?"), search your products using search_products or check catalog context. If the item is in your catalog, present it with price and ordering options. If the item is NOT sold by your shop, explicitly tell the customer that you do not carry that product, and briefly mention available categories instead. NEVER output generic stalling replies like "If there is anything else feel free to ask".',
+            'CRITICAL - AMBIGUOUS ORDER STATEMENTS: When a customer says "I want to add", "add", "I want to buy", or asks a question without specifying a product number or item name, DO NOT assume or select an item, and DO NOT re-send the full catalog list. Politely ask them: "Which item would you like to add? Reply with the product number (e.g. 1, 2) or product name."',
+            'CRITICAL - CART MODIFICATIONS & CONFIRMATIONS: When a customer asks to remove, swap, change, or substitute an item (e.g. "remove CS Book", "order earphones instead"), or confirms a product choice/option (e.g. "yes give me the red ones", "red ones", "yes"), YOU MUST call process_order_message IMMEDIATELY in the exact same turn. NEVER output plain text asking the customer to confirm again. Execute the action first with process_order_message, then summarize the updated cart.',
+            'CRITICAL - ORDER PROCEED & CHECKOUT CONFIRMATION: When a customer says "yes", "proceed", "confirm", "i want to proceed", "i am ready to proceed", "place order", "finalize", or expresses intent to proceed/buy/checkout, YOU MUST call process_order_message IMMEDIATELY in that exact turn. NEVER output conversational promises like "Just a moment while I finalize the details", "If you\'re ready let me know", or plain text asking them to confirm again without calling process_order_message tool.',
+            'CRITICAL - PRODUCT IMAGES: When a customer asks to see images, photos, or pictures of items in their cart or products (e.g. "can I get an image of the item in my cart?", "show photos"), YOU MUST output image tags using [IMAGE_URL: <url> CAPTION: <caption_text>] for each product image, or call process_order_message with "images". NEVER output broken raw markdown images like ![alt](url).',
+            'When recommending or listing products: format each product neatly with a bold title (*Product Name*), clear price, and bullet points if describing features. Keep spacing clean and readable.',
+            'When selling: understand need → recommend real catalog items with reasons → handle objections → clear next step (order, pay, or human). Be persuasive but honest.',
+            'When supporting: use order history and facts; own the problem; offer a path to resolution.',
+            'Remember conversation context. If they thank you or say ok, respond briefly without dumping the catalog.',
+            'Prefer tools when available for live catalog, orders, payments, and memory. Never contradict tool results.',
         ]);
 
         $this->appendBusinessProfile($company, $parts);
+        $this->appendBusinessModeGuidance($company, $parts);
         $this->appendKnowledgeBase($company, $parts, $customerMessage, $budget);
         $this->appendProducts($company, $parts, $customerMessage, $budget);
         $this->appendLearningSamples($learningSamples, $parts);
@@ -71,6 +82,46 @@ class SystemPromptBuilder
         $prompt = implode("\n", $parts);
 
         return $this->trimToTokenBudget($prompt, $budget);
+    }
+
+    private function appendBusinessModeGuidance(Company $company, array &$parts): void
+    {
+        $settings = $company->settings;
+        $mode = $settings?->business_mode ?? 'hybrid';
+        $allowsBookings = $settings?->allowsBookings() ?? true;
+        $allowsDineIn = $settings?->allowsDineIn() ?? false;
+        $allowsCatalog = $settings?->allowsProductsCatalog() ?? true;
+
+        $lines = [];
+
+        if ($mode === 'services' || ($allowsBookings && ! $allowsCatalog)) {
+            $lines[] = 'OPERATING MODE: SERVICES & APPOINTMENTS';
+            $lines[] = '• You are an appointment concierge. Customers message to inquire about services, consultations, or bookings.';
+            $lines[] = '• Use check_calendar_availability to check live open slots and working hours.';
+            $lines[] = '• When the customer chooses a time slot, call create_booking to lock in their reservation.';
+            $lines[] = '• DO NOT ask for delivery addresses or shipping fees for service appointments.';
+        } elseif ($mode === 'restaurant' || $allowsDineIn) {
+            $lines[] = 'OPERATING MODE: RESTAURANT & DINE-IN / FOOD MENU';
+            $lines[] = '• You handle food & drink orders. When a customer mentions a table (e.g. Table 4 or T4), lock in table dining.';
+            $lines[] = '• For table orders (dine-in), NEVER ask for a delivery address or delivery fees.';
+            $lines[] = '• Ask for any dietary preferences or cooking instructions if relevant, and confirm orders swiftly.';
+        } elseif ($mode === 'retail') {
+            $lines[] = 'OPERATING MODE: RETAIL & E-COMMERCE';
+            $lines[] = '• You sell physical/digital products with delivery and self-pickup fulfillment.';
+            $lines[] = '• Collect delivery address for shipping orders.';
+        } else {
+            $lines[] = 'OPERATING MODE: HYBRID (Products, Services & Dine-In)';
+            if ($allowsBookings) {
+                $lines[] = '• For service items, use check_calendar_availability and create_booking without asking for shipping addresses.';
+            }
+            if ($allowsDineIn) {
+                $lines[] = '• For table dine-in orders, skip delivery addresses and tag the table.';
+            }
+        }
+
+        if ($lines !== []) {
+            $parts[] = "\n".implode("\n", $lines);
+        }
     }
 
     private function appendBusinessProfile(Company $company, array &$parts): void
@@ -165,26 +216,30 @@ class SystemPromptBuilder
             }
         }
         $company->loadMissing('settings');
-        $ccy = $company->settings?->displayCurrencyCode() ?? 'USD';
+        $settings = $company->settings;
+        $ccy = $settings?->displayCurrencyCode() ?? 'USD';
         $parts[] = "\nProducts (do not invent; refer to catalog if they ask). All prices are in {$ccy}. Customers can order by number in WhatsApp:";
 
         $added = 0;
         foreach ($ranked as $p) {
             $lines = [];
+            $desc = trim((string) ($p->description ?? ''));
+            $descSuffix = $desc !== '' ? ' — '.mb_substr($desc, 0, 120) : '';
+
             if ($p->variants->where('status', 'active')->isNotEmpty()) {
                 $min = (float) $p->variants->where('status', 'active')->min('price');
                 $productImage = $this->resolvePrimaryImageUrl($p->images);
                 $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
-                $lines[] = '- '.$p->name.' (options; from '.MoneyFormatter::format($min, $ccy)."){$productImageSuffix}:";
+                $lines[] = '- '.$p->name.' (options; from '.MoneyFormatter::formatFromSettings($min, $settings).")$descSuffix{$productImageSuffix}:";
                 foreach ($p->variants->where('status', 'active')->take(8) as $v) {
                     $variantImage = $this->resolvePrimaryImageUrl($v->images) ?? $productImage;
                     $variantImageSuffix = $variantImage ? " [image: {$variantImage}]" : '';
-                    $lines[] = '  • '.$v->label.': '.MoneyFormatter::format((float) $v->price, $ccy).$variantImageSuffix;
+                    $lines[] = '  • '.$v->label.': '.MoneyFormatter::formatFromSettings((float) $v->price, $settings).$variantImageSuffix;
                 }
             } else {
                 $productImage = $this->resolvePrimaryImageUrl($p->images);
                 $productImageSuffix = $productImage ? " [image: {$productImage}]" : '';
-                $lines[] = '- '.$p->name.': '.MoneyFormatter::format((float) $p->price, $ccy).$productImageSuffix;
+                $lines[] = '- '.$p->name.': '.MoneyFormatter::formatFromSettings((float) $p->price, $settings).$descSuffix.$productImageSuffix;
             }
 
             $block = implode("\n", $lines);

@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe } from "lucide-react"
+import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe, Cookie, Code } from "lucide-react"
 import {
   getPlatformSettings,
   updatePlatformSettings,
@@ -34,7 +34,7 @@ const timezoneGroups = getTimezoneGroups()
 export default function AdminSettingsPage() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
-  const validTabs = ["general", "appearance", "security", "email", "integrations", "notifications", "landing"] as const
+  const validTabs = ["general", "appearance", "security", "compliance", "email", "integrations", "notifications", "landing"] as const
   const initialTab = validTabs.includes(tabParam as typeof validTabs[number])
     ? (tabParam as typeof validTabs[number])
     : "general"
@@ -45,6 +45,7 @@ export default function AdminSettingsPage() {
   const [savingEmail, setSavingEmail] = useState(false)
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [savingSecurity, setSavingSecurity] = useState(false)
+  const [savingCompliance, setSavingCompliance] = useState(false)
   const [savingIntegrations, setSavingIntegrations] = useState(false)
   const [savingNotifications, setSavingNotifications] = useState(false)
   const [savingLanding, setSavingLanding] = useState(false)
@@ -52,6 +53,8 @@ export default function AdminSettingsPage() {
   const [testEmailTo, setTestEmailTo] = useState("")
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [faviconFile, setFaviconFile] = useState<File | null>(null)
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -101,11 +104,14 @@ export default function AdminSettingsPage() {
         primaryColor: settings.primaryColor ?? undefined,
         secondaryColor: settings.secondaryColor ?? undefined,
         logo: logoFile ?? undefined,
+        favicon: faviconFile ?? undefined,
       })
       if (res.success) {
         toast({ title: res.message ?? "Appearance saved" })
         setLogoFile(null)
         setLogoPreview(null)
+        setFaviconFile(null)
+        setFaviconPreview(null)
         getPlatformSettings().then((data) => setSettings(data))
       } else {
         toast({ title: res.message ?? "Save failed", variant: "destructive" })
@@ -123,6 +129,15 @@ export default function AdminSettingsPage() {
       setLogoFile(file)
       const url = URL.createObjectURL(file)
       setLogoPreview(url)
+    }
+  }
+
+  const onFaviconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setFaviconFile(file)
+      const url = URL.createObjectURL(file)
+      setFaviconPreview(url)
     }
   }
 
@@ -172,6 +187,35 @@ export default function AdminSettingsPage() {
       toast({ title: "Failed to save security settings", variant: "destructive" })
     } finally {
       setSavingSecurity(false)
+    }
+  }
+
+  const handleSaveCompliance = async () => {
+    if (!settings) return
+    setSavingCompliance(true)
+    try {
+      const res = await updatePlatformSettings({
+        cookieBannerEnabled: settings.cookieBannerEnabled,
+        cookieBannerText: settings.cookieBannerText ?? undefined,
+        cookiePolicyUrl: settings.cookiePolicyUrl ?? undefined,
+        recaptchaEnabled: settings.recaptchaEnabled,
+        recaptchaSiteKey: settings.recaptchaSiteKey ?? undefined,
+        recaptchaSecretKey:
+          settings.recaptchaSecretKey && settings.recaptchaSecretKey !== "********"
+            ? settings.recaptchaSecretKey
+            : undefined,
+      })
+      if (res.success) {
+        toast({ title: res.message ?? "Compliance settings saved" })
+        const refreshed = await getPlatformSettings()
+        setSettings(refreshed)
+      } else {
+        toast({ title: res.message ?? "Save failed", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Failed to save compliance settings", variant: "destructive" })
+    } finally {
+      setSavingCompliance(false)
     }
   }
 
@@ -245,6 +289,7 @@ export default function AdminSettingsPage() {
         openaiApiKey: settings.openaiApiKey && settings.openaiApiKey !== "********" ? settings.openaiApiKey : undefined,
         openaiModel: settings.openaiModel ?? undefined,
         openaiMaxTokens: settings.openaiMaxTokens ?? undefined,
+        devModeEnabled: settings.devModeEnabled ?? false,
         aiLearningConfig: settings.aiLearningConfig ?? undefined,
       })
       if (res.success) {
@@ -337,6 +382,10 @@ export default function AdminSettingsPage() {
             <Shield className="h-4 w-4" />
             Security
           </TabsTrigger>
+          <TabsTrigger value="compliance" className="gap-2">
+            <Cookie className="h-4 w-4" />
+            Compliance
+          </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
             Email
@@ -369,7 +418,7 @@ export default function AdminSettingsPage() {
                     id="platformName"
                     value={settings?.platformName ?? ""}
                     onChange={(e) => updateSetting("platformName", e.target.value)}
-                    placeholder="e.g. Essem Chat"
+                    placeholder="e.g. RelayIQ"
                   />
                   <p className="text-xs text-muted-foreground mt-1">Used in emails, invoices, and headers across the app.</p>
                 </Field>
@@ -471,7 +520,7 @@ export default function AdminSettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Appearance & branding</CardTitle>
-              <CardDescription>Primary and secondary colours, logo, and app name. Applied to the landing page, dashboard theme, emails, and invoices.</CardDescription>
+              <CardDescription>Primary and secondary colours, logo, favicon, and app name. Applied to the landing page, dashboard theme, emails, and invoices.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FieldGroup>
@@ -542,6 +591,38 @@ export default function AdminSettingsPage() {
                         </Button>
                         {logoFile && (
                           <span className="text-xs text-muted-foreground">{logoFile.name}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Field>
+                <Field>
+                  <FieldLabel>Favicon</FieldLabel>
+                  <p className="text-xs text-muted-foreground mb-2">Browser tab icon. Square PNG (32×32 to 512×512) recommended. Max 1 MB.</p>
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="h-12 w-12 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={faviconPreview ?? settings?.appFavicon ?? "/images/branding/relaysiq-favicon.png"}
+                          alt="Favicon"
+                          className="max-h-10 max-w-10 object-contain"
+                        />
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <Button type="button" variant="outline" size="sm" asChild>
+                          <label className="cursor-pointer flex items-center gap-2">
+                            <Upload className="h-4 w-4" />
+                            {settings?.appFavicon && !faviconFile ? "Replace favicon" : "Upload favicon"}
+                            <input
+                              type="file"
+                              accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/jpeg,image/webp,image/svg+xml"
+                              className="sr-only"
+                              onChange={onFaviconChange}
+                            />
+                          </label>
+                        </Button>
+                        {faviconFile && (
+                          <span className="text-xs text-muted-foreground">{faviconFile.name}</span>
                         )}
                       </div>
                     </div>
@@ -637,6 +718,104 @@ export default function AdminSettingsPage() {
 
               <Button onClick={handleSaveSecurity} disabled={savingSecurity}>
                 {savingSecurity ? "Saving…" : "Save Security Settings"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="compliance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compliance</CardTitle>
+              <CardDescription>
+                Cookie consent banner and Google reCAPTCHA for public forms. Privacy Policy is managed in Website CMS.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">Cookie banner</p>
+                    <p className="text-sm text-muted-foreground">Show a consent notice on public marketing pages</p>
+                  </div>
+                  <Switch
+                    checked={settings?.cookieBannerEnabled ?? true}
+                    onCheckedChange={(v) => updateSetting("cookieBannerEnabled", v)}
+                  />
+                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="cookieBannerText">Banner text</FieldLabel>
+                    <Textarea
+                      id="cookieBannerText"
+                      rows={3}
+                      value={settings?.cookieBannerText ?? ""}
+                      onChange={(e) => updateSetting("cookieBannerText", e.target.value)}
+                      placeholder="We use cookies to keep you signed in and improve RelayIQ…"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="cookiePolicyUrl">Privacy / cookie policy URL</FieldLabel>
+                    <Input
+                      id="cookiePolicyUrl"
+                      value={settings?.cookiePolicyUrl ?? "/privacy"}
+                      onChange={(e) => updateSetting("cookiePolicyUrl", e.target.value)}
+                      placeholder="/privacy"
+                    />
+                  </Field>
+                </FieldGroup>
+              </div>
+
+              <div className="space-y-4 border-t border-border pt-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">Google reCAPTCHA v2</p>
+                    <p className="text-sm text-muted-foreground">
+                      Protect Sign up and Contact forms. Create keys at{" "}
+                      <a
+                        href="https://www.google.com/recaptcha/admin"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        Google reCAPTCHA Admin
+                      </a>{" "}
+                      (choose “reCAPTCHA v2 → I’m not a robot”).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.recaptchaEnabled ?? false}
+                    onCheckedChange={(v) => updateSetting("recaptchaEnabled", v)}
+                  />
+                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="recaptchaSiteKey">Site key (public)</FieldLabel>
+                    <Input
+                      id="recaptchaSiteKey"
+                      value={settings?.recaptchaSiteKey ?? ""}
+                      onChange={(e) => updateSetting("recaptchaSiteKey", e.target.value)}
+                      placeholder="6Lc…"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="recaptchaSecretKey">Secret key</FieldLabel>
+                    <Input
+                      id="recaptchaSecretKey"
+                      type="password"
+                      value={settings?.recaptchaSecretKey ?? ""}
+                      onChange={(e) => updateSetting("recaptchaSecretKey", e.target.value)}
+                      placeholder={settings?.recaptchaSecretKey === "********" ? "Saved — enter new key to replace" : "Secret key"}
+                    />
+                  </Field>
+                </FieldGroup>
+                <p className="text-xs text-muted-foreground">
+                  Captcha only activates when enabled and both keys are set. Add your domain (and localhost for testing) in Google’s reCAPTCHA console.
+                </p>
+              </div>
+
+              <Button onClick={handleSaveCompliance} disabled={savingCompliance}>
+                {savingCompliance ? "Saving…" : "Save Compliance Settings"}
               </Button>
             </CardContent>
           </Card>
@@ -813,7 +992,7 @@ export default function AdminSettingsPage() {
                   <p className="font-medium text-foreground">Meta WhatsApp billing model</p>
                   <p className="text-sm text-muted-foreground">
                     Controls who pays Meta for WhatsApp conversation fees. Applies to all companies connecting after you save.
-                    Essem subscription billing (Stripe/M-Pesa) is separate.
+                    RelayIQ subscription billing (Stripe/M-Pesa) is separate.
                   </p>
                 </div>
                 <Field>
@@ -834,7 +1013,7 @@ export default function AdminSettingsPage() {
                 {settings?.whatsappBillingModel === "solution_partner" && (
                   <div className="space-y-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
                     <p className="text-sm text-muted-foreground">
-                      Requires Meta Solution Partner status and an extended credit line. On connect, Essem automatically calls Meta&apos;s{" "}
+                      Requires Meta Solution Partner status and an extended credit line. On connect, RelayIQ automatically calls Meta&apos;s{" "}
                       <code className="text-xs">whatsapp_credit_sharing_and_attach</code> API for each company WABA.
                       You are the Bill-To party and liable for all WhatsApp spend on shared credit lines.
                     </p>
@@ -1185,6 +1364,21 @@ export default function AdminSettingsPage() {
                     value={aiLearning.fallbackLanguage ?? "en"}
                     onChange={(e) => updateAiLearning("fallbackLanguage", e.target.value || "en")}
                     placeholder="en"
+                  />
+                </Field>
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4 bg-amber-500/5 border-amber-500/30">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <FieldLabel className="flex items-center gap-2 font-semibold text-foreground">
+                      <Code className="h-4 w-4 text-amber-500" />
+                      Developer Mode & AI Prompt Debugger
+                    </FieldLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Enable platform-wide raw LLM prompt logging and prompt downloads under chat messages.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.devModeEnabled ?? false}
+                    onCheckedChange={(v) => setSettings((prev) => ({ ...prev, devModeEnabled: v }))}
                   />
                 </Field>
               </FieldGroup>

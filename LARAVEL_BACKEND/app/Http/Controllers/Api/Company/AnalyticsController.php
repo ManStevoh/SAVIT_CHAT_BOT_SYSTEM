@@ -20,6 +20,15 @@ class AnalyticsController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
 
+        $company = $request->user()->company;
+        if ($company && ! \App\Services\PlanLimitService::companyHasAnalytics($company)) {
+            return response()->json([
+                'message' => 'Analytics dashboard is available on Growth and Enterprise plans.',
+                'code' => 'analytics_required',
+                'upgradeUrl' => rtrim((string) config('app.frontend_url', config('app.url')), '/').'/dashboard/subscription',
+            ], 403);
+        }
+
         $period = $request->input('period', '7d');
         $days = $period === '30d' ? 30 : ($period === '90d' ? 90 : 7);
         $since = now()->subDays($days);

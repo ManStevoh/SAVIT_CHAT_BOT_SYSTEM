@@ -11,7 +11,18 @@ class TokenEstimator
     {
         $len = mb_strlen($text);
 
-        return $len === 0 ? 0 : (int) max(1, ceil($len / 4));
+        if ($len === 0) {
+            return 0;
+        }
+
+        // Count ASCII printable characters (single-byte = ~4 chars/token)
+        $asciiLen = strlen(preg_replace('/[^\x20-\x7E]/', '', $text) ?? '');
+        $nonAsciiLen = $len - $asciiLen;
+
+        // ASCII: ~4 chars/token; non-ASCII: ~2 chars/token (conservative for multi-byte scripts)
+        $estimate = ($asciiLen / 4) + ($nonAsciiLen / 2);
+
+        return (int) max(1, ceil($estimate));
     }
 
     /**

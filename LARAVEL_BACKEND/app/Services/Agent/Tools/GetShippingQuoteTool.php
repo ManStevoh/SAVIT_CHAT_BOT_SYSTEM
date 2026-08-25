@@ -56,11 +56,11 @@ final class GetShippingQuoteTool implements AgentTool
         }
 
         $quote = $result['quote'] ?? [];
-        $currency = $context->company->settings?->displayCurrencyCode() ?? ($quote['currency'] ?? 'KES');
+        $settings = $context->company->settings;
 
         return [
             'quote' => [
-                'amount' => MoneyFormatter::format((float) ($quote['amount'] ?? 0), $currency),
+                'amount' => MoneyFormatter::formatFromSettings((float) ($quote['amount'] ?? 0), $settings),
                 'eta_days' => (int) ($quote['eta_days'] ?? 2),
                 'carrier' => (string) ($quote['carrier'] ?? 'standard'),
                 'note' => (string) ($quote['note'] ?? ''),

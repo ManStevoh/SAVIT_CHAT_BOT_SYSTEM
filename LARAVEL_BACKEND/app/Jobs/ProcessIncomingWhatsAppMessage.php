@@ -37,13 +37,106 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
     public array $backoff = [10, 60, 300];
 
+    /** Seconds to hold the unique lock (avoids stuck locks when a job never runs). */
+    public int $uniqueFor = 120;
+
     /**
-     * Unique key so only one job runs per incoming message (avoids duplicate replies when Meta retries the webhook).
+     * Dispatch inbound auto-reply. Default is synchronous so AI auto-reply actually sends
+     * without a queue worker. Optional after-response / queue via config.
+     */
+    public static function dispatchIncoming(
+        int $companyId,
+        int $chatId,
+        string $customerPhone,
+        string $phoneNumberId,
+        string $messageText,
+        ?string $customerName = null,
+        ?string $whatsappMessageId = null,
+        ?int $incomingMessageId = null,
+        bool $forceReply = false,
+    ): mixed {
+        if (config('whatsapp.auto_reply_via_queue', false)) {
+            return static::dispatch(
+                $companyId,
+                $chatId,
+                $customerPhone,
+                $phoneNumberId,
+                $messageText,
+                $customerName,
+                $whatsappMessageId,
+                $incomingMessageId,
+                $forceReply,
+            );
+        }
+
+        if (config('whatsapp.auto_reply_after_response', false)) {
+            return static::dispatchAfterResponse(
+                $companyId,
+                $chatId,
+                $customerPhone,
+                $phoneNumberId,
+                $messageText,
+                $customerName,
+                $whatsappMessageId,
+                $incomingMessageId,
+                $forceReply,
+            );
+        }
+
+        static::dispatchSyncIncoming(
+            $companyId,
+            $chatId,
+            $customerPhone,
+            $phoneNumberId,
+            $messageText,
+            $customerName,
+            $whatsappMessageId,
+            $incomingMessageId,
+            $forceReply,
+        );
+
+        return null;
+    }
+
+    /**
+     * Run auto-reply immediately in this request (used by Ask AI / hand-back).
+     */
+    public static function dispatchSyncIncoming(
+        int $companyId,
+        int $chatId,
+        string $customerPhone,
+        string $phoneNumberId,
+        string $messageText,
+        ?string $customerName = null,
+        ?string $whatsappMessageId = null,
+        ?int $incomingMessageId = null,
+        bool $forceReply = false,
+    ): void {
+        static::dispatchSync(
+            $companyId,
+            $chatId,
+            $customerPhone,
+            $phoneNumberId,
+            $messageText,
+            $customerName,
+            $whatsappMessageId,
+            $incomingMessageId,
+            $forceReply,
+        );
+    }
+
+    /**
+     * Unique key so only one job runs per incoming message (avoids duplicate replies when Meta retries
+     * or dashboard poll races the webhook). forceReply shares the same key.
      */
     public function uniqueId(): string
     {
         if ($this->whatsappMessageId) {
             return "wa_incoming:{$this->chatId}:{$this->whatsappMessageId}";
+        }
+
+        if ($this->incomingMessageId) {
+            return "wa_incoming:{$this->chatId}:msg:{$this->incomingMessageId}";
         }
 
         return "wa_incoming:{$this->chatId}:".md5($this->messageText.':'.$this->customerPhone);
@@ -58,12 +151,73 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         public ?string $customerName = null,
         public ?string $whatsappMessageId = null,
         public ?int $incomingMessageId = null,
-    ) {}
+        public bool $forceReply = false,
+    ) {
+        $this->uniqueFor = 120;
+    }
 
     public function handle(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
     {
+        @set_time_limit(120);
+        @ini_set('max_execution_time', '120');
+
+        \App\Services\WhatsApp\WhatsAppDebugLogger::registerShutdownHandler([
+            'company_id' => $this->companyId,
+            'chat_id' => $this->chatId,
+            'whatsapp_message_id' => $this->whatsappMessageId,
+        ]);
+
+        $lockKey = 'wa_reply_lock:'.$this->uniqueId();
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 120);
+        if (! $lock->get()) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('SKIPPED_DUPLICATE_LOCK_HELD', [
+                'chat_id' => $this->chatId,
+                'whatsapp_message_id' => $this->whatsappMessageId,
+            ]);
+            Log::info('ProcessIncomingWhatsAppMessage: skipped duplicate (lock held)', [
+                'chat_id' => $this->chatId,
+                'whatsapp_message_id' => $this->whatsappMessageId,
+            ]);
+
+            return;
+        }
+
+        try {
+            $this->handleLocked($aiReply, $waSender, $mailService);
+        } catch (\Throwable $e) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('PIPELINE_CRITICAL_UNHANDLED_EXCEPTION', [
+                'company_id' => $this->companyId,
+                'chat_id' => $this->chatId,
+                'error' => $e->getMessage(),
+                'file' => basename($e->getFile()),
+                'line' => $e->getLine(),
+            ], $e);
+            Log::error('ProcessIncomingWhatsAppMessage: unhandled exception', [
+                'company_id' => $this->companyId,
+                'chat_id' => $this->chatId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    protected function handleLocked(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
+    {
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('JOB_EXECUTION_START', [
+            'company_id' => $this->companyId,
+            'chat_id' => $this->chatId,
+            'customer_phone' => $this->customerPhone,
+            'whatsapp_message_id' => $this->whatsappMessageId,
+            'incoming_message_id' => $this->incomingMessageId,
+            'force_reply' => $this->forceReply,
+            'message_preview' => mb_substr($this->messageText, 0, 100),
+        ]);
+
         $company = Company::find($this->companyId);
         if (! $company) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('SKIPPED_COMPANY_NOT_FOUND', ['company_id' => $this->companyId]);
             Log::warning('ProcessIncomingWhatsAppMessage: company not found', ['company_id' => $this->companyId]);
 
             return;
@@ -71,22 +225,58 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
         $chat = Chat::find($this->chatId);
         if (! $chat) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('SKIPPED_CHAT_NOT_FOUND', ['chat_id' => $this->chatId]);
+
+            return;
+        }
+
+        // System Maintenance Mode Interceptor
+        if (config('agent.system_maintenance_enabled', false)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('SYSTEM_MAINTENANCE_MODE_ACTIVE', [
+                'company_id' => $company->id,
+                'chat_id' => $chat->id,
+            ]);
+
+            $maintenanceMsg = (string) config(
+                'agent.system_maintenance_message',
+                "🚧 *System Under Maintenance*\n\nOur service is currently undergoing scheduled system updates to improve performance and add new features. We will be back online shortly!\n\nThank you for your patience."
+            );
+
+            $this->sendReplyAndSave($waSender, $company, $chat, $maintenanceMsg, 'system_maintenance');
+
             return;
         }
 
         $this->updateChatLanguage($company, $chat);
 
         if ($this->tryHandleCustomerLearningFeedback($chat)) {
-            return;
-        }
-
-        if ($chat->isAgentHandling(30)) {
-            $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('HANDLED_CUSTOMER_LEARNING_FEEDBACK', ['chat_id' => $chat->id]);
 
             return;
         }
 
-        if ($this->wantsHumanEscalation($chat)) {
+        // Agent lock: silence AI when chat has been handed off to a human agent.
+        if ($chat->agent_handling_at !== null || $chat->ai_handled === false || $chat->status === 'pending') {
+            if ($chat->isAgentHandling(30) && ! $this->forceReply) {
+                \App\Services\WhatsApp\WhatsAppDebugLogger::warning('SKIPPED_HUMAN_AGENT_ACTIVE', [
+                    'chat_id' => $chat->id,
+                    'agent_handling_at' => $chat->agent_handling_at?->toIso8601String(),
+                ]);
+                $this->notifyCompanyNewMessage($company, $mailService, 'agent_active');
+
+                return;
+            }
+
+            if ($chat->agent_handling_at !== null && ! $chat->isAgentHandling(30)) {
+                $chat->update(['agent_handling_at' => null, 'ai_handled' => true, 'status' => 'open']);
+                $chat->refresh();
+            }
+        }
+
+        // Keyword handoff is legacy fallback only. Agent commerce always routes to AI
+        // (including menu "3") so transfer_to_human can decide from dialogue intent.
+        if ($this->wantsHumanEscalation($chat, allowKeywordMatch: ! CommerceAgentReplyService::isEnabledForCompany($company))) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('HUMAN_ESCALATION_TRIGGERED', ['chat_id' => $chat->id]);
             $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
             app(OrderFlowService::class)->resetOrderState($chat);
             $chat->refresh();
@@ -102,69 +292,213 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
 
         if (! $this->companyHasActiveSubscription($company)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('SKIPPED_INACTIVE_SUBSCRIPTION', [
+                'company_id' => $company->id,
+                'chat_id' => $chat->id,
+            ]);
             $replyText = 'Our service is temporarily unavailable. Please try again later or contact support.';
             $this->sendReplyAndSave($waSender, $company, $chat, $replyText, 'subscription_unavailable');
 
             return;
         }
 
-        app(UsageMeterService::class)->increment($company, 'messages');
-
         if (! PlanLimitService::isWithinMessageLimit($company)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('SKIPPED_PLAN_LIMIT_REACHED', ['company_id' => $company->id]);
             Log::info('ProcessIncomingWhatsAppMessage: message limit reached, skipping auto-reply', ['company_id' => $company->id]);
             $this->notifyCompanyNewMessage($company, $mailService, 'message');
 
             return;
         }
 
+        app(UsageMeterService::class)->increment($company, 'messages');
+
         $settings = $company->settings;
-        if (! $settings || ! $settings->auto_reply_enabled) {
+        // Default ON: missing settings row must not disable AI auto-reply.
+        if ($settings && $settings->auto_reply_enabled === false) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('SKIPPED_AUTO_REPLY_DISABLED', [
+                'company_id' => $company->id,
+                'auto_reply_enabled' => false,
+            ]);
             $this->notifyCompanyNewMessage($company, $mailService, 'message');
 
             return;
         }
 
         $account = $company->whatsappAccount;
-        if (! $account || ! $account->isActive()) {
+        $accountActive = $account && $account->isActive();
+        $autoReplyEnabled = ($settings?->auto_reply_enabled ?? true) !== false;
+
+        \App\Services\WhatsApp\WhatsAppDebugLogger::log('JOB_PROCESSING_PIPELINE', [
+            'company_id' => $company->id,
+            'chat_id' => $chat->id,
+            'customer_phone' => $this->customerPhone,
+            'whatsapp_account_id' => $account?->id,
+            'whatsapp_account_status' => $account?->status,
+            'whatsapp_account_is_active' => $accountActive,
+            'auto_reply_enabled' => $autoReplyEnabled,
+            'agent_handling_at' => $chat->agent_handling_at?->toIso8601String(),
+            'message_text_preview' => mb_substr($this->messageText, 0, 100),
+        ]);
+
+        if (! $accountActive) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::log('SKIPPED_INACTIVE_WHATSAPP_ACCOUNT', [
+                'account_id' => $account?->id,
+                'status' => $account?->status,
+            ]);
             Log::warning('ProcessIncomingWhatsAppMessage: no active WhatsApp account', ['company_id' => $this->companyId]);
 
             return;
         }
 
+        // Always dedupe — including force/handback — so webhook + dashboard poll cannot double-send.
         if ($this->alreadyRepliedToThisMessage()) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::log('SKIPPED_ALREADY_REPLIED_DUPLICATE', [
+                'incoming_message_id' => $this->incomingMessageId,
+                'whatsapp_message_id' => $this->whatsappMessageId,
+            ]);
+
             return;
         }
 
+        // Authoritative Cutover Switch (CONVERSATIONAL_OS_ENABLED=true)
+        $conversationalOsEnabled = (bool) config('agent.conversational_os_enabled', env('CONVERSATIONAL_OS_ENABLED', true));
+
+        if ($conversationalOsEnabled) {
+            Log::info('PIPELINE_STARTUP', [
+                'active_pipeline' => 'ConversationalOSPipeline',
+                'workflow_version' => \App\Services\Workflow\WorkflowEngine::WORKFLOW_VERSION,
+                'renderer_version' => \App\Services\Workflow\ResponseSpecRenderer::RENDERER_VERSION,
+                'company_id' => $company->id,
+                'chat_id' => $chat->id,
+            ]);
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('CONVERSATIONAL_OS_PIPELINE_EXECUTING', [
+                'active_pipeline' => 'ConversationalOSPipeline',
+                'workflow_version' => \App\Services\Workflow\WorkflowEngine::WORKFLOW_VERSION,
+                'renderer_version' => \App\Services\Workflow\ResponseSpecRenderer::RENDERER_VERSION,
+            ]);
+
+            $channelAdapter = new \App\Services\Channels\WhatsAppChannelAdapter($waSender);
+            $envelope = $channelAdapter->normalizeInbound([
+                'customer_phone' => $this->customerPhone,
+                'customer_name' => $this->customerName,
+                'message_text' => $this->messageText,
+                'whatsapp_message_id' => $this->whatsappMessageId,
+            ], (int) $company->id);
+
+            $pipeline = app(\App\Services\Workflow\ConversationalOSPipeline::class);
+            $pipeline->processTurn($company, $chat, $envelope, $channelAdapter);
+
+            return;
+        }
+
+        Log::warning('PIPELINE_ROLLBACK_ACTIVE: Routing to legacy pipeline', [
+            'company_id' => $company->id,
+            'chat_id' => $chat->id,
+        ]);
+
         if (CommerceAgentReplyService::isEnabledForCompany($company)) {
-            $messageText = $this->enrichIncomingMessage($company, $chat);
+            $agentResult = null;
+            try {
+                $messageText = $this->enrichIncomingMessage($company, $chat);
 
-            $ownerVoice = app(\App\Services\Agent\Voice\OwnerVoiceCommandService::class);
-            if ($ownerVoice->isOwnerPhone($company, $this->customerPhone)) {
-                $ownerResult = $ownerVoice->handle($company, $chat, $messageText);
-                if (($ownerResult['handled'] ?? false) && trim((string) ($ownerResult['reply'] ?? '')) !== '') {
-                    $this->sendReplyAndSave($waSender, $company, $chat, (string) $ownerResult['reply'], 'owner_voice');
+                \App\Services\WhatsApp\WhatsAppDebugLogger::log('COMMERCE_AGENT_TRY_GENERATE', [
+                    'company_id' => $company->id,
+                    'chat_id' => $chat->id,
+                    'message_text' => mb_substr($messageText, 0, 150),
+                ]);
 
-                    return;
+                $ownerVoice = app(\App\Services\Agent\Voice\OwnerVoiceCommandService::class);
+                if ($ownerVoice->isOwnerPhone($company, $this->customerPhone)) {
+                    $ownerResult = $ownerVoice->handle($company, $chat, $messageText);
+                    if (($ownerResult['handled'] ?? false) && trim((string) ($ownerResult['reply'] ?? '')) !== '') {
+                        \App\Services\WhatsApp\WhatsAppDebugLogger::log('OWNER_VOICE_HANDLED', $ownerResult);
+                        $this->sendReplyAndSave($waSender, $company, $chat, (string) $ownerResult['reply'], 'owner_voice');
+
+                        return;
+                    }
                 }
+
+                $agentResult = app(CommerceAgentReplyService::class)->generate(
+                    $company,
+                    $chat,
+                    $this->customerPhone,
+                    $this->customerName,
+                    $messageText,
+                );
+
+                \App\Services\WhatsApp\WhatsAppDebugLogger::log('COMMERCE_AGENT_RESULT', [
+                    'has_result' => $agentResult !== null,
+                    'reply_length' => strlen($agentResult['reply'] ?? ''),
+                    'reply_preview' => mb_substr($agentResult['reply'] ?? '', 0, 150),
+                    'route' => $agentResult['route'] ?? null,
+                ]);
+            } catch (\Throwable $e) {
+                \App\Services\WhatsApp\WhatsAppDebugLogger::error('COMMERCE_AGENT_EXCEPTION', [
+                    'company_id' => $company->id,
+                    'chat_id' => $chat->id,
+                    'error' => $e->getMessage(),
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine(),
+                ], $e);
             }
 
-            $agentResult = app(CommerceAgentReplyService::class)->generate(
-                $company,
-                $chat,
-                $this->customerPhone,
-                $this->customerName,
-                $messageText,
-            );
             if ($agentResult !== null && trim($agentResult['reply'] ?? '') !== '') {
                 if ($agentResult['handoff']) {
                     $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
                 }
-                $this->sendReplyAndSave($waSender, $company, $chat, $agentResult['reply'], $agentResult['route']);
+                $this->sendReplyAndSave(
+                    $waSender,
+                    $company,
+                    $chat,
+                    $agentResult['reply'],
+                    $agentResult['route'],
+                    $agentResult['log_id'] ?? null,
+                    $agentResult['pay_url'] ?? $agentResult['cta_url'] ?? null,
+                    $agentResult['cta_button_text'] ?? $agentResult['button_text'] ?? null,
+                );
                 $this->maybeSendVisionProductImage($waSender, $company, $chat);
                 $this->schedulePostConversationJobs($company, $chat);
 
                 return;
             }
+
+            // Agent OS unavailable — prefer legacy AI before keyword order-flow / FAQ shortcuts.
+            $inOrderStep = filled($chat->conversation_step);
+            if (! $inOrderStep) {
+                $replyText = $aiReply->getReplyForMessage(
+                    $company,
+                    $messageText,
+                    $this->customerName,
+                    $this->chatId,
+                    $this->orderFlowContextForAi($chat),
+                );
+                \App\Services\WhatsApp\WhatsAppDebugLogger::log('LEGACY_AI_FALLBACK_RESULT', [
+                    'reply_preview' => mb_substr($replyText, 0, 150),
+                    'route' => $aiReply->getLastReplyRoute(),
+                ]);
+                if (trim($replyText) !== '') {
+                    $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
+
+                    return;
+                }
+            }
+        }
+
+        // Active checkout step: keep state-machine continuity. Otherwise AI already tried above
+        // (agent companies) or runs after order-flow miss (legacy).
+        $orderFlow = app(OrderFlowService::class);
+        $stepBefore = $chat->conversation_step;
+        $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
+        \App\Services\WhatsApp\WhatsAppDebugLogger::log('ORDER_FLOW_PROCESS_RESULT', [
+            'has_order_reply' => filled($orderReply),
+            'order_reply_preview' => mb_substr((string) $orderReply, 0, 150),
+        ]);
+        if ($orderReply !== null && trim($orderReply) !== '') {
+            $chat->refresh();
+            $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
+            $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
+
+            return;
         }
 
         if ($this->isFirstCustomerMessageInChat($this->chatId)) {
@@ -173,24 +507,19 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
             $skipOpening = $aiReply->shouldSkipScriptedOpening($company, $this->messageText);
             if (! $skipOpening) {
-                $greeting = $aiReply->getGreetingOpening($company, $this->customerName);
+                $greeting = $aiReply->getGreetingOpening($company, $this->customerName, $chat);
+                \App\Services\WhatsApp\WhatsAppDebugLogger::log('FIRST_MESSAGE_GREETING_SEND', [
+                    'greeting_preview' => mb_substr($greeting, 0, 150),
+                ]);
                 $this->sendReplyAndSave($waSender, $company, $chat, $greeting, $aiReply->getLastReplyRoute());
                 $chat->refresh();
             }
 
-            $orderFlow = app(OrderFlowService::class);
-            $stepBefore = $chat->conversation_step;
-            $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
-            if ($orderReply !== null && trim($orderReply) !== '') {
-                $chat->refresh();
-                $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
-                $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
-
-                return;
-            }
-
             if ($skipOpening) {
                 $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
+                \App\Services\WhatsApp\WhatsAppDebugLogger::log('FIRST_MESSAGE_SKIP_OPENING_REPLY', [
+                    'reply_preview' => mb_substr($replyText, 0, 150),
+                ]);
                 if (trim($replyText) !== '') {
                     $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
                 }
@@ -206,26 +535,23 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $orderFlow = app(OrderFlowService::class);
-        $stepBefore = $chat->conversation_step;
-        $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
-        if ($orderReply !== null) {
-            $chat->refresh();
-            $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
-            $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
-
-            return;
-        }
-
         $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
+        \App\Services\WhatsApp\WhatsAppDebugLogger::log('DEFAULT_AI_FALLBACK_REPLY', [
+            'reply_preview' => mb_substr($replyText, 0, 150),
+            'route' => $aiReply->getLastReplyRoute(),
+        ]);
         $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
     }
 
     /**
-     * Quick menu "3. Talk to agent" (only when not in an order step where "3" means e.g. product or payment option).
+     * Legacy keyword / menu handoff. When agent commerce is on, callers pass
+     * allowKeywordMatch=false so everything (including "3") goes to the AI layer.
      */
-    protected function wantsHumanEscalation(Chat $chat): bool
+    protected function wantsHumanEscalation(Chat $chat, bool $allowKeywordMatch = true): bool
     {
+        if (! $allowKeywordMatch) {
+            return false;
+        }
         $lower = mb_strtolower(trim($this->messageText));
         if ($lower === '3') {
             return ! filled($chat->conversation_step);
@@ -249,9 +575,12 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
     protected function companyHasActiveSubscription(Company $company): bool
     {
+        // Match EnsureSubscriptionActive / EntitlementService: trial companies must get AI replies.
         return Subscription::where('company_id', $company->id)
-            ->where('status', 'active')
-            ->where('end_date', '>=', now()->toDateString())
+            ->whereIn('status', ['active', 'trial'])
+            ->where(function ($q) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
+            })
             ->exists();
     }
 
@@ -264,20 +593,26 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
     protected function alreadyRepliedToThisMessage(): bool
     {
-        if (! $this->whatsappMessageId) {
-            return false;
+        $incoming = null;
+        if ($this->whatsappMessageId) {
+            $incoming = Message::where('chat_id', $this->chatId)
+                ->where('whatsapp_message_id', $this->whatsappMessageId)
+                ->where('sender', 'customer')
+                ->first();
+        } elseif ($this->incomingMessageId) {
+            $incoming = Message::where('chat_id', $this->chatId)
+                ->where('id', $this->incomingMessageId)
+                ->where('sender', 'customer')
+                ->first();
         }
-        $incoming = Message::where('chat_id', $this->chatId)
-            ->where('whatsapp_message_id', $this->whatsappMessageId)
-            ->where('sender', 'customer')
-            ->first();
+
         if (! $incoming) {
             return false;
         }
 
         return Message::where('chat_id', $this->chatId)
-            ->where('sender', 'bot')
-            ->where('created_at', '>=', $incoming->created_at)
+            ->whereIn('sender', ['bot', 'agent'])
+            ->where('id', '>', $incoming->id)
             ->exists();
     }
 
@@ -287,6 +622,9 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         Chat $chat,
         string $replyText,
         ?string $replySource = null,
+        ?int $aiRequestLogId = null,
+        ?string $ctaUrl = null,
+        ?string $ctaButtonText = null,
     ): void {
         $account = $company->whatsappAccount;
         if (! $account || ! $account->isActive()) {
@@ -303,9 +641,27 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             );
         }
 
+        $company->loadMissing('settings');
+        $voiceMode = $company->settings?->agent_voice_reply_mode ?? 'dual_text_and_voice';
         $voiceOutbound = app(\App\Services\Agent\Voice\VoiceOutboundService::class);
-        if ($voiceOutbound->shouldReplyWithVoice($company, $inboundWasAudio)) {
+        $shouldVoice = $voiceOutbound->shouldReplyWithVoice($company, $inboundWasAudio) && $voiceMode !== 'text_only';
+
+        \App\Services\WhatsApp\WhatsAppDebugLogger::log('SEND_REPLY_AND_SAVE_START', [
+            'company_id' => $company->id,
+            'chat_id' => $chat->id,
+            'customer_phone' => $this->customerPhone,
+            'reply_source' => $replySource,
+            'inbound_was_audio' => $inboundWasAudio,
+            'voice_mode' => $voiceMode,
+            'should_voice' => $shouldVoice,
+            'reply_text_preview' => mb_substr($replyText, 0, 150),
+            'cta_url' => $ctaUrl,
+            'cta_button_text' => $ctaButtonText,
+        ]);
+
+        if ($shouldVoice && $voiceMode === 'voice_only') {
             $voiceResult = $voiceOutbound->sendVoiceReply($account, $company, $this->customerPhone, $replyText);
+            \App\Services\WhatsApp\WhatsAppDebugLogger::log('VOICE_ONLY_SEND_RESULT', $voiceResult);
             if ($voiceResult['success'] ?? false) {
                 Message::create([
                     'chat_id' => $this->chatId,
@@ -314,6 +670,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
                     'message_type' => 'audio',
                     'reply_source' => ($replySource ?? 'agent').'_voice',
                     'whatsapp_message_id' => $voiceResult['message_id'] ?? null,
+                    'ai_request_log_id' => $aiRequestLogId,
                 ]);
                 $chat->update([
                     'last_message' => mb_substr($replyText, 0, 500),
@@ -325,34 +682,132 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             }
         }
 
-        $result = $waSender->sendText($account, $this->customerPhone, $replyText);
+        $extractedImages = $this->extractMediaImages($replyText);
+        $cleanReplyText = $replyText;
+        if (! empty($extractedImages)) {
+            foreach ($extractedImages as $img) {
+                $cleanReplyText = str_replace($img['raw'], '', $cleanReplyText);
+            }
+            $cleanReplyText = trim(preg_replace('/\n{3,}/', "\n\n", $cleanReplyText));
+        }
 
-        $message = Message::create([
-            'chat_id' => $this->chatId,
-            'content' => $replyText,
-            'sender' => 'bot',
-            'reply_source' => $replySource,
-            'status' => $result['success'] ? 'sent' : 'failed',
-            'whatsapp_message_id' => $result['message_id'] ?? null,
-        ]);
+        if ($cleanReplyText !== '') {
+            if (empty($ctaUrl) && preg_match('~(https?://[^\s]+(?:/pay/|/invoice/|receipt|/orders/|/s/|pesapaliframe)[^\s]*)~i', $cleanReplyText, $m)) {
+                $ctaUrl = trim($m[1], "().,;[]");
+            }
 
-        if ($result['success'] && $this->shouldLinkLearningSample($replySource)) {
-            $sampleId = app(ConversationLearningService::class)->linkSampleToMessage(
-                (int) $company->id,
-                $this->chatId,
-                $this->messageText,
-                (int) $message->id,
-            );
-            if ($sampleId !== null) {
-                $message->update(['learning_sample_id' => $sampleId]);
+            if (! empty($ctaUrl)) {
+                if (empty($ctaButtonText)) {
+                    $lowerUrl = strtolower($ctaUrl);
+                    if (str_contains($lowerUrl, 'pesapal')) {
+                        $ctaButtonText = 'Pay via Pesapal';
+                    } elseif (str_contains($lowerUrl, 'paystack')) {
+                        $ctaButtonText = 'Pay via Paystack';
+                    } elseif (str_contains($lowerUrl, 'stripe')) {
+                        $ctaButtonText = 'Pay via Stripe';
+                    } elseif (str_contains($lowerUrl, 'flutterwave')) {
+                        $ctaButtonText = 'Pay via Flutterwave';
+                    } elseif (str_contains($lowerUrl, '/pay/')) {
+                        $ctaButtonText = 'Pay Online';
+                    } elseif (str_contains($lowerUrl, '/invoice/')) {
+                        $ctaButtonText = 'View Invoice';
+                    } elseif (str_contains($lowerUrl, 'receipt')) {
+                        $ctaButtonText = 'View Receipt';
+                    } elseif (str_contains($lowerUrl, '/cart')) {
+                        $ctaButtonText = 'View Cart';
+                    } elseif (str_contains($lowerUrl, '/track')) {
+                        $ctaButtonText = 'Track Order';
+                    } else {
+                        $ctaButtonText = 'Shop Online';
+                    }
+                }
+
+                $result = $waSender->sendInteractiveCtaUrl(
+                    $account,
+                    $this->customerPhone,
+                    $cleanReplyText,
+                    $ctaButtonText,
+                    $ctaUrl
+                );
+            } else {
+                $result = $waSender->sendText($account, $this->customerPhone, $cleanReplyText);
+            }
+            \App\Services\WhatsApp\WhatsAppDebugLogger::log('TEXT_SEND_META_API_RESULT', [
+                'success' => $result['success'] ?? false,
+                'message_id' => $result['message_id'] ?? null,
+                'error' => $result['error'] ?? null,
+            ]);
+
+            $message = Message::create([
+                'chat_id' => $this->chatId,
+                'content' => $cleanReplyText,
+                'sender' => 'bot',
+                'reply_source' => $replySource,
+                'status' => ($result['success'] ?? false) ? 'sent' : 'failed',
+                'whatsapp_message_id' => $result['message_id'] ?? null,
+                'ai_request_log_id' => $aiRequestLogId,
+            ]);
+
+            if (($result['success'] ?? false) && $this->shouldLinkLearningSample($replySource)) {
+                $sampleId = app(ConversationLearningService::class)->linkSampleToMessage(
+                    (int) $company->id,
+                    $this->chatId,
+                    $this->messageText,
+                    (int) $message->id,
+                );
+                if ($sampleId !== null) {
+                    $message->update(['learning_sample_id' => $sampleId]);
+                }
+            }
+
+            $chat->update([
+                'last_message' => $cleanReplyText,
+                'last_message_at' => now(),
+                'ai_handled' => true,
+            ]);
+        }
+
+        // Send extracted images as native WhatsApp photo messages
+        foreach ($extractedImages as $img) {
+            $imgUrl = $img['url'];
+            if (str_starts_with($imgUrl, '/')) {
+                $imgUrl = url($imgUrl);
+            }
+            $caption = $img['caption'] !== '' ? $img['caption'] : null;
+
+            $imgResult = $waSender->sendImage($account, $this->customerPhone, $imgUrl, $caption);
+            if (! empty($imgResult['success'])) {
+                Message::create([
+                    'chat_id' => $this->chatId,
+                    'sender' => 'bot',
+                    'content' => $caption ? "📷 {$caption}" : '[Image]',
+                    'message_type' => 'image',
+                    'attachment_url' => $imgUrl,
+                    'reply_source' => ($replySource ?? 'agent').'_image',
+                    'whatsapp_message_id' => $imgResult['message_id'] ?? null,
+                    'ai_request_log_id' => $aiRequestLogId,
+                ]);
             }
         }
 
-        $chat->update([
-            'last_message' => $replyText,
-            'last_message_at' => now(),
-            'ai_handled' => true,
-        ]);
+        if ($shouldVoice && $voiceMode === 'dual_text_and_voice') {
+            try {
+                $voiceResult = $voiceOutbound->sendVoiceReply($account, $company, $this->customerPhone, $replyText);
+                if ($voiceResult['success'] ?? false) {
+                    Message::create([
+                        'chat_id' => $this->chatId,
+                        'sender' => 'bot',
+                        'content' => $replyText,
+                        'message_type' => 'audio',
+                        'reply_source' => ($replySource ?? 'agent').'_voice',
+                        'whatsapp_message_id' => $voiceResult['message_id'] ?? null,
+                        'ai_request_log_id' => $aiRequestLogId,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Dual-mode voice reply failed', ['error' => $e->getMessage()]);
+            }
+        }
 
         if (! $result['success']) {
             Log::error('ProcessIncomingWhatsAppMessage: send failed', ['error' => $result['error'] ?? 'unknown']);
@@ -683,5 +1138,42 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         $bgDelay = (int) config('agent.platform.background_thinking_delay_minutes', 50);
         RunBackgroundThinkingJob::dispatch($this->companyId, $this->chatId)
             ->delay(now()->addMinutes($bgDelay));
+    }
+
+    protected function extractMediaImages(string $text): array
+    {
+        $images = [];
+
+        // 1. Markdown images: ![alt](url)
+        if (preg_match_all('/!\[(.*?)\]\(([^"\'\s\)]+)\)/i', $text, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $url = trim($m[2]);
+                if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+                    $url = url($url);
+                }
+                $images[] = [
+                    'raw' => $m[0],
+                    'caption' => trim($m[1]),
+                    'url' => $url,
+                ];
+            }
+        }
+
+        // 2. Tag images: [IMAGE_URL: url CAPTION: caption] or [IMAGE_URL: url]
+        if (preg_match_all('/\[IMAGE_URL:\s*([^\s\]]+)(?:\s+CAPTION:\s*([^\]]+))?\]/i', $text, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $url = trim($m[1]);
+                if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+                    $url = url($url);
+                }
+                $images[] = [
+                    'raw' => $m[0],
+                    'caption' => isset($m[2]) ? trim($m[2]) : '',
+                    'url' => $url,
+                ];
+            }
+        }
+
+        return $images;
     }
 }

@@ -46,7 +46,7 @@ This document maps **every operational platform module** in the SAVIT vision to 
 | Infrastructure | Files, Calendar | 0 | 2 | 0 |
 | Ecosystem | Industry Packs, Offline, White-label, Marketplace | 0 | 0 | 4 |
 
-**Bottom line:** Phase 1 **Core Commerce** is largely built. Phase 2 **Operations v1** is shipped (entitlements, billing ledger, notifications, audit, policies, event bus, API keys) — see [ENTERPRISE_PLATFORM_PHASE2.md](ENTERPRISE_PLATFORM_PHASE2.md). Phase 3+ covers portals, builders, coupons, tax, and full ABAC.
+**Bottom line:** Phase 1 **Core Commerce** is largely built. Phase 2 **Operations v1** is shipped (entitlements, billing ledger, notifications, audit, policies, event bus, API keys) — see [ENTERPRISE_PLATFORM_PHASE2.md](ENTERPRISE_PLATFORM_PHASE2.md). Phase 3+ covers portals, builders, coupons, and full ABAC. **Commerce order tax** is implemented — see [COMMERCE_TAX.md](COMMERCE_TAX.md).
 
 ---
 
@@ -127,7 +127,8 @@ partner_accounts            — reseller markup, commission, white-label scope
 | Invoices (orders) | **Partial** | `order-receipt.blade.php`, signed `orders.receipt` URL |
 | Payments | **Partial** | Stripe/M-Pesa/Paystack gateways; `PaymentGateway` model |
 | Refunds | **Partial** | Agent `issue_order_refund` sets DB status only — **no gateway reversal** |
-| Tax | **Roadmap** | No VAT/GST, Stripe Tax, or tax lines |
+| Tax (SaaS billing invoices) | **Roadmap** | No Stripe Tax / `billing_tax_rates` yet |
+| Tax (commerce product orders) | **Implemented** | Company tax rates — see [COMMERCE_TAX.md](COMMERCE_TAX.md) |
 | Credits / wallet | **Roadmap** | No prepaid balance |
 | Proration | **Roadmap** | No upgrade/downgrade math; Stripe portal only |
 | Revenue reports | **Partial** | Admin `RevenueController`, order aggregates; no unified billing ledger |

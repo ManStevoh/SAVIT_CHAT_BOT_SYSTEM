@@ -14,7 +14,7 @@ final class TransferToHumanTool implements AgentTool
 
     public function description(): string
     {
-        return 'Escalate the conversation to a human agent when the customer requests it or the issue requires human judgment.';
+        return 'Escalate to a human teammate only when the customer clearly wants a person, the issue needs human judgment/policy exception, or no available tool can fulfill the request. Never use for routine lookups, invoices, tracking, or orders the tools can handle.';
     }
 
     public function parametersSchema(): array

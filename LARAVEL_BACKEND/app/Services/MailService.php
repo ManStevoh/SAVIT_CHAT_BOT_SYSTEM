@@ -41,7 +41,7 @@ class MailService
         $settings = PlatformSetting::first();
         $name = $settings && ! empty($settings->platform_name) ? $settings->platform_name : config('app.name');
 
-        return $name ?: 'Essem';
+        return $name ?: 'RelayIQ';
     }
 
     /**
@@ -71,7 +71,22 @@ class MailService
             $header = '<div style="margin-bottom:20px;"><img src="' . e($url) . '" alt="Logo" style="max-height:48px;max-width:200px;" /></div>';
         }
 
-        return $header . $htmlBody;
+        return $header . $htmlBody . self::emailAttributionFooter();
+    }
+
+    /**
+     * Product / legal-entity attribution for outbound emails.
+     */
+    public static function emailAttributionFooter(): string
+    {
+        $product = e(config('branding.product_name', 'RelayIQ'));
+        $entity = e(config('branding.legal_entity', 'Essem Digital Innovation Limited'));
+        $site = e(config('branding.company_website', 'https://relayiq.app'));
+
+        return '<p style="margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;line-height:1.5;">'
+            . $product . ' is a product of ' . $entity . '.<br>'
+            . 'Powered by ' . $entity . ' · <a href="' . $site . '" style="color:#2563eb;">relayiq.app</a>'
+            . '</p>';
     }
 
     /**
@@ -88,9 +103,41 @@ class MailService
     }
 
     /**
+     * Send OTP security verification code to user email.
+     */
+    public function sendOtpEmail(string $to, string $name, string $code): void
+    {
+        $appName = self::applicationName();
+        $subject = "[{$appName}] Your security verification code: {$code}";
+        $html = '<p>Hi ' . e($name) . ',</p>';
+        $html .= '<p>Your security verification code is:</p>';
+        $html .= '<div style="margin:20px 0;padding:16px 24px;background:#f3f4f6;border-radius:8px;display:inline-block;font-size:24px;font-weight:bold;letter-spacing:4px;color:#111827;">' . e($code) . '</div>';
+        $html .= '<p>This code will expire in 10 minutes. If you did not request this code, please secure your account immediately.</p>';
+        $html = self::wrapEmailBody($html, self::getEmailLogoUrl());
+
+        try {
+            $this->send($to, $subject, $html, strip_tags($html));
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('MAIL_OTP_DISPATCH_SUCCESS', [
+                'to' => $to,
+                'subject' => $subject,
+                'otp_code' => $code,
+            ]);
+        } catch (\Throwable $e) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('MAIL_OTP_DISPATCH_FAILED', [
+                'to' => $to,
+                'otp_code' => $code,
+                'error' => $e->getMessage(),
+            ], $e);
+            throw $e;
+        }
+    }
+
+
+    /**
      * Send a test email (e.g. from Admin Settings). Uses platform SMTP if configured.
      */
     public function sendTestEmail(string $to): void
+
     {
         $appName = self::applicationName();
         $subject = '[' . $appName . '] Test email';
@@ -161,6 +208,35 @@ class MailService
         $html .= '<p><strong>Message:</strong></p><p>' . nl2br(e($messagePreview)) . '</p>';
         $html .= '<p><a href="' . e($chatsUrl) . '" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View in dashboard</a></p>';
         $html = self::wrapEmailBody($html);
+        $this->send($to, $subject, $html, strip_tags($html));
+    }
+
+    /**
+     * Welcome email after registration (includes free-trial details when applicable).
+     */
+    public function sendWelcomeTrialEmail(
+        string $to,
+        string $name,
+        string $planName,
+        int $trialDays,
+        string $endDate,
+        bool $isTrial = true
+    ): void {
+        $appName = self::applicationName();
+        $subject = $isTrial
+            ? "[{$appName}] Welcome — your {$trialDays}-day free trial has started"
+            : "[{$appName}] Welcome to {$appName}";
+        $html = '<p>Hi '.e($name).',</p>';
+        $html .= '<p>Welcome to <strong>'.e($appName).'</strong>!</p>';
+        if ($isTrial) {
+            $html .= '<p>Your free trial of <strong>'.e($planName).'</strong> is now active for <strong>'.e((string) $trialDays).' days</strong> (ends <strong>'.e($endDate).'</strong>).</p>';
+            $html .= '<p>Sign in to your dashboard to connect WhatsApp, add products, and explore the product. You can upgrade anytime from Subscription.</p>';
+        } else {
+            $html .= '<p>Your <strong>'.e($planName).'</strong> account is ready. Sign in to your dashboard to get started.</p>';
+        }
+        $dashboardUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/').'/dashboard';
+        $html .= '<p><a href="'.e($dashboardUrl).'" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Open dashboard</a></p>';
+        $html = self::wrapEmailBody($html, self::getEmailLogoUrl());
         $this->send($to, $subject, $html, strip_tags($html));
     }
 

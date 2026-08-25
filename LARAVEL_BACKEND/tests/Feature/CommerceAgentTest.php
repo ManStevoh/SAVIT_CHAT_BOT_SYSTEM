@@ -44,13 +44,20 @@ class CommerceAgentTest extends TestCase
         $this->assertContains('process_order_message', $names);
         $this->assertContains('get_product_relationships', $names);
         $this->assertContains('get_weather', $names);
-        $this->assertCount(20, $names);
+        $this->assertContains('send_order_invoice', $names);
+        $this->assertContains('share_payment_details', $names);
+        $this->assertCount(22, $names);
     }
 
-    public function test_agent_mode_disabled_by_default(): void
+    public function test_agent_mode_off_when_setting_false(): void
     {
         $company = Company::create(['name' => 'Test Co', 'email' => 't@test.local', 'status' => 'active']);
-        CompanySetting::create(['company_id' => $company->id, 'auto_reply_enabled' => true]);
+        CompanySetting::create([
+            'company_id' => $company->id,
+            'auto_reply_enabled' => true,
+            'agent_commerce_enabled' => false,
+        ]);
+        $company->load('settings');
 
         $this->assertFalse(CommerceAgentReplyService::isEnabledForCompany($company));
     }
@@ -137,7 +144,7 @@ class CommerceAgentTest extends TestCase
             'Do you have Samsung projectors?',
         );
 
-        $this->assertSame('agent_cognitive', $result['route']);
+        $this->assertSame('agent_os', $result['route']);
         $this->assertStringContainsString('Samsung', $result['reply'] ?? '');
     }
 }

@@ -22,3 +22,10 @@ LARAVEL_BACKEND/node_modules/
 
 # Cursor
 .cursor/
+
+# Build artifacts, deployment zips, and scripts
+*.zip
+*.tar.gz
+EssemChat-cPanel.zip
+scripts/pack-cpanel.py
+scripts/pack_*.py

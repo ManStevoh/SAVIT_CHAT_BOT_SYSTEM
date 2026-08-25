@@ -1,17 +1,26 @@
 ﻿"use client"
 
-import { Head } from "@inertiajs/react"
 import { LegalLayout } from "./legal-layout"
 import { useCmsPage } from "@/lib/api-hooks"
+import type { CmsPageData } from "./types"
+import { SeoHead, buildSeoFromCmsPage, type SeoPayload } from "@/components/seo/SeoHead"
 
 interface LegalCmsPageProps {
   slug: string
   fallbackTitle: string
   fallbackBody: React.ReactNode
+  initialSeo?: SeoPayload | null
+  initialCms?: CmsPageData | null
 }
 
-export function LegalCmsPage({ slug, fallbackTitle, fallbackBody }: LegalCmsPageProps) {
-  const { data, isLoading } = useCmsPage(slug)
+export function LegalCmsPage({
+  slug,
+  fallbackTitle,
+  fallbackBody,
+  initialSeo,
+  initialCms,
+}: LegalCmsPageProps) {
+  const { data, isLoading } = useCmsPage(slug, initialCms)
 
   const section = data?.sections?.find((s) => s.key === "legal_content" && s.isEnabled)
   const content = (section?.content ?? {}) as {
@@ -21,12 +30,16 @@ export function LegalCmsPage({ slug, fallbackTitle, fallbackBody }: LegalCmsPage
   }
 
   const title = content.title || fallbackTitle
-  const metaTitle = data?.page.metaTitle || `${title} — Essem Chat`
+  const seo = buildSeoFromCmsPage(
+    data?.page,
+    initialSeo,
+    data?.page?.metaTitle || `${title} — RelayIQ`
+  )
   const hasCmsBody = typeof content.body === "string" && content.body.trim().length > 0
 
   return (
     <>
-      <Head title={metaTitle} />
+      <SeoHead seo={seo} fallbackTitle={`${title} — RelayIQ`} />
       <LegalLayout title={title}>
         {content.lastUpdated && (
           <p className="text-sm leading-relaxed">

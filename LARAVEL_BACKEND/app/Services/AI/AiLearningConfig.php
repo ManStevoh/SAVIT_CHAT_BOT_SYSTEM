@@ -30,7 +30,7 @@ final class AiLearningConfig
             'retentionDays' => 365,
             'piiRedactionEnabled' => true,
             'storeFaqExchanges' => true,
-            'storeAgentReplies' => false,
+            'storeAgentReplies' => true,
             'faqEmbeddingsEnabled' => true,
             'learningEmbeddingsEnabled' => true,
             'faqSemanticMinScore' => 0.82,

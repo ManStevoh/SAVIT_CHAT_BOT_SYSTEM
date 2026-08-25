@@ -89,7 +89,7 @@ import {
   syncGrowthIntegrations,
 } from "@/lib/api-actions"
 import { useCompanySettings } from "@/lib/api-hooks"
-import { formatCurrencyAmount, normalizeCurrencyCode } from "@/lib/format-currency"
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from "@/lib/format-currency"
 import { resolveBackendMediaUrl } from "@/lib/api-client"
 import { toast } from "sonner"
 import { Loader2, Sparkles, Link2, Bot, TrendingUp, Target, Copy, ImagePlus, Download, Plug, Users } from "lucide-react"
@@ -157,6 +157,9 @@ function GrowthPageContent() {
   const { data: portfolioInsights } = useGrowthPortfolioInsights()
   const { data: companySettings } = useCompanySettings()
   const currency = normalizeCurrencyCode(companySettings?.displayCurrency)
+  const moneyDisplay = currencyDisplayFromSettings(companySettings)
+  const formatMoney = (value: number, code?: string) =>
+    formatCurrencyAmount(value, code || currency, moneyDisplay)
 
   const summary = analytics?.summary
   const intelligence = analytics?.intelligence
@@ -440,7 +443,7 @@ function GrowthPageContent() {
               <CardHeader className="pb-2">
                 <CardDescription>Attributed revenue</CardDescription>
                 <CardTitle className="text-3xl">
-                  {formatCurrencyAmount(summary?.revenue ?? 0, currency)}
+                  {formatMoney(summary?.revenue ?? 0)}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -448,7 +451,7 @@ function GrowthPageContent() {
               <CardHeader className="pb-2">
                 <CardDescription>Ad spend</CardDescription>
                 <CardTitle className="text-3xl">
-                  {formatCurrencyAmount(summary?.adSpend ?? adSpend?.totalSpend ?? 0, currency)}
+                  {formatMoney(summary?.adSpend ?? adSpend?.totalSpend ?? 0)}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -457,7 +460,7 @@ function GrowthPageContent() {
                 <CardDescription>Cost per lead</CardDescription>
                 <CardTitle className="text-3xl">
                   {summary?.costPerLead != null
-                    ? formatCurrencyAmount(summary.costPerLead, currency)
+                    ? formatMoney(summary.costPerLead)
                     : "—"}
                 </CardTitle>
               </CardHeader>
@@ -467,7 +470,7 @@ function GrowthPageContent() {
                 <CardDescription>CAC</CardDescription>
                 <CardTitle className="text-3xl">
                   {summary?.customerAcquisitionCost != null
-                    ? formatCurrencyAmount(summary.customerAcquisitionCost, currency)
+                    ? formatMoney(summary.customerAcquisitionCost)
                     : "—"}
                 </CardTitle>
               </CardHeader>
@@ -575,7 +578,7 @@ function GrowthPageContent() {
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis dataKey="platform" />
                         <YAxis />
-                        <Tooltip formatter={(v: number) => formatCurrencyAmount(v, currency)} />
+                        <Tooltip formatter={(v: number) => formatMoney(v)} />
                         <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -615,7 +618,7 @@ function GrowthPageContent() {
                             {post.performanceScore != null ? Math.round(post.performanceScore) : "—"}
                           </TableCell>
                           <TableCell className="text-right">
-                            {formatCurrencyAmount(post.revenue, currency)}
+                            {formatMoney(post.revenue)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1034,7 +1037,7 @@ function GrowthPageContent() {
               <Card>
                 <CardHeader>
                   <CardTitle>Spend history</CardTitle>
-                  <CardDescription>Total: {formatCurrencyAmount(adSpend?.totalSpend ?? 0, currency)}</CardDescription>
+                  <CardDescription>Total: {formatMoney(adSpend?.totalSpend ?? 0)}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -1053,7 +1056,7 @@ function GrowthPageContent() {
                           <TableCell>{e.platform ?? "—"}</TableCell>
                           <TableCell>{e.campaignName ?? "—"}</TableCell>
                           <TableCell className="text-right">
-                            {formatCurrencyAmount(e.amount, e.currency || currency)}
+                            {formatMoney(e.amount, e.currency || currency)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1112,8 +1115,8 @@ function GrowthPageContent() {
                           {(predictionAccuracy.items as { title: string; predictedRevenue: number; actualRevenue: number }[]).slice(0, 5).map((row, i) => (
                             <TableRow key={i}>
                               <TableCell className="text-sm">{row.title}</TableCell>
-                              <TableCell className="text-right">{formatCurrencyAmount(row.predictedRevenue, currency)}</TableCell>
-                              <TableCell className="text-right">{formatCurrencyAmount(row.actualRevenue, currency)}</TableCell>
+                              <TableCell className="text-right">{formatMoney(row.predictedRevenue)}</TableCell>
+                              <TableCell className="text-right">{formatMoney(row.actualRevenue)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1179,7 +1182,7 @@ function GrowthPageContent() {
                             <TableCell className="font-medium">{d.title}</TableCell>
                             <TableCell className="text-xs">{d.tags.join(", ")}</TableCell>
                             <TableCell className="text-right">{Math.round(d.predictedScore)}</TableCell>
-                            <TableCell className="text-right">{formatCurrencyAmount(d.estimatedRevenue, currency)}</TableCell>
+                            <TableCell className="text-right">{formatMoney(d.estimatedRevenue)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

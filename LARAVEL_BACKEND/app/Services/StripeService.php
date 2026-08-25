@@ -80,7 +80,10 @@ class StripeService
 
         $customerId = $this->getOrCreateCustomer($company);
         $config = $this->stripeConfig();
-        $trialDays = (int) ($config['trial_days'] ?? 14);
+        $trialDays = 0;
+        if ($plan->has_trial) {
+            $trialDays = (int) ($plan->trial_days ?: ($config['trial_days'] ?? 14));
+        }
 
         try {
             $params = [
@@ -93,7 +96,6 @@ class StripeService
                     ],
                 ],
                 'subscription_data' => [
-                    'trial_period_days' => $trialDays,
                     'metadata' => [
                         'company_id' => (string) $company->id,
                         'plan_slug' => $plan->slug,
@@ -106,6 +108,10 @@ class StripeService
                     'plan_slug' => $plan->slug,
                 ],
             ];
+
+            if ($trialDays > 0) {
+                $params['subscription_data']['trial_period_days'] = $trialDays;
+            }
 
             if ($customerId) {
                 $params['customer'] = $customerId;

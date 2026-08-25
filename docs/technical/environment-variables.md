@@ -14,13 +14,13 @@ Complete reference for `.env` configuration. Admin UI settings in `platform_sett
 
 | Variable | Example | Description |
 |----------|---------|-------------|
-| `APP_NAME` | Essem Chat Bot | Application name |
+| `APP_NAME` | RelayIQ | Application name |
 | `APP_ENV` | production | local / production |
 | `APP_KEY` | base64:... | Encryption key (required) |
 | `APP_DEBUG` | false | Never true in production |
-| `APP_URL` | https://essemchat.essemglobalsolutions.com | Backend public URL |
-| `FRONTEND_URL` | https://essem-chat-bot-system.vercel.app | CORS allowed origin |
-| `SANCTUM_STATEFUL_DOMAINS` | essem-chat-bot-system.vercel.app | Comma-separated SPA domains |
+| `APP_URL` | https://relayiq.app | Application public URL |
+| `FRONTEND_URL` | https://relayiq.app | CORS allowed origin |
+| `SANCTUM_STATEFUL_DOMAINS` | relayiq.app | Comma-separated SPA domains |
 
 ### Database
 

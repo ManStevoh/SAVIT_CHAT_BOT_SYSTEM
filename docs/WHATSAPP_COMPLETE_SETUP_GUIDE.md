@@ -58,7 +58,7 @@ flowchart TB
 ### For Essem (platform owner)
 
 - Legal business entity (for Meta Business Verification)
-- Domain with HTTPS, e.g. `https://essemchat.essemglobalsolutions.com`
+- Domain with HTTPS, e.g. `https://relayiq.app`
 - Laravel app deployed with:
   - `php artisan migrate` (includes WhatsApp migrations)
   - `php artisan queue:work` (required for AI auto-replies)
@@ -82,7 +82,7 @@ flowchart TB
 ### Step A1: Meta Business Portfolio
 
 1. Go to [business.facebook.com](https://business.facebook.com) (Meta Business Suite).
-2. Create or select a **Business Portfolio** for **Essem Global Solutions** (or your legal entity name).
+2. Create or select a **Business Portfolio** for **Essem Digital Innovation Limited** (or your legal entity name).
 3. Complete **Business Verification**:
    - Business name, address, phone, website
    - Upload documents if Meta requests them
@@ -132,10 +132,10 @@ Meta deprecated Embedded Signup v2 — use **v4** before **October 15, 2026**.
 3. Note down:
    - **App ID** (same as your Meta app ID)
    - **Configuration ID** (Embedded Signup config id)
-4. **Allowed domains:** add your production domain, e.g. `essemchat.essemglobalsolutions.com`.
+4. **Allowed domains:** add your production domain, e.g. `relayiq.app`.
 5. **OAuth redirect URI:** add:
    ```
-   https://essemchat.essemglobalsolutions.com/dashboard/settings
+   https://relayiq.app/dashboard/settings
    ```
    (Must match what you enter in Essem admin settings.)
 6. Optional: enable **coexist** in Embedded Signup if companies use **WhatsApp Business mobile app** on the same number (also enable **Enable coexist** in Essem admin).
@@ -147,7 +147,7 @@ Official docs: [Embedded Signup](https://developers.facebook.com/docs/whatsapp/e
 1. App Dashboard → **WhatsApp** → **Configuration**.
 2. **Callback URL:**
    ```
-   https://essemchat.essemglobalsolutions.com/api/whatsapp/webhook
+   https://relayiq.app/api/whatsapp/webhook
    ```
 3. **Verify token:** choose a long random string (e.g. `essem_wa_verify_2026_xK9m...`). You will enter the **same** value in Essem admin.
 4. Click **Verify and save** (Meta sends GET to your server — app must be running).
@@ -184,7 +184,7 @@ php artisan config:cache
 Ensure `.env`:
 
 ```env
-APP_URL=https://essemchat.essemglobalsolutions.com
+APP_URL=https://relayiq.app
 QUEUE_CONNECTION=database   # or redis
 ```
 

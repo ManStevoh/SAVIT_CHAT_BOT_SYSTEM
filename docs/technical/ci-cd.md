@@ -7,7 +7,7 @@ description: Automate deploy from local machine to production server via GitHub 
 
 # CI/CD Pipeline
 
-Essem Chat Bot is a **Laravel + PHP** application. It **cannot run on Vercel** (Vercel is for static sites and serverless Node). Production lives on your **cPanel/VPS** at `https://essemchat.essemglobalsolutions.com`.
+Essem Chat Bot is a **Laravel + PHP** application. It **cannot run on Vercel** (Vercel is for static sites and serverless Node). Production lives on your **cPanel/VPS** at `https://relayiq.app`.
 
 This guide replaces the old **local → Vercel → API** flow with:
 
@@ -60,7 +60,7 @@ flowchart LR
 
 ### 1. Production server
 
-On `essemchat.essemglobalsolutions.com` (cPanel or VPS):
+On `relayiq.app` (cPanel or VPS):
 
 1. Upload or clone the app so Laravel lives at a known path, e.g.  
    `/home/username/essemchat/LARAVEL_BACKEND`
@@ -103,7 +103,7 @@ Repo → **Settings → Secrets and variables → Actions** → **New repository
 
 | Secret | Example | Description |
 |--------|---------|-------------|
-| `PROD_SSH_HOST` | `essemchat.essemglobalsolutions.com` or server IP | SSH hostname |
+| `PROD_SSH_HOST` | `relayiq.app` or server IP | SSH hostname |
 | `PROD_SSH_USER` | `essemuser` | cPanel/VPS username |
 | `PROD_SSH_KEY` | Full private key file contents | From `ESSEM_deploy` (no passphrase recommended for CI) |
 | `PROD_SSH_PORT` | `22` | Optional; omit if default |
@@ -190,7 +190,7 @@ bash scripts/post-deploy.sh
 ## Monitoring deploys
 
 - **Actions:** [github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions)
-- **Health:** `curl https://essemchat.essemglobalsolutions.com/up`
+- **Health:** `curl https://relayiq.app/up`
 - **Logs on server:** `storage/logs/laravel.log`, queue worker log
 
 ---

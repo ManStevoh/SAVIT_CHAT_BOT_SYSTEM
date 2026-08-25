@@ -10,8 +10,8 @@ import { DataTable, type Column, type Filter } from '@/components/shared/data-ta
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField } from '@/components/shared/form-field'
-import { useProducts, useCompanySettings } from '@/lib/api-hooks'
-import { formatCurrencyAmount, normalizeCurrencyCode } from '@/lib/format-currency'
+import { useProducts, useCompanySettings, useTaxRates } from '@/lib/api-hooks'
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import {
   createProduct,
   updateProduct,
@@ -19,10 +19,12 @@ import {
   companyExportData,
   importProducts,
   createProductVariant,
+  updateProductVariant,
   deleteProductVariant,
   uploadProductImage,
   uploadVariantImage,
 } from '@/lib/api-actions'
+import { ProductVariantsModal } from '@/components/dashboard/products/product-variants-modal'
 import { downloadFile, resolveBackendMediaUrl } from '@/lib/api-client'
 import type { Product, ProductVariant } from '@/lib/mock-data'
 import {
@@ -75,16 +77,54 @@ import {
 interface ProductFormData {
   name: string
   description: string
+  metaTitle: string
+  metaDescription: string
+  slug: string
   price: string
+  compareAtPrice: string
+  taxRateId: string
   category: string
+  productType: 'physical' | 'digital' | 'service'
+  fulfillmentType: 'shipping' | 'download' | 'link' | 'booking' | 'manual'
+  trackInventory: boolean
+  requiresDeliveryAddress: boolean
+  accessUrl: string
+  serviceBookingUrl: string
+  fulfillmentInstructions: string
+  licenseKeyMode: 'none' | 'auto' | 'pool'
+  licenseKeyPrefix: string
+  accessExpiresDays: string
+  maxDownloads: string
+  bookable: boolean
+  bookingDurationMinutes: string
+  licenseKeys: string
   stock: string
 }
 
 const initialFormData: ProductFormData = {
   name: '',
   description: '',
+  metaTitle: '',
+  metaDescription: '',
+  slug: '',
   price: '',
+  compareAtPrice: '',
+  taxRateId: 'none',
   category: '',
+  productType: 'physical',
+  fulfillmentType: 'shipping',
+  trackInventory: true,
+  requiresDeliveryAddress: true,
+  accessUrl: '',
+  serviceBookingUrl: '',
+  fulfillmentInstructions: '',
+  licenseKeyMode: 'none',
+  licenseKeyPrefix: '',
+  accessExpiresDays: '',
+  maxDownloads: '',
+  bookable: false,
+  bookingDurationMinutes: '',
+  licenseKeys: '',
   stock: '',
 }
 
@@ -145,6 +185,7 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState<ProductFormData>(initialFormData)
   const [productImageFile, setProductImageFile] = useState<File | null>(null)
+  const [digitalFile, setDigitalFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [exportOpen, setExportOpen] = useState(false)
@@ -154,16 +195,13 @@ export default function ProductsPage() {
   const [importResult, setImportResult] = useState<{ created: number; errors?: { row: number; errors: string[] }[] } | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const [variantsSheetProduct, setVariantsSheetProduct] = useState<Product | null>(null)
-  const [variantLabel, setVariantLabel] = useState('')
-  const [variantPrice, setVariantPrice] = useState('')
-  const [variantStock, setVariantStock] = useState('0')
-  const [variantImageFile, setVariantImageFile] = useState<File | null>(null)
-  const [variantSaving, setVariantSaving] = useState(false)
-  const [variantImageUploadingId, setVariantImageUploadingId] = useState<string | null>(null)
   const [productExtraImageUploading, setProductExtraImageUploading] = useState(false)
 
   const { data: companySettings } = useCompanySettings()
+  const { data: taxRates } = useTaxRates()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
+  const formatCurrency = (value: number) =>
+    formatCurrencyAmount(value, catalogCurrency, currencyDisplayFromSettings(companySettings))
 
   // API: GET /api/company/products (useProducts)
   const { data: products, isLoading, error } = useProducts({
@@ -192,8 +230,6 @@ export default function ProductsPage() {
     outOfStock: products?.filter((p) => p.stock === 0).length || 0,
   }
 
-  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
-
   // Validate form
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
@@ -209,6 +245,15 @@ export default function ProductsPage() {
     }
     if (!formData.stock || parseInt(formData.stock) < 0) {
       errors.stock = 'Valid stock quantity is required'
+    }
+    if (formData.maxDownloads && (!Number.isInteger(Number(formData.maxDownloads)) || Number(formData.maxDownloads) < 1)) {
+      errors.maxDownloads = 'Download limit must be a whole number of at least 1'
+    }
+    if (formData.bookable && formData.bookingDurationMinutes &&
+      (!Number.isInteger(Number(formData.bookingDurationMinutes)) ||
+        Number(formData.bookingDurationMinutes) < 5 ||
+        Number(formData.bookingDurationMinutes) > 480)) {
+      errors.bookingDurationMinutes = 'Duration must be between 5 and 480 minutes'
     }
     
     setFormErrors(errors)
@@ -233,10 +278,30 @@ export default function ProductsPage() {
       const result = await createProduct({
         name: formData.name,
         description: formData.description,
+        metaTitle: formData.metaTitle || null,
+        metaDescription: formData.metaDescription || null,
+        slug: formData.slug || null,
         price: parseFloat(formData.price),
+        compareAtPrice: formData.compareAtPrice.trim() === '' ? null : parseFloat(formData.compareAtPrice),
+        taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
         category: formData.category,
-        stock: parseInt(formData.stock),
+        productType: formData.productType,
+        fulfillmentType: formData.fulfillmentType,
+        trackInventory: formData.trackInventory,
+        requiresDeliveryAddress: formData.requiresDeliveryAddress,
+        accessUrl: formData.accessUrl,
+        serviceBookingUrl: formData.serviceBookingUrl,
+        fulfillmentInstructions: formData.fulfillmentInstructions,
+        licenseKeyMode: formData.licenseKeyMode,
+        licenseKeyPrefix: formData.licenseKeyPrefix,
+        accessExpiresDays: formData.accessExpiresDays ? parseInt(formData.accessExpiresDays, 10) : null,
+        maxDownloads: formData.maxDownloads ? parseInt(formData.maxDownloads, 10) : null,
+        bookable: formData.bookable,
+        bookingDurationMinutes: formData.bookingDurationMinutes ? parseInt(formData.bookingDurationMinutes, 10) : null,
+        licenseKeys: formData.licenseKeys || undefined,
+        stock: Number.isNaN(parseInt(formData.stock, 10)) ? 0 : parseInt(formData.stock, 10),
         image: productImageFile ?? undefined,
+        digitalFile: digitalFile ?? undefined,
       })
 
       if (result.success) {
@@ -244,14 +309,22 @@ export default function ProductsPage() {
         mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         setIsAddModalOpen(false)
         setFormData(initialFormData)
+        setFormErrors({})
         setProductImageFile(null)
+        setDigitalFile(null)
+      } else {
+        setFormErrors((prev) => ({
+          ...prev,
+          general: result.message || 'Failed to create product. Please check form inputs.',
+        }))
       }
     } catch (error) {
       console.error('Failed to create product:', error)
+      setFormErrors((prev) => ({ ...prev, general: 'An unexpected error occurred while creating product.' }))
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, mutate, categoryFilter, statusFilter, searchQuery, productImageFile])
+  }, [formData, mutate, categoryFilter, statusFilter, searchQuery, productImageFile, digitalFile])
 
   // Handle edit product — api-actions.updateProduct → PUT /api/company/products/:productId
   const handleEditProduct = useCallback(async () => {
@@ -262,10 +335,30 @@ export default function ProductsPage() {
       const result = await updateProduct(selectedProduct.id, {
         name: formData.name,
         description: formData.description,
+        metaTitle: formData.metaTitle || null,
+        metaDescription: formData.metaDescription || null,
+        slug: formData.slug || null,
         price: parseFloat(formData.price),
+        compareAtPrice: formData.compareAtPrice.trim() === '' ? null : parseFloat(formData.compareAtPrice),
+        taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
         category: formData.category,
-        stock: parseInt(formData.stock),
+        productType: formData.productType,
+        fulfillmentType: formData.fulfillmentType,
+        trackInventory: formData.trackInventory,
+        requiresDeliveryAddress: formData.requiresDeliveryAddress,
+        accessUrl: formData.accessUrl,
+        serviceBookingUrl: formData.serviceBookingUrl,
+        fulfillmentInstructions: formData.fulfillmentInstructions,
+        licenseKeyMode: formData.licenseKeyMode,
+        licenseKeyPrefix: formData.licenseKeyPrefix,
+        accessExpiresDays: formData.accessExpiresDays ? parseInt(formData.accessExpiresDays, 10) : null,
+        maxDownloads: formData.maxDownloads ? parseInt(formData.maxDownloads, 10) : null,
+        bookable: formData.bookable,
+        bookingDurationMinutes: formData.bookingDurationMinutes ? parseInt(formData.bookingDurationMinutes, 10) : null,
+        licenseKeys: formData.licenseKeys || undefined,
+        stock: Number.isNaN(parseInt(formData.stock, 10)) ? 0 : parseInt(formData.stock, 10),
         image: productImageFile ?? undefined,
+        digitalFile: digitalFile ?? undefined,
       })
 
       if (result.success) {
@@ -273,14 +366,22 @@ export default function ProductsPage() {
         setIsEditModalOpen(false)
         setSelectedProduct(null)
         setFormData(initialFormData)
+        setFormErrors({})
         setProductImageFile(null)
+        setDigitalFile(null)
+      } else {
+        setFormErrors((prev) => ({
+          ...prev,
+          general: result.message || 'Failed to update product. Please check form inputs.',
+        }))
       }
     } catch (error) {
       console.error('Failed to update product:', error)
+      setFormErrors((prev) => ({ ...prev, general: 'An unexpected error occurred while updating product.' }))
     } finally {
       setIsSubmitting(false)
     }
-  }, [selectedProduct, formData, mutate, categoryFilter, statusFilter, searchQuery, productImageFile])
+  }, [selectedProduct, formData, mutate, categoryFilter, statusFilter, searchQuery, productImageFile, digitalFile])
 
   // Handle delete product — api-actions.deleteProduct → DELETE /api/company/products/:productId
   const handleDeleteProduct = useCallback(async () => {
@@ -306,11 +407,31 @@ export default function ProductsPage() {
   const openEditModal = (product: Product) => {
     setSelectedProduct(product)
     setProductImageFile(null)
+    setDigitalFile(null)
     setFormData({
       name: product.name,
       description: product.description,
+      metaTitle: product.metaTitle ?? '',
+      metaDescription: product.metaDescription ?? '',
+      slug: product.slug ?? '',
       price: product.price.toString(),
+      compareAtPrice: product.compareAtPrice != null ? String(product.compareAtPrice) : '',
+      taxRateId: product.taxRateId ?? 'none',
       category: product.category,
+      productType: product.productType ?? 'physical',
+      fulfillmentType: product.fulfillmentType ?? 'shipping',
+      trackInventory: product.trackInventory ?? true,
+      requiresDeliveryAddress: product.requiresDeliveryAddress ?? true,
+      accessUrl: product.accessUrl ?? '',
+      serviceBookingUrl: product.serviceBookingUrl ?? '',
+      fulfillmentInstructions: product.fulfillmentInstructions ?? '',
+      licenseKeyMode: product.licenseKeyMode ?? 'none',
+      licenseKeyPrefix: product.licenseKeyPrefix ?? '',
+      accessExpiresDays: product.accessExpiresDays != null ? String(product.accessExpiresDays) : '',
+      maxDownloads: product.maxDownloads != null ? String(product.maxDownloads) : '',
+      bookable: product.bookable ?? false,
+      bookingDurationMinutes: product.bookingDurationMinutes != null ? String(product.bookingDurationMinutes) : '',
+      licenseKeys: '',
       stock: product.stock.toString(),
     })
     setFormErrors({})
@@ -334,38 +455,45 @@ export default function ProductsPage() {
     setExportFormat(value === 'json' ? 'json' : 'csv')
   }
 
-  const handleAddVariant = useCallback(async () => {
-    if (!variantsSheetProduct || !variantLabel.trim() || variantPrice === '') return
-    const price = parseFloat(variantPrice)
-    if (Number.isNaN(price) || price < 0) return
-    setVariantSaving(true)
-    try {
-      const res = await createProductVariant(variantsSheetProduct.id, {
-        label: variantLabel.trim(),
-        price,
-        stock: parseInt(variantStock, 10) || 0,
-        image: variantImageFile ?? undefined,
-      })
+  const handleAddVariantModal = useCallback(
+    async (data: { label: string; price: number; stock: number; image?: File }) => {
+      if (!variantsSheetProduct) return false
+      const res = await createProductVariant(variantsSheetProduct.id, data)
       if (res.success) {
-        setVariantLabel('')
-        setVariantPrice('')
-        setVariantStock('0')
-        setVariantImageFile(null)
         mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         if (res.variant) {
           setVariantsSheetProduct((prev) =>
-            prev
-              ? { ...prev, variants: [...(prev.variants ?? []), res.variant!] }
-              : null
+            prev ? { ...prev, variants: [...(prev.variants ?? []), res.variant!] } : null
           )
         }
+        return true
       }
-    } finally {
-      setVariantSaving(false)
-    }
-  }, [variantsSheetProduct, variantLabel, variantPrice, variantStock, mutate, categoryFilter, statusFilter, searchQuery, variantImageFile])
+      return false
+    },
+    [variantsSheetProduct, mutate, categoryFilter, statusFilter, searchQuery]
+  )
 
-  const handleDeleteVariant = useCallback(
+  const handleUpdateVariantModal = useCallback(
+    async (variantId: string, data: { label?: string; price?: number; stock?: number; status?: 'active' | 'inactive' }) => {
+      const res = await updateProductVariant(variantId, data)
+      if (res.success) {
+        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        setVariantsSheetProduct((prev) =>
+          prev
+            ? {
+                ...prev,
+                variants: (prev.variants ?? []).map((v) => (v.id === variantId ? { ...v, ...data } : v)),
+              }
+            : null
+        )
+        return true
+      }
+      return false
+    },
+    [mutate, categoryFilter, statusFilter, searchQuery]
+  )
+
+  const handleDeleteVariantModal = useCallback(
     async (variantId: string) => {
       const res = await deleteProductVariant(variantId)
       if (res.success) {
@@ -373,22 +501,21 @@ export default function ProductsPage() {
         setVariantsSheetProduct((prev) =>
           prev ? { ...prev, variants: (prev.variants ?? []).filter((v) => v.id !== variantId) } : null
         )
+        return true
       }
+      return false
     },
     [mutate, categoryFilter, statusFilter, searchQuery]
   )
 
-  const handleUploadVariantImage = useCallback(
+  const handleUploadVariantImageModal = useCallback(
     async (variantId: string, file: File) => {
-      setVariantImageUploadingId(variantId)
-      try {
-        const res = await uploadVariantImage(variantId, { image: file, isPrimary: true })
-        if (res.success) {
-          mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
-        }
-      } finally {
-        setVariantImageUploadingId(null)
+      const res = await uploadVariantImage(variantId, { image: file, isPrimary: true })
+      if (res.success) {
+        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        return true
       }
+      return false
     },
     [mutate, categoryFilter, statusFilter, searchQuery]
   )
@@ -454,6 +581,9 @@ export default function ProductsPage() {
               <p className="text-xs text-muted-foreground line-clamp-1">
                 {product.description}
               </p>
+              <p className="text-xs text-muted-foreground">
+                {(product.productType ?? 'physical')} · {(product.fulfillmentType ?? 'shipping')}
+              </p>
             </div>
           </div>
         )
@@ -514,15 +644,7 @@ export default function ProductsPage() {
               <Edit className="mr-2 h-4 w-4" />
               Edit Product
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setVariantsSheetProduct(product)
-                setVariantLabel('')
-                setVariantPrice('')
-                setVariantStock('0')
-                    setVariantImageFile(null)
-              }}
-            >
+            <DropdownMenuItem onClick={() => setVariantsSheetProduct(product)}>
               <Layers className="mr-2 h-4 w-4" />
               Options / variants
             </DropdownMenuItem>
@@ -579,6 +701,11 @@ export default function ProductsPage() {
   // Product form fields (shared between add and edit)
   const renderProductForm = () => (
     <div className="space-y-4">
+      {formErrors.general && (
+        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
+          {formErrors.general}
+        </div>
+      )}
       <InputField
         label="Product Name"
         name="name"
@@ -589,21 +716,44 @@ export default function ProductsPage() {
         required
       />
 
-      <SelectField
+      <InputField
         label="Category"
         name="category"
         value={formData.category}
         onChange={(value) => handleFieldChange('category', value)}
-        options={[
-          { value: 'Phones', label: 'Phones' },
-          { value: 'Laptops', label: 'Laptops' },
-          { value: 'Tablets', label: 'Tablets' },
-          { value: 'Accessories', label: 'Accessories' },
-        ]}
-        placeholder="Select category"
+        placeholder="e.g. Books, Coaching, Templates"
         error={formErrors.category}
         required
       />
+
+      <div className="grid grid-cols-2 gap-4">
+        <SelectField
+          label="Item type"
+          name="productType"
+          value={formData.productType}
+          onChange={(value) => setFormData((prev) => ({ ...prev, productType: value as ProductFormData['productType'] }))}
+          options={[
+            { value: 'physical', label: 'Physical product' },
+            { value: 'digital', label: 'Digital good' },
+            { value: 'service', label: 'Service' },
+          ]}
+          required
+        />
+        <SelectField
+          label="Fulfillment"
+          name="fulfillmentType"
+          value={formData.fulfillmentType}
+          onChange={(value) => setFormData((prev) => ({ ...prev, fulfillmentType: value as ProductFormData['fulfillmentType'] }))}
+          options={[
+            { value: 'shipping', label: 'Shipping / delivery' },
+            { value: 'download', label: 'Download file' },
+            { value: 'link', label: 'Access link' },
+            { value: 'booking', label: 'Booking link' },
+            { value: 'manual', label: 'Manual instructions' },
+          ]}
+          required
+        />
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <InputField
@@ -617,7 +767,18 @@ export default function ProductsPage() {
           required
         />
         <InputField
-          label="Stock"
+          label="Compare-at price (sale)"
+          name="compareAtPrice"
+          type="number"
+          value={formData.compareAtPrice}
+          onChange={(value) => handleFieldChange('compareAtPrice', value)}
+          placeholder="Optional — was price"
+          description="If higher than Price, storefront shows a Sale badge and strikethrough."
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <InputField
+          label={formData.trackInventory ? 'Stock' : 'Stock'}
           name="stock"
           type="number"
           value={formData.stock}
@@ -626,6 +787,43 @@ export default function ProductsPage() {
           error={formErrors.stock}
           required
         />
+        <div />
+      </div>
+
+      <SelectField
+        label="Tax rate"
+        name="taxRateId"
+        value={formData.taxRateId || 'none'}
+        onChange={(value) => handleFieldChange('taxRateId', value)}
+        options={[
+          { value: 'none', label: 'Company default / none' },
+          ...(taxRates ?? [])
+            .filter((r) => r.isActive)
+            .map((r) => ({
+              value: r.id,
+              label: `${r.name}${r.code ? ` (${r.code})` : ''} — ${r.rate}%`,
+            })),
+        ]}
+        description="Optional. Leave default to use the company default tax rate when tax is enabled."
+      />
+
+      <div className="grid grid-cols-2 gap-4 rounded-md border border-border/70 p-3">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={formData.trackInventory}
+            onChange={(e) => setFormData((prev) => ({ ...prev, trackInventory: e.target.checked }))}
+          />
+          Track inventory
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={formData.requiresDeliveryAddress}
+            onChange={(e) => setFormData((prev) => ({ ...prev, requiresDeliveryAddress: e.target.checked }))}
+          />
+          Ask for delivery address
+        </label>
       </div>
 
       <TextareaField
@@ -636,6 +834,198 @@ export default function ProductsPage() {
         placeholder="Enter product description"
         description="This will be shown to customers and used by AI for responses"
       />
+
+      <InputField
+        label="URL slug"
+        name="slug"
+        value={formData.slug}
+        onChange={(value) => handleFieldChange('slug', value)}
+        placeholder="auto-from-name"
+        description="Optional. Used in the storefront product URL."
+      />
+      <InputField
+        label="SEO title"
+        name="metaTitle"
+        value={formData.metaTitle}
+        onChange={(value) => handleFieldChange('metaTitle', value)}
+        placeholder="Leave blank to use product name"
+        description="Recommended 50–60 characters for Google titles."
+      />
+      <TextareaField
+        label="SEO description"
+        name="metaDescription"
+        value={formData.metaDescription}
+        onChange={(value) => handleFieldChange('metaDescription', value)}
+        placeholder="Leave blank to use product description"
+        description="Recommended ~155 characters. Shown in search results."
+      />
+
+      {/* Live Product Search & Social Snippet Preview */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-900/50">
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Live Search &amp; WhatsApp Preview</p>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Google Result</span>
+            <span>·</span>
+            <span className="truncate">/p/{formData.slug || 'product-url'}</span>
+          </div>
+          <h5 className="mt-0.5 text-sm font-medium text-[#1a0dab] hover:underline dark:text-[#8ab4f8] line-clamp-1">
+            {formData.metaTitle || formData.name || 'Product Title'}
+          </h5>
+          <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300 line-clamp-2">
+            {formData.metaDescription || formData.description || 'Order online with fast WhatsApp checkout.'}
+          </p>
+        </div>
+      </div>
+
+      {(formData.productType === 'digital' || formData.productType === 'service') && (
+        <>
+          <InputField
+            label="Access link"
+            name="accessUrl"
+            value={formData.accessUrl}
+            onChange={(value) => handleFieldChange('accessUrl', value)}
+            placeholder="https://..."
+            description="For course portals, members-only links, Google Drive, Notion, Calendly, etc."
+          />
+          <InputField
+            label="Booking / secondary link"
+            name="serviceBookingUrl"
+            value={formData.serviceBookingUrl}
+            onChange={(value) => handleFieldChange('serviceBookingUrl', value)}
+            placeholder="https://..."
+          />
+          {formData.productType === 'digital' && (
+            <InputField
+              label="Maximum downloads"
+              name="maxDownloads"
+              type="number"
+              value={formData.maxDownloads}
+              onChange={(value) => handleFieldChange('maxDownloads', value)}
+              placeholder="Leave blank for unlimited"
+              description="Per purchased item"
+              error={formErrors.maxDownloads}
+            />
+          )}
+          {(formData.productType === 'service' || formData.fulfillmentType === 'booking') && (
+            <div className="space-y-3 rounded-md border border-border/70 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={formData.bookable}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, bookable: e.target.checked }))}
+                />
+                Enable customer bookings
+              </label>
+              {formData.bookable && (
+                <InputField
+                  label="Meeting duration (minutes)"
+                  name="bookingDurationMinutes"
+                  type="number"
+                  value={formData.bookingDurationMinutes}
+                  onChange={(value) => handleFieldChange('bookingDurationMinutes', value)}
+                  placeholder="e.g. 30"
+                  description="Leave blank to use the booking default"
+                  error={formErrors.bookingDurationMinutes}
+                />
+              )}
+            </div>
+          )}
+          <TextareaField
+            label="Fulfillment instructions"
+            name="fulfillmentInstructions"
+            value={formData.fulfillmentInstructions}
+            onChange={(value) => handleFieldChange('fulfillmentInstructions', value)}
+            placeholder="Explain how the customer gets access after payment"
+            description="Sent after payment and shown in the receipt."
+          />
+          <div className="space-y-2 rounded-md border border-border/70 p-3">
+            <label className="text-sm font-medium text-foreground">Digital file / resource</label>
+            {selectedProduct?.digitalFileName && !digitalFile && (
+              <p className="text-xs text-muted-foreground">Current file: {selectedProduct.digitalFileName} (private — delivered via signed link after payment)</p>
+            )}
+            {digitalFile && <p className="text-xs text-muted-foreground">Selected: {digitalFile.name}</p>}
+            <input
+              type="file"
+              accept=".pdf,.epub,.txt,.csv,.zip,.doc,.docx"
+              onChange={(e) => setDigitalFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium"
+            />
+            {selectedProduct?.digitalFileName && !digitalFile && (
+              <button
+                type="button"
+                className="text-xs text-destructive underline"
+                onClick={async () => {
+                  if (!selectedProduct) return
+                  setIsSubmitting(true)
+                  try {
+                    await updateProduct(selectedProduct.id, { clearDigitalFile: true })
+                    mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+                    setSelectedProduct({ ...selectedProduct, digitalFileName: null, hasDigitalFile: false })
+                  } finally {
+                    setIsSubmitting(false)
+                  }
+                }}
+              >
+                Remove current digital file
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <SelectField
+              label="License keys"
+              name="licenseKeyMode"
+              value={formData.licenseKeyMode}
+              onChange={(value) => setFormData((prev) => ({ ...prev, licenseKeyMode: value as ProductFormData['licenseKeyMode'] }))}
+              options={[
+                { value: 'none', label: 'None' },
+                { value: 'auto', label: 'Auto-generate' },
+                { value: 'pool', label: 'From key pool' },
+              ]}
+            />
+            <InputField
+              label="Access expires (days)"
+              name="accessExpiresDays"
+              type="number"
+              value={formData.accessExpiresDays}
+              onChange={(value) => handleFieldChange('accessExpiresDays', value)}
+              placeholder="Leave blank for no expiry"
+              description="Applies to signed download / portal links"
+            />
+          </div>
+          {formData.licenseKeyMode !== 'none' && (
+            <InputField
+              label="License key prefix"
+              name="licenseKeyPrefix"
+              value={formData.licenseKeyPrefix}
+              onChange={(value) => handleFieldChange('licenseKeyPrefix', value)}
+              placeholder="e.g. COURSE"
+              description="Used when auto-generating keys"
+            />
+          )}
+          {formData.licenseKeyMode === 'pool' && (
+            <>
+              {(selectedProduct?.licenseKeysAvailable ?? 0) === 0 && !formData.licenseKeys.trim() && (
+                <p className="text-xs text-amber-700">
+                  No keys in the pool yet. Import keys below before selling this product, or checkout will be blocked.
+                </p>
+              )}
+              <TextareaField
+                label="Import license keys"
+                name="licenseKeys"
+                value={formData.licenseKeys}
+                onChange={(value) => handleFieldChange('licenseKeys', value)}
+                placeholder={'KEY-001\nKEY-002\nKEY-003'}
+                description={
+                  selectedProduct?.licenseKeysAvailable != null
+                    ? `Add one key per line. Available in pool: ${selectedProduct.licenseKeysAvailable}`
+                    : 'Add one key per line (or comma-separated). Keys are assigned after payment.'
+                }
+              />
+            </>
+          )}
+        </>
+      )}
 
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Main product image</label>
@@ -758,6 +1148,7 @@ export default function ProductsPage() {
             setFormData(initialFormData)
             setFormErrors({})
             setProductImageFile(null)
+            setDigitalFile(null)
             setIsAddModalOpen(true)
           }}>
             <Plus className="mr-2 h-4 w-4" />
@@ -828,7 +1219,10 @@ export default function ProductsPage() {
       <FormModal
         open={isAddModalOpen}
         onOpenChange={(open) => {
-          if (!open) setProductImageFile(null)
+          if (!open) {
+            setProductImageFile(null)
+            setDigitalFile(null)
+          }
           setIsAddModalOpen(open)
         }}
         title="Add New Product"
@@ -855,6 +1249,7 @@ export default function ProductsPage() {
             setSelectedProduct(null)
             setFormData(initialFormData)
             setProductImageFile(null)
+            setDigitalFile(null)
           }
           setIsEditModalOpen(open)
         }}
@@ -874,106 +1269,20 @@ export default function ProductsPage() {
         {renderProductForm()}
       </FormModal>
 
-      <Sheet
+      <ProductVariantsModal
+        product={variantsSheetProduct}
         open={variantsSheetProduct !== null}
         onOpenChange={(open) => {
           if (!open) {
             setVariantsSheetProduct(null)
-            setVariantImageFile(null)
           }
         }}
-      >
-        <SheetContent className="overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Product options</SheetTitle>
-            <SheetDescription>
-              Add sizes, colors, brands, etc. Customers pick a number for the product, then a number for the option, then quantity in WhatsApp.
-            </SheetDescription>
-          </SheetHeader>
-          {variantsSheetProduct && (
-            <div className="mt-6 space-y-6">
-              <p className="text-sm font-medium text-foreground">{variantsSheetProduct.name}</p>
-              <ul className="space-y-2">
-                {(variantsSheetProduct.variants ?? []).map((v) => {
-                  const vThumb = variantDisplayImage(v)
-                  return (
-                  <li
-                    key={v.id}
-                    className="rounded-md border border-border/60 px-3 py-2 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        {vThumb ? (
-                          <div className="h-10 w-10 overflow-hidden rounded-md">
-                            <ProductThumbImg
-                              src={vThumb}
-                              alt={v.label}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-10 w-10 rounded-md bg-muted" />
-                        )}
-                        <span>
-                          {v.label} — {formatCurrency(v.price)} (stock {v.stock})
-                        </span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => handleDeleteVariant(v.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="mt-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) handleUploadVariantImage(v.id, file)
-                          e.currentTarget.value = ''
-                        }}
-                        disabled={variantImageUploadingId === v.id}
-                        className="block w-full text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-secondary file:px-2 file:py-1 file:text-xs file:font-medium disabled:opacity-60"
-                      />
-                    </div>
-                  </li>
-                  )
-                })}
-                {(variantsSheetProduct.variants ?? []).length === 0 && (
-                  <p className="text-sm text-muted-foreground">No options yet. Add one below.</p>
-                )}
-              </ul>
-              <div className="space-y-3 border-t border-border pt-4">
-                <InputField label="Option label" name="vlabel" value={variantLabel} onChange={setVariantLabel} placeholder="e.g. Blue / L / Brand X" />
-                <div className="grid grid-cols-2 gap-3">
-                  <InputField label="Price" name="vprice" type="number" value={variantPrice} onChange={setVariantPrice} placeholder="0" />
-                  <InputField label="Stock" name="vstock" type="number" value={variantStock} onChange={setVariantStock} placeholder="0" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-foreground">Option image (optional)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setVariantImageFile(e.target.files?.[0] ?? null)}
-                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium"
-                  />
-                  {variantImageFile && (
-                    <p className="text-xs text-muted-foreground">Selected: {variantImageFile.name}</p>
-                  )}
-                </div>
-                <Button type="button" onClick={handleAddVariant} disabled={variantSaving || !variantLabel.trim() || variantPrice === ''}>
-                  {variantSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add option'}
-                </Button>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+        formatCurrency={formatCurrency}
+        onAddVariant={handleAddVariantModal}
+        onUpdateVariant={handleUpdateVariantModal}
+        onDeleteVariant={handleDeleteVariantModal}
+        onUploadVariantImage={handleUploadVariantImageModal}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

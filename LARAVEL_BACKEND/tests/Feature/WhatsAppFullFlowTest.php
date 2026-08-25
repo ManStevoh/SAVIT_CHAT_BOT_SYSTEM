@@ -107,6 +107,25 @@ class WhatsAppFullFlowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_webhook_verify_accepts_company_custom_token(): void
+    {
+        $user = $this->companyUser();
+        WhatsAppAccount::create([
+            'company_id' => $user->company_id,
+            'phone_number_id' => 'phone-custom',
+            'access_token' => 'token-custom',
+            'whatsapp_business_account_id' => 'waba-custom',
+            'verify_token' => 'company-verify-abc',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'connected_at' => now(),
+        ]);
+
+        $this->get('/api/whatsapp/webhook?hub_mode=subscribe&hub_verify_token=company-verify-abc&hub_challenge=custom-challenge')
+            ->assertOk()
+            ->assertSee('custom-challenge');
+    }
+
     public function test_incoming_webhook_creates_chat_and_message(): void
     {
         Queue::fake();
@@ -157,6 +176,125 @@ class WhatsAppFullFlowTest extends TestCase
         ]);
 
         Queue::assertPushed(\App\Jobs\ProcessIncomingWhatsAppMessage::class);
+    }
+
+    public function test_incoming_webhook_accepts_company_meta_app_secret(): void
+    {
+        Queue::fake();
+
+        $user = $this->companyUser();
+        WhatsAppAccount::create([
+            'company_id' => $user->company_id,
+            'phone_number_id' => 'phone-byo',
+            'access_token' => 'token-byo',
+            'whatsapp_business_account_id' => 'waba-byo',
+            'meta_app_secret' => 'company-only-secret',
+            'connected_via' => 'manual',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'webhook_subscribed_at' => now(),
+            'phone_registered_at' => now(),
+            'connected_at' => now(),
+        ]);
+
+        $payload = json_encode([
+            'object' => 'whatsapp_business_account',
+            'entry' => [[
+                'id' => 'waba-byo',
+                'changes' => [[
+                    'field' => 'messages',
+                    'value' => [
+                        'metadata' => ['phone_number_id' => 'phone-byo'],
+                        'contacts' => [['profile' => ['name' => 'BYO Customer']]],
+                        'messages' => [[
+                            'id' => 'wamid.byo123',
+                            'from' => '254722222222',
+                            'type' => 'text',
+                            'text' => ['body' => 'Hello from BYO app'],
+                        ]],
+                    ],
+                ]],
+            ]],
+        ], JSON_THROW_ON_ERROR);
+
+        $hash = hash_hmac('sha256', $payload, 'company-only-secret');
+        $headers = [
+            'X-Hub-Signature-256' => 'sha256=' . $hash,
+            'Content-Type' => 'application/json',
+        ];
+
+        $this->call(
+            'POST',
+            '/api/whatsapp/webhook',
+            [],
+            [],
+            [],
+            $this->transformHeadersToServerVars($headers),
+            $payload
+        )->assertOk();
+
+        $this->assertDatabaseHas('chats', [
+            'company_id' => $user->company_id,
+            'customer_phone' => '254722222222',
+        ]);
+        $this->assertDatabaseHas('messages', [
+            'content' => 'Hello from BYO app',
+            'whatsapp_message_id' => 'wamid.byo123',
+        ]);
+    }
+
+    public function test_incoming_webhook_rejects_wrong_company_secret_when_not_platform(): void
+    {
+        $user = $this->companyUser();
+        WhatsAppAccount::create([
+            'company_id' => $user->company_id,
+            'phone_number_id' => 'phone-byo-bad',
+            'access_token' => 'token-byo',
+            'whatsapp_business_account_id' => 'waba-byo-bad',
+            'meta_app_secret' => 'company-only-secret',
+            'connected_via' => 'manual',
+            'status' => 'active',
+            'onboarding_status' => 'active',
+            'webhook_subscribed_at' => now(),
+            'connected_at' => now(),
+        ]);
+
+        $payload = json_encode([
+            'object' => 'whatsapp_business_account',
+            'entry' => [[
+                'id' => 'waba-byo-bad',
+                'changes' => [[
+                    'field' => 'messages',
+                    'value' => [
+                        'metadata' => ['phone_number_id' => 'phone-byo-bad'],
+                        'messages' => [[
+                            'id' => 'wamid.bad',
+                            'from' => '254733333333',
+                            'type' => 'text',
+                            'text' => ['body' => 'Should reject'],
+                        ]],
+                    ],
+                ]],
+            ]],
+        ], JSON_THROW_ON_ERROR);
+
+        $hash = hash_hmac('sha256', $payload, 'wrong-secret');
+        $headers = [
+            'X-Hub-Signature-256' => 'sha256=' . $hash,
+            'Content-Type' => 'application/json',
+        ];
+
+        $this->call(
+            'POST',
+            '/api/whatsapp/webhook',
+            [],
+            [],
+            [],
+            $this->transformHeadersToServerVars($headers),
+            $payload
+        )->assertForbidden();
+
+        $this->assertDatabaseMissing('messages', ['whatsapp_message_id' => 'wamid.bad']);
     }
 
     public function test_disconnect_unsubscribes_and_deactivates(): void
@@ -286,6 +424,92 @@ class WhatsAppFullFlowTest extends TestCase
         $this->postJson('/api/company/whatsapp/embedded/complete', [
             'phoneNumberId' => 'phone-1',
         ])->assertUnprocessable();
+    }
+
+    public function test_manual_connect_full_inbound_flow_uses_company_credentials_only(): void
+    {
+        Queue::fake();
+
+        Http::fake([
+            'graph.facebook.com/*/phone-byo-flow*' => Http::response([
+                'id' => 'phone-byo-flow',
+                'display_phone_number' => '+254700000099',
+                'quality_rating' => 'GREEN',
+            ], 200),
+            'graph.facebook.com/*/waba-byo-flow/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/phone-byo-flow/register' => Http::response(['success' => true], 200),
+        ]);
+
+        $user = $this->companyUser();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/company/whatsapp/connect', [
+            'phoneNumberId' => 'phone-byo-flow',
+            'accessToken' => 'byo-access-token',
+            'whatsappBusinessAccountId' => 'waba-byo-flow',
+            'metaAppSecret' => 'byo-app-secret',
+            'webhookVerifyToken' => 'byo-verify-token',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $account = WhatsAppAccount::where('company_id', $user->company_id)->firstOrFail();
+        $this->assertSame('manual', $account->connected_via);
+        $this->assertSame('tech_provider', $account->meta_billing_model);
+        $this->assertSame('byo-verify-token', $account->verify_token);
+        $this->assertSame('byo-app-secret', $account->meta_app_secret);
+        $this->assertNull($account->credit_line_shared_at);
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), 'waba-byo-flow/subscribed_apps')) {
+                return false;
+            }
+            $body = $request->data();
+
+            return ($body['verify_token'] ?? null) === 'byo-verify-token';
+        });
+
+        $this->get('/api/whatsapp/webhook?hub_mode=subscribe&hub_verify_token=byo-verify-token&hub_challenge=byo-challenge')
+            ->assertOk()
+            ->assertSee('byo-challenge');
+
+        $payload = json_encode([
+            'object' => 'whatsapp_business_account',
+            'entry' => [[
+                'id' => 'waba-byo-flow',
+                'changes' => [[
+                    'field' => 'messages',
+                    'value' => [
+                        'metadata' => ['phone_number_id' => 'phone-byo-flow'],
+                        'contacts' => [['profile' => ['name' => 'Manual Customer']]],
+                        'messages' => [[
+                            'id' => 'wamid.manual-flow',
+                            'from' => '254744444444',
+                            'type' => 'text',
+                            'text' => ['body' => 'Manual inbound works'],
+                        ]],
+                    ],
+                ]],
+            ]],
+        ], JSON_THROW_ON_ERROR);
+
+        $hash = hash_hmac('sha256', $payload, 'byo-app-secret');
+        $this->call(
+            'POST',
+            '/api/whatsapp/webhook',
+            [],
+            [],
+            [],
+            $this->transformHeadersToServerVars([
+                'X-Hub-Signature-256' => 'sha256=' . $hash,
+                'Content-Type' => 'application/json',
+            ]),
+            $payload
+        )->assertOk();
+
+        $this->assertDatabaseHas('messages', [
+            'content' => 'Manual inbound works',
+            'whatsapp_message_id' => 'wamid.manual-flow',
+        ]);
+        Queue::assertPushed(\App\Jobs\ProcessIncomingWhatsAppMessage::class);
     }
 
     public function test_manual_connect_endpoint_disabled_when_toggle_off(): void

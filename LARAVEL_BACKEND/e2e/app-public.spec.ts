@@ -14,7 +14,7 @@ test.describe('Public app pages', () => {
   })
   test('marketing homepage loads', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveTitle(/Essem Chat/i)
+    await expect(page).toHaveTitle(/RelayIQ/i)
     await expect(
       page.getByRole('heading', {
         name: /sell on whatsapp/i,

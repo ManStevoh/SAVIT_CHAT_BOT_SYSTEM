@@ -504,7 +504,7 @@ class CommerceAgentCognitiveTest extends TestCase
 
 
 
-        $this->assertSame('agent_cognitive', $result['route']);
+        $this->assertSame('agent_os', $result['route']);
 
         $episode = CognitiveEpisode::where('company_id', $company->id)->first();
 

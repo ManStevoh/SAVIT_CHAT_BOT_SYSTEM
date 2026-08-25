@@ -7,9 +7,12 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\Order;
 use App\Models\OrderProduct;
+use App\Models\Product;
 use App\Models\SocialPost;
 use App\Services\OrderPaymentService;
+use App\Services\Orders\TaxCalculationService;
 use App\Services\WhatsAppMessageSenderService;
+use App\Support\MoneyFormatter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -30,7 +33,7 @@ class OrderController extends Controller
 
     protected function buildOrderUpdateWhatsAppMessage(Order $order, ?string $oldStatus, ?string $oldPaymentStatus): string
     {
-        $companyName = $order->company?->name ?: 'Essem Chat';
+        $companyName = $order->company?->name ?: 'RelayIQ';
         $customerName = $order->customer_name ?: 'Customer';
         $settings = $order->company?->settings;
 
@@ -47,6 +50,14 @@ class OrderController extends Controller
                 'cancelled' => "Your order has been cancelled. Reply to this message if you’d like help.",
                 default => "We’ll keep you updated as it progresses.",
             };
+            if ($order->status === 'shipped') {
+                if (! empty($order->courier_name)) {
+                    $lines[] = "• Courier: {$order->courier_name}";
+                }
+                if (! empty($order->tracking_number)) {
+                    $lines[] = "• Tracking Number: {$order->tracking_number}";
+                }
+            }
         }
 
         if ($oldPaymentStatus !== $order->payment_status) {
@@ -121,14 +132,37 @@ class OrderController extends Controller
         $query = Order::with('orderProducts')->where('company_id', $companyId)->orderByDesc('created_at');
 
         if ($request->filled('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
+            $status = $request->status;
+            if ($status === 'failed') {
+                $query->where(function ($q) {
+                    $q->where('status', 'cancelled')->orWhere('payment_status', 'failed');
+                });
+            } elseif ($status === 'waiting_shipping' || $status === 'ready_to_ship') {
+                $query->where(function ($q) {
+                    $q->where('status', 'confirmed')
+                      ->orWhere(function ($sub) {
+                          $sub->where('payment_status', 'paid')
+                              ->whereNotIn('status', ['shipped', 'delivered', 'cancelled']);
+                      });
+                });
+            } elseif ($status === 'shipped_delivered' || $status === 'completed') {
+                $query->whereIn('status', ['shipped', 'delivered']);
+            } elseif ($status === 'pending') {
+                $query->where(function ($q) {
+                    $q->where('status', 'pending')->orWhere('payment_status', 'pending');
+                });
+            } else {
+                $query->where('status', $status);
+            }
         }
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'like', "%{$search}%")
                     ->orWhere('customer_name', 'like', "%{$search}%")
-                    ->orWhere('customer_phone', 'like', "%{$search}%");
+                    ->orWhere('customer_phone', 'like', "%{$search}%")
+                    ->orWhere('delivery_address', 'like', "%{$search}%")
+                    ->orWhere('tracking_number', 'like', "%{$search}%");
             });
         }
 
@@ -153,13 +187,30 @@ class OrderController extends Controller
                 'orderNumber' => $order->order_number,
                 'customerName' => $order->customer_name,
                 'customerPhone' => $order->customer_phone,
+                'customerEmail' => $order->customer_email,
+                'deliveryAddress' => $order->delivery_address,
+                'fulfillmentType' => $order->fulfillment_type ?? 'delivery',
+                'dineInTableName' => $order->dine_in_table_name,
+                'orderNotes' => $order->order_notes,
+                'trackingNumber' => $order->tracking_number,
+                'courierName' => $order->courier_name,
+                'shippedAt' => $order->shipped_at?->toIso8601String(),
+                'deliveryFee' => (float) ($order->delivery_fee ?? 0),
                 'chatId' => $order->chat_id ? (string) $order->chat_id : null,
                 'products' => $order->orderProducts->map(fn ($p) => [
                     'id' => (string) $p->id,
                     'name' => $p->name,
                     'quantity' => (int) $p->quantity,
                     'price' => (float) $p->price,
+                    'taxAmount' => (float) ($p->tax_amount ?? 0),
+                    'lineSubtotal' => (float) ($p->line_subtotal ?? ((float) $p->price * (int) $p->quantity)),
+                    'taxName' => $p->tax_name,
+                    'taxRate' => $p->tax_rate !== null ? (float) $p->tax_rate : null,
+                    'taxInclusive' => (bool) ($p->tax_inclusive ?? false),
                 ])->values()->all(),
+                'subtotal' => (float) ($order->subtotal ?? $order->total),
+                'taxTotal' => (float) ($order->tax_total ?? 0),
+                'taxBreakdown' => is_array($order->tax_breakdown) ? $order->tax_breakdown : [],
                 'total' => (float) $order->total,
                 'status' => $order->status,
                 'paymentStatus' => $order->payment_status,
@@ -196,18 +247,76 @@ class OrderController extends Controller
                 'orderNumber' => $order->order_number,
                 'customerName' => $order->customer_name,
                 'customerPhone' => $order->customer_phone,
+                'customerEmail' => $order->customer_email,
+                'deliveryAddress' => $order->delivery_address,
+                'fulfillmentType' => $order->fulfillment_type ?? 'delivery',
+                'dineInTableName' => $order->dine_in_table_name,
+                'orderNotes' => $order->order_notes,
+                'trackingNumber' => $order->tracking_number,
+                'courierName' => $order->courier_name,
+                'shippedAt' => $order->shipped_at?->toIso8601String(),
+                'deliveryFee' => (float) ($order->delivery_fee ?? 0),
                 'products' => $order->orderProducts->map(fn ($p) => [
                     'id' => (string) $p->id,
                     'name' => $p->name,
                     'quantity' => (int) $p->quantity,
                     'price' => (float) $p->price,
+                    'taxAmount' => (float) ($p->tax_amount ?? 0),
+                    'lineSubtotal' => (float) ($p->line_subtotal ?? ((float) $p->price * (int) $p->quantity)),
+                    'taxName' => $p->tax_name,
+                    'taxRate' => $p->tax_rate !== null ? (float) $p->tax_rate : null,
+                    'taxInclusive' => (bool) ($p->tax_inclusive ?? false),
                 ])->values()->all(),
+                'subtotal' => (float) ($order->subtotal ?? $order->total),
+                'taxTotal' => (float) ($order->tax_total ?? 0),
+                'taxBreakdown' => is_array($order->tax_breakdown) ? $order->tax_breakdown : [],
                 'total' => (float) $order->total,
                 'status' => $order->status,
                 'paymentStatus' => $order->payment_status,
                 'createdAt' => $order->created_at->toIso8601String(),
                 'updatedAt' => $order->updated_at->toIso8601String(),
             ],
+        ]);
+    }
+
+    /**
+     * Preview subtotal / tax / total for cart lines without creating an order.
+     */
+    public function previewTotals(Request $request): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.productId' => 'nullable|integer|exists:products,id',
+            'items.*.price' => 'required|numeric|min:0',
+            'items.*.quantity' => 'required|integer|min:1|max:9999',
+            'items.*.taxRateId' => 'nullable|integer|exists:tax_rates,id',
+        ]);
+
+        $company = $request->user()->company;
+        $company?->loadMissing('settings');
+
+        $calcItems = [];
+        foreach ($validated['items'] as $item) {
+            $calcItems[] = [
+                'product_id' => $item['productId'] ?? null,
+                'price' => (float) $item['price'],
+                'quantity' => (int) $item['quantity'],
+                'tax_rate_id' => $item['taxRateId'] ?? null,
+            ];
+        }
+
+        $calc = app(TaxCalculationService::class)->calculateForCompany($company, $calcItems);
+
+        return response()->json([
+            'subtotal' => $calc['subtotal'],
+            'taxTotal' => $calc['tax_total'],
+            'total' => $calc['total'],
+            'taxBreakdown' => $calc['tax_breakdown'],
         ]);
     }
 
@@ -219,9 +328,12 @@ class OrderController extends Controller
         $validated = $request->validate([
             'chatId' => 'required|integer|exists:chats,id',
             'items' => 'required|array|min:1',
+            'items.*.productId' => 'nullable|integer|exists:products,id',
+            'items.*.productVariantId' => 'nullable|integer|exists:product_variants,id',
             'items.*.name' => 'required|string|max:255',
             'items.*.quantity' => 'required|integer|min:1|max:9999',
             'items.*.price' => 'required|numeric|min:0',
+            'items.*.fulfillmentData' => 'nullable|array',
             'sendWhatsApp' => 'sometimes|boolean',
         ]);
 
@@ -234,10 +346,19 @@ class OrderController extends Controller
             ->where('company_id', $companyId)
             ->firstOrFail();
 
-        $total = 0.0;
+        $company = $chat->company;
+        $company?->loadMissing('settings');
+
+        $calcItems = [];
         foreach ($validated['items'] as $item) {
-            $total += ((float) $item['price']) * ((int) $item['quantity']);
+            $calcItems[] = [
+                'product_id' => $item['productId'] ?? null,
+                'name' => $item['name'],
+                'price' => (float) $item['price'],
+                'quantity' => (int) $item['quantity'],
+            ];
         }
+        $calc = app(TaxCalculationService::class)->calculateForCompany($company, $calcItems);
 
         $orderNumber = 'ORD-'.strtoupper(Str::random(8));
         while (Order::where('order_number', $orderNumber)->exists()) {
@@ -250,18 +371,74 @@ class OrderController extends Controller
             'order_number' => $orderNumber,
             'customer_name' => $chat->customer_name ?: 'Customer',
             'customer_phone' => $chat->customer_phone ?: '',
-            'total' => round($total, 2),
+            'subtotal' => $calc['subtotal'],
+            'tax_total' => $calc['tax_total'],
+            'tax_breakdown' => $calc['tax_breakdown'] !== [] ? $calc['tax_breakdown'] : null,
+            'total' => $calc['total'],
             'status' => 'pending',
             'payment_status' => 'pending',
         ]);
 
-        foreach ($validated['items'] as $item) {
-            OrderProduct::create([
-                'order_id' => $order->id,
-                'name' => $item['name'],
-                'quantity' => (int) $item['quantity'],
-                'price' => (float) $item['price'],
-            ]);
+        $digitalAccess = app(\App\Services\DigitalAccessService::class);
+
+        try {
+            foreach ($validated['items'] as $index => $item) {
+                $product = null;
+                $productId = $item['productId'] ?? null;
+                if ($productId) {
+                    $product = Product::query()
+                        ->where('company_id', $companyId)
+                        ->where('id', $productId)
+                        ->first();
+                    if (! $product) {
+                        throw new \RuntimeException('Invalid product for this company.');
+                    }
+
+                    $poolError = $digitalAccess->assertPoolCapacity($product, (int) $item['quantity']);
+                    if ($poolError) {
+                        throw new \RuntimeException($poolError);
+                    }
+                }
+
+                $fulfillment = is_array($item['fulfillmentData'] ?? null) ? $item['fulfillmentData'] : [];
+                // Strip any client-supplied file paths to prevent path injection.
+                unset($fulfillment['digitalFilePath'], $fulfillment['digitalFileAbsolutePath'], $fulfillment['digitalFileUrl']);
+                $fulfillment = $digitalAccess->hydrateFulfillmentData($fulfillment, $product);
+                if ($product && empty($fulfillment)) {
+                    $fulfillment = $product->fulfillmentSnapshot();
+                }
+
+                $lineTax = $calc['lines'][$index] ?? [
+                    'tax_rate_id' => null,
+                    'tax_name' => null,
+                    'tax_code' => null,
+                    'tax_rate' => null,
+                    'tax_inclusive' => false,
+                    'tax_amount' => 0.0,
+                    'line_subtotal' => round(((float) $item['price']) * ((int) $item['quantity']), 2),
+                ];
+
+                OrderProduct::create([
+                    'order_id' => $order->id,
+                    'product_id' => $product?->id,
+                    'product_variant_id' => $item['productVariantId'] ?? null,
+                    'name' => $item['name'],
+                    'quantity' => (int) $item['quantity'],
+                    'price' => (float) $item['price'],
+                    'tax_rate_id' => $lineTax['tax_rate_id'],
+                    'tax_name' => $lineTax['tax_name'],
+                    'tax_code' => $lineTax['tax_code'],
+                    'tax_rate' => $lineTax['tax_rate'],
+                    'tax_inclusive' => $lineTax['tax_inclusive'],
+                    'tax_amount' => $lineTax['tax_amount'],
+                    'line_subtotal' => $lineTax['line_subtotal'],
+                    'fulfillment_data' => $fulfillment !== [] ? $fulfillment : null,
+                ]);
+            }
+        } catch (\RuntimeException $e) {
+            $order->delete();
+
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
         $whatsappSent = false;
@@ -282,8 +459,17 @@ class OrderController extends Controller
                 if (! empty($stripe['success']) && ! empty($stripe['url'])) {
                     $paymentLine .= "Pay online now: {$stripe['url']}\n";
                 }
+                $moneyLines = app(TaxCalculationService::class)->formatSummaryLines([
+                    'subtotal' => (float) ($order->subtotal ?? $order->total),
+                    'tax_total' => (float) ($order->tax_total ?? 0),
+                    'total' => (float) $order->total,
+                    'tax_breakdown' => is_array($order->tax_breakdown) ? $order->tax_breakdown : [],
+                ], fn (float $amount) => MoneyFormatter::formatFromSettings(
+                    $amount,
+                    $company?->settings
+                ));
                 $invoiceMessage = "Order #{$order->order_number} created for {$order->customer_name}.\n"
-                    ."Total: {$order->total}.\n\n"
+                    .implode("\n", $moneyLines)."\n\n"
                     ."View invoice / receipt:\n{$order->publicReceiptUrl()}\n\n"
                     .$paymentLine
                     ."Thank you!";
@@ -329,6 +515,9 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'sometimes|in:pending,confirmed,shipped,delivered,cancelled',
             'paymentStatus' => 'sometimes|in:pending,paid,refunded',
+            'courierName' => 'sometimes|nullable|string|max:100',
+            'trackingNumber' => 'sometimes|nullable|string|max:100',
+            'deliveryAddress' => 'sometimes|nullable|string|max:1000',
         ]);
 
         if ($order->company_id !== $request->user()->company_id) {
@@ -341,24 +530,47 @@ class OrderController extends Controller
         $updates = [];
         if ($request->has('status')) {
             $updates['status'] = $request->status;
-        }
-        if ($request->has('paymentStatus')) {
-            if ($request->paymentStatus === 'paid') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment can only be marked paid through a verified payment gateway.',
-                ], 403);
+            if ($request->status === 'shipped' && $oldStatus !== 'shipped') {
+                $updates['shipped_at'] = now();
             }
-            $updates['payment_status'] = $request->paymentStatus;
+        }
+        if ($request->has('courierName')) {
+            $updates['courier_name'] = $request->courierName;
+        }
+        if ($request->has('trackingNumber')) {
+            $updates['tracking_number'] = $request->trackingNumber;
+        }
+        if ($request->has('deliveryAddress')) {
+            $updates['delivery_address'] = $request->deliveryAddress;
+        }
+
+        $markedPaidViaService = false;
+        if ($request->has('paymentStatus')) {
+            if ($request->paymentStatus === 'paid' && $oldPaymentStatus !== 'paid') {
+                // Manual / till / offline payments: company staff confirm receipt.
+                // Gateways also call OrderPaymentService::markOrderPaid from webhooks.
+                app(OrderPaymentService::class)->markOrderPaid($order);
+                $order->refresh();
+                $markedPaidViaService = true;
+                // markOrderPaid sets status=confirmed; don't regress it with a stale pending/confirmed patch.
+                if (isset($updates['status']) && in_array($updates['status'], ['pending', 'confirmed'], true)) {
+                    unset($updates['status']);
+                }
+            } else {
+                $updates['payment_status'] = $request->paymentStatus;
+            }
         }
         if ($updates !== []) {
             $order->update($updates);
+            $order->refresh();
         }
 
+        // markOrderPaid already sends its own payment confirmation + fulfillment WhatsApp.
         $whatsappSent = false;
         $whatsappError = null;
 
-        $shouldNotify = ($oldStatus !== $order->status) || ($oldPaymentStatus !== $order->payment_status);
+        $shouldNotify = ! $markedPaidViaService
+            && (($oldStatus !== $order->status) || ($oldPaymentStatus !== $order->payment_status));
         if ($shouldNotify) {
             $company = $order->company;
             $account = $company?->whatsappAccount;
@@ -405,8 +617,10 @@ class OrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $whatsappSent ? 'Order updated and customer notified via WhatsApp.' : 'Order updated successfully',
-            'whatsappSent' => $whatsappSent,
+            'message' => $markedPaidViaService
+                ? 'Order marked as paid. Customer notified if WhatsApp is connected.'
+                : ($whatsappSent ? 'Order updated and customer notified via WhatsApp.' : 'Order updated successfully'),
+            'whatsappSent' => $whatsappSent || $markedPaidViaService,
             'whatsappError' => $whatsappError,
         ]);
     }

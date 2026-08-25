@@ -22,7 +22,7 @@ final class SearchProductsTool implements AgentTool
 
     public function description(): string
     {
-        return 'Search the business product catalog by query. Returns names, prices, stock, and descriptions.';
+        return 'Search the business product catalog by query. Returns names, prices (including sale/compare-at), stock, and descriptions.';
     }
 
     public function parametersSchema(): array
@@ -46,7 +46,7 @@ final class SearchProductsTool implements AgentTool
         }
 
         $companyId = (int) $context->company->id;
-        $currency = $context->company->settings?->displayCurrencyCode() ?? 'USD';
+        $settings = $context->company->settings;
 
         $semantic = $this->knowledgeChunks->search($companyId, $query, KnowledgeChunk::SOURCE_PRODUCT, $limit);
         $productIds = array_values(array_unique(array_map(fn ($r) => (int) $r['source_id'], $semantic)));
@@ -70,16 +70,28 @@ final class SearchProductsTool implements AgentTool
         $products = Product::query()
             ->where('company_id', $companyId)
             ->whereIn('id', array_slice($ids, 0, $limit))
-            ->get(['id', 'name', 'price', 'stock', 'description']);
+            ->get(['id', 'name', 'price', 'compare_at_price', 'stock', 'description']);
 
         return [
-            'products' => $products->map(fn (Product $p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'price' => MoneyFormatter::format((float) $p->price, $currency),
-                'stock' => $p->stock,
-                'description' => mb_substr((string) ($p->description ?? ''), 0, 200),
-            ])->values()->all(),
+            'products' => $products->map(function (Product $p) use ($settings) {
+                $price = (float) $p->price;
+                $compare = $p->compare_at_price !== null ? (float) $p->compare_at_price : null;
+                $onSale = $compare !== null && $compare > $price;
+                $row = [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'price' => MoneyFormatter::formatFromSettings($price, $settings),
+                    'stock' => $p->stock,
+                    'description' => mb_substr((string) ($p->description ?? ''), 0, 200),
+                    'onSale' => $onSale,
+                ];
+                if ($onSale) {
+                    $row['compareAtPrice'] = MoneyFormatter::formatFromSettings($compare, $settings);
+                    $row['discountPercent'] = (int) round((1 - ($price / $compare)) * 100);
+                }
+
+                return $row;
+            })->values()->all(),
         ];
     }
 }

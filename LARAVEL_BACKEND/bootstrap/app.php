@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Must run before routing so unverified bare paths like /cart on a custom
+        // domain can redirect onto /s/{slug}/cart instead of hard-404ing.
+        $middleware->prepend(\App\Http\Middleware\ResolveStorefrontDomain::class);
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\SecurityHeaders::class,
@@ -21,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
         $middleware->statefulApi();
+        $middleware->encryptCookies(except: [
+            'pricing_currency',
+        ]);
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
@@ -29,7 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
-        $schedule->command('subscription:expiry-reminders')->dailyAt('09:00');
+        $schedule->command('subscription:expiry-reminders --expire')->dailyAt('09:00');
         $schedule->job(new \App\Jobs\Growth\PublishScheduledPostsJob)->everyFiveMinutes();
         $schedule->job(new \App\Jobs\Growth\SyncMetaMetricsJob)->dailyAt('06:00');
         $schedule->job(new \App\Jobs\Growth\SyncMetaAdSpendJob)->dailyAt('06:30');
@@ -51,8 +57,44 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('learning:prune-expired')->dailyAt('02:30');
         $schedule->command('learning:sync-embeddings --missing-only')->weeklyOn(0, '03:30');
         $schedule->command('products:sync-embeddings --missing-only')->weeklyOn(0, '04:00');
+        $schedule->job(new \App\Jobs\Orders\ProcessPaymentRecoveryJob)->hourly();
+        $schedule->job(new \App\Jobs\Orders\ProcessCustomerRetentionJob)->dailyAt('09:30');
+        $schedule->job(new \App\Jobs\Storefront\ProcessAbandonedCartJob)->hourly();
         $schedule->command('ai:health-check --notify')->dailyAt('07:30');
+
+        // Shared hosting: set AUTO_MIGRATE=true to apply pending migrations via cron.
+        if (config('app.auto_migrate')) {
+            $schedule->command('migrate:via-cron')
+                ->everyFiveMinutes()
+                ->withoutOverlapping(10)
+                ->appendOutputTo(storage_path('logs/migrate-cron.log'));
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Convert ModelNotFoundException → 404 instead of 500 (Laravel 12 compatible)
+        $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            if (request()->expectsJson()) {
+                return response()->json(['message' => 'Resource not found.'], 404);
+            }
+
+            abort(404);
+        });
+
+        // Log all exceptions to a publicly-accessible debug file for cPanel debugging
+        $exceptions->report(function (\Throwable $e) {
+            try {
+                $logFile = public_path('error_log.txt');
+                $logLine = sprintf(
+                    "[%s] ERROR: %s in %s:%d\nStack Trace:\n%s\n----------------------------------------\n\n",
+                    now()->toDateTimeString(),
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine(),
+                    $e->getTraceAsString()
+                );
+                file_put_contents($logFile, $logLine, FILE_APPEND);
+            } catch (\Throwable) {}
+
+            return false; // Allow default Laravel logging to continue
+        });
     })->create();

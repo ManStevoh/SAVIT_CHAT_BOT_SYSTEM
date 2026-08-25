@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -28,10 +28,10 @@ export function LandoNavbar({
   const [open, setOpen] = useState(false)
 
   return (
-    <nav className="lando-nav fixed top-0 left-0 right-0 z-50 border-b border-gray-200/80 bg-[#f3f4f6]/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" onClick={() => setOpen(false)}>
-          <AppLogoAndName variant="navbar" className="font-bold text-black" />
+    <nav className="lando-nav fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-muted/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <Link href="/" onClick={() => setOpen(false)} className="min-w-0 shrink">
+          <AppLogoAndName variant="navbar" className="font-bold text-foreground" />
         </Link>
 
         <div className="hidden md:flex md:items-center md:gap-8">
@@ -43,7 +43,7 @@ export function LandoNavbar({
                 href={link.href}
                 className={cn(
                   "text-sm font-medium transition-colors",
-                  isActive ? "text-[#2563eb]" : "text-black hover:text-[#2563eb]"
+                  isActive ? "text-primary" : "text-foreground/90 hover:text-primary dark:text-foreground/90 dark:hover:text-primary"
                 )}
               >
                 {link.label}
@@ -55,19 +55,19 @@ export function LandoNavbar({
         <div className="flex items-center gap-2">
           <Link
             href={loginHref}
-            className="hidden text-sm font-medium text-black sm:inline"
+            className="hidden text-sm font-medium text-foreground/90 transition-colors hover:text-primary sm:inline"
           >
             {loginLabel}
           </Link>
           <Button
             asChild
-            className="hidden h-9 rounded-lg bg-[#2563eb] px-5 text-sm font-medium text-white hover:bg-[#1d4ed8] sm:inline-flex"
+            className="hidden h-9 rounded-lg bg-primary px-5 text-sm font-medium text-white transition-transform hover:bg-primary/90 hover:-translate-y-0.5 sm:inline-flex"
           >
             <Link href={signupHref}>{signupLabel}</Link>
           </Button>
           <button
             type="button"
-            className="rounded-lg p-2 text-black md:hidden"
+            className="rounded-lg p-2 text-foreground md:hidden"
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
           >
@@ -78,7 +78,7 @@ export function LandoNavbar({
 
       <div
         className={cn(
-          "overflow-hidden border-t border-gray-200/80 bg-[#f3f4f6] transition-all md:hidden",
+          "overflow-hidden border-t border-border/80 bg-muted transition-all md:hidden",
           open ? "max-h-96 pb-4 opacity-100" : "max-h-0 opacity-0"
         )}
       >
@@ -92,22 +92,22 @@ export function LandoNavbar({
                 onClick={() => setOpen(false)}
                 className={cn(
                   "block rounded-lg px-3 py-2 text-sm font-medium",
-                  isActive ? "bg-white text-[#2563eb]" : "text-black hover:bg-white/70"
+                  isActive ? "bg-card text-primary" : "text-foreground hover:bg-card/70"
                 )}
               >
                 {link.label}
               </Link>
             )
           })}
-          <div className="mt-3 flex flex-col gap-2 border-t border-gray-200 pt-3">
+          <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
             <Link
               href={loginHref}
               onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-black hover:bg-white/70"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-card/70"
             >
               {loginLabel}
             </Link>
-            <Button asChild className="h-10 rounded-lg bg-[#2563eb] text-white hover:bg-[#1d4ed8]">
+            <Button asChild className="h-10 rounded-lg bg-primary text-white hover:bg-primary/90">
               <Link href={signupHref} onClick={() => setOpen(false)}>
                 {signupLabel}
               </Link>

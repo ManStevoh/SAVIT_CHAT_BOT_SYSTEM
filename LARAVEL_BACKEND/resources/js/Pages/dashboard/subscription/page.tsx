@@ -16,18 +16,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Check, CreditCard, Download, MessageSquare, Smartphone, Users, Zap } from "lucide-react"
+import { Check, CreditCard, Download, MessageSquare, Package, Smartphone, Users, Zap } from "lucide-react"
 import { useSubscription, useSubscriptionInvoices, useSubscriptionUsage, usePlans, type BillingInvoice } from "@/lib/api-hooks"
-import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout } from "@/lib/api-actions"
+import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout, verifyPaystackCheckout, cancelSubscription, previewCoupon, apiRequest, submitManualPaymentProof } from "@/lib/api-actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 
 function SubscriptionPageContent() {
   const searchParams = useSearchParams()
   const { data: subscription, error, isLoading, mutate } = useSubscription()
   const { data: billingHistory = [] } = useSubscriptionInvoices()
   const { data: usageData } = useSubscriptionUsage()
-  const { data: plansData = [] } = usePlans()
+  const [pricingCurrency, setPricingCurrency] = useState<string | null>(null)
+  const { data: plansResponse } = usePlans(pricingCurrency)
+  const plansData = plansResponse?.plans ?? []
+  const activeCurrency = plansResponse?.currency ?? pricingCurrency ?? "KES"
+  const currencies = plansResponse?.availableCurrencies?.length
+    ? plansResponse.availableCurrencies
+    : [
+        { code: "KES", label: "Kenyan Shilling", symbol: "KSh" },
+        { code: "USD", label: "US Dollar", symbol: "$" },
+        { code: "NGN", label: "Nigerian Naira", symbol: "₦" },
+      ]
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<"success" | "cancelled" | null>(null)
@@ -36,42 +47,108 @@ function SubscriptionPageContent() {
   const [mpesaWaiting, setMpesaWaiting] = useState<string | null>(null)
   const [mpesaError, setMpesaError] = useState<string | null>(null)
   const [autoSubscribeDone, setAutoSubscribeDone] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [verifyDone, setVerifyDone] = useState(false)
+  const [couponCode, setCouponCode] = useState("")
+  const [couponPreview, setCouponPreview] = useState<{
+    code: string
+    originalAmount: number
+    discountAmount: number
+    finalAmount: number
+    currency: string
+  } | null>(null)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [couponChecking, setCouponChecking] = useState(false)
+  const [manualCheckout, setManualCheckout] = useState<{
+    reference: string
+    instructions: string
+    amount: number
+    currency: string
+    bankName?: string | null
+    accountName?: string | null
+    accountNumber?: string | null
+  } | null>(null)
+  const [proofFile, setProofFile] = useState<File | null>(null)
+  const [proofNote, setProofNote] = useState("")
+  const [proofSubmitting, setProofSubmitting] = useState(false)
 
   const planSlug = subscription?.plan ?? "starter"
+  const status = subscription?.status ?? "active"
+  const daysRemaining = subscription?.daysRemaining
+  const expiredBanner = searchParams.get("expired") === "1"
+  const needsPaidActivation =
+    expiredBanner ||
+    ["trial", "expired", "cancelled"].includes(status) ||
+    (typeof daysRemaining === "number" && daysRemaining <= 0)
 
   const plans = plansData.map((p) => ({
     id: p.id,
     name: p.name,
     slug: p.slug,
     price: p.price ?? p.priceDisplay ?? "—",
-    features: p.features ?? [],
+    features: Array.isArray(p.features) ? p.features : [],
     current: p.slug === planSlug,
+    isFree: !!p.isFree,
+    popular: !!p.popular,
+    cta: p.cta,
     checkoutAvailable: p.checkoutAvailable ?? false,
-    paymentMethods: p.paymentMethods ?? {},
+    paymentMethods: p.paymentMethods && typeof p.paymentMethods === "object" ? p.paymentMethods : {},
   }))
+  const anyCheckoutAvailable = plans.some((p) => p.checkoutAvailable && p.price !== "Custom")
 
   useEffect(() => {
     const q = searchParams.get("checkout")
     const paystackRef = searchParams.get("reference") || searchParams.get("trxref")
-    if (q === "success" || q === "cancelled" || paystackRef) {
-      setCheckoutMessage(q === "cancelled" ? "cancelled" : "success")
-      mutate()
+    if (!q && !paystackRef) return
+
+    const run = async () => {
+      if (paystackRef && !verifyDone) {
+        setVerifyDone(true)
+        const result = await verifyPaystackCheckout(paystackRef)
+        if (!result.success) {
+          toast.error(result.message ?? "Could not confirm Paystack payment.")
+          setCheckoutMessage("cancelled")
+        } else {
+          setCheckoutMessage("success")
+          toast.success(result.message ?? "Payment confirmed.")
+        }
+        await mutate()
+      } else if (q === "success" || q === "cancelled") {
+        setCheckoutMessage(q === "cancelled" ? "cancelled" : "success")
+        mutate()
+      }
       if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
     }
-  }, [searchParams, mutate])
+    void run()
+  }, [searchParams, mutate, verifyDone])
 
   // Auto-start checkout when redirected from register/login with ?subscribe=planId
   useEffect(() => {
     const subscribePlanId = searchParams.get("subscribe")
     if (!subscribePlanId || autoSubscribeDone || !plansData.length) return
     const plan = plansData.find((p) => p.id === subscribePlanId)
-    if (!plan?.checkoutAvailable) return
     setAutoSubscribeDone(true)
     if (typeof window !== "undefined") window.history.replaceState({}, "", "/dashboard/subscription")
-    createCheckoutSession(subscribePlanId).then((result) => {
+    if (!plan?.checkoutAvailable) {
+      toast.error("No payment method is enabled for this plan. Ask an admin to enable a payment gateway.")
+      return
+    }
+    const start = async () => {
+      if (plan.paymentMethods?.paystack) {
+        const callbackUrl =
+          typeof window !== "undefined"
+            ? `${window.location.origin}/dashboard/subscription?checkout=success`
+            : undefined
+        const result = await createPaystackCheckout(subscribePlanId, { callbackUrl })
+        if (result.success && result.url) window.location.href = result.url
+        else toast.error(result.message ?? "Could not start Paystack checkout.")
+        return
+      }
+      const result = await createCheckoutSession(subscribePlanId)
       if (result.success && result.url) window.location.href = result.url
       else if (!result.success) toast.error(result.message ?? "Could not start checkout.")
-    })
+    }
+    void start()
   }, [searchParams, plansData, autoSubscribeDone])
 
   // Poll subscription when M-Pesa payment is pending
@@ -135,17 +212,71 @@ function SubscriptionPageContent() {
     )
   }
 
-  const planName = subscription?.plan === "professional" ? "Growth" : subscription?.plan === "starter" ? "Starter" : subscription?.plan === "enterprise" ? "Enterprise" : "Growth"
-  const planPrice = subscription?.amount ? `$${Number(subscription.amount)}` : "$99"
+  const planName =
+    subscription?.planName ??
+    plans.find((p) => p.slug === subscription?.plan)?.name ??
+    (subscription?.plan === "professional"
+      ? "Growth"
+      : subscription?.plan === "starter"
+        ? "Starter"
+        : subscription?.plan === "enterprise"
+          ? "Enterprise"
+          : subscription?.plan ?? "Plan")
+  const currency = (subscription?.currency || "").toUpperCase()
+  const planPrice = subscription?.amount
+    ? `${currency ? currency + " " : ""}${Number(subscription.amount).toLocaleString()}`
+    : "—"
   const renewalDate = subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"
-  const status = subscription?.status ?? "active"
+  const accessLabel = subscription?.accessEndsLabel ?? "Renews on"
+  const isStripeManaged = subscription?.paymentMethod === "stripe"
+  const canCancelLocal =
+    !!subscription &&
+    ["active", "trial"].includes(status) &&
+    !isStripeManaged &&
+    subscription.id !== "0"
+
+  const applyCoupon = async (planId: string) => {
+    const code = couponCode.trim()
+    if (!code) {
+      setCouponPreview(null)
+      setCouponError(null)
+      return
+    }
+    setCouponChecking(true)
+    setCouponError(null)
+    const result = await previewCoupon(planId, code, activeCurrency)
+    setCouponChecking(false)
+    if (!result.success) {
+      setCouponPreview(null)
+      setCouponError(result.message ?? "Invalid coupon")
+      return
+    }
+    setCouponPreview({
+      code: result.code ?? code,
+      originalAmount: result.originalAmount ?? 0,
+      discountAmount: result.discountAmount ?? 0,
+      finalAmount: result.finalAmount ?? 0,
+      currency: result.currency ?? activeCurrency,
+    })
+  }
 
   const usage = (usageData?.items ?? [
-    { name: "Messages", used: 0, limit: 5000 },
-    { name: "Team members", used: 0, limit: 3 },
+    { name: "Messages", used: 0, limit: 500 },
+    { name: "Products", used: 0, limit: 100 },
+    { name: "WhatsApp numbers", used: 0, limit: 1 },
+    { name: "Team members", used: 0, limit: 1 },
   ]).map((item) => ({
     ...item,
-    icon: item.name === "Messages" ? MessageSquare : Users,
+    icon:
+      item.name === "Messages"
+        ? MessageSquare
+        : item.name === "Products"
+        ? Package
+        : item.name === "WhatsApp numbers"
+        ? Smartphone
+        : item.name === "Team members"
+        ? Users
+        : Zap,
   }))
 
   const handleSubscribe = async (planId: string) => {
@@ -156,13 +287,81 @@ function SubscriptionPageContent() {
     else toast.error(result.message ?? "Could not start checkout.")
   }
 
+  const handleGenericCheckout = async (planId: string, gatewayId: string) => {
+    setCheckoutPlanId(planId)
+    const result = await apiRequest<{
+      success: boolean
+      checkout_url?: string
+      instructions?: string
+      invoice_reference?: string
+      amount?: number
+      currency?: string
+      bank_name?: string | null
+      account_name?: string | null
+      account_number?: string | null
+      message?: string
+    }>("/api/company/subscription/checkout", {
+      method: "POST",
+      body: {
+        plan: planId,
+        gateway: gatewayId,
+      },
+    })
+    setCheckoutPlanId(null)
+    if (result.success) {
+      if (result.checkout_url) {
+        window.location.href = result.checkout_url
+      } else if (gatewayId === "manual" && result.invoice_reference) {
+        setManualCheckout({
+          reference: result.invoice_reference,
+          instructions: result.instructions ?? "",
+          amount: result.amount ?? 0,
+          currency: result.currency ?? "KES",
+          bankName: result.bank_name,
+          accountName: result.account_name,
+          accountNumber: result.account_number,
+        })
+        setProofFile(null)
+        setProofNote("")
+      } else if (result.instructions) {
+        toast.success(result.instructions, { duration: 10000 })
+      } else {
+        toast.success(result.message ?? "Checkout initiated.")
+      }
+    } else {
+      toast.error(result.message ?? "Could not start checkout.")
+    }
+  }
+
+  const handleSubmitProof = async () => {
+    if (!manualCheckout?.reference || !proofFile) {
+      toast.error("Choose a payment proof image or PDF first.")
+      return
+    }
+    setProofSubmitting(true)
+    const res = await submitManualPaymentProof(manualCheckout.reference, proofFile, proofNote.trim() || undefined)
+    setProofSubmitting(false)
+    if (res.success) {
+      toast.success(res.message ?? "Proof submitted for review.")
+      setManualCheckout(null)
+      setProofFile(null)
+      setProofNote("")
+      mutate()
+    } else {
+      toast.error(res.message ?? "Could not submit proof.")
+    }
+  }
+
   const handlePaystackSubscribe = async (planId: string) => {
     setCheckoutPlanId(planId)
     const callbackUrl =
       typeof window !== "undefined"
         ? `${window.location.origin}/dashboard/subscription?checkout=success`
         : undefined
-    const result = await createPaystackCheckout(planId, { callbackUrl })
+    const result = await createPaystackCheckout(planId, {
+      callbackUrl,
+      couponCode: couponCode.trim() || undefined,
+    })
     setCheckoutPlanId(null)
     if (result.success && result.url) window.location.href = result.url
     else toast.error(result.message ?? "Could not start Paystack checkout.")
@@ -175,7 +374,7 @@ function SubscriptionPageContent() {
       return
     }
     setMpesaError(null)
-    const result = await createMpesaCheckout(planId, phone)
+    const result = await createMpesaCheckout(planId, phone, couponCode.trim() || undefined)
     if (!result.success) {
       setMpesaError(result.message ?? "Failed to send M-Pesa prompt")
       return
@@ -192,16 +391,28 @@ function SubscriptionPageContent() {
     if (result.success && result.url) window.location.href = result.url
     else toast.error(result.message ?? "Could not open billing portal.")
   }
+
+  const handleCancel = async () => {
+    if (!canCancelLocal) return
+    if (!window.confirm("Cancel your subscription? Access continues until the current period ends.")) return
+    setCancelLoading(true)
+    const result = await cancelSubscription()
+    setCancelLoading(false)
+    if (result.success) {
+      toast.success(result.message ?? "Subscription cancelled.")
+      mutate()
+    } else {
+      toast.error(result.message ?? "Could not cancel subscription.")
+    }
+  }
+
   const formatInvoiceDate = (d: string) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
       return new Date(d + "Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     }
     return d
   }
-  const billingList = billingHistory.length > 0 ? billingHistory : [
-    { id: "INV-001", date: "Mar 14, 2024", amount: planPrice + ".00", status: "paid" },
-    { id: "INV-002", date: "Feb 14, 2024", amount: planPrice + ".00", status: "paid" },
-  ] as BillingInvoice[]
+  const billingList = billingHistory
   const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     const s = status.toLowerCase()
     if (s === "paid") return "default"
@@ -210,6 +421,139 @@ function SubscriptionPageContent() {
     return "outline"
   }
 
+  const checkoutLabel = (plan: (typeof plans)[number], payingCurrent: boolean) => {
+    if (payingCurrent) {
+      if (status === "trial") return "Subscribe now"
+      if (status === "expired" || expiredBanner) return "Renew plan"
+      if (status === "cancelled") return "Re-subscribe"
+      return "Pay now"
+    }
+    return status === "trial" || status === "active" ? "Upgrade" : "Subscribe"
+  }
+
+  const renderCheckoutButtons = (plan: (typeof plans)[number], payingCurrent = false) => {
+    const busy = checkoutPlanId !== null && checkoutPlanId !== plan.id
+    const primaryLabel = checkoutLabel(plan, payingCurrent)
+
+    return (
+      <>
+        {plan.paymentMethods?.stripe && (
+          <Button
+            className="w-full"
+            variant="default"
+            disabled={busy}
+            onClick={() => handleSubscribe(plan.id)}
+          >
+            {checkoutPlanId === plan.id
+              ? "Redirecting…"
+              : plan.paymentMethods?.mpesa || plan.paymentMethods?.paystack
+                ? `${primaryLabel} with Card`
+                : primaryLabel}
+          </Button>
+        )}
+        {plan.paymentMethods?.paystack && (
+          <Button
+            className="w-full"
+            variant={plan.paymentMethods?.stripe ? "outline" : "default"}
+            disabled={busy}
+            onClick={() => handlePaystackSubscribe(plan.id)}
+          >
+            {checkoutPlanId === plan.id ? "Redirecting…" : `${primaryLabel} with Paystack`}
+          </Button>
+        )}
+        {plan.paymentMethods?.mpesa && (
+          <>
+            {mpesaPlanId !== plan.id && !mpesaWaiting ? (
+              <Button
+                className="w-full mt-2"
+                variant="outline"
+                disabled={!!checkoutPlanId}
+                onClick={() => setMpesaPlanId(plan.id)}
+              >
+                <Smartphone className="h-4 w-4 mr-2" />
+                Pay with M-Pesa
+              </Button>
+            ) : mpesaWaiting === plan.id ? (
+              <p className="text-sm text-center text-muted-foreground py-2">
+                Check your phone and enter PIN. We&apos;ll update when payment is received…
+              </p>
+            ) : null}
+            {mpesaPlanId === plan.id && !mpesaWaiting && (
+              <div className="mt-3 space-y-2 rounded-lg border p-3 bg-muted/30">
+                <Label htmlFor={`mpesa-phone-${plan.id}`}>M-Pesa phone number</Label>
+                <Input
+                  id={`mpesa-phone-${plan.id}`}
+                  placeholder="254712345678 or 0712345678"
+                  value={mpesaPhone}
+                  onChange={(e) => setMpesaPhone(e.target.value)}
+                  className="bg-background"
+                />
+                {mpesaError && <p className="text-xs text-destructive">{mpesaError}</p>}
+                <div className="flex gap-2">
+                  <Button size="sm" className="w-full" onClick={() => handleMpesaSubmit(plan.id)}>
+                    Send M-Pesa prompt
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setMpesaPlanId(null)
+                      setMpesaError(null)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {plan.paymentMethods?.pesapal && (
+          <Button
+            className="w-full mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() => handleGenericCheckout(plan.id, "pesapal")}
+          >
+            Pay with Pesapal
+          </Button>
+        )}
+        {plan.paymentMethods?.flutterwave && (
+          <Button
+            className="w-full mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() => handleGenericCheckout(plan.id, "flutterwave")}
+          >
+            Pay with Flutterwave
+          </Button>
+        )}
+        {plan.paymentMethods?.paypal && (
+          <Button
+            className="w-full mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() => handleGenericCheckout(plan.id, "paypal")}
+          >
+            Pay with PayPal
+          </Button>
+        )}
+        {plan.paymentMethods?.manual && (
+          <Button
+            className="w-full mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() => handleGenericCheckout(plan.id, "manual")}
+          >
+            Bank Transfer / Invoice
+          </Button>
+        )}
+      </>
+    )
+  }
+
+  const currentPlan = plans.find((p) => p.current)
+
   return (
     <div className="space-y-6">
       <div>
@@ -217,10 +561,75 @@ function SubscriptionPageContent() {
         <p className="text-muted-foreground">Manage your subscription and billing</p>
       </div>
 
-      {searchParams.get("expired") === "1" && (
+      {expiredBanner && (
         <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-          Your subscription has expired or was cancelled. Choose a plan below to continue using the service.
+          Your subscription has expired or was cancelled. Choose a plan below to renew or upgrade.
         </div>
+      )}
+      {needsPaidActivation && status === "trial" && !expiredBanner && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+          You&apos;re on a free trial. You can subscribe to your current plan or upgrade to a different plan anytime —
+          payment starts immediately and replaces the trial.
+        </div>
+      )}
+      {!anyCheckoutAvailable && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          No payment methods are ready on this platform, so Subscribe / Renew buttons stay unavailable. An admin must
+          enable a gateway under Admin → Payment Gateways and save credentials (or bank details for Bank Transfer).
+          Toggling Active alone is not enough if keys / bank info are missing.
+        </div>
+      )}
+      {manualCheckout && (
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle>Bank transfer instructions</CardTitle>
+            <CardDescription>
+              Pay {manualCheckout.currency} {Number(manualCheckout.amount).toLocaleString()} using reference{" "}
+              <span className="font-mono font-medium text-foreground">{manualCheckout.reference}</span>, then upload
+              proof for admin approval.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(manualCheckout.bankName || manualCheckout.accountNumber) && (
+              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm space-y-1">
+                {manualCheckout.bankName ? <div>Bank: {manualCheckout.bankName}</div> : null}
+                {manualCheckout.accountName ? <div>Account name: {manualCheckout.accountName}</div> : null}
+                {manualCheckout.accountNumber ? <div>Account number: {manualCheckout.accountNumber}</div> : null}
+              </div>
+            )}
+            {manualCheckout.instructions && (
+              <pre className="whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                {manualCheckout.instructions}
+              </pre>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="manual-proof">Payment proof (image or PDF)</Label>
+              <Input
+                id="manual-proof"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-note">Note (optional)</Label>
+              <Input
+                id="manual-note"
+                value={proofNote}
+                onChange={(e) => setProofNote(e.target.value)}
+                placeholder="Transaction ID, payer name, etc."
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleSubmitProof} disabled={proofSubmitting || !proofFile}>
+                {proofSubmitting ? "Submitting…" : "Submit proof"}
+              </Button>
+              <Button variant="outline" onClick={() => setManualCheckout(null)} disabled={proofSubmitting}>
+                Close
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
       {checkoutMessage === "success" && (
         <div className="rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
@@ -249,16 +658,43 @@ function SubscriptionPageContent() {
                 <div className="flex items-center gap-2">
                   <h3 className="text-2xl font-bold text-foreground">{planName}</h3>
                   <Badge>{status}</Badge>
+                  {subscription?.isExpiringSoon && (
+                    <Badge variant="outline" className="border-amber-500 text-amber-700">
+                      Expiring soon
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-muted-foreground">
-                  {planPrice}/month • Renews on {renewalDate}
+                  {planPrice}/month • {accessLabel} {renewalDate}
+                  {typeof daysRemaining === "number" && status !== "expired" ? (
+                    <span> ({daysRemaining} day{daysRemaining === 1 ? "" : "s"} left)</span>
+                  ) : null}
                 </p>
               </div>
             </div>
-            <div className="flex w-full gap-2 sm:w-auto">
-              <Button className="w-full sm:w-auto" variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
-                {portalLoading ? "Opening…" : "Manage billing"}
-              </Button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+              {needsPaidActivation && currentPlan?.checkoutAvailable && (
+                <div className="flex w-full flex-col gap-2 sm:min-w-[220px]">
+                  {renderCheckoutButtons(currentPlan, true)}
+                </div>
+              )}
+              {needsPaidActivation && currentPlan && !currentPlan.checkoutAvailable && (
+                <Button asChild className="w-full sm:w-auto" variant="default">
+                  <Link href="#plans">Choose a plan below</Link>
+                </Button>
+              )}
+              <div className="flex w-full gap-2 sm:w-auto">
+                {isStripeManaged && (
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={handleBillingPortal} disabled={portalLoading}>
+                    {portalLoading ? "Opening…" : "Manage billing"}
+                  </Button>
+                )}
+                {canCancelLocal && (
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={handleCancel} disabled={cancelLoading}>
+                    {cancelLoading ? "Cancelling…" : "Cancel subscription"}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -298,8 +734,9 @@ function SubscriptionPageContent() {
         <CardContent>
           <div className="space-y-6">
             {usage.map((item) => {
-              const pct = item.limit > 0 ? (item.used / item.limit) * 100 : 0
-              const nearLimit = pct >= 80
+              const isUnlimited = item.limit == null
+              const pct = !isUnlimited && item.limit > 0 ? (item.used / item.limit) * 100 : 0
+              const nearLimit = !isUnlimited && pct >= 80
               return (
               <div key={item.name} className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -308,10 +745,10 @@ function SubscriptionPageContent() {
                     <span className="font-medium text-foreground">{item.name}</span>
                   </div>
                   <span className={`text-sm ${nearLimit ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
-                    {item.used.toLocaleString()} / {item.limit.toLocaleString()}
+                    {item.used.toLocaleString()} / {isUnlimited ? "Unlimited" : item.limit.toLocaleString()}
                   </span>
                 </div>
-                <Progress value={Math.min(100, pct)} className={`h-2 ${nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
+                <Progress value={isUnlimited ? 0 : Math.min(100, pct)} className={`h-2 ${nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
               </div>
             )})}
           </div>
@@ -322,10 +759,78 @@ function SubscriptionPageContent() {
       <Card id="plans">
         <CardHeader>
           <CardTitle>Available Plans</CardTitle>
-          <CardDescription>Compare and switch plans</CardDescription>
+          <CardDescription>Compare and switch plans. Apply a coupon before Paystack or M-Pesa checkout.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="inline-flex rounded-lg border border-border bg-muted/30 p-1">
+              {currencies.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => {
+                    setPricingCurrency(c.code)
+                    setCouponPreview(null)
+                    setCouponError(null)
+                  }}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    activeCurrency === c.code
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {c.code}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Showing prices in {activeCurrency}
+              {plansResponse?.source === "cloudflare" || plansResponse?.source === "forced"
+                ? ` (location${plansResponse?.detectedCountry ? `: ${plansResponse.detectedCountry}` : ""})`
+                : ""}
+              . Switch anytime.
+            </p>
+          </div>
+          <div className="mb-6 max-w-md space-y-2 rounded-lg border p-4 bg-muted/20">
+            <Label htmlFor="coupon-code">Coupon code</Label>
+            <div className="flex gap-2">
+              <Input
+                id="coupon-code"
+                placeholder="e.g. SAVE20"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase())
+                  setCouponPreview(null)
+                  setCouponError(null)
+                }}
+                className="bg-background"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={couponChecking || !couponCode.trim() || !plans.find((p) => p.checkoutAvailable)}
+                onClick={() => {
+                  const target = plans.find((p) => p.current && p.checkoutAvailable)
+                    ?? plans.find((p) => p.checkoutAvailable)
+                  if (target) void applyCoupon(target.id)
+                }}
+              >
+                {couponChecking ? "…" : "Apply"}
+              </Button>
+            </div>
+            {couponError && <p className="text-sm text-destructive">{couponError}</p>}
+            {couponPreview && (
+              <p className="text-sm text-muted-foreground">
+                {couponPreview.code}: {couponPreview.currency} {couponPreview.originalAmount} →{" "}
+                <span className="font-medium text-foreground">
+                  {couponPreview.currency} {couponPreview.finalAmount}
+                </span>{" "}
+                (save {couponPreview.discountAmount})
+              </p>
+            )}
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {plans.map((plan) => (
               <div
                 key={plan.id}
@@ -336,6 +841,11 @@ function SubscriptionPageContent() {
                 {plan.current && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
                     Current Plan
+                  </Badge>
+                )}
+                {plan.popular && !plan.current && (
+                  <Badge variant="default" className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    Most Popular
                   </Badge>
                 )}
                 <div className="text-center mb-6">
@@ -356,83 +866,30 @@ function SubscriptionPageContent() {
                   ))}
                 </ul>
                 <div className="space-y-2">
-                  {plan.current ? (
+                  {plan.isFree ? (
+                    plan.current && !needsPaidActivation ? (
+                      <Button className="w-full" variant="secondary" disabled>
+                        Current Plan
+                      </Button>
+                    ) : (
+                      <Button className="w-full" variant="outline" disabled>
+                        Free Plan
+                      </Button>
+                    )
+                  ) : plan.price === "Custom" ? (
+                    <Button asChild className="w-full" variant="outline">
+                      <Link href="/contact">Contact Sales</Link>
+                    </Button>
+                  ) : !plan.checkoutAvailable ? (
+                    <Button className="w-full" variant="secondary" disabled>
+                      Payments unavailable
+                    </Button>
+                  ) : plan.current && !needsPaidActivation ? (
                     <Button className="w-full" variant="secondary" disabled>
                       Current Plan
                     </Button>
-                  ) : plan.price === "Custom" || !plan.checkoutAvailable ? (
-                    <Button className="w-full" variant="secondary" disabled>
-                      Contact Sales
-                    </Button>
                   ) : (
-                    <>
-                      {plan.paymentMethods?.stripe && (
-                        <Button
-                          className="w-full"
-                          variant="default"
-                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
-                          onClick={() => handleSubscribe(plan.id)}
-                        >
-                          {checkoutPlanId === plan.id
-                            ? "Redirecting…"
-                            : plan.paymentMethods?.mpesa || plan.paymentMethods?.paystack
-                              ? "Subscribe with Card"
-                              : "Subscribe"}
-                        </Button>
-                      )}
-                      {plan.paymentMethods?.paystack && (
-                        <Button
-                          className="w-full"
-                          variant={plan.paymentMethods?.stripe ? "outline" : "default"}
-                          disabled={checkoutPlanId !== null && checkoutPlanId !== plan.id}
-                          onClick={() => handlePaystackSubscribe(plan.id)}
-                        >
-                          {checkoutPlanId === plan.id ? "Redirecting…" : "Pay with Paystack"}
-                        </Button>
-                      )}
-                      {plan.paymentMethods?.mpesa && (
-                        <>
-                          {mpesaPlanId !== plan.id && !mpesaWaiting ? (
-                            <Button
-                              className="w-full mt-2"
-                              variant="outline"
-                              disabled={!!checkoutPlanId}
-                              onClick={() => setMpesaPlanId(mpesaPlanId === plan.id ? null : plan.id)}
-                            >
-                              <Smartphone className="h-4 w-4 mr-2" />
-                              Pay with M-Pesa
-                            </Button>
-                          ) : mpesaWaiting === plan.id ? (
-                            <p className="text-sm text-center text-muted-foreground py-2">
-                              Check your phone and enter PIN. We&apos;ll update when payment is received…
-                            </p>
-                          ) : null}
-                          {mpesaPlanId === plan.id && !mpesaWaiting && (
-                            <div className="mt-3 space-y-2 rounded-lg border p-3 bg-muted/30">
-                              <Label htmlFor={`mpesa-phone-${plan.id}`}>M-Pesa phone number</Label>
-                              <Input
-                                id={`mpesa-phone-${plan.id}`}
-                                placeholder="254712345678 or 0712345678"
-                                value={mpesaPhone}
-                                onChange={(e) => setMpesaPhone(e.target.value)}
-                                className="bg-background"
-                              />
-                              {mpesaError && (
-                                <p className="text-sm text-destructive">{mpesaError}</p>
-                              )}
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleMpesaSubmit(plan.id)}>
-                                  Send M-Pesa prompt
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={() => { setMpesaPlanId(null); setMpesaError(null) }}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </>
+                    renderCheckoutButtons(plan, !!plan.current)
                   )}
                 </div>
               </div>
@@ -446,14 +903,19 @@ function SubscriptionPageContent() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Billing History</CardTitle>
-            <CardDescription>Your recent invoices</CardDescription>
+            <CardDescription>Your recent payments</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={handleBillingPortal} disabled={portalLoading}>
-            <CreditCard className="h-4 w-4 mr-2" />
-            {portalLoading ? "Opening…" : "Manage billing"}
-          </Button>
+          {isStripeManaged && (
+            <Button variant="outline" size="sm" onClick={handleBillingPortal} disabled={portalLoading}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              {portalLoading ? "Opening…" : "Manage billing"}
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
+          {billingList.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">No payments yet.</p>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -490,6 +952,7 @@ function SubscriptionPageContent() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -21,6 +21,7 @@ Use this as a checklist when building your Laravel backend. The Next.js app send
 | Method | Route | Body | Response (success) |
 |--------|--------|------|--------------------|
 | POST | `/api/company/chats/:chatId/messages` | `content` | `{ success: true, message?: string }` |
+| POST | `/api/company/chats/start` | `phone`, `name?` | `{ success: true, created: bool, chat: Chat }` — find-or-create chat by phone (mobile add-contact) |
 | PATCH | `/api/company/orders/:orderId` | `status` | `{ success: true, message?: string }` |
 | POST | `/api/company/products` | JSON: `name`, `description`, `price`, `category`, `stock` — or multipart with `image` | `{ success: true, product?: Product, message?: string }` |
 | PUT | `/api/company/products/:productId` | `name?`, `description?`, `price?`, `category?`, `stock?` | `{ success: true, message?: string }` |

@@ -1,0 +1,710 @@
+[2026-08-01 15:09:00] [SYSTEM_INIT] WhatsApp Debug Logger Initialized. Waiting for incoming WhatsApp text or voice messages.
+[2026-08-03 05:50:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"commerce_morning_brief","company_id":2,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:14:46] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":42,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:46] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":42,"use_case":"whatsapp","model":"gpt-4o-mini","prompt_tokens":120,"completion_tokens":18,"latency_ms":18,"content_preview":"Hello from AI"}
+[2026-08-03 06:14:46] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"growth","company_id":null,"chat_id":null,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:48] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":null,"chat_id":null,"use_case":"growth","model":"gpt-4o-mini","prompt_tokens":10,"completion_tokens":5,"latency_ms":2501,"content_preview":"Recovered"}
+[2026-08-03 06:14:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"whatsapp","company_id":null,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:14:50] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_message_id":"wamid.in.2","incoming_message_id":null,"force_reply":false,"message_preview":"What is your refund policy?"}
+[2026-08-03 06:14:50] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What is your refund policy?"}
+[2026-08-03 06:14:50] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:50] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Test Customer","message_preview":"What is your refund policy?"}
+[2026-08-03 06:14:50] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:50] [ERROR] [AI_GATEWAY_COMPLETION_FAILED] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","error":"Incorrect API key provided: sk-test. You can find your API key at https://platform.openai.com/account/api-keys.","http_status":401}
+[2026-08-03 06:14:50] [WARNING] [AI_REPLY_GENERATOR_PRIMARY_FAILED_RETRYING] {"company_id":1,"chat_id":1,"error":"Incorrect API key provided: sk-test. You can find your API key at https://platform.openai.com/account/api-keys."}
+[2026-08-03 06:14:50] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:51] [ERROR] [AI_GATEWAY_COMPLETION_FAILED] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","error":"Incorrect API key provided: sk-test. You can find your API key at https://platform.openai.com/account/api-keys.","http_status":401}
+[2026-08-03 06:14:51] [ERROR] [AI_REPLY_GENERATOR_RETRY_FAILED] {"company_id":1,"chat_id":1,"error":"Incorrect API key provided: sk-test. You can find your API key at https://platform.openai.com/account/api-keys."}
+[2026-08-03 06:14:52] [INFO] [DEFAULT_AI_FALLBACK_REPLY] {"reply_preview":"We refund within 14 days.","route":"faq"}
+[2026-08-03 06:14:52] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","reply_source":"faq","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"We refund within 14 days."}
+[2026-08-03 06:14:52] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-ai","to":"254700000099","text_length":25,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:52] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:52] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_message_id":"wamid.in.faq-ai","incoming_message_id":null,"force_reply":false,"message_preview":"What is your refund policy?"}
+[2026-08-03 06:14:52] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What is your refund policy?"}
+[2026-08-03 06:14:52] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:52] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Test Customer","message_preview":"What is your refund policy?"}
+[2026-08-03 06:14:52] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:52] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","prompt_tokens":100,"completion_tokens":20,"latency_ms":0,"content_preview":"Our refund policy allows returns within 14 days of purchase."}
+[2026-08-03 06:14:52] [INFO] [AI_REPLY_GENERATOR_SUCCESS] {"company_id":1,"chat_id":1,"guarded_reply_preview":"Our refund policy allows returns within 14 days of purchase."}
+[2026-08-03 06:14:52] [INFO] [DEFAULT_AI_FALLBACK_REPLY] {"reply_preview":"Our refund policy allows returns within 14 days of purchase.","route":"openai"}
+[2026-08-03 06:14:52] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","reply_source":"openai","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Our refund policy allows returns within 14 days of purchase."}
+[2026-08-03 06:14:52] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-ai","to":"254700000099","text_length":60,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:52] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:52] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_message_id":"wamid.in.faqfb","incoming_message_id":null,"force_reply":false,"message_preview":"What is your refund policy?"}
+[2026-08-03 06:14:52] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What is your refund policy?"}
+[2026-08-03 06:14:52] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:52] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Test Customer","message_preview":"What is your refund policy?"}
+[2026-08-03 06:14:52] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"whatsapp","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:14:52] [WARNING] [AI_REPLY_GENERATOR_PRIMARY_FAILED_RETRYING] {"company_id":1,"chat_id":1,"error":"No AI provider or model configured"}
+[2026-08-03 06:14:52] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"whatsapp","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:14:52] [ERROR] [AI_REPLY_GENERATOR_RETRY_FAILED] {"company_id":1,"chat_id":1,"error":"No AI provider or model configured"}
+[2026-08-03 06:14:52] [INFO] [DEFAULT_AI_FALLBACK_REPLY] {"reply_preview":"We refund within 14 days.","route":"faq"}
+[2026-08-03 06:14:52] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","reply_source":"faq","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"We refund within 14 days."}
+[2026-08-03 06:14:52] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-ai","to":"254700000099","text_length":25,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:52] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:52] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_message_id":"wamid.in.3","incoming_message_id":null,"force_reply":false,"message_preview":"Do you deliver to Nairobi?"}
+[2026-08-03 06:14:52] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Do you deliver to Nairobi?"}
+[2026-08-03 06:14:52] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:52] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Test Customer","message_preview":"Do you deliver to Nairobi?"}
+[2026-08-03 06:14:52] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:52] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","prompt_tokens":200,"completion_tokens":30,"latency_ms":0,"content_preview":"We deliver across Nairobi."}
+[2026-08-03 06:14:52] [INFO] [AI_REPLY_GENERATOR_SUCCESS] {"company_id":1,"chat_id":1,"guarded_reply_preview":"We deliver across Nairobi."}
+[2026-08-03 06:14:52] [INFO] [DEFAULT_AI_FALLBACK_REPLY] {"reply_preview":"We deliver across Nairobi.","route":"openai"}
+[2026-08-03 06:14:52] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","reply_source":"openai","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"We deliver across Nairobi."}
+[2026-08-03 06:14:52] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-ai","to":"254700000099","text_length":26,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:52] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:52] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_message_id":"wamid.in.4","incoming_message_id":null,"force_reply":false,"message_preview":"What is your warranty policy for refurbished items?"}
+[2026-08-03 06:14:52] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What is your warranty policy for refurbished items?"}
+[2026-08-03 06:14:52] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:52] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Test Customer","message_preview":"What is your warranty policy for refurbished items?"}
+[2026-08-03 06:14:52] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:52] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o","prompt_tokens":10,"completion_tokens":5,"latency_ms":0,"content_preview":"Custom model reply"}
+[2026-08-03 06:14:52] [INFO] [AI_REPLY_GENERATOR_SUCCESS] {"company_id":1,"chat_id":1,"guarded_reply_preview":"Custom model reply"}
+[2026-08-03 06:14:52] [INFO] [DEFAULT_AI_FALLBACK_REPLY] {"reply_preview":"Custom model reply","route":"openai"}
+[2026-08-03 06:14:52] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254700000099","reply_source":"openai","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Custom model reply"}
+[2026-08-03 06:14:52] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-ai","to":"254700000099","text_length":18,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:52] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:52] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"growth","company_id":1,"chat_id":null,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:52] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":null,"use_case":"growth","model":"gpt-4o-mini","prompt_tokens":50,"completion_tokens":40,"latency_ms":0,"content_preview":"{\"posts\":[{\"title\":\"P1\",\"content\":\"Hello\",\"hashtags\":[\"a\"],\"contentType\":\"text\"}]}"}
+[2026-08-03 06:14:53] [INFO] [WEBHOOK_DISPATCHING_AUTO_REPLY] {"company_id":1,"chat_id":1,"customer_phone":"254711111111","whatsapp_message_id":"wamid.auto-1","incoming_message_id":1,"dispatch_mode":"sync"}
+[2026-08-03 06:14:53] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254722222222","text_length":16,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:53] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254733333333","whatsapp_message_id":"wamid.hello","incoming_message_id":1,"force_reply":true,"message_preview":"Hello?"}
+[2026-08-03 06:14:53] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254733333333","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Hello?"}
+[2026-08-03 06:14:53] [INFO] [COMMERCE_AGENT_TRY_GENERATE] {"company_id":1,"chat_id":1,"message_text":"Hello?"}
+[2026-08-03 06:14:53] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"254733333333"}
+[2026-08-03 06:14:53] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"agent_reasoning","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:14:53] [ERROR] [AGENT_CHAT_RESOLVE_FAILED] {"company_id":1,"chat_id":1,"use_case":"agent_commerce","reason":"No AI provider configured for company"}
+[2026-08-03 06:14:53] [ERROR] [COMMERCE_AGENT_ITERATION_FAILED] {"company_id":1,"chat_id":1,"iteration":0,"error":"No AI provider configured"}
+[2026-08-03 06:14:53] [WARNING] [COMMERCE_AGENT_EMPTY_REPLY] {"company_id":1,"chat_id":1,"route":"agent_os_failed"}
+[2026-08-03 06:14:53] [INFO] [COMMERCE_AGENT_RESULT] {"has_result":false,"reply_length":0,"reply_preview":"","route":null}
+[2026-08-03 06:14:53] [INFO] [LEGACY_AI_FALLBACK_RESULT] {"reply_preview":"Hello Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent","route":"greeting_menu"}
+[2026-08-03 06:14:53] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254733333333","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:53] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254733333333","text_length":115,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:53] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:54] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254744444444","whatsapp_message_id":"wamid.trial-q","incoming_message_id":1,"force_reply":false,"message_preview":"What are your hours?"}
+[2026-08-03 06:14:54] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254744444444","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What are your hours?"}
+[2026-08-03 06:14:54] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:54] [INFO] [FIRST_MESSAGE_GREETING_SEND] {"greeting_preview":"Hello Trial Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:54] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254744444444","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Trial Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:54] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-trial","to":"254744444444","text_length":121,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:54] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:54] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254766666666","whatsapp_message_id":"wamid.stuck-hello","incoming_message_id":1,"force_reply":true,"message_preview":"Hello"}
+[2026-08-03 06:14:54] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254766666666","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Hello"}
+[2026-08-03 06:14:54] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:54] [INFO] [FIRST_MESSAGE_GREETING_SEND] {"greeting_preview":"Hello Stuck! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:54] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254766666666","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Stuck! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:54] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254766666666","text_length":115,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:54] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:54] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254777777777","whatsapp_message_id":"wamid.after-expiry","incoming_message_id":1,"force_reply":false,"message_preview":"Are you there?"}
+[2026-08-03 06:14:54] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254777777777","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Are you there?"}
+[2026-08-03 06:14:54] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:54] [INFO] [FIRST_MESSAGE_GREETING_SEND] {"greeting_preview":"Hello Expired Lock! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:54] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254777777777","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Expired Lock! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:54] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254777777777","text_length":122,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:54] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:54] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254788888888","whatsapp_message_id":"wamid.poll-hi","incoming_message_id":1,"force_reply":true,"message_preview":"Hi"}
+[2026-08-03 06:14:54] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254788888888","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Hi"}
+[2026-08-03 06:14:54] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:14:54] [INFO] [FIRST_MESSAGE_GREETING_SEND] {"greeting_preview":"Hello Poll Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:54] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254788888888","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Poll Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:14:54] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254788888888","text_length":120,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:54] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:54] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254799999999","whatsapp_message_id":"wamid.dup-1","incoming_message_id":1,"force_reply":false,"message_preview":"what products do you have"}
+[2026-08-03 06:14:54] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254799999999","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"what products do you have"}
+[2026-08-03 06:14:54] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":true,"order_reply_preview":"🛍️ *Catalog currently empty*\n\nWe don't have any items available in our catalog right now. Please contact us for assistance.\n\n📌 *How to order:*\n• Reply"}
+[2026-08-03 06:14:54] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254799999999","reply_source":"order_flow","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"🛍️ *Catalog currently empty*\n\nWe don't have any items available in our catalog right now. Please contact us for assistance.\n\n📌 *How to order:*\n• Reply"}
+[2026-08-03 06:14:54] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254799999999","text_length":326,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:54] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:54] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254755555555","whatsapp_message_id":"wamid.expired-q","incoming_message_id":1,"force_reply":false,"message_preview":"Hello"}
+[2026-08-03 06:14:54] [WARNING] [SKIPPED_INACTIVE_SUBSCRIPTION] {"company_id":1,"chat_id":1}
+[2026-08-03 06:14:54] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254755555555","reply_source":"subscription_unavailable","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Our service is temporarily unavailable. Please try again later or contact support."}
+[2026-08-03 06:14:54] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-expired","to":"254755555555","text_length":82,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:54] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:55] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-reply","to":"254711111111","text_length":17,"has_token":true,"context_message_id":"wamid.original"}
+[2026-08-03 06:14:56] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-abandoned","to":"254711333444","text_length":146,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:58] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"agent_reasoning","company_id":1,"chat_id":1,"model_key":"gpt-4o","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:58] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":1,"use_case":"agent_reasoning","model":"gpt-4o","prompt_tokens":100,"completion_tokens":80,"latency_ms":0,"content_preview":"{\"understanding\":\"Customer wants to buy 50 laptops for a school\",\"hypotheses\":[\"Bulk purchase\",\"Quote request\"],\"options\":[{\"label\":\"A\",\"approach\":\"Qu"}
+[2026-08-03 06:14:58] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"commerce_morning_brief","company_id":1,"chat_id":null,"model_key":"gpt-4o","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:58] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":null,"use_case":"commerce_morning_brief","model":"gpt-4o","prompt_tokens":50,"completion_tokens":30,"latency_ms":0,"content_preview":"Good morning. Yesterday sales were strong. Consider restocking low items."}
+[2026-08-03 06:14:58] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"agent_reflection","company_id":1,"chat_id":1,"model_key":"gpt-4o","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:58] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":1,"use_case":"agent_reflection","model":"gpt-4o","prompt_tokens":60,"completion_tokens":40,"latency_ms":0,"content_preview":"{\"goal_achieved\":true,\"customer_satisfaction_estimate\":\"high\",\"mistakes\":[],\"missed_opportunities\":[],\"tool_efficiency\":\"ok\",\"operating_guide_updates\""}
+[2026-08-03 06:14:58] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_message_id":"wamid.agent.in.1","incoming_message_id":null,"force_reply":false,"message_preview":"Do you sell laptops?"}
+[2026-08-03 06:14:58] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Do you sell laptops?"}
+[2026-08-03 06:14:58] [INFO] [COMMERCE_AGENT_TRY_GENERATE] {"company_id":1,"chat_id":1,"message_text":"Do you sell laptops?"}
+[2026-08-03 06:14:58] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233"}
+[2026-08-03 06:14:58] [INFO] [COMMERCE_AGENT_RESULT] {"has_result":true,"reply_length":68,"reply_preview":"We have great laptops starting at KES 45,000. Want a recommendation?","route":"agent_os"}
+[2026-08-03 06:14:58] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","reply_source":"agent_os","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"We have great laptops starting at KES 45,000. Want a recommendation?"}
+[2026-08-03 06:14:58] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-agent-flow","to":"254711122233","text_length":68,"has_token":true,"context_message_id":""}
+[2026-08-03 06:14:58] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:14:58] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_message_id":"wamid.agent.in.2","incoming_message_id":null,"force_reply":false,"message_preview":"What are your opening hours?"}
+[2026-08-03 06:14:58] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What are your opening hours?"}
+[2026-08-03 06:14:58] [INFO] [COMMERCE_AGENT_TRY_GENERATE] {"company_id":1,"chat_id":1,"message_text":"What are your opening hours?"}
+[2026-08-03 06:14:58] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233"}
+[2026-08-03 06:14:58] [ERROR] [COMMERCE_AGENT_ITERATION_FAILED] {"company_id":1,"chat_id":1,"iteration":0,"error":"Simulated agent failure"}
+[2026-08-03 06:14:58] [WARNING] [COMMERCE_AGENT_EMPTY_REPLY] {"company_id":1,"chat_id":1,"route":"agent_os_failed"}
+[2026-08-03 06:14:58] [INFO] [COMMERCE_AGENT_RESULT] {"has_result":false,"reply_length":0,"reply_preview":"","route":null}
+[2026-08-03 06:14:58] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Jane","message_preview":"What are your opening hours?"}
+[2026-08-03 06:14:58] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:59] [ERROR] [AI_GATEWAY_COMPLETION_FAILED] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","error":"Incorrect API key provided: sk-test-*gent. You can find your API key at https://platform.openai.com/account/api-keys.","http_status":401}
+[2026-08-03 06:14:59] [WARNING] [AI_REPLY_GENERATOR_PRIMARY_FAILED_RETRYING] {"company_id":1,"chat_id":1,"error":"Incorrect API key provided: sk-test-*gent. You can find your API key at https://platform.openai.com/account/api-keys."}
+[2026-08-03 06:14:59] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:14:59] [ERROR] [AI_GATEWAY_COMPLETION_FAILED] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","error":"Incorrect API key provided: sk-test-*gent. You can find your API key at https://platform.openai.com/account/api-keys.","http_status":401}
+[2026-08-03 06:14:59] [ERROR] [AI_REPLY_GENERATOR_RETRY_FAILED] {"company_id":1,"chat_id":1,"error":"Incorrect API key provided: sk-test-*gent. You can find your API key at https://platform.openai.com/account/api-keys."}
+[2026-08-03 06:15:00] [INFO] [LEGACY_AI_FALLBACK_RESULT] {"reply_preview":"We are open 9am to 6pm daily.","route":"faq"}
+[2026-08-03 06:15:00] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","reply_source":"faq","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"We are open 9am to 6pm daily."}
+[2026-08-03 06:15:00] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-agent-flow","to":"254711122233","text_length":29,"has_token":true,"context_message_id":""}
+[2026-08-03 06:15:00] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:15:01] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"agent_proactive","company_id":1,"chat_id":null,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:15:01] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":null,"use_case":"agent_proactive","model":"gpt-4o-mini","prompt_tokens":50,"completion_tokens":20,"latency_ms":0,"content_preview":"Hi Jane! Your order ORD-AGENT-001 is waiting — need help paying?"}
+[2026-08-03 06:15:01] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-agent-flow","to":"254711122233","text_length":66,"has_token":true,"context_message_id":""}
+[2026-08-03 06:15:01] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"agent_proactive","company_id":1,"chat_id":null,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:15:01] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":null,"use_case":"agent_proactive","model":"gpt-4o-mini","prompt_tokens":40,"completion_tokens":15,"latency_ms":0,"content_preview":"Thank you Jane! Payment for ORD-PAY-001 received — we appreciate your business."}
+[2026-08-03 06:15:01] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-agent-flow","to":"254711122233","text_length":81,"has_token":true,"context_message_id":""}
+[2026-08-03 06:15:01] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"agent_memory_extraction","company_id":1,"chat_id":1,"model_key":"gpt-4o","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:15:01] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":1,"use_case":"agent_memory_extraction","model":"gpt-4o","prompt_tokens":80,"completion_tokens":40,"latency_ms":0,"content_preview":"{\"memories\":[{\"key\":\"location\",\"value\":\"Nairobi\",\"category\":\"location\"},{\"key\":\"business_type\",\"value\":\"school\",\"category\":\"context\"}]}"}
+[2026-08-03 06:15:03] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"agent_reasoning","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:04] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"web_widget:visitor-42"}
+[2026-08-03 06:15:04] [ERROR] [AGENT_CHAT_RESOLVE_FAILED] {"company_id":1,"chat_id":1,"use_case":"agent_commerce","reason":"No AI provider configured for company"}
+[2026-08-03 06:15:04] [ERROR] [COMMERCE_AGENT_ITERATION_FAILED] {"company_id":1,"chat_id":1,"iteration":0,"error":"No AI provider configured"}
+[2026-08-03 06:15:04] [WARNING] [COMMERCE_AGENT_EMPTY_REPLY] {"company_id":1,"chat_id":1,"route":"agent_os_failed"}
+[2026-08-03 06:15:04] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"web_widget:v-public-1"}
+[2026-08-03 06:15:04] [ERROR] [AGENT_CHAT_RESOLVE_FAILED] {"company_id":1,"chat_id":1,"use_case":"agent_commerce","reason":"No AI provider configured for company"}
+[2026-08-03 06:15:04] [ERROR] [COMMERCE_AGENT_ITERATION_FAILED] {"company_id":1,"chat_id":1,"iteration":0,"error":"No AI provider configured"}
+[2026-08-03 06:15:04] [WARNING] [COMMERCE_AGENT_EMPTY_REPLY] {"company_id":1,"chat_id":1,"route":"agent_os_failed"}
+[2026-08-03 06:15:04] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"web_widget:v-public-1"}
+[2026-08-03 06:15:04] [ERROR] [AGENT_CHAT_RESOLVE_FAILED] {"company_id":1,"chat_id":1,"use_case":"agent_commerce","reason":"No AI provider configured for company"}
+[2026-08-03 06:15:04] [ERROR] [COMMERCE_AGENT_ITERATION_FAILED] {"company_id":1,"chat_id":1,"iteration":0,"error":"No AI provider configured"}
+[2026-08-03 06:15:04] [WARNING] [COMMERCE_AGENT_EMPTY_REPLY] {"company_id":1,"chat_id":1,"route":"agent_os_failed"}
+[2026-08-03 06:15:04] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"email:buyer-at-examplecom"}
+[2026-08-03 06:15:04] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"agent_reasoning","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:04] [ERROR] [AGENT_CHAT_RESOLVE_FAILED] {"company_id":1,"chat_id":1,"use_case":"agent_commerce","reason":"No AI provider configured for company"}
+[2026-08-03 06:15:04] [ERROR] [COMMERCE_AGENT_ITERATION_FAILED] {"company_id":1,"chat_id":1,"iteration":0,"error":"No AI provider configured"}
+[2026-08-03 06:15:04] [WARNING] [COMMERCE_AGENT_EMPTY_REPLY] {"company_id":1,"chat_id":1,"route":"agent_os_failed"}
+[2026-08-03 06:15:05] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"instagram_dm:ig-user-99"}
+[2026-08-03 06:15:05] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"agent_reasoning","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:05] [ERROR] [AGENT_CHAT_RESOLVE_FAILED] {"company_id":1,"chat_id":1,"use_case":"agent_commerce","reason":"No AI provider configured for company"}
+[2026-08-03 06:15:05] [ERROR] [COMMERCE_AGENT_ITERATION_FAILED] {"company_id":1,"chat_id":1,"iteration":0,"error":"No AI provider configured"}
+[2026-08-03 06:15:05] [WARNING] [COMMERCE_AGENT_EMPTY_REPLY] {"company_id":1,"chat_id":1,"route":"agent_os_failed"}
+[2026-08-03 06:15:05] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"commerce_morning_brief","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:05] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"commerce_morning_brief","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:08] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-recovery","to":"254711000222","text_length":237,"has_token":true,"context_message_id":""}
+[2026-08-03 06:15:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:18] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"growth","company_id":1,"chat_id":null,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:15:19] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254728210962","whatsapp_message_id":"wamid.customer-hi","incoming_message_id":2,"force_reply":true,"message_preview":"Hi"}
+[2026-08-03 06:15:19] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254728210962","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Hi"}
+[2026-08-03 06:15:19] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:15:19] [INFO] [FIRST_MESSAGE_GREETING_SEND] {"greeting_preview":"Hello Essem! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:15:19] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254728210962","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Essem! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:15:19] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-hb","to":"254728210962","text_length":115,"has_token":true,"context_message_id":""}
+[2026-08-03 06:15:19] [ERROR] [PIPELINE_CRITICAL_UNHANDLED_EXCEPTION] {"company_id":1,"chat_id":1,"error":"Undefined variable $url","file":"WhatsAppMessageSenderService.php","line":67,"error_message":"Undefined variable $url","error_file":"WhatsAppMessageSenderService.php","error_line":67,"error_trace":"#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#1 /var/www/html/app/Services/WhatsAppMessageSenderService.php(67): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}(2, 'Undefined varia...', '/var/www/html/a...', 67)\n#2 /var/www/html/app/Jobs/ProcessIncomingWhatsAppMessage.php(628): App\\"}
+[2026-08-03 06:39:51] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254744444444","whatsapp_message_id":"wamid.trial-q","incoming_message_id":1,"force_reply":false,"message_preview":"What are your hours?"}
+[2026-08-03 06:39:51] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254744444444","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What are your hours?"}
+[2026-08-03 06:39:51] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:39:51] [INFO] [FIRST_MESSAGE_GREETING_SEND] {"greeting_preview":"Hello Trial Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:39:51] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254744444444","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Trial Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-trial","to":"254744444444","text_length":121,"has_token":true,"context_message_id":""}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"phone-trial","to":"254744444444","whatsapp_message_id":"wamid.bot-trial"}
+[2026-08-03 06:39:51] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.bot-trial","error":null}
+[2026-08-03 06:39:51] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Trial Buyer","message_preview":"What are your hours?"}
+[2026-08-03 06:39:51] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"whatsapp","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:39:51] [WARNING] [AI_REPLY_GENERATOR_PRIMARY_FAILED_RETRYING] {"company_id":1,"chat_id":1,"error":"No AI provider or model configured"}
+[2026-08-03 06:39:51] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"whatsapp","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:39:51] [ERROR] [AI_REPLY_GENERATOR_RETRY_FAILED] {"company_id":1,"chat_id":1,"error":"No AI provider or model configured"}
+[2026-08-03 06:39:51] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254744444444","reply_source":"faq","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"We are open 9am to 5pm."}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-trial","to":"254744444444","text_length":23,"has_token":true,"context_message_id":""}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"phone-trial","to":"254744444444","whatsapp_message_id":"wamid.bot-trial"}
+[2026-08-03 06:39:51] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.bot-trial","error":null}
+[2026-08-03 06:39:51] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254777777777","whatsapp_message_id":"wamid.after-expiry","incoming_message_id":1,"force_reply":false,"message_preview":"Are you there?"}
+[2026-08-03 06:39:51] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254777777777","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Are you there?"}
+[2026-08-03 06:39:51] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:39:51] [INFO] [FIRST_MESSAGE_GREETING_SEND] {"greeting_preview":"Hello Expired Lock! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:39:51] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254777777777","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Expired Lock! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254777777777","text_length":122,"has_token":true,"context_message_id":""}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"phone-auto","to":"254777777777","whatsapp_message_id":"wamid.bot-after-expiry"}
+[2026-08-03 06:39:51] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.bot-after-expiry","error":null}
+[2026-08-03 06:39:51] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Expired Lock","message_preview":"Are you there?"}
+[2026-08-03 06:39:51] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"whatsapp","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:39:51] [WARNING] [AI_REPLY_GENERATOR_PRIMARY_FAILED_RETRYING] {"company_id":1,"chat_id":1,"error":"No AI provider or model configured"}
+[2026-08-03 06:39:51] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"whatsapp","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:39:51] [ERROR] [AI_REPLY_GENERATOR_RETRY_FAILED] {"company_id":1,"chat_id":1,"error":"No AI provider or model configured"}
+[2026-08-03 06:39:51] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254777777777","reply_source":"faq","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Yes, we are here."}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254777777777","text_length":17,"has_token":true,"context_message_id":""}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"phone-auto","to":"254777777777","whatsapp_message_id":"wamid.bot-after-expiry"}
+[2026-08-03 06:39:51] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.bot-after-expiry","error":null}
+[2026-08-03 06:39:51] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254788888888","whatsapp_message_id":"wamid.poll-hi","incoming_message_id":1,"force_reply":true,"message_preview":"Hi"}
+[2026-08-03 06:39:51] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254788888888","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Hi"}
+[2026-08-03 06:39:51] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:39:51] [INFO] [FIRST_MESSAGE_GREETING_SEND] {"greeting_preview":"Hello Poll Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:39:51] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254788888888","reply_source":"greeting_menu","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Hello Poll Buyer! Thanks for reaching out. How can we help you today?\n\nReply with: 1. Prices  2. Order  3. Talk to agent"}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-auto","to":"254788888888","text_length":120,"has_token":true,"context_message_id":""}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"phone-auto","to":"254788888888","whatsapp_message_id":"wamid.bot-poll"}
+[2026-08-03 06:39:51] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.bot-poll","error":null}
+[2026-08-03 06:39:51] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254755555555","whatsapp_message_id":"wamid.expired-q","incoming_message_id":1,"force_reply":false,"message_preview":"Hello"}
+[2026-08-03 06:39:51] [WARNING] [SKIPPED_INACTIVE_SUBSCRIPTION] {"company_id":1,"chat_id":1}
+[2026-08-03 06:39:51] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254755555555","reply_source":"subscription_unavailable","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Our service is temporarily unavailable. Please try again later or contact support."}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-expired","to":"254755555555","text_length":82,"has_token":true,"context_message_id":""}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"phone-expired","to":"254755555555","whatsapp_message_id":"wamid.bot-expired"}
+[2026-08-03 06:39:51] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.bot-expired","error":null}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-reply","to":"254711111111","text_length":17,"has_token":true,"context_message_id":"wamid.original"}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"phone-reply","to":"254711111111","whatsapp_message_id":"wamid.agent-reply"}
+[2026-08-03 06:39:51] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"agent_proactive","company_id":1,"chat_id":null,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:39:51] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":null,"use_case":"agent_proactive","model":"gpt-4o-mini","prompt_tokens":40,"completion_tokens":15,"latency_ms":0,"content_preview":"Thank you Jane! Payment for ORD-PAY-001 received — we appreciate your business."}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"phone-agent-flow","to":"254711122233","text_length":81,"has_token":true,"context_message_id":""}
+[2026-08-03 06:39:51] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"phone-agent-flow","to":"254711122233","whatsapp_message_id":"wamid.pay.1"}
+[2026-08-03 06:39:51] [INFO] [COMMERCE_AGENT_START] {"company_id":1,"chat_id":1,"customer_phone":"email:buyer-at-examplecom"}
+[2026-08-03 06:39:51] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"agent_reasoning","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-03 06:39:52] [ERROR] [AGENT_CHAT_RESOLVE_FAILED] {"company_id":1,"chat_id":1,"use_case":"agent_commerce","reason":"No AI provider configured for company"}
+[2026-08-03 06:39:52] [ERROR] [COMMERCE_AGENT_ITERATION_FAILED] {"company_id":1,"chat_id":1,"iteration":0,"error":"No AI provider configured"}
+[2026-08-03 06:39:52] [WARNING] [COMMERCE_AGENT_EMPTY_REPLY] {"company_id":1,"chat_id":1,"route":"agent_os_failed"}
+[2026-08-03 06:39:52] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_message_id":"wamid.cust.1","incoming_message_id":null,"force_reply":false,"message_preview":"What are your opening hours?"}
+[2026-08-03 06:39:52] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What are your opening hours?"}
+[2026-08-03 06:39:52] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 06:39:52] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Buyer","message_preview":"What are your opening hours?"}
+[2026-08-03 06:39:52] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:39:53] [ERROR] [AI_GATEWAY_COMPLETION_FAILED] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","error":"Incorrect API key provided: sk-test-**enai. You can find your API key at https://platform.openai.com/account/api-keys.","http_status":401}
+[2026-08-03 06:39:53] [WARNING] [AI_REPLY_GENERATOR_PRIMARY_FAILED_RETRYING] {"company_id":1,"chat_id":1,"error":"Incorrect API key provided: sk-test-**enai. You can find your API key at https://platform.openai.com/account/api-keys."}
+[2026-08-03 06:39:53] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 06:39:53] [ERROR] [AI_GATEWAY_COMPLETION_FAILED] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","error":"Incorrect API key provided: sk-test-**enai. You can find your API key at https://platform.openai.com/account/api-keys.","http_status":401}
+[2026-08-03 06:39:53] [ERROR] [AI_REPLY_GENERATOR_RETRY_FAILED] {"company_id":1,"chat_id":1,"error":"Incorrect API key provided: sk-test-**enai. You can find your API key at https://platform.openai.com/account/api-keys."}
+[2026-08-03 06:39:54] [INFO] [DEFAULT_AI_FALLBACK_REPLY] {"reply_preview":"We are open 9am to 6pm Monday to Saturday.","route":"faq"}
+[2026-08-03 06:39:54] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","reply_source":"faq","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"We are open 9am to 6pm Monday to Saturday."}
+[2026-08-03 06:39:54] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"pn-int","to":"254711122233","text_length":42,"has_token":true,"context_message_id":""}
+[2026-08-03 06:39:54] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"pn-int","to":"254711122233","whatsapp_message_id":"wamid.bot.faq"}
+[2026-08-03 06:39:54] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.bot.faq","error":null}
+[2026-08-03 06:39:54] [INFO] [WEBHOOK_DISPATCHING_AUTO_REPLY] {"company_id":1,"chat_id":1,"customer_phone":"254711111111","whatsapp_message_id":"wamid.test123","incoming_message_id":1,"dispatch_mode":"sync"}
+[2026-08-03 07:38:10] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"growth","company_id":1,"chat_id":null,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 07:38:10] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":null,"use_case":"growth","model":"gpt-4o-mini","prompt_tokens":80,"completion_tokens":15,"latency_ms":0,"content_preview":"{\"caption\":\"Weekend sale — reply to order!\"}"}
+[2026-08-03 07:38:10] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_message_id":"wamid.cust.1","incoming_message_id":null,"force_reply":false,"message_preview":"What are your opening hours?"}
+[2026-08-03 07:38:10] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"What are your opening hours?"}
+[2026-08-03 07:38:10] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 07:38:10] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Buyer","message_preview":"What are your opening hours?"}
+[2026-08-03 07:38:10] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 07:38:11] [ERROR] [AI_GATEWAY_COMPLETION_FAILED] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","error":"Incorrect API key provided: sk-test-**enai. You can find your API key at https://platform.openai.com/account/api-keys.","http_status":401}
+[2026-08-03 07:38:11] [WARNING] [AI_REPLY_GENERATOR_PRIMARY_FAILED_RETRYING] {"company_id":1,"chat_id":1,"error":"Incorrect API key provided: sk-test-**enai. You can find your API key at https://platform.openai.com/account/api-keys."}
+[2026-08-03 07:38:11] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 07:38:11] [ERROR] [AI_GATEWAY_COMPLETION_FAILED] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","error":"Incorrect API key provided: sk-test-**enai. You can find your API key at https://platform.openai.com/account/api-keys.","http_status":401}
+[2026-08-03 07:38:11] [ERROR] [AI_REPLY_GENERATOR_RETRY_FAILED] {"company_id":1,"chat_id":1,"error":"Incorrect API key provided: sk-test-**enai. You can find your API key at https://platform.openai.com/account/api-keys."}
+[2026-08-03 07:38:12] [INFO] [DEFAULT_AI_FALLBACK_REPLY] {"reply_preview":"We are open 9am to 6pm Monday to Saturday.","route":"faq"}
+[2026-08-03 07:38:12] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","reply_source":"faq","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"We are open 9am to 6pm Monday to Saturday."}
+[2026-08-03 07:38:12] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"pn-int","to":"254711122233","text_length":42,"has_token":true,"context_message_id":""}
+[2026-08-03 07:38:12] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"pn-int","to":"254711122233","whatsapp_message_id":"wamid.bot.faq"}
+[2026-08-03 07:38:12] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.bot.faq","error":null}
+[2026-08-03 07:38:12] [INFO] [JOB_EXECUTION_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_message_id":"wamid.cust.ai","incoming_message_id":null,"force_reply":false,"message_preview":"Hello I need help"}
+[2026-08-03 07:38:12] [INFO] [JOB_PROCESSING_PIPELINE] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","whatsapp_account_id":1,"whatsapp_account_status":"active","whatsapp_account_is_active":true,"auto_reply_enabled":true,"agent_handling_at":null,"message_text_preview":"Hello I need help"}
+[2026-08-03 07:38:12] [INFO] [ORDER_FLOW_PROCESS_RESULT] {"has_order_reply":false,"order_reply_preview":""}
+[2026-08-03 07:38:12] [INFO] [AI_REPLY_GENERATOR_START] {"company_id":1,"chat_id":1,"customer_name":"Buyer","message_preview":"I need help"}
+[2026-08-03 07:38:12] [INFO] [AI_GATEWAY_RESOLVED_MODEL] {"use_case":"whatsapp","company_id":1,"chat_id":1,"model_key":"gpt-4o-mini","provider":"OpenAI","credential_source":"platform"}
+[2026-08-03 07:38:12] [INFO] [AI_GATEWAY_COMPLETION_SUCCESS] {"company_id":1,"chat_id":1,"use_case":"whatsapp","model":"gpt-4o-mini","prompt_tokens":50,"completion_tokens":12,"latency_ms":0,"content_preview":"Thanks for reaching out! How can I help you today?"}
+[2026-08-03 07:38:12] [INFO] [AI_REPLY_GENERATOR_SUCCESS] {"company_id":1,"chat_id":1,"guarded_reply_preview":"Thanks for reaching out! How can I help you today?"}
+[2026-08-03 07:38:12] [INFO] [DEFAULT_AI_FALLBACK_REPLY] {"reply_preview":"Thanks for reaching out! How can I help you today?","route":"openai"}
+[2026-08-03 07:38:12] [INFO] [SEND_REPLY_AND_SAVE_START] {"company_id":1,"chat_id":1,"customer_phone":"254711122233","reply_source":"openai","inbound_was_audio":false,"voice_mode":"dual_text_and_voice","should_voice":false,"reply_text_preview":"Thanks for reaching out! How can I help you today?"}
+[2026-08-03 07:38:12] [INFO] [META_API_SEND_REQUEST] {"phone_number_id":"pn-int","to":"254711122233","text_length":50,"has_token":true,"context_message_id":""}
+[2026-08-03 07:38:12] [INFO] [META_API_SEND_SUCCESS] {"phone_number_id":"pn-int","to":"254711122233","whatsapp_message_id":"wamid.ai"}
+[2026-08-03 07:38:12] [INFO] [TEXT_SEND_META_API_RESULT] {"success":true,"message_id":"wamid.ai","error":null}
+[2026-08-11 15:36:52] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:36:52] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:36:52] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:36:52] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:36:52] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:36:52] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:36:52] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:36:52] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:36:52] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:36:52] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:36:52] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:36:52] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:36:52] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:37:37] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:37:37] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:37:37] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:37:37] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:37:37] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:37:37] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:37:37] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:37:37] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:37:37] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:37:37] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:37:37] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:37:37] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:37:37] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:38:10] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:38:10] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:38:10] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:38:10] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:38:10] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:38:10] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:38:10] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:38:10] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:38:10] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:38:10] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:38:10] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:38:10] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:38:10] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"0712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"0712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"0712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"0712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"0712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"0712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"0712345678"}
+[2026-08-11 15:41:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:41:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"0712345678"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:48:48] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:48:48] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:48:48] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:48:48] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:49:28] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:49:28] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:49:28] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:28] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:29] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:29] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:49:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:49:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:49:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:49:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:55:46] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:55:46] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:55:46] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:55:46] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:56:16] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:56:16] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:56:16] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 15:56:16] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:36:14] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-11 16:42:24] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:42:24] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-11 16:42:25] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:12] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:12] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:12] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 19:51:49] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:51:49] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 19:54:08] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:54:08] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 19:55:12] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:12] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:55:12] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:12] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:55:12] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:12] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:55:12] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:12] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:55:12] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:55:12] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:55:12] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:55:12] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:12] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 19:55:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:13] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 19:55:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:13] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:55:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:13] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:55:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:13] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:55:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:13] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:55:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:13] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:55:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:13] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 19:55:13] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:55:13] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 19:57:35] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:35] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 19:57:36] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 19:57:36] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 20:19:31] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:19:31] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254799887766"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254711223344"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254743864577"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345678"}
+[2026-08-17 20:44:19] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:19] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}
+[2026-08-17 20:44:20] [ERROR] [AI_GATEWAY_RESOLVE_FAILED] {"use_case":"intent_classification","company_id":1,"chat_id":1,"reason":"No AI provider or model configured for chat capability"}
+[2026-08-17 20:44:20] [WARNING] [CHANNEL_ADAPTER_INACTIVE_ACCOUNT] {"company_id":1,"recipient":"254712345679"}

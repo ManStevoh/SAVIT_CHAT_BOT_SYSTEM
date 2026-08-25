@@ -8,7 +8,7 @@ nav_order: 1
 
 **URL:** `/admin`
 
-The super admin panel is for **platform operators** (Essem Global Solutions team) to manage all tenants, billing, integrations, and system health.
+The super admin panel is for **platform operators** (Essem Digital Innovation Limited team) to manage all tenants, billing, integrations, and system health.
 
 ## Access
 

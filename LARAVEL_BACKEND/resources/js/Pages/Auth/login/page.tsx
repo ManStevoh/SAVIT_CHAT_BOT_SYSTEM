@@ -34,9 +34,39 @@ function LoginPageContent() {
   }, [searchParams])
 
   const planId = searchParams.get('plan')
-  const subscribeRedirect = planId ? `/dashboard/subscription?subscribe=${planId}` : null
-  const verifiedParam = searchParams.get('verified') === '1'
+  const forcePay = searchParams.get('pay') === '1'
+  const trialParam = searchParams.get('trial') === '1'
   const registeredParam = searchParams.get('registered') === '1'
+  const verifiedParam = searchParams.get('verified') === '1'
+  const registerHref = (() => {
+    if (!planId) return '/register'
+    const params = new URLSearchParams({ plan: planId })
+    if (forcePay) params.set('intent', 'subscribe')
+    return `/register?${params.toString()}`
+  })()
+
+  const resolvePostLoginPath = (role: string): string => {
+    if (redirectTo) return redirectTo
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('post_login_path')
+      if (stored && stored.startsWith('/')) {
+        sessionStorage.removeItem('post_login_path')
+        return stored
+      }
+    }
+    // After signup with a trial: welcome dashboard (do not force payment).
+    if (registeredParam && trialParam && !forcePay) {
+      return '/dashboard?trial_started=1'
+    }
+    // Existing user clicked a plan on Pricing, or signup for a no-trial paid plan.
+    if (planId && (forcePay || !registeredParam)) {
+      return `/dashboard/subscription?subscribe=${encodeURIComponent(planId)}`
+    }
+    if (registeredParam && planId) {
+      return '/dashboard?trial_started=1'
+    }
+    return role === 'admin' ? '/admin' : '/dashboard'
+  }
 
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -126,11 +156,7 @@ function LoginPageContent() {
         }
 
         setAuthCookie(result.user.role, !!formData.rememberMe)
-        const target =
-          redirectTo ||
-          subscribeRedirect ||
-          (result.user.role === 'admin' ? '/admin' : '/dashboard')
-        router.push(target)
+        router.push(resolvePostLoginPath(result.user.role))
       } else {
         const code = (result as { code?: string }).code
         setEmailNotVerified(code === 'email_not_verified')
@@ -144,21 +170,31 @@ function LoginPageContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [formData, redirectTo, subscribeRedirect, router])
+  }, [formData, redirectTo, planId, forcePay, trialParam, registeredParam, router])
 
   return (
     <div className="w-full">
       <LandoAuthHeader title="Welcome back" description="Sign in to your account to continue" />
 
       {verifiedParam && (
-        <LandoAuthSuccess>Email verified successfully. You can now sign in.</LandoAuthSuccess>
+        <LandoAuthSuccess>
+          {forcePay && planId
+            ? 'Email verified successfully. Sign in to complete payment for your plan.'
+            : 'Email verified successfully. You can now sign in.'}
+        </LandoAuthSuccess>
       )}
 
       {registeredParam && !verifiedParam && (
         <LandoAuthSuccess>
           {branding.requireEmailVerification
-            ? 'Account created. Please check your email to verify your account, then sign in below.'
-            : 'Account created successfully. You can sign in below.'}
+            ? forcePay
+              ? 'Account created. Verify your email, then sign in to complete payment for your plan.'
+              : 'Account created. Please check your email to verify your account, then sign in below.'
+            : forcePay
+              ? 'Account created. Sign in to complete payment for your plan.'
+              : trialParam
+                ? 'Account created — your free trial has started. Sign in to open your dashboard.'
+                : 'Account created successfully. You can sign in below.'}
         </LandoAuthSuccess>
       )}
 
@@ -186,7 +222,7 @@ function LoginPageContent() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium text-black">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
           <Input
             id="email"
             type="email"
@@ -201,7 +237,7 @@ function LoginPageContent() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-sm font-medium text-black">Password</Label>
+          <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
           <div className="relative">
             <Input
               id="password"
@@ -216,7 +252,7 @@ function LoginPageContent() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -233,9 +269,9 @@ function LoginPageContent() {
               onCheckedChange={(checked) => handleFieldChange('rememberMe', checked === true)}
               disabled={isLoading}
             />
-            <label htmlFor="remember" className="cursor-pointer text-sm text-gray-600">Remember me</label>
+            <label htmlFor="remember" className="cursor-pointer text-sm text-muted-foreground">Remember me</label>
           </div>
-          <Link href="/forgot-password" className="text-sm font-medium text-[#2563eb] hover:text-[#1d4ed8]">
+          <Link href="/forgot-password" className="text-sm font-medium text-primary hover:text-primary/80">
             Forgot password?
           </Link>
         </div>
@@ -245,9 +281,9 @@ function LoginPageContent() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-600">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         {"Don't have an account? "}
-        <Link href="/register" className="font-medium text-[#2563eb] hover:text-[#1d4ed8]">Sign up</Link>
+        <Link href={registerHref} className="font-medium text-primary hover:text-primary/80">Sign up</Link>
       </p>
     </div>
   )

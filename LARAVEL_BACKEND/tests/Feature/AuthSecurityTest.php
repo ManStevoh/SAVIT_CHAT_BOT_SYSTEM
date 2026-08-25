@@ -89,7 +89,7 @@ class AuthSecurityTest extends TestCase
             ->assertJsonPath('code', 'company_inactive');
     }
 
-    public function test_company_cannot_mark_order_paid_manually(): void
+    public function test_company_can_mark_order_paid_manually_for_offline_payment(): void
     {
         $company = Company::create([
             'name' => 'Order Co',
@@ -123,6 +123,61 @@ class AuthSecurityTest extends TestCase
             'order_number' => 'ORD-SEC01',
             'customer_name' => 'Buyer',
             'customer_phone' => '254700000000',
+            'total' => 100,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/company/orders/{$order->id}", [
+                'paymentStatus' => 'paid',
+            ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+        $fresh = $order->fresh();
+        $this->assertSame('paid', $fresh->payment_status);
+        $this->assertSame('confirmed', $fresh->status);
+    }
+
+    public function test_company_cannot_mark_another_companys_order_paid(): void
+    {
+        $companyA = Company::create([
+            'name' => 'Order Co A',
+            'email' => 'order-a@test.local',
+            'status' => 'active',
+        ]);
+        $companyB = Company::create([
+            'name' => 'Order Co B',
+            'email' => 'order-b@test.local',
+            'status' => 'active',
+        ]);
+
+        $user = User::create([
+            'name' => 'Order Owner A',
+            'email' => 'order-owner-a@test.com',
+            'password' => Hash::make('password123'),
+            'company_id' => $companyA->id,
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+        $user->role = 'company_owner';
+        $user->save();
+
+        Subscription::create([
+            'company_id' => $companyA->id,
+            'plan' => 'starter',
+            'status' => 'active',
+            'start_date' => now()->format('Y-m-d'),
+            'end_date' => now()->addYear()->format('Y-m-d'),
+            'amount' => 29,
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $order = Order::create([
+            'company_id' => $companyB->id,
+            'order_number' => 'ORD-SEC02',
+            'customer_name' => 'Buyer',
+            'customer_phone' => '254700000001',
             'total' => 100,
             'status' => 'pending',
             'payment_status' => 'pending',

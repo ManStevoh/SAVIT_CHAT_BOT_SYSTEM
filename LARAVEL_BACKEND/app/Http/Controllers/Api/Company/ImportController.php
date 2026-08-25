@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\Company;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\Faq;
 use App\Models\Product;
+use App\Services\Platform\EntitlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -13,6 +15,10 @@ use League\Csv\Statement;
 
 class ImportController extends Controller
 {
+    public function __construct(
+        private readonly EntitlementService $entitlements,
+    ) {}
+
     /**
      * Import products from CSV.
      * Expected columns: name, description, price, category, status (optional: stock).
@@ -22,6 +28,22 @@ class ImportController extends Controller
         $companyId = $request->user()->company_id;
         if (! $companyId) {
             return response()->json(['success' => false, 'message' => 'No company.'], 403);
+        }
+
+        $company = Company::find($companyId);
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Company not found.'], 404);
+        }
+
+        if (! $this->entitlements->canAddProduct($company)) {
+            $max = $this->entitlements->maxProducts($company);
+
+            return response()->json([
+                'success' => false,
+                'code' => 'product_limit_reached',
+                'message' => "You have reached your limit of {$max} products for your plan. Upgrade your plan to import more products.",
+                'maxProducts' => $max,
+            ], 403);
         }
 
         $request->validate([
@@ -40,6 +62,15 @@ class ImportController extends Controller
             $errors = [];
 
             foreach ($stmt->getRecords($headers) as $index => $record) {
+                if (! $this->entitlements->canAddProduct($company)) {
+                    $max = $this->entitlements->maxProducts($company);
+                    $errors[] = [
+                        'row' => $index + 2,
+                        'errors' => ["Product limit of {$max} reached for your plan. Remaining products were skipped."],
+                    ];
+                    break;
+                }
+
                 $row = array_combine($headers, $record);
                 $row = array_map('trim', $row);
                 $validator = Validator::make($row, [

@@ -8,9 +8,13 @@ const FALLBACK = (
 
     <h2>1. Who we are</h2>
     <p>
-      Essem Chat is operated by Essem Global Solutions. We provide a multi-tenant SaaS platform
+      RelayIQ is a product of Essem Digital Innovation Limited. We provide a multi-tenant SaaS platform
       for WhatsApp business messaging, AI-assisted replies, order management, and related
-      services.
+      services. Learn more at{" "}
+      <a href="https://relayiq.app" className="text-[#2563eb] underline" target="_blank" rel="noopener noreferrer">
+        relayiq.app
+      </a>
+      .
     </p>
 
     <h2>2. Information we collect</h2>
@@ -26,7 +30,7 @@ const FALLBACK = (
     <h2>3. How we use your information</h2>
     <p>We use collected data to:</p>
     <ul>
-      <li>Provide, operate, and improve the Essem Chat platform</li>
+      <li>Provide, operate, and improve the RelayIQ platform</li>
       <li>Process AI-assisted replies using your configured provider and business content</li>
       <li>Send service-related communications</li>
       <li>Comply with legal obligations and prevent abuse</li>
@@ -49,7 +53,7 @@ const FALLBACK = (
     <p>
       Depending on your jurisdiction, you may have rights to access, correct, or delete personal
       data. Contact us at{" "}
-      <a href="mailto:support@essemglobalsolutions.com">support@essemglobalsolutions.com</a> to
+      <a href="mailto:support@relayiq.app">support@relayiq.app</a> to
       submit a request.
     </p>
 
@@ -61,6 +65,20 @@ const FALLBACK = (
   </>
 )
 
-export default function PrivacyPage() {
-  return <LegalCmsPage slug="privacy" fallbackTitle="Privacy Policy" fallbackBody={FALLBACK} />
+export default function PrivacyPage({
+  seo,
+  cms,
+}: {
+  seo?: import("@/components/seo/SeoHead").SeoPayload | null
+  cms?: import("@/components/lando/types").CmsPageData | null
+}) {
+  return (
+    <LegalCmsPage
+      slug="privacy"
+      fallbackTitle="Privacy Policy"
+      fallbackBody={FALLBACK}
+      initialSeo={seo}
+      initialCms={cms}
+    />
+  )
 }

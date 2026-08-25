@@ -5,18 +5,22 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformSetting;
 use App\Services\MailService;
+use App\Services\RecaptchaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ContactController extends Controller
 {
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, RecaptchaService $recaptcha): JsonResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'message' => 'required|string|max:5000',
+            'recaptchaToken' => 'nullable|string|max:4000',
         ]);
+
+        $recaptcha->assertValid($validated['recaptchaToken'] ?? null, $request->ip());
 
         $settings = PlatformSetting::first();
         $to = $settings?->support_email ?? config('mail.from.address');

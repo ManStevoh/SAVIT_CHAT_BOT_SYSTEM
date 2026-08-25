@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Admin\LandingFaqController;
 use App\Http\Controllers\Api\Admin\LogController;
 use App\Http\Controllers\Api\Admin\OverviewController;
 use App\Http\Controllers\Api\Admin\PaymentGatewayController;
+use App\Http\Controllers\Api\Admin\ManualBillingPaymentController;
 use App\Http\Controllers\Api\Admin\PlatformSettingsController;
 use App\Http\Controllers\Api\Admin\RevenueController;
 use App\Http\Controllers\Api\Admin\TestimonialController;
@@ -37,15 +38,18 @@ use App\Http\Controllers\Api\Company\CompanyAiProviderController;
 use App\Http\Controllers\Api\Company\CompanyAiUsageController;
 use App\Http\Controllers\Api\Company\ApiPlatformController;
 use App\Http\Controllers\Api\Company\ApiV1Controller;
+use App\Http\Controllers\Api\Company\AiModelController;
 use App\Http\Controllers\Api\Company\ChatController;
 use App\Http\Controllers\Api\Company\ChatMessageController;
 use App\Http\Controllers\Api\Company\WhatsAppCampaignController;
 use App\Http\Controllers\Api\Company\CustomerController;
+use App\Http\Controllers\Api\Company\DeliveryZoneController;
 use App\Http\Controllers\Api\Admin\GrowthPortfolioController;
 use App\Http\Controllers\Api\Admin\SystemHealthController;
 use App\Http\Controllers\Api\Company\ExportController;
 use App\Http\Controllers\Api\Company\GrowthAdSpendController;
 use App\Http\Controllers\Api\Company\GrowthAgentController;
+use App\Http\Controllers\Api\Company\AnalyticsController;
 use App\Http\Controllers\Api\Company\GrowthAnalyticsController;
 use App\Http\Controllers\Api\Company\GrowthCompetitorController;
 use App\Http\Controllers\Api\Company\GrowthInsightController;
@@ -59,25 +63,36 @@ use App\Http\Controllers\Api\Company\ImportController;
 use App\Http\Controllers\Api\Company\MemorySearchController;
 use App\Http\Controllers\Api\Company\MarketplaceController;
 use App\Http\Controllers\Api\Company\MissionControlController;
+use App\Http\Controllers\Api\Company\MpesaCheckoutController;
+use App\Http\Controllers\Api\Company\CouponController;
 use App\Http\Controllers\Api\Company\OnboardingInterviewController;
 use App\Http\Controllers\Api\Company\PolicyRuleController;
 use App\Http\Controllers\Api\Company\NotificationController;
 use App\Http\Controllers\Api\Company\OrderController;
+use App\Http\Controllers\Api\Company\ProductReviewController;
 use App\Http\Controllers\Api\Company\OwnerAnalyticsController;
+use App\Http\Controllers\Api\Company\PaystackCheckoutController;
 use App\Http\Controllers\Api\Company\ProductController;
+use App\Http\Controllers\Api\Company\BookingController;
 use App\Http\Controllers\Api\Company\SettingsController;
+use App\Http\Controllers\Api\Company\SetupStatusController;
 use App\Http\Controllers\Api\Company\StripeCheckoutController;
 use App\Http\Controllers\Api\Company\SubscriptionController;
+use App\Http\Controllers\Api\Company\TaxRateController;
 use App\Http\Controllers\Api\Company\TeamController;
 use App\Http\Controllers\Api\Company\WhatsAppController;
 use App\Http\Controllers\Api\Company\WhatsAppTemplateController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\AppBrandingController;
+use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\CmsPageController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\FlutterwaveWebhookController;
 use App\Http\Controllers\Api\LandingController;
 use App\Http\Controllers\Api\MpesaCallbackController;
+use App\Http\Controllers\Api\PayPalWebhookController;
 use App\Http\Controllers\Api\PaystackWebhookController;
+use App\Http\Controllers\Api\PesapalCallbackController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\StripeWebhookController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
@@ -88,6 +103,8 @@ Route::get('plans', [PlanController::class, 'index']);
 Route::get('app-branding', [AppBrandingController::class, 'show']);
 Route::get('cms/pages/{slug}', [CmsPageController::class, 'show']);
 Route::get('cms/global', [CmsPageController::class, 'global']);
+Route::get('blog/posts', [BlogPostController::class, 'index']);
+Route::get('blog/posts/{slug}', [BlogPostController::class, 'show']);
 Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:10,1');
 Route::get('landing', [LandingController::class, 'index']);
 
@@ -100,6 +117,18 @@ Route::post('mpesa/callback', MpesaCallbackController::class);
 // Paystack webhook (no auth; verified by HMAC signature)
 Route::post('paystack/webhook', PaystackWebhookController::class);
 
+// Pesapal callback & IPN (no auth; called by Pesapal API v3)
+Route::match(['get', 'post'], 'pesapal/callback', PesapalCallbackController::class);
+Route::match(['get', 'post'], 'pesapal/ipn', PesapalCallbackController::class);
+
+// Flutterwave webhook & callback (no auth; verified by verif-hash signature)
+Route::post('flutterwave/webhook', FlutterwaveWebhookController::class);
+Route::match(['get', 'post'], 'flutterwave/callback', FlutterwaveWebhookController::class);
+
+// PayPal webhook & callback (no auth)
+Route::post('paypal/webhook', PayPalWebhookController::class);
+Route::match(['get', 'post'], 'paypal/callback', PayPalWebhookController::class);
+
 // WhatsApp webhook (no auth; Meta calls for verification and incoming messages)
 Route::get('whatsapp/webhook', [WhatsAppWebhookController::class, 'verify']);
 Route::post('whatsapp/webhook', [WhatsAppWebhookController::class, 'receive']);
@@ -109,6 +138,9 @@ Route::prefix('auth')->group(function () {
     Route::get('verify-email', EmailVerificationController::class)->name('api.verification.verify');
     Route::middleware('throttle:auth-login')->post('login', [AuthController::class, 'login']);
     Route::middleware('throttle:auth-register')->post('register', [AuthController::class, 'register']);
+    Route::post('send-register-otp', [AuthController::class, 'sendRegisterOtp']);
+    Route::post('verify-register-otp', [AuthController::class, 'verifyRegisterOtp']);
+
     Route::middleware('throttle:auth-password')->group(function () {
         Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
@@ -143,12 +175,20 @@ Route::prefix('v1/company')->middleware('api.key')->group(function () {
 
 // Company (auth required; subscription must be active except for subscription/checkout routes)
 Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscription.active'])->group(function () {
+    Route::get('dashboard-summary', [\App\Http\Controllers\Api\Company\DashboardSummaryController::class, 'index']);
     Route::get('chats', [ChatController::class, 'index']);
+    Route::post('chats/start', [ChatController::class, 'start']);
     Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);
+    Route::patch('chats/{chatId}', [ChatController::class, 'update']);
+    Route::post('chats/{chatId}/block-ordering', [ChatController::class, 'blockOrdering']);
+    Route::post('chats/{chatId}/unblock-ordering', [ChatController::class, 'unblockOrdering']);
     Route::get('chats/{chatId}/messages', [ChatMessageController::class, 'index']);
     Route::post('chats/{chatId}/messages', [ChatMessageController::class, 'store']);
     Route::post('chats/{chatId}/messages/{messageId}/learning-feedback', [ChatMessageController::class, 'learningFeedback']);
+    Route::get('chats/{chatId}/messages/{messageId}/download-prompt', [ChatMessageController::class, 'downloadPrompt']);
+    Route::delete('chats/{chatId}/clear-history', [ChatMessageController::class, 'clearHistory']);
     Route::get('orders', [OrderController::class, 'index']);
+    Route::post('orders/preview-totals', [OrderController::class, 'previewTotals']);
     Route::get('orders/{order}', [OrderController::class, 'show']);
     Route::post('orders', [OrderController::class, 'store']);
     Route::patch('orders/{order}', [OrderController::class, 'updateStatus']);
@@ -165,9 +205,26 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     // POST alias for update: PHP does not populate $_FILES on multipart PUT; browsers send file uploads as POST.
     Route::post('products/{product}', [ProductController::class, 'update']);
     Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);
+    Route::get('bookings/settings', [BookingController::class, 'settings']);
+    Route::put('bookings/settings', [BookingController::class, 'updateSettings']);
+    Route::get('bookings', [BookingController::class, 'index']);
+    Route::patch('bookings/{booking}', [BookingController::class, 'updateStatus']);
     Route::get('faqs', [FaqController::class, 'index']);
     Route::apiResource('faqs', FaqController::class)->only(['store', 'update', 'destroy']);
-    Route::get('analytics', [AnalyticsController::class, 'index']);
+    Route::get('tax-rates', [TaxRateController::class, 'index']);
+    Route::apiResource('tax-rates', TaxRateController::class)->only(['store', 'update', 'destroy']);
+    Route::apiResource('delivery-zones', DeliveryZoneController::class);
+    Route::apiResource('dine-in-tables', \App\Http\Controllers\Api\Company\DineInTableController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('product-reviews', [ProductReviewController::class, 'index']);
+    Route::patch('product-reviews/{productReview}', [ProductReviewController::class, 'update']);
+    Route::delete('product-reviews/{productReview}', [ProductReviewController::class, 'destroy']);
+    Route::get('storefront-coupons', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'index']);
+    Route::post('storefront-coupons', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'store']);
+    Route::put('storefront-coupons/{storefrontCoupon}', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'update']);
+    Route::patch('storefront-coupons/{storefrontCoupon}', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'update']);
+    Route::delete('storefront-coupons/{storefrontCoupon}', [\App\Http\Controllers\Api\Company\StorefrontCouponController::class, 'destroy']);
+    Route::get('storefront/analytics', [\App\Http\Controllers\Api\Company\StorefrontAnalyticsController::class, 'show']);
+    Route::get('analytics', [\App\Http\Controllers\Api\Company\AnalyticsController::class, 'index']);
     Route::get('growth/analytics', [GrowthAnalyticsController::class, 'index']);
     Route::get('growth/posts', [GrowthPostController::class, 'index']);
     Route::post('growth/posts', [GrowthPostController::class, 'store']);
@@ -226,12 +283,22 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('subscription', [SubscriptionController::class, 'show']);
     Route::get('subscription/invoices', [SubscriptionController::class, 'invoices']);
     Route::get('subscription/usage', [SubscriptionController::class, 'usage']);
+    Route::get('subscription/payment-methods', [SubscriptionController::class, 'paymentMethods']);
+    Route::post('subscription/checkout', [SubscriptionController::class, 'checkout']);
+    Route::get('subscription/manual-payments', [SubscriptionController::class, 'manualPayments']);
+    Route::post('subscription/manual-payments/proof', [SubscriptionController::class, 'submitManualProof']);
+    Route::post('subscription/cancel', [SubscriptionController::class, 'cancel']);
     Route::get('team', [TeamController::class, 'index']);
+    Route::post('team', [TeamController::class, 'store']);
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::get('settings', [SettingsController::class, 'show']);
     Route::put('settings', [SettingsController::class, 'update']);
+    Route::patch('settings', [SettingsController::class, 'update']);
+    Route::post('settings', [SettingsController::class, 'update']); // multipart logo (PHP files require POST)
+    Route::get('setup-status', [SetupStatusController::class, 'show']);
+    Route::post('setup-status/dismiss', [SetupStatusController::class, 'dismiss']);
     Route::get('commerce-brief', [CommerceBriefController::class, 'today']);
     Route::get('executive-ai/dashboard', [ExecutiveAiController::class, 'dashboard']);
     Route::get('executive-ai/opportunities', [ExecutiveAiController::class, 'opportunities']);
@@ -303,6 +370,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('whatsapp/embedded/config', [WhatsAppController::class, 'embeddedConfig']);
     Route::post('whatsapp/embedded/complete', [WhatsAppController::class, 'completeEmbeddedSignup']);
     Route::post('whatsapp/disconnect', [WhatsAppController::class, 'disconnect']);
+    Route::post('whatsapp/webhooks/subscribe', [WhatsAppController::class, 'resubscribeWebhooks']);
     Route::get('whatsapp/templates', [WhatsAppTemplateController::class, 'index']);
     Route::post('whatsapp/templates', [WhatsAppTemplateController::class, 'store']);
     Route::post('whatsapp/templates/sync', [WhatsAppTemplateController::class, 'sync']);
@@ -328,6 +396,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('billing-portal', [StripeCheckoutController::class, 'createPortalSession']);
     Route::post('mpesa/initiate', [MpesaCheckoutController::class, 'initiate']);
     Route::post('paystack/initialize', [PaystackCheckoutController::class, 'initialize']);
+    Route::post('paystack/verify', [PaystackCheckoutController::class, 'verify']);
+    Route::post('coupon/preview', [CouponController::class, 'preview']);
 });
 
 // Admin (auth:sanctum + admin role)
@@ -353,6 +423,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::post('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'store']);
     Route::put('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'update']);
     Route::delete('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'destroy']);
+    Route::get('subscription-offers', [App\Http\Controllers\Api\Admin\SubscriptionOfferController::class, 'index']);
+    Route::post('subscription-offers', [App\Http\Controllers\Api\Admin\SubscriptionOfferController::class, 'store']);
+    Route::put('subscription-offers/{offer}', [App\Http\Controllers\Api\Admin\SubscriptionOfferController::class, 'update']);
+    Route::delete('subscription-offers/{offer}', [App\Http\Controllers\Api\Admin\SubscriptionOfferController::class, 'destroy']);
     Route::get('revenue', [RevenueController::class, 'index']);
     Route::get('ai-usage', [AIUsageController::class, 'index']);
     Route::get('ai-learning/stats', [AiLearningAdminController::class, 'stats']);
@@ -372,6 +446,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::get('logs', [LogController::class, 'index']);
     Route::get('payment-gateways', [PaymentGatewayController::class, 'index']);
     Route::put('payment-gateways/{slug}', [PaymentGatewayController::class, 'update']);
+    Route::get('manual-payments', [ManualBillingPaymentController::class, 'index']);
+    Route::post('manual-payments/{id}/approve', [ManualBillingPaymentController::class, 'approve']);
+    Route::post('manual-payments/{id}/reject', [ManualBillingPaymentController::class, 'reject']);
+    Route::get('manual-payments/{id}/proof', [ManualBillingPaymentController::class, 'proof']);
     Route::get('settings', [PlatformSettingsController::class, 'show']);
     Route::put('settings', [PlatformSettingsController::class, 'update']);
     Route::post('settings', [PlatformSettingsController::class, 'update']);
@@ -394,4 +472,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::put('cms/pages/{slug}/sections/{sectionKey}', [CmsAdminController::class, 'updateSection']);
     Route::put('cms/pages/{slug}/sections-reorder', [CmsAdminController::class, 'reorderSections']);
     Route::post('cms/upload-image', [CmsAdminController::class, 'uploadImage']);
+    Route::get('blog-posts', [\App\Http\Controllers\Api\Admin\BlogPostAdminController::class, 'index']);
+    Route::post('blog-posts', [\App\Http\Controllers\Api\Admin\BlogPostAdminController::class, 'store']);
+    Route::put('blog-posts/{blogPost}', [\App\Http\Controllers\Api\Admin\BlogPostAdminController::class, 'update']);
+    Route::delete('blog-posts/{blogPost}', [\App\Http\Controllers\Api\Admin\BlogPostAdminController::class, 'destroy']);
 });

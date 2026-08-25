@@ -27,6 +27,13 @@ final class WhatsAppAiReplyGenerator
         ?int $chatId,
         ?string $orderFlowContext = null,
     ): ?string {
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('AI_REPLY_GENERATOR_START', [
+            'company_id' => $company->id,
+            'chat_id' => $chatId,
+            'customer_name' => $customerName,
+            'message_preview' => mb_substr($message, 0, 100),
+        ]);
+
         $messages = $this->conversationBuilder->build($company, $message, $customerName, $chatId, $orderFlowContext);
 
         $result = $this->orchestrator->chat(
@@ -34,28 +41,46 @@ final class WhatsAppAiReplyGenerator
             company: $company,
             useCase: AiUseCase::WHATSAPP,
             chatId: $chatId,
+            temperature: 0.3,
             timeoutSeconds: 25,
             latestUserMessage: $message,
         );
 
         if (! $result->success || $result->content === null) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::warning('AI_REPLY_GENERATOR_PRIMARY_FAILED_RETRYING', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'error' => $result->error,
+            ]);
             $result = $this->orchestrator->chat(
                 messages: $messages,
                 company: $company,
                 useCase: AiUseCase::WHATSAPP,
                 chatId: $chatId,
-                temperature: 0.4,
+                temperature: 0.3,
                 timeoutSeconds: 30,
                 latestUserMessage: $message,
             );
         }
 
         if (! $result->success || $result->content === null) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::error('AI_REPLY_GENERATOR_RETRY_FAILED', [
+                'company_id' => $company->id,
+                'chat_id' => $chatId,
+                'error' => $result->error,
+            ]);
+
             return null;
         }
 
         $reply = $this->replyGuard->guard($company, $result->content);
         $this->learningRecorder->recordOpenAiExchange($company, $message, $reply, $chatId);
+
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('AI_REPLY_GENERATOR_SUCCESS', [
+            'company_id' => $company->id,
+            'chat_id' => $chatId,
+            'guarded_reply_preview' => mb_substr($reply, 0, 150),
+        ]);
 
         return $reply;
     }

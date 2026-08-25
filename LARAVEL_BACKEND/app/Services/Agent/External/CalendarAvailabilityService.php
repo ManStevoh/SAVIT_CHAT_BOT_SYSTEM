@@ -3,26 +3,79 @@
 namespace App\Services\Agent\External;
 
 use App\Models\Company;
+use App\Models\Product;
+use App\Services\BookingService;
 use Carbon\Carbon;
 
 /**
- * Calendar / appointment availability from company working hours.
+ * Calendar / appointment availability from company working hours & BookingEngine.
  */
 final class CalendarAvailabilityService
 {
+    public function __construct(
+        protected ?BookingService $bookingService = null,
+    ) {
+        $this->bookingService = $bookingService ?? app(BookingService::class);
+    }
+
     /**
-     * @return array{timezone: ?string, slots: list<array{date: string, day: string, open: string, close: string, available: bool}>}
+     * @return array{timezone: ?string, publicBookingUrl?: string, slots: list<array<string, mixed>>}
      */
-    public function availability(Company $company, int $daysAhead = 7): array
+    public function availability(Company $company, int $daysAhead = 7, ?int $productId = null): array
     {
         $settings = $company->settings;
         $timezone = $settings?->timezone ?? config('app.timezone', 'UTC');
-        $workingHours = $settings?->working_hours ?? [];
-        $tz = Carbon::now($timezone);
+        $from = Carbon::now($timezone);
+        $to = $from->copy()->addDays(max(1, $daysAhead))->endOfDay();
 
+        $product = null;
+        if ($productId) {
+            $product = Product::where('company_id', $company->id)->where('id', $productId)->first();
+        }
+
+        // Try booking engine slots first
+        $bookingSlots = [];
+        try {
+            $bookingSlots = $this->bookingService->availableSlots($company, $product, $from, $to);
+        } catch (\Throwable) {
+            $bookingSlots = [];
+        }
+
+        $publicUrl = null;
+        try {
+            $publicUrl = $this->bookingService->publicBookingUrl($company, $product);
+        } catch (\Throwable) {
+            $publicUrl = null;
+        }
+
+        if ($bookingSlots !== []) {
+            // Group slots by date for clear AI reading
+            $formattedSlots = [];
+            foreach (array_slice($bookingSlots, 0, 30) as $slot) {
+                $start = Carbon::parse($slot['start'])->timezone($timezone);
+                $end = Carbon::parse($slot['end'])->timezone($timezone);
+                $formattedSlots[] = [
+                    'date' => $start->toDateString(),
+                    'day' => $start->englishDayOfWeek,
+                    'startTime' => $start->format('H:i'),
+                    'endTime' => $end->format('H:i'),
+                    'slotStartIso' => $slot['start'],
+                    'available' => true,
+                ];
+            }
+
+            return [
+                'timezone' => $timezone,
+                'publicBookingUrl' => $publicUrl,
+                'slots' => $formattedSlots,
+            ];
+        }
+
+        // Fallback to working hours
+        $workingHours = $settings?->working_hours ?? [];
         $slots = [];
         for ($i = 0; $i < $daysAhead; $i++) {
-            $day = $tz->copy()->addDays($i);
+            $day = $from->copy()->addDays($i);
             $dayName = strtolower($day->englishDayOfWeek);
             $hours = $this->hoursForDay($workingHours, $dayName);
 
@@ -37,6 +90,7 @@ final class CalendarAvailabilityService
 
         return [
             'timezone' => $timezone,
+            'publicBookingUrl' => $publicUrl,
             'slots' => $slots,
         ];
     }
@@ -68,3 +122,4 @@ final class CalendarAvailabilityService
         return ['enabled' => false, 'open' => '09:00', 'close' => '17:00'];
     }
 }
+

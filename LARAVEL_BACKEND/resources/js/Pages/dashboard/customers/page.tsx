@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/tooltip"
 // API: GET /api/company/customers — list customers (useCustomers in api-hooks)
 import { useCustomers, useCustomerStats, useCompanySettings } from "@/lib/api-hooks"
-import { formatCurrencyAmount, normalizeCurrencyCode } from "@/lib/format-currency"
+import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from "@/lib/format-currency"
 import type { Customer } from "@/lib/mock-data"
 function formatDate(dateStr: string): string {
   try {
@@ -80,7 +80,8 @@ export default function CustomersPage() {
   const { data: companySettings } = useCompanySettings()
   const { data: statsData } = useCustomerStats()
   const catalogCurrency = normalizeCurrencyCode(companySettings?.displayCurrency)
-  const formatCurrency = (value: number) => formatCurrencyAmount(value, catalogCurrency)
+  const formatCurrency = (value: number) =>
+    formatCurrencyAmount(value, catalogCurrency, currencyDisplayFromSettings(companySettings))
 
   const handleExportCustomers = async () => {
     setExporting(true)
@@ -224,7 +225,7 @@ export default function CustomersPage() {
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search customers..."
+              placeholder="Search name or phone…"
               className="pl-10"
               value={searchQuery}
               onChange={(e) => {

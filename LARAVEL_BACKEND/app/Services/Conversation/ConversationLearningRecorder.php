@@ -66,7 +66,10 @@ final class ConversationLearningRecorder
         string $agentReply,
         ?int $chatId = null,
     ): void {
-        if (! $this->learningConfig->isLearningEnabled() || ! $this->learningConfig->storeAgentReplies()) {
+        if (! $this->learningConfig->companyCanLearn($company)) {
+            return;
+        }
+        if (! $this->learningConfig->storeAgentReplies()) {
             return;
         }
 

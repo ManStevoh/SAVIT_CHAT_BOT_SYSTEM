@@ -31,7 +31,7 @@ export function UseCasesSection() {
         <SectionHeader
           label="Who it's for"
           title="Built for businesses that sell on WhatsApp"
-          description="If your customers already message you, Essem Chat turns those chats into sales."
+          description="If your customers already message you, RelayIQ turns those chats into sales."
         />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <ProtectedRoute>
       <div className="min-h-screen w-full bg-muted/20 text-foreground">
         <DashboardSidebar />
-        <div className="min-h-screen transition-all duration-300 md:pl-60">
+        <div className="min-h-screen transition-all duration-300 md:pl-[var(--dashboard-sidebar-width,15rem)]">
           <Suspense fallback={<div className="h-14 border-b border-border/50" />}>
             <DashboardNavbar />
           </Suspense>

@@ -105,9 +105,11 @@ class CommerceAgentPhase5Test extends TestCase
         $registry = app(AgentToolRegistry::class);
         $names = array_map(fn ($t) => $t->name(), $registry->all());
 
-        $this->assertCount(20, $names);
+        $this->assertCount(22, $names);
         $this->assertContains('send_whatsapp_campaign', $names);
         $this->assertContains('issue_order_refund', $names);
+        $this->assertContains('send_order_invoice', $names);
+        $this->assertContains('share_payment_details', $names);
     }
 
     public function test_high_risk_refund_queues_approval(): void
@@ -165,6 +167,20 @@ class CommerceAgentPhase5Test extends TestCase
         $this->assertTrue($result['success'] ?? false);
         $this->assertSame('refunded', $order->fresh()->payment_status);
         $this->assertSame('executed', $request->fresh()->status);
+    }
+
+    public function test_owner_voice_unmatched_falls_through_to_ai(): void
+    {
+        ['company' => $company, 'chat' => $chat] = $this->phase5Company();
+
+        $result = app(OwnerVoiceCommandService::class)->handle(
+            $company,
+            $chat,
+            'can you help me order 10 headphones?',
+        );
+
+        $this->assertFalse($result['handled']);
+        $this->assertNull($result['reply']);
     }
 
     public function test_owner_voice_command_queues_refund(): void

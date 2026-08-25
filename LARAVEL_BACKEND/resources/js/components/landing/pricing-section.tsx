@@ -13,7 +13,8 @@ import { FadeIn } from "@/components/shared/fade-in"
 import { cn } from "@/lib/utils"
 
 export function PricingSection() {
-  const { data: plans, error, isLoading } = usePlans()
+  const [currency, setCurrency] = useState<string | null>(null)
+  const { data, error, isLoading } = usePlans(currency)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
 
@@ -21,7 +22,15 @@ export function PricingSection() {
     setIsLoggedIn(!!getAuthToken())
   }, [])
 
-  const list = plans ?? []
+  const list = data?.plans ?? []
+  const activeCurrency = data?.currency ?? currency ?? "KES"
+  const currencies = data?.availableCurrencies?.length
+    ? data.availableCurrencies
+    : [
+        { code: "KES", label: "Kenyan Shilling", symbol: "KSh" },
+        { code: "USD", label: "US Dollar", symbol: "$" },
+        { code: "NGN", label: "Nigerian Naira", symbol: "₦" },
+      ]
 
   const handleSubscribe = async (planId: string) => {
     setCheckoutPlanId(planId)
@@ -41,9 +50,35 @@ export function PricingSection() {
           <SectionHeader
             label="Pricing"
             title="Straightforward plans"
-            description="14-day free trial on every plan. Pick what fits your volume."
+            description="Start free, upgrade as you grow. 14-day free trial on paid plans."
           />
         </FadeIn>
+
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="inline-flex rounded-lg border border-border/70 bg-card p-1">
+            {currencies.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => setCurrency(c.code)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  activeCurrency === c.code
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {c.code}
+              </button>
+            ))}
+          </div>
+          <p className="text-center text-xs text-muted-foreground">
+            {data?.source === "cloudflare" || data?.source === "forced"
+              ? `Showing ${activeCurrency} based on your location${data?.detectedCountry ? ` (${data.detectedCountry})` : ""}.`
+              : `Showing prices in ${activeCurrency}.`}{" "}
+            You can switch currency anytime.
+          </p>
+        </div>
 
         {isLoading && list.length === 0 ? (
           <div className="flex justify-center py-12">
@@ -54,11 +89,12 @@ export function PricingSection() {
             Unable to load pricing. Please try again later.
           </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {list.map((plan, i) => {
+              const showSubscribeActions = !plan.isFree && (plan.price ?? plan.priceDisplay) !== "Custom"
               const canCheckout = plan.checkoutAvailable && isLoggedIn
-              const showContactSales = !plan.checkoutAvailable
-              const ctaText = plan.cta ?? "Start free trial"
+              const ctaText =
+                plan.cta && !/contact/i.test(plan.cta) ? plan.cta : "Start Free Trial"
 
               return (
                 <FadeIn key={plan.id} delay={i * 80}>
@@ -100,19 +136,10 @@ export function PricingSection() {
                       ))}
                     </ul>
 
-                    {canCheckout ? (
-                      <Button
-                        className="w-full rounded-lg"
-                        variant={plan.popular ? "default" : "outline"}
-                        disabled={checkoutPlanId !== null}
-                        onClick={() => handleSubscribe(plan.id)}
-                      >
-                        {checkoutPlanId === plan.id ? "Redirecting…" : ctaText}
-                      </Button>
-                    ) : showContactSales ? (
+                    {!showSubscribeActions ? (
                       <div className="space-y-2">
                         <Button asChild className="w-full rounded-lg" variant={plan.popular ? "default" : "outline"}>
-                          <Link href={`/register?plan=${plan.id}`}>{ctaText}</Link>
+                          <Link href={`/register?plan=${plan.id}`}>{plan.cta ?? "Contact Sales"}</Link>
                         </Button>
                         <p className="text-center text-xs text-muted-foreground">
                           Already have an account?{" "}
@@ -123,15 +150,43 @@ export function PricingSection() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Button asChild className="w-full rounded-lg" variant={plan.popular ? "default" : "outline"}>
-                          <Link href={`/register?plan=${plan.id}`}>{ctaText}</Link>
-                        </Button>
-                        <p className="text-center text-xs text-muted-foreground">
-                          Already have an account?{" "}
-                          <Link href={`/login?plan=${plan.id}`} className="text-primary hover:underline">
-                            Sign in
-                          </Link>
-                        </p>
+                        {(plan.hasTrial ?? true) && (
+                          <Button asChild className="w-full rounded-lg" variant={plan.popular ? "default" : "outline"}>
+                            <Link href={isLoggedIn ? "/dashboard/subscription" : `/register?plan=${plan.id}`}>
+                              {ctaText}
+                            </Link>
+                          </Button>
+                        )}
+                        {canCheckout ? (
+                          <Button
+                            className="w-full rounded-lg"
+                            variant={plan.hasTrial === false && plan.popular ? "default" : "outline"}
+                            disabled={checkoutPlanId !== null}
+                            onClick={() => handleSubscribe(plan.id)}
+                          >
+                            {checkoutPlanId === plan.id ? "Redirecting…" : "Subscribe"}
+                          </Button>
+                        ) : (
+                          <Button asChild className="w-full rounded-lg" variant="outline">
+                            <Link
+                              href={
+                                isLoggedIn
+                                  ? `/dashboard/subscription?subscribe=${plan.id}`
+                                  : `/register?plan=${plan.id}&intent=subscribe`
+                              }
+                            >
+                              Subscribe
+                            </Link>
+                          </Button>
+                        )}
+                        {!isLoggedIn && (
+                          <p className="text-center text-xs text-muted-foreground">
+                            Already have an account?{" "}
+                            <Link href={`/login?plan=${plan.id}&pay=1`} className="text-primary hover:underline">
+                              Sign in to pay
+                            </Link>
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

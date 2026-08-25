@@ -1,8 +1,9 @@
-﻿import { LandoCmsPage } from "@/components/lando/cms-page"
+import { LandoCmsPage } from "@/components/lando/cms-page"
 import { useCmsGlobal } from "@/lib/api-hooks"
 import { LandoNavbar } from "@/components/lando/navbar"
-import { LandoFooter } from "@/components/lando/footer"
+import { LandoFooter, mobileAppFromFooterContent } from "@/components/lando/footer"
 import type { CmsLink, CmsSection } from "@/components/lando/types"
+import { cn } from "@/lib/utils"
 
 function getSectionContent(sections: CmsSection[], key: string) {
   return sections.find((s) => s.key === key)?.content ?? {}
@@ -12,16 +13,29 @@ interface LegalLayoutProps {
   title: string
   activePath?: string
   children: React.ReactNode
+  /** Wider content column (blog index / marketing-style pages). */
+  wide?: boolean
+  /** Skip default prose styles so cards/layout can control typography. */
+  plain?: boolean
+  /** Optional intro rendered under the H1, outside prose. */
+  intro?: React.ReactNode
 }
 
-export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutProps) {
+export function LegalLayout({
+  title,
+  children,
+  activePath = "/",
+  wide = false,
+  plain = false,
+  intro,
+}: LegalLayoutProps) {
   const { data: globalData } = useCmsGlobal()
   const globalSections = globalData?.sections ?? []
   const navbarContent = getSectionContent(globalSections, "navbar")
   const footerContent = getSectionContent(globalSections, "footer")
 
   return (
-    <div className="lando-page min-h-screen bg-[#f3f4f6]">
+    <div className="lando-page min-h-screen bg-muted">
       <LandoNavbar
         links={(navbarContent.links as CmsLink[]) ?? []}
         loginLabel={String(navbarContent.loginLabel ?? "Log in")}
@@ -30,9 +44,21 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
         signupHref={String(navbarContent.signupHref ?? "/register")}
         activePath={activePath}
       />
-      <main className="mx-auto max-w-3xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32">
-        <h1 className="text-3xl font-bold tracking-tight text-black sm:text-4xl">{title}</h1>
-        <div className="prose prose-sm mt-10 max-w-none text-gray-600 prose-headings:font-semibold prose-headings:text-black prose-a:text-[#2563eb]">
+      <main
+        className={cn(
+          "mx-auto px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-32",
+          wide ? "max-w-6xl" : "max-w-3xl"
+        )}
+      >
+        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h1>
+        {intro}
+        <div
+          className={cn(
+            "mt-10 max-w-none",
+            !plain &&
+              "prose prose-sm dark:prose-invert text-muted-foreground prose-headings:font-semibold prose-headings:text-foreground prose-a:text-primary"
+          )}
+        >
           {children}
         </div>
       </main>
@@ -41,6 +67,7 @@ export function LegalLayout({ title, children, activePath = "/" }: LegalLayoutPr
         navLinks={(footerContent.navLinks as CmsLink[]) ?? []}
         socialLinks={(footerContent.socialLinks as CmsLink[]) ?? []}
         legalLinks={(footerContent.legalLinks as CmsLink[]) ?? []}
+        mobileApp={mobileAppFromFooterContent(footerContent)}
       />
     </div>
   )

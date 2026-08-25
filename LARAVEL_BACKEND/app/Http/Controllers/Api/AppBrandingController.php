@@ -18,17 +18,27 @@ class AppBrandingController extends Controller
     {
         $settings = PlatformSetting::first();
         $appName = MailService::applicationName();
-        $appLogo = null;
+        $appLogo = asset('images/branding/relaysiq-mark.png');
         if ($settings && ! empty($settings->app_logo) && Storage::disk('public')->exists($settings->app_logo)) {
             $appLogo = asset('storage/' . $settings->app_logo);
+        }
+        $appFavicon = asset('images/branding/relaysiq-favicon.png');
+        if ($settings && ! empty($settings->app_favicon) && Storage::disk('public')->exists($settings->app_favicon)) {
+            $appFavicon = asset('storage/' . $settings->app_favicon);
         }
 
         return response()->json([
             'applicationName' => $appName,
             'appLogo' => $appLogo,
+            'appFavicon' => $appFavicon,
             'primaryColor' => $settings ? $settings->primary_color : null,
             'secondaryColor' => $settings ? $settings->secondary_color : null,
             'requireEmailVerification' => PlatformSetting::requiresEmailVerification(),
+            'cookieBannerEnabled' => (bool) ($settings?->cookie_banner_enabled ?? true),
+            'cookieBannerText' => $settings?->cookie_banner_text,
+            'cookiePolicyUrl' => $settings?->cookie_policy_url ?: '/privacy',
+            'recaptchaEnabled' => app(\App\Services\RecaptchaService::class)->isEnabled(),
+            'recaptchaSiteKey' => app(\App\Services\RecaptchaService::class)->siteKey(),
         ]);
     }
 }

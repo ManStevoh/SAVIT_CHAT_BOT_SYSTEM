@@ -22,6 +22,8 @@ use App\Services\Agent\Tools\SearchFaqTool;
 use App\Services\Agent\Tools\SearchKnowledgeTool;
 use App\Services\Agent\Tools\SearchOrdersTool;
 use App\Services\Agent\Tools\SearchProductsTool;
+use App\Services\Agent\Tools\SendOrderInvoiceTool;
+use App\Services\Agent\Tools\SharePaymentDetailsTool;
 use App\Services\Agent\Tools\SendWhatsAppCampaignTool;
 use App\Services\Agent\Tools\TraceCustomerGraphTool;
 use App\Services\Agent\Tools\TransferToHumanTool;
@@ -47,6 +49,8 @@ class AppServiceProvider extends ServiceProvider
                 SearchOrdersTool::class,
                 GetCatalogTool::class,
                 ProcessOrderMessageTool::class,
+                SendOrderInvoiceTool::class,
+                SharePaymentDetailsTool::class,
                 TransferToHumanTool::class,
                 RememberCustomerTool::class,
                 GetBusinessInfoTool::class,
@@ -57,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
                 CheckMpesaPaymentTool::class,
                 GetShippingQuoteTool::class,
                 CheckCalendarAvailabilityTool::class,
+                CreateBookingTool::class,
                 GetMarketingPerformanceTool::class,
                 SendWhatsAppCampaignTool::class,
                 IssueOrderRefundTool::class,
@@ -74,6 +79,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Company::observe(CompanyObserver::class);
+
+        \Illuminate\Support\Facades\Http::globalOptions([
+            'curl' => [
+                CURLOPT_NOSIGNAL => 1,
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+            ],
+        ]);
 
         RateLimiter::for('auth-login', function (Request $request) {
             return Limit::perMinute(10)->by($request->ip());

@@ -2,13 +2,16 @@
 
 namespace App\Services\AI\Drivers;
 
+use App\Services\AI\AnthropicToolPayloadConverter;
+use App\Services\AI\Drivers\Contracts\SupportsToolCalling;
 use App\Services\AI\EmbedResult;
+use App\Services\AI\OpenAiChatResult;
 use App\Services\AI\ResolvedAiModel;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
-class AnthropicDriver extends AbstractAiDriver
+class AnthropicDriver extends AbstractAiDriver implements SupportsToolCalling
 {
     public function chatCompletion(
         ResolvedAiModel $resolved,
@@ -94,6 +97,78 @@ class AnthropicDriver extends AbstractAiDriver
     public function embed(ResolvedAiModel $resolved, string $text, int $timeoutSeconds = 30): ?EmbedResult
     {
         return null;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $messages
+     * @param  array<int, array<string, mixed>>  $tools
+     */
+    public function chatCompletionWithTools(
+        ResolvedAiModel $resolved,
+        array $messages,
+        array $tools,
+        int $maxTokens,
+        ?float $temperature,
+        int $timeoutSeconds,
+    ): OpenAiChatResult {
+        $base = rtrim($resolved->apiBaseUrl ?: $resolved->provider->api_base_url ?: 'https://api.anthropic.com/v1', '/');
+        $started = microtime(true);
+        $converter = new AnthropicToolPayloadConverter;
+        $converted = $converter->messages($messages);
+        $anthropicTools = $converter->tools($tools);
+
+        $payload = [
+            'model' => $resolved->model->model_key,
+            'max_tokens' => $maxTokens,
+            'messages' => $converted['messages'],
+            'tools' => $anthropicTools,
+        ];
+        if ($converted['system'] !== '') {
+            $payload['system'] = $converted['system'];
+        }
+        if ($temperature !== null) {
+            $payload['temperature'] = $temperature;
+        }
+
+        $headers = [
+            'x-api-key' => $resolved->apiKey,
+            'anthropic-version' => '2023-06-01',
+            'content-type' => 'application/json',
+        ];
+
+        try {
+            $response = $this->postJson("{$base}/messages", $payload, $timeoutSeconds, $headers);
+        } catch (\Throwable $e) {
+            return $this->failedResult($resolved, $this->elapsed($started), null, $e->getMessage());
+        }
+
+        if ($response === null || ! $response->successful()) {
+            return $this->failedResult(
+                $resolved,
+                $this->elapsed($started),
+                $response?->status(),
+                $response ? $this->errorMessage($response) : 'Request failed',
+            );
+        }
+
+        $data = $response->json();
+        $parsed = $converter->parseResponseContent(is_array($data['content'] ?? null) ? $data['content'] : []);
+        $usage = is_array($data['usage'] ?? null) ? $data['usage'] : [];
+
+        return new OpenAiChatResult(
+            content: $parsed['content'],
+            success: true,
+            model: $resolved->model->model_key,
+            promptTokens: (int) ($usage['input_tokens'] ?? 0),
+            completionTokens: (int) ($usage['output_tokens'] ?? 0),
+            totalTokens: (int) (($usage['input_tokens'] ?? 0) + ($usage['output_tokens'] ?? 0)),
+            latencyMs: $this->elapsed($started),
+            httpStatus: $response->status(),
+            providerId: $resolved->provider->id,
+            modelId: $resolved->model->id,
+            toolCalls: $parsed['toolCalls'],
+            finishReason: (string) ($data['stop_reason'] ?? ''),
+        );
     }
 
     /**

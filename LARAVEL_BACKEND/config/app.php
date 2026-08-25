@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'RelayIQ'),
 
     /*
     |--------------------------------------------------------------------------
@@ -40,6 +40,18 @@ return [
     */
 
     'debug' => (bool) env('APP_DEBUG', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auto-migrate via scheduler (shared hosting / SPanel)
+    |--------------------------------------------------------------------------
+    |
+    | When true, `migrate:via-cron` runs every 5 minutes through schedule:run.
+    | Prefer a one-shot cron with --force for urgent deploys, then leave this off.
+    |
+    */
+
+    'auto_migrate' => (bool) env('AUTO_MIGRATE', false),
 
     /*
     |--------------------------------------------------------------------------

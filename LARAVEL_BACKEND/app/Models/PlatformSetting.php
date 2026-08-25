@@ -12,6 +12,7 @@ class PlatformSetting extends Model
         'primary_color',
         'secondary_color',
         'app_logo',
+        'app_favicon',
         'support_email',
         'maintenance_mode',
         'default_timezone',
@@ -58,10 +59,18 @@ class PlatformSetting extends Model
         'notify_usage_alerts',
         'notify_daily_summary',
         'landing_trusted_companies',
+        'cookie_banner_enabled',
+        'cookie_banner_text',
+        'cookie_policy_url',
+        'recaptcha_enabled',
+        'recaptcha_site_key',
+        'recaptcha_secret_key',
+        'dev_mode_enabled',
     ];
 
     protected $casts = [
         'maintenance_mode' => 'boolean',
+        'dev_mode_enabled' => 'boolean',
         'allow_new_registrations' => 'boolean',
         'require_email_verification' => 'boolean',
         'whatsapp_enable_coexist' => 'boolean',
@@ -79,6 +88,8 @@ class PlatformSetting extends Model
         'notify_daily_summary' => 'boolean',
         'landing_trusted_companies' => 'array',
         'ai_learning_config' => 'array',
+        'cookie_banner_enabled' => 'boolean',
+        'recaptcha_enabled' => 'boolean',
     ];
 
     /** Hide secrets when serializing (e.g. for API GET); controller returns masked values. */
@@ -88,6 +99,7 @@ class PlatformSetting extends Model
         'whatsapp_embedded_app_secret',
         'whatsapp_credit_sharing_system_token',
         'openai_api_key',
+        'recaptcha_secret_key',
     ];
 
     /** Whether SMTP is configured enough to send mail. */

@@ -103,6 +103,34 @@ final class AgentToolRegistry
         );
     }
 
+    /**
+     * Dynamic capability surface for the system prompt — derived from registered tools
+     * available to this company (not a hardcoded phrase map).
+     */
+    public function capabilityCatalogForPrompt(Company $company): string
+    {
+        $defs = $this->openAiDefinitionsForCompany($company);
+        if ($defs === []) {
+            return '';
+        }
+
+        $lines = [
+            'Live action capabilities (choose by customer intent — any wording counts as a request to act):',
+        ];
+        foreach ($defs as $def) {
+            $fn = $def['function'] ?? null;
+            if (! is_array($fn) || empty($fn['name'])) {
+                continue;
+            }
+            $name = (string) $fn['name'];
+            $desc = trim((string) ($fn['description'] ?? ''));
+            $lines[] = $desc !== '' ? "- {$name}: {$desc}" : "- {$name}";
+        }
+        $lines[] = 'If the customer wants an outcome that matches a capability above, call that tool now. Do not invent capabilities that are not listed.';
+
+        return implode("\n", $lines);
+    }
+
     public function execute(string $name, AgentToolContext $context, array $arguments): array
     {
         $tool = $this->get($name);

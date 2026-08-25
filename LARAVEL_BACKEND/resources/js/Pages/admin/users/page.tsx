@@ -231,6 +231,7 @@ export default function AdminUsersPage() {
                   <TableHead>User</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Consent</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Active</TableHead>
                   <TableHead></TableHead>
@@ -255,6 +256,24 @@ export default function AdminUsersPage() {
                       <Badge variant={user.role === "admin" ? "default" : "secondary"}>
                         {user.role.replace("_", " ")}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground space-y-1">
+                      <div>
+                        Terms:{" "}
+                        {user.termsAcceptedAt ? (
+                          <span className="text-foreground">Yes</span>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </div>
+                      <div>
+                        Marketing:{" "}
+                        {user.marketingConsent ? (
+                          <span className="text-foreground">Opted in</span>
+                        ) : (
+                          <span>No</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={user.status === "active" ? "default" : "secondary"}>{user.status}</Badge>

@@ -36,7 +36,7 @@ final class GetCustomerProfileTool implements AgentTool
     {
         $companyId = (int) $context->company->id;
         $phone = $context->customerPhone;
-        $currency = $context->company->settings?->displayCurrencyCode() ?? 'USD';
+        $settings = $context->company->settings;
 
         $memories = $this->customerMemory->list($companyId, $phone);
 
@@ -55,7 +55,7 @@ final class GetCustomerProfileTool implements AgentTool
             'recent_orders' => $recentOrders->map(fn (Order $o) => [
                 'order_number' => $o->order_number,
                 'status' => $o->status,
-                'total' => MoneyFormatter::format((float) $o->total, $currency),
+                'total' => MoneyFormatter::formatFromSettings((float) $o->total, $settings),
                 'date' => $o->created_at?->toDateString(),
                 'items' => $o->orderProducts->map(fn ($i) => "{$i->quantity}x {$i->name}")->take(5)->all(),
             ])->all(),

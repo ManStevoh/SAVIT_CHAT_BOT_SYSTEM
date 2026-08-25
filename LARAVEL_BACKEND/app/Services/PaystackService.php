@@ -54,12 +54,15 @@ class PaystackService
         int $amountSubunit,
         string $reference,
         string $callbackUrl,
-        array $metadata = []
+        array $metadata = [],
+        ?array $configOverride = null
     ): array {
-        $secret = $this->config['secret_key'] ?? '';
+        $cfg = is_array($configOverride) && ! empty($configOverride['secret_key']) ? $configOverride : $this->config;
+        $secret = $cfg['secret_key'] ?? '';
         if (! $secret) {
             return ['error' => 'Paystack secret key not configured'];
         }
+        $currency = strtoupper((string) ($cfg['currency'] ?? $this->getCurrency()));
 
         if ($amountSubunit <= 0) {
             return ['error' => 'Amount must be greater than zero'];
@@ -74,7 +77,7 @@ class PaystackService
                     'reference' => $reference,
                     'callback_url' => $callbackUrl,
                     'metadata' => $metadata,
-                    'currency' => strtoupper($this->getCurrency()),
+                    'currency' => $currency,
                 ]);
 
             if (! $response->successful()) {
@@ -100,9 +103,10 @@ class PaystackService
     /**
      * @return array{success: bool, data?: array<string, mixed>, error?: string}
      */
-    public function verifyTransaction(string $reference): array
+    public function verifyTransaction(string $reference, ?array $configOverride = null): array
     {
-        $secret = $this->config['secret_key'] ?? '';
+        $cfg = is_array($configOverride) && ! empty($configOverride['secret_key']) ? $configOverride : $this->config;
+        $secret = $cfg['secret_key'] ?? '';
         if (! $secret) {
             return ['success' => false, 'error' => 'Paystack secret key not configured'];
         }
@@ -146,9 +150,9 @@ class PaystackService
      *
      * @return array{success: bool, url?: string, reference?: string, error?: string}
      */
-    public function createPaymentLinkForOrder(Order $order, string $callbackUrl): array
+    public function createPaymentLinkForOrder(Order $order, string $callbackUrl, ?array $configOverride = null): array
     {
-        if (! self::isEnabled()) {
+        if (! self::isEnabled() && empty($configOverride['secret_key'])) {
             return ['success' => false, 'error' => 'Paystack is not configured.'];
         }
 
@@ -157,7 +161,7 @@ class PaystackService
             return ['success' => false, 'error' => 'Order total must be greater than zero.'];
         }
 
-        $email = $order->customer_email ?: ('order'.$order->id.'@paystack.local');
+        $email = $this->resolveOrderCustomerEmail($order);
         $reference = 'essem_ord_'.$order->id.'_'.uniqid();
 
         $result = $this->initializeTransaction(
@@ -168,7 +172,8 @@ class PaystackService
             [
                 'order_id' => $order->id,
                 'type' => 'order',
-            ]
+            ],
+            $configOverride
         );
 
         if (! empty($result['error']) || empty($result['authorization_url'])) {
@@ -180,5 +185,26 @@ class PaystackService
             'url' => $result['authorization_url'],
             'reference' => $result['reference'] ?? $reference,
         ];
+    }
+
+    /**
+     * Paystack requires a valid email. WhatsApp/storefront orders often have phone only.
+     */
+    public function resolveOrderCustomerEmail(Order $order): string
+    {
+        $email = trim((string) ($order->customer_email ?? ''));
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $email;
+        }
+
+        $phone = trim((string) ($order->customer_phone ?? ''));
+        if ($phone !== '') {
+            $digits = preg_replace('/\D+/', '', $phone);
+            if ($digits !== '') {
+                return $digits.'@customers.essemchat.com';
+            }
+        }
+
+        return 'order-'.$order->id.'@orders.essemchat.com';
     }
 }
