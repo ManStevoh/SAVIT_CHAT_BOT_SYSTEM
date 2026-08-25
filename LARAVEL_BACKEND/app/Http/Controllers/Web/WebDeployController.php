@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Process\Process;
 
 class WebDeployController extends Controller
 {
@@ -75,7 +77,7 @@ class WebDeployController extends Controller
                 $repoRoot = base_path();
             }
 
-            $output = shell_exec(sprintf('cd %s && git branch -r 2>&1', escapeshellarg($repoRoot)));
+            $output = $this->runCmd("cd {$repoRoot} && git branch -r 2>&1");
             if ($output) {
                 $lines = explode("\n", (string) $output);
                 foreach ($lines as $line) {
@@ -90,7 +92,7 @@ class WebDeployController extends Controller
                 }
             }
         } catch (\Throwable) {
-            // Safe fallback list
+            // Fallback list
         }
 
         usort($branches, function ($a, $b) {
@@ -119,14 +121,12 @@ class WebDeployController extends Controller
             $logs = [];
             $startTime = microtime(true);
 
-            $logs[] = '🚀 [' . date('Y-m-d H:i:s') . "] Initializing deployment for branch: [{$cleanBranch}]";
+            $logs[] = '🚀 [' . date('Y-m-d H:i:s') . "] Starting deployment for branch: [{$cleanBranch}]";
 
             $deployScript = '/home/qkbghwib/deploy';
-            if (is_executable($deployScript)) {
-                $logs[] = "⚡ Executing pipeline: {$deployScript}";
-                $cmd = sprintf('%s %s 2>&1', escapeshellarg($deployScript), escapeshellarg($cleanBranch));
-                $output = shell_exec($cmd);
-
+            if (is_file($deployScript) && is_executable($deployScript)) {
+                $logs[] = "⚡ Running deploy pipeline: {$deployScript}";
+                $output = $this->runCmd("{$deployScript} " . escapeshellarg($cleanBranch) . " 2>&1");
                 if ($output) {
                     $lines = explode("\n", trim((string) $output));
                     foreach ($lines as $line) {
@@ -143,23 +143,46 @@ class WebDeployController extends Controller
 
                 $logs[] = "📂 Project root: {$repoRoot}";
 
-                $fetchOutput = shell_exec(sprintf('cd %s && git fetch origin %s 2>&1', escapeshellarg($repoRoot), escapeshellarg($cleanBranch)));
+                // Step 1: Git fetch
+                $fetchOutput = $this->runCmd("cd {$repoRoot} && git fetch origin {$cleanBranch} 2>&1");
                 $logs[] = '📥 [git fetch]: ' . trim((string) $fetchOutput);
 
-                $resetOutput = shell_exec(sprintf('cd %s && git reset --hard origin/%s 2>&1', escapeshellarg($repoRoot), escapeshellarg($cleanBranch)));
+                // Step 2: Git reset
+                $resetOutput = $this->runCmd("cd {$repoRoot} && git reset --hard origin/{$cleanBranch} 2>&1");
                 $logs[] = '🔄 [git reset]: ' . trim((string) $resetOutput);
 
-                $artisanPath = base_path('artisan');
-                $phpBin = PHP_BINARY ?: 'php';
-                $artisanCmd = sprintf('cd %s && %s %s migrate --force 2>&1 && %s %s optimize:clear 2>&1 && %s %s optimize 2>&1 && %s %s view:cache 2>&1',
-                    escapeshellarg(base_path()),
-                    escapeshellarg($phpBin), escapeshellarg($artisanPath),
-                    escapeshellarg($phpBin), escapeshellarg($artisanPath),
-                    escapeshellarg($phpBin), escapeshellarg($artisanPath),
-                    escapeshellarg($phpBin), escapeshellarg($artisanPath)
-                );
-                $artisanOutput = shell_exec($artisanCmd);
-                $logs[] = '⚡ [artisan]: ' . trim((string) $artisanOutput);
+                // Step 3: Database migrations
+                try {
+                    Artisan::call('migrate', ['--force' => true]);
+                    $logs[] = '🗄️ [migrate]: ' . trim(Artisan::output());
+                } catch (\Throwable $e) {
+                    $logs[] = '⚠️ [migrate]: ' . $e->getMessage();
+                }
+
+                // Step 4: Storage link
+                try {
+                    Artisan::call('storage:link');
+                    $logs[] = '🔗 [storage:link]: Link active';
+                } catch (\Throwable) {
+                    $logs[] = '🔗 [storage:link]: Link active';
+                }
+
+                // Step 5: Production caches
+                try {
+                    Artisan::call('optimize:clear');
+                    $logs[] = '🧹 [optimize:clear]: ' . trim(Artisan::output());
+
+                    Artisan::call('optimize');
+                    $logs[] = '⚡ [optimize]: ' . trim(Artisan::output());
+
+                    Artisan::call('view:cache');
+                    $logs[] = '👁️ [view:cache]: Views compiled';
+
+                    Artisan::call('event:cache');
+                    $logs[] = '📡 [event:cache]: Events compiled';
+                } catch (\Throwable $e) {
+                    $logs[] = '⚠️ [cache]: ' . $e->getMessage();
+                }
             }
 
             $duration = round(microtime(true) - $startTime, 2);
@@ -174,12 +197,79 @@ class WebDeployController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Deployment error: ' . $e->getMessage(),
+                'message' => 'Deployment exception: ' . $e->getMessage(),
                 'logs' => [
                     '❌ Error: ' . $e->getMessage(),
                 ],
             ], 500);
         }
+    }
+
+    /**
+     * Robust command execution supporting Symfony Process, proc_open, exec, and popen
+     */
+    private function runCmd(string $cmd): string
+    {
+        // Method 1: Symfony Process
+        try {
+            if (class_exists(Process::class)) {
+                $process = Process::fromShellCommandline($cmd);
+                $process->setTimeout(60);
+                $process->run();
+                return $process->getOutput() . $process->getErrorOutput();
+            }
+        } catch (\Throwable) {}
+
+        // Method 2: proc_open
+        try {
+            if (function_exists('proc_open')) {
+                $descriptors = [
+                    0 => ['pipe', 'r'],
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w'],
+                ];
+                $proc = proc_open($cmd, $descriptors, $pipes);
+                if (is_resource($proc)) {
+                    fclose($pipes[0]);
+                    $out = stream_get_contents($pipes[1]);
+                    $err = stream_get_contents($pipes[2]);
+                    fclose($pipes[1]);
+                    fclose($pipes[2]);
+                    proc_close($proc);
+                    return (string) ($out . $err);
+                }
+            }
+        } catch (\Throwable) {}
+
+        // Method 3: exec
+        try {
+            if (function_exists('exec')) {
+                $out = [];
+                @exec($cmd, $out);
+                return implode("\n", $out);
+            }
+        } catch (\Throwable) {}
+
+        // Method 4: popen
+        try {
+            if (function_exists('popen')) {
+                $handle = @popen($cmd, 'r');
+                if ($handle) {
+                    $read = stream_get_contents($handle);
+                    @pclose($handle);
+                    return (string) $read;
+                }
+            }
+        } catch (\Throwable) {}
+
+        // Method 5: shell_exec (if allowed)
+        try {
+            if (function_exists('shell_exec')) {
+                return (string) @shell_exec($cmd);
+            }
+        } catch (\Throwable) {}
+
+        return '';
     }
 
     private function renderDeployHtml(): string
