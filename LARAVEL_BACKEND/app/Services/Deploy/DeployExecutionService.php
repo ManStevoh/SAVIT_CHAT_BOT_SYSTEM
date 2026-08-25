@@ -237,7 +237,7 @@ class DeployExecutionService
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * Core deploy pipeline. Mutates $logs and periodically flushes them to $statusFile.
+     * Core deploy pipeline. Mutates $logs and flushes them line-by-line to $statusFile.
      *
      * @param  string[]  $logs
      */
@@ -250,13 +250,7 @@ class DeployExecutionService
             $logs[] = "⚡ Running deploy pipeline: {$deployScript}";
             $this->flushLogs($statusFile, 'running', $branch, $logs);
 
-            $output = $this->runCmd($deployScript . ' ' . escapeshellarg($branch) . ' 2>&1');
-
-            foreach (explode("\n", trim((string) $output)) as $line) {
-                if (trim($line) !== '') {
-                    $logs[] = trim($line);
-                }
-            }
+            $this->runStreamingCommand($deployScript . ' ' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch);
         } else {
             // ── Built-in git + artisan fallback ───────────────────────
             $repoRoot = base_path('..');
@@ -267,20 +261,30 @@ class DeployExecutionService
             $logs[] = "📂 Project root: {$repoRoot}";
             $this->flushLogs($statusFile, 'running', $branch, $logs);
 
-            // Step 1: Git fetch — SAFE: branch is sanitised by caller
-            $out    = $this->runCmd('cd ' . escapeshellarg($repoRoot) . ' && git fetch origin ' . escapeshellarg($branch) . ' 2>&1');
-            $logs[] = '📥 [git fetch]: ' . trim((string) $out);
+            // Step 1: Git fetch
+            $logs[] = "📥 [git fetch] Fetching branch [{$branch}]...";
             $this->flushLogs($statusFile, 'running', $branch, $logs);
+            $this->runStreamingCommand('cd ' . escapeshellarg($repoRoot) . ' && git fetch origin ' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch);
 
-            // Step 2: Git reset — SAFE: branch is sanitised by caller
-            $out    = $this->runCmd('cd ' . escapeshellarg($repoRoot) . ' && git reset --hard origin/' . escapeshellarg($branch) . ' 2>&1');
-            $logs[] = '🔄 [git reset]: ' . trim((string) $out);
+            // Step 2: Git reset
+            $logs[] = "🔄 [git reset] Resetting to origin/{$branch}...";
             $this->flushLogs($statusFile, 'running', $branch, $logs);
+            $this->runStreamingCommand('cd ' . escapeshellarg($repoRoot) . ' && git reset --hard origin/' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch);
 
             // Step 3: Database migrations
+            $logs[] = "🗄️  [migrate] Running database migrations...";
+            $this->flushLogs($statusFile, 'running', $branch, $logs);
             try {
                 Artisan::call('migrate', ['--force' => true]);
-                $logs[] = '🗄️  [migrate]: ' . trim(Artisan::output());
+                $migrateOut = trim(Artisan::output());
+                if ($migrateOut !== '') {
+                    foreach (explode("\n", $migrateOut) as $mLine) {
+                        $mTrim = trim($mLine);
+                        if ($mTrim !== '') {
+                            $logs[] = $mTrim;
+                        }
+                    }
+                }
             } catch (\Throwable $e) {
                 $logs[] = '⚠️  [migrate]: ' . $e->getMessage();
             }
@@ -289,28 +293,32 @@ class DeployExecutionService
             // Step 4: Storage link
             try {
                 Artisan::call('storage:link');
-                $logs[] = '🔗 [storage:link]: Link active';
+                $logs[] = '🔗 [storage:link]: Storage symlink active';
             } catch (\Throwable) {
                 $logs[] = '🔗 [storage:link]: Already linked';
             }
-
+            $this->flushLogs($statusFile, 'running', $branch, $logs);
             // Step 5: Cache optimisation
             try {
                 Artisan::call('optimize:clear');
-                $logs[] = '🧹 [optimize:clear]: Cleared';
+                $logs[] = '🧹 [optimize:clear]: Cleared configuration, routes, and views';
+                $this->flushLogs($statusFile, 'running', $branch, $logs);
 
                 Artisan::call('optimize');
-                $logs[] = '⚡ [optimize]: Bootstraps compiled';
+                $logs[] = '⚡ [optimize]: Compiled bootstrap cache';
+                $this->flushLogs($statusFile, 'running', $branch, $logs);
 
                 Artisan::call('view:cache');
-                $logs[] = '👁️  [view:cache]: Views compiled';
+                $logs[] = '👁️  [view:cache]: Blade views compiled';
+                $this->flushLogs($statusFile, 'running', $branch, $logs);
 
                 Artisan::call('event:cache');
-                $logs[] = '📡 [event:cache]: Events compiled';
+                $logs[] = '📡 [event:cache]: Events and listeners cached';
+                $this->flushLogs($statusFile, 'running', $branch, $logs);
             } catch (\Throwable $e) {
                 $logs[] = '⚠️  [cache]: ' . $e->getMessage();
+                $this->flushLogs($statusFile, 'running', $branch, $logs);
             }
-            $this->flushLogs($statusFile, 'running', $branch, $logs);
         }
     }
 
@@ -328,38 +336,105 @@ class DeployExecutionService
     }
 
     /**
-     * Robust command runner: Symfony Process → proc_open → shell_exec.
+     * Run a command and stream its output lines in real-time into $logs and $statusFile.
+     *
+     * @param  string[]  $logs
      */
-    private function runCmd(string $cmd): string
+    private function runStreamingCommand(string $cmd, array &$logs, string $statusFile, string $branch): void
     {
-        // Method 1: Symfony Process (preferred — no timeout)
-        try {
-            if (class_exists(Process::class)) {
+        $buffer = '';
+        $onOutput = function (string $chunk) use (&$logs, &$buffer, $statusFile, $branch) {
+            $buffer .= $chunk;
+            $lines = explode("\n", $buffer);
+            $buffer = array_pop($lines) ?? '';
+            $flushed = false;
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                if ($trimmed !== '') {
+                    $logs[] = $trimmed;
+                    $flushed = true;
+                }
+            }
+            if ($flushed) {
+                $this->flushLogs($statusFile, 'running', $branch, $logs);
+            }
+        };
+
+        // Method 1: Symfony Process with live output callback
+        if (class_exists(Process::class)) {
+            try {
                 $process = Process::fromShellCommandline($cmd);
                 $process->setTimeout(null);
-                $process->run();
-                return $process->getOutput() . $process->getErrorOutput();
-            }
-        } catch (\Throwable) {}
+                $process->run(function ($type, $chunk) use ($onOutput) {
+                    $onOutput($chunk);
+                });
+                if (trim($buffer) !== '') {
+                    $logs[] = trim($buffer);
+                    $this->flushLogs($statusFile, 'running', $branch, $logs);
+                }
+                return;
+            } catch (\Throwable) {}
+        }
 
-        // Method 2: proc_open
-        try {
-            if (function_exists('proc_open')) {
-                $descriptors = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+        // Method 2: proc_open with non-blocking stream reads
+        if (function_exists('proc_open')) {
+            try {
+                $descriptors = [
+                    0 => ['pipe', 'r'],
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w'],
+                ];
                 $proc = proc_open($cmd, $descriptors, $pipes);
                 if (is_resource($proc)) {
                     fclose($pipes[0]);
-                    $out = stream_get_contents($pipes[1]);
-                    $err = stream_get_contents($pipes[2]);
+                    stream_set_blocking($pipes[1], false);
+                    stream_set_blocking($pipes[2], false);
+
+                    while (true) {
+                        $read = [$pipes[1], $pipes[2]];
+                        $write = null;
+                        $except = null;
+                        $changed = stream_select($read, $write, $except, 0, 100000);
+                        if ($changed > 0) {
+                            foreach ($read as $pipe) {
+                                $chunk = fread($pipe, 4096);
+                                if ($chunk !== false && strlen($chunk) > 0) {
+                                    $onOutput($chunk);
+                                }
+                            }
+                        }
+
+                        $procStatus = proc_get_status($proc);
+                        if (! $procStatus['running']) {
+                            $rem1 = stream_get_contents($pipes[1]);
+                            if ($rem1) $onOutput($rem1);
+                            $rem2 = stream_get_contents($pipes[2]);
+                            if ($rem2) $onOutput($rem2);
+                            break;
+                        }
+                    }
+
                     fclose($pipes[1]);
                     fclose($pipes[2]);
                     proc_close($proc);
-                    return (string) ($out . $err);
+
+                    if (trim($buffer) !== '') {
+                        $logs[] = trim($buffer);
+                        $this->flushLogs($statusFile, 'running', $branch, $logs);
+                    }
+                    return;
                 }
-            }
-        } catch (\Throwable) {}
+            } catch (\Throwable) {}
+        }
 
         // Method 3: shell_exec (last resort)
-        return (string) @shell_exec($cmd);
+        $out = (string) @shell_exec($cmd);
+        foreach (explode("\n", trim($out)) as $l) {
+            $lTrim = trim($l);
+            if ($lTrim !== '') {
+                $logs[] = $lTrim;
+            }
+        }
+        $this->flushLogs($statusFile, 'running', $branch, $logs);
     }
 }

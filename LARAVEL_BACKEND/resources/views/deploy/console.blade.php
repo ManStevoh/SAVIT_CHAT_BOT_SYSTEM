@@ -5,33 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Deploy Console — RelayIQ</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800|geist-mono:400,500,600&display=swap" rel="stylesheet" />
     <style>
-        /* ── Reset & tokens ─────────────────────────────────────── */
+        /* ── Reset & tokens (Light Mode — RelayIQ Theme) ─────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg:            #080c14;
-            --surface:       #0f172a;
-            --surface-hi:    #1e293b;
-            --border:        #1e293b;
-            --border-sub:    #334155;
-            --primary:       #3b82f6;
-            --primary-h:     #2563eb;
-            --primary-glow:  rgba(59, 130, 246, 0.25);
-            --success:       #22c55e;
-            --success-dim:   rgba(34, 197, 94, 0.12);
-            --danger:        #ef4444;
-            --danger-dim:    rgba(239, 68, 68, 0.12);
-            --warn:          #f59e0b;
-            --warn-dim:      rgba(245, 158, 11, 0.12);
-            --text:          #f8fafc;
-            --text-muted:    #94a3b8;
-            --text-dim:      #475569;
-            --mono:          ui-monospace, 'Cascadia Code', 'Fira Code', Consolas, monospace;
-            --sans:          ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --bg:            #f8fafc;
+            --surface:       #ffffff;
+            --surface-subtle:#f1f5f9;
+            --surface-hi:    #f8fafc;
+            --border:        #e2e8f0;
+            --border-sub:    #cbd5e1;
+            --primary:       #2563eb;
+            --primary-h:     #1d4ed8;
+            --primary-glow:  rgba(37, 99, 235, 0.15);
+            --success:       #16a34a;
+            --success-dim:   #f0fdf4;
+            --success-border:#bbf7d0;
+            --danger:        #dc2626;
+            --danger-dim:    #fef2f2;
+            --danger-border: #fecaca;
+            --warn:          #d97706;
+            --warn-dim:      #fffbeb;
+            --warn-border:   #fde68a;
+            --text:          #0f172a;
+            --text-muted:    #475569;
+            --text-dim:      #94a3b8;
+            --mono:          'Geist Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+            --sans:          'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+            --radius-lg:     14px;
             --radius:        12px;
             --radius-sm:     8px;
             --radius-xs:     6px;
+            --shadow-sm:     0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md:     0 4px 12px 0 rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-lg:     0 12px 28px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
         }
 
         body {
@@ -41,47 +51,82 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* ── Layout ─────────────────────────────────────────────── */
+        /* ── Header ─────────────────────────────────────────────── */
         .app-header {
             display: flex;
             align-items: center;
-            gap: 14px;
-            padding: 16px 28px;
+            justify-content: space-between;
+            padding: 14px 28px;
             background: var(--surface);
             border-bottom: 1px solid var(--border);
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 20;
+            box-shadow: var(--shadow-sm);
         }
-        .app-header-brand { display: flex; align-items: center; gap: 10px; }
+        .app-header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        .app-header-logo-img {
+            height: 32px;
+            width: auto;
+            object-fit: contain;
+        }
+        .app-header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .app-header-fallback {
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
         .app-header-icon {
             width: 36px; height: 36px;
-            background: rgba(59,130,246,.15);
-            border: 1px solid rgba(59,130,246,.25);
-            border-radius: 9px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
             font-size: 18px;
         }
-        .app-header-title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+        .app-header-title { font-size: 16px; font-weight: 700; color: var(--text); }
         .app-header-sub   { font-size: 12px; color: var(--text-muted); }
-        .app-header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+        .app-header-right { display: flex; align-items: center; gap: 12px; }
 
-        /* Status chip */
+        /* ── Status chip ─────────────────────────────────────────── */
         .status-chip {
-            display: inline-flex; align-items: center; gap: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             padding: 5px 12px;
             border-radius: 999px;
-            font-size: 12px; font-weight: 600;
+            font-size: 12px;
+            font-weight: 600;
             border: 1px solid transparent;
             transition: all .2s;
         }
-        .status-chip.locked   { background: var(--danger-dim);  border-color: rgba(239,68,68,.25);  color: var(--danger); }
-        .status-chip.ready    { background: var(--success-dim); border-color: rgba(34,197,94,.25); color: var(--success); }
-        .status-chip.deploying{ background: var(--warn-dim);    border-color: rgba(245,158,11,.25); color: var(--warn); }
-        .status-chip.done     { background: var(--success-dim); border-color: rgba(34,197,94,.25); color: var(--success); }
-        .status-chip.failed   { background: var(--danger-dim);  border-color: rgba(239,68,68,.25);  color: var(--danger); }
+        .status-chip.locked    { background: var(--danger-dim);  border-color: var(--danger-border);  color: var(--danger); }
+        .status-chip.ready     { background: var(--success-dim); border-color: var(--success-border); color: var(--success); }
+        .status-chip.deploying { background: var(--warn-dim);    border-color: var(--warn-border);    color: var(--warn); }
+        .status-chip.done      { background: var(--success-dim); border-color: var(--success-border); color: var(--success); }
+        .status-chip.failed    { background: var(--danger-dim);  border-color: var(--danger-border);  color: var(--danger); }
+
         .pulse {
             width: 7px; height: 7px; border-radius: 50%;
             background: currentColor;
@@ -89,63 +134,100 @@
         }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
 
-        /* Main body */
+        /* ── Main Layout ─────────────────────────────────────────── */
         .app-body {
             flex: 1;
             display: grid;
-            grid-template-columns: 380px 1fr;
-            gap: 0;
-            min-height: 0;
+            grid-template-columns: 400px 1fr;
+            gap: 24px;
+            padding: 24px 28px;
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .panel-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
         }
 
         .panel-left {
-            border-right: 1px solid var(--border);
-            padding: 28px;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
 
         .panel-right {
-            padding: 28px;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 380px;
         }
 
         /* ── Steps indicator ─────────────────────────────────────── */
         .steps {
             display: flex;
-            gap: 0;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border);
             margin-bottom: 4px;
         }
         .step {
             display: flex;
             align-items: center;
-            gap: 7px;
-            font-size: 12px;
+            gap: 8px;
+            font-size: 13px;
             font-weight: 600;
             color: var(--text-dim);
-            flex: 1;
+            transition: color .2s;
         }
         .step:not(:last-child)::after {
             content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border-sub);
-            margin: 0 6px;
+            width: 32px;
+            height: 2px;
+            background: var(--border);
+            margin: 0 4px;
+            transition: background .2s;
+        }
+        .step.complete:not(:last-child)::after {
+            background: var(--success);
         }
         .step-dot {
-            width: 24px; height: 24px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             border: 2px solid var(--border-sub);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 11px; font-weight: 700;
+            background: var(--surface-hi);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
             flex-shrink: 0;
             transition: all .2s;
         }
-        .step.active .step-dot    { border-color: var(--primary); background: var(--primary); color: #fff; }
-        .step.active              { color: var(--text); }
-        .step.complete .step-dot  { border-color: var(--success); background: var(--success); color: #fff; }
-        .step.complete            { color: var(--text-muted); }
+        .step.active {
+            color: var(--text);
+        }
+        .step.active .step-dot {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        .step.complete {
+            color: var(--text-muted);
+        }
+        .step.complete .step-dot {
+            border-color: var(--success);
+            background: var(--success);
+            color: #ffffff;
+        }
 
         /* ── Section heading ─────────────────────────────────────── */
         .section-title {
@@ -153,56 +235,92 @@
             font-weight: 700;
             letter-spacing: .06em;
             text-transform: uppercase;
-            color: var(--text-dim);
+            color: var(--text-muted);
             margin-bottom: 12px;
         }
 
         /* ── Form controls ───────────────────────────────────────── */
         .field { display: flex; flex-direction: column; gap: 6px; }
-        label  { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        label  { font-size: 13px; font-weight: 600; color: #334155; }
 
         input, select {
             width: 100%;
-            background: rgba(0,0,0,.4);
+            background: #ffffff;
             border: 1px solid var(--border-sub);
             color: var(--text);
-            padding: 11px 14px;
+            padding: 10px 14px;
             border-radius: var(--radius-sm);
             font-size: 14px;
             font-family: var(--sans);
+            font-weight: 500;
             outline: none;
             transition: border .15s, box-shadow .15s;
             appearance: none;
+            box-shadow: var(--shadow-sm);
         }
         input:focus, select:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px var(--primary-glow);
         }
         select {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 12px center;
             padding-right: 36px;
+            cursor: pointer;
         }
-        select option { background: #1e293b; color: var(--text); }
+        select option { background: #ffffff; color: var(--text); }
 
         /* ── Buttons ─────────────────────────────────────────────── */
         .btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            padding: 12px 20px;
-            border: none; border-radius: var(--radius-sm);
-            font-size: 14px; font-weight: 600; font-family: var(--sans);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 11px 18px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: var(--sans);
             cursor: pointer;
             transition: all .15s;
             width: 100%;
+            box-shadow: var(--shadow-sm);
         }
-        .btn-primary  { background: var(--primary); color: #fff; }
-        .btn-primary:hover:not(:disabled) { background: var(--primary-h); transform: translateY(-1px); box-shadow: 0 4px 16px var(--primary-glow); }
-        .btn-ghost    { background: var(--surface-hi); color: var(--text-muted); border: 1px solid var(--border-sub); }
-        .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--border-sub); }
-        .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-        .btn-danger   { background: var(--danger); color: #fff; }
-        .btn-danger:hover:not(:disabled) { opacity: .9; }
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-h);
+            box-shadow: 0 4px 12px var(--primary-glow);
+            transform: translateY(-1px);
+        }
+        .btn-ghost {
+            background: #ffffff;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover:not(:disabled) {
+            background: var(--surface-subtle);
+            color: var(--text);
+            border-color: var(--border-sub);
+        }
+        .btn:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: #ffffff;
+        }
+        .btn-danger:hover:not(:disabled) {
+            opacity: .92;
+            transform: translateY(-1px);
+        }
 
         /* ── Warning banner (production branch) ──────────────────── */
         .prod-warning {
@@ -211,16 +329,16 @@
             gap: 10px;
             padding: 12px 14px;
             background: var(--warn-dim);
-            border: 1px solid rgba(245,158,11,.25);
+            border: 1px solid var(--warn-border);
             border-radius: var(--radius-sm);
             font-size: 13px;
-            color: var(--warn);
+            color: #92400e;
             line-height: 1.5;
         }
         .prod-warning.visible { display: flex; }
         .prod-warning-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 
-        /* ── Error/info callout ──────────────────────────────────── */
+        /* ── Callout messages ────────────────────────────────────── */
         .callout {
             padding: 10px 14px;
             border-radius: var(--radius-sm);
@@ -228,128 +346,177 @@
             line-height: 1.5;
             display: none;
         }
-        .callout.error   { background: var(--danger-dim); border: 1px solid rgba(239,68,68,.25); color: var(--danger); display: block; }
-        .callout.success { background: var(--success-dim); border: 1px solid rgba(34,197,94,.25); color: var(--success); display: block; }
-        .callout.info    { background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.25); color: var(--primary); display: block; }
+        .callout.error   { background: var(--danger-dim); border: 1px solid var(--danger-border); color: var(--danger); display: block; }
+        .callout.success { background: var(--success-dim); border: 1px solid var(--success-border); color: var(--success); display: block; }
+        .callout.info    { background: #eff6ff; border: 1px solid #bfdbfe; color: var(--primary); display: block; }
 
         /* ── Deploy history (right panel) ────────────────────────── */
         .history-empty {
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; gap: 10px;
-            padding: 60px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 50px 20px;
             color: var(--text-dim);
             text-align: center;
             font-size: 13px;
             border: 1px dashed var(--border);
             border-radius: var(--radius);
+            background: var(--surface-subtle);
         }
         .history-empty-icon { font-size: 32px; }
 
-        .history-list { display: flex; flex-direction: column; gap: 10px; }
+        .history-list { display: flex; flex-direction: column; gap: 8px; }
         .history-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 14px 16px;
-            background: var(--surface);
+            padding: 12px 16px;
+            background: #ffffff;
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
-            transition: border-color .15s;
+            transition: all .15s;
         }
-        .history-item:hover { border-color: var(--border-sub); }
+        .history-item:hover {
+            border-color: var(--border-sub);
+            box-shadow: var(--shadow-sm);
+        }
         .history-branch {
-            font-size: 13px; font-weight: 600;
+            font-size: 13px;
+            font-weight: 600;
             color: var(--text);
             font-family: var(--mono);
         }
         .history-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
         .history-badge {
             margin-left: auto;
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 3px 9px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
             border-radius: 999px;
-            font-size: 11px; font-weight: 700;
+            font-size: 11px;
+            font-weight: 700;
         }
-        .badge-success { background: var(--success-dim); color: var(--success); border: 1px solid rgba(34,197,94,.25); }
-        .badge-failed  { background: var(--danger-dim);  color: var(--danger);  border: 1px solid rgba(239,68,68,.25); }
-        .badge-running { background: var(--warn-dim);    color: var(--warn);    border: 1px solid rgba(245,158,11,.25); }
+        .badge-success { background: var(--success-dim); color: var(--success); border: 1px solid var(--success-border); }
+        .badge-failed  { background: var(--danger-dim);  color: var(--danger);  border: 1px solid var(--danger-border); }
+        .badge-running { background: var(--warn-dim);    color: var(--warn);    border: 1px solid var(--warn-border); }
 
-        /* ── Terminal (full width, below both panels) ─────────────── */
+        /* ── Terminal (Developer Console Window) ─────────────────── */
         .terminal-wrapper {
-            border-top: 1px solid var(--border);
+            margin-top: 8px;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            border: 1px solid #334155;
+            box-shadow: var(--shadow-lg);
             display: none;
         }
         .terminal-wrapper.visible { display: block; }
         .terminal-header {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 20px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 18px;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
         }
-        .terminal-title { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: .05em; text-transform: uppercase; }
+        .terminal-dots {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .terminal-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .terminal-dot.red    { background: #ef4444; }
+        .terminal-dot.yellow { background: #f59e0b; }
+        .terminal-dot.green  { background: #10b981; }
+
+        .terminal-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin-left: 4px;
+        }
         .terminal-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
         .term-btn {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 5px 10px;
-            background: var(--surface-hi);
-            border: 1px solid var(--border-sub);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            background: #334155;
+            border: 1px solid #475569;
             border-radius: var(--radius-xs);
-            font-size: 11px; font-weight: 600;
-            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            color: #e2e8f0;
             cursor: pointer;
             transition: all .15s;
         }
-        .term-btn:hover { color: var(--text); border-color: var(--text-dim); }
+        .term-btn:hover { background: #475569; color: #ffffff; }
 
         .terminal-body {
-            background: #040710;
+            background: #090d16;
             padding: 18px 22px;
             font-family: var(--mono);
             font-size: 12.5px;
-            line-height: 1.65;
-            color: #cbd5e1;
-            max-height: 340px;
+            line-height: 1.7;
+            color: #e2e8f0;
+            max-height: 380px;
             overflow-y: auto;
             transition: max-height .3s ease;
             scrollbar-width: thin;
-            scrollbar-color: var(--border-sub) transparent;
+            scrollbar-color: #334155 transparent;
         }
-        .terminal-body.expanded { max-height: 600px; }
+        .terminal-body.expanded { max-height: 640px; }
 
         .log-line { word-break: break-all; padding: 1px 0; }
-        .log-line.log-success { color: var(--success); font-weight: 600; }
-        .log-line.log-error   { color: var(--danger);  font-weight: 600; }
-        .log-line.log-warn    { color: var(--warn); }
+        .log-line.log-success { color: #4ade80; font-weight: 600; }
+        .log-line.log-error   { color: #f87171; font-weight: 600; }
+        .log-line.log-warn    { color: #fbbf24; }
 
         /* Post-deploy quick actions */
         .post-actions {
             display: none;
-            gap: 8px;
-            padding: 14px 22px;
-            background: var(--surface);
-            border-top: 1px solid var(--border);
+            gap: 10px;
+            padding: 14px 20px;
+            background: #1e293b;
+            border-top: 1px solid #334155;
         }
         .post-actions.visible { display: flex; flex-wrap: wrap; }
         .post-btn {
-            display: inline-flex; align-items: center; gap: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             padding: 8px 14px;
-            background: var(--surface-hi);
-            border: 1px solid var(--border-sub);
+            background: #334155;
+            border: 1px solid #475569;
             border-radius: var(--radius-xs);
-            font-size: 13px; font-weight: 600;
-            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            color: #e2e8f0;
             cursor: pointer;
             transition: all .15s;
             text-decoration: none;
         }
-        .post-btn:hover { color: var(--text); border-color: var(--border-sub); }
-        .post-btn.primary { background: var(--success-dim); border-color: rgba(34,197,94,.3); color: var(--success); }
+        .post-btn:hover { background: #475569; color: #ffffff; }
+        .post-btn.primary {
+            background: #15803d;
+            border-color: #16a34a;
+            color: #ffffff;
+        }
+        .post-btn.primary:hover { background: #16a34a; }
 
         /* ── Confirmation modal ──────────────────────────────────── */
         .modal-overlay {
             display: none;
             position: fixed; inset: 0;
-            background: rgba(0,0,0,.7);
+            background: rgba(15, 23, 42, 0.45);
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
             z-index: 50;
@@ -359,67 +526,29 @@
         }
         .modal-overlay.open { display: flex; }
         .modal {
-            background: var(--surface);
-            border: 1px solid var(--border-sub);
-            border-radius: var(--radius);
-            padding: 30px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 28px;
             max-width: 440px;
             width: 100%;
-            box-shadow: 0 24px 60px rgba(0,0,0,.6);
+            box-shadow: var(--shadow-lg);
         }
-        .modal-icon  { font-size: 36px; margin-bottom: 16px; }
-        .modal h2    { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
-        .modal p     { font-size: 14px; color: var(--text-muted); line-height: 1.65; margin-bottom: 20px; }
-        .modal-field { margin-bottom: 20px; }
-        .modal-field label { font-size: 13px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px; }
+        .modal-icon  { font-size: 36px; margin-bottom: 14px; }
+        .modal h2    { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+        .modal p     { font-size: 14px; color: var(--text-muted); line-height: 1.65; margin-bottom: 18px; }
+        .modal-field { margin-bottom: 18px; }
+        .modal-field label { font-size: 13px; font-weight: 600; color: #334155; display: block; margin-bottom: 6px; }
         .modal-actions { display: flex; gap: 10px; }
         .modal-actions .btn { flex: 1; }
 
-        /* ── Hidden utility ──────────────────────────────────────── */
+        /* ── Utility ─────────────────────────────────────────────── */
         .hidden { display: none !important; }
 
         /* ── Responsive ──────────────────────────────────────────── */
-        @media (max-width: 768px) {
-            .app-body { grid-template-columns: 1fr; }
-            .panel-left { border-right: none; border-bottom: 1px solid var(--border); }
+        @media (max-width: 920px) {
+            .app-body { grid-template-columns: 1fr; padding: 16px; }
             .app-header-sub { display: none; }
-        }
-
-        /* ── Light mode (system colour scheme) ───────────────────── */
-        @media (prefers-color-scheme: light) {
-            :root {
-                --bg:           #f1f5f9;
-                --surface:      #ffffff;
-                --surface-hi:   #f8fafc;
-                --border:       #e2e8f0;
-                --border-sub:   #cbd5e1;
-                --text:         #0f172a;
-                --text-muted:   #475569;
-                --text-dim:     #94a3b8;
-                --primary-glow: rgba(59, 130, 246, 0.18);
-                --success-dim:  rgba(34, 197, 94, 0.10);
-                --danger-dim:   rgba(239, 68, 68, 0.10);
-                --warn-dim:     rgba(245, 158, 11, 0.10);
-            }
-            input, select {
-                background: #f8fafc;
-                border-color: var(--border-sub);
-            }
-            select option { background: #ffffff; color: var(--text); }
-            .modal {
-                box-shadow: 0 24px 60px rgba(0,0,0,.10);
-            }
-            /* ── Terminal always stays dark ── */
-            .terminal-wrapper  { background: #0d1117; }
-            .terminal-header   { background: #161b22; border-color: #30363d; }
-            .terminal-title    { color: #8b949e; }
-            .terminal-body     { background: #040710; color: #cbd5e1; }
-            .term-btn          { background: #21262d; border-color: #30363d; color: #8b949e; }
-            .term-btn:hover    { color: #f0f6fc; border-color: #8b949e; }
-            .post-actions      { background: #161b22; border-color: #30363d; }
-            .post-btn          { background: #21262d; border-color: #30363d; color: #8b949e; }
-            .post-btn:hover    { color: #f0f6fc; }
-            .post-btn.primary  { background: var(--success-dim); border-color: rgba(34,197,94,.3); color: var(--success); }
         }
 
         /* ── Spinner ─────────────────────────────────────────────── */
@@ -427,7 +556,7 @@
         .spinner {
             display: inline-block;
             width: 14px; height: 14px;
-            border: 2px solid rgba(255,255,255,.3);
+            border: 2px solid rgba(255,255,255,.4);
             border-top-color: #fff;
             border-radius: 50%;
             animation: spin .6s linear infinite;
@@ -439,12 +568,21 @@
 <!-- ── Header ────────────────────────────────────────────────── -->
 <header class="app-header">
     <div class="app-header-brand">
-        <div class="app-header-icon">🚀</div>
-        <div>
-            <div class="app-header-title">RelayIQ Deploy Console</div>
-            <div class="app-header-sub" id="headerSub">Enter credentials to access</div>
+        <img src="/images/branding/relaysiq-wordmark-light.png?v=5"
+             alt="RelayIQ"
+             class="app-header-logo-img"
+             onerror="this.style.display='none'; document.getElementById('headerFallback').style.display='flex';" />
+
+        <div id="headerFallback" class="app-header-fallback">
+            <div class="app-header-icon">🚀</div>
+            <div>
+                <div class="app-header-title">RelayIQ</div>
+            </div>
         </div>
+
+        <span class="app-header-badge">Deploy Console</span>
     </div>
+
     <div class="app-header-right">
         <div class="status-chip locked" id="statusChip">
             <div class="pulse"></div>
@@ -457,21 +595,21 @@
 <div class="app-body">
 
     <!-- Left panel: steps + forms -->
-    <div class="panel-left">
+    <div class="panel-card panel-left">
 
-        <!-- Steps -->
+        <!-- Steps Indicator (1, 2, 3) -->
         <div class="steps">
             <div class="step active" id="step1">
-                <div class="step-dot">1</div>
-                <span>Auth</span>
+                <div class="step-dot" id="stepDot1">1</div>
+                <span id="stepLabel1">Auth</span>
             </div>
             <div class="step" id="step2">
-                <div class="step-dot">2</div>
-                <span>Branch</span>
+                <div class="step-dot" id="stepDot2">2</div>
+                <span id="stepLabel2">Branch</span>
             </div>
             <div class="step" id="step3">
-                <div class="step-dot">3</div>
-                <span>Deploy</span>
+                <div class="step-dot" id="stepDot3">3</div>
+                <span id="stepLabel3">Deploy</span>
             </div>
         </div>
 
@@ -485,8 +623,7 @@
                        autocomplete="current-password"
                        autofocus required />
             </div>
-            <div id="authCallout"></div>
-            <br>
+            <div id="authCallout" style="margin-bottom:14px"></div>
             <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">
                 <span>🔓 Unlock Console</span>
             </button>
@@ -512,21 +649,21 @@
                 <span>You are deploying to <strong>production</strong>. A confirmation is required.</span>
             </div>
 
-            <div id="deployCallout" style="margin-bottom:10px"></div>
+            <div id="deployCallout" style="margin-bottom:12px"></div>
 
             <button class="btn btn-primary" id="deployBtn" onclick="handleDeploy()">
                 <span>⚡ Deploy to Live Site</span>
             </button>
 
             <button class="btn btn-ghost" id="logoutBtn"
-                    onclick="handleLogout()" style="margin-top:10px; font-size:12px; padding:9px;">
+                    onclick="handleLogout()" style="margin-top:10px; font-size:13px; padding:9px;">
                 🔒 Lock Console
             </button>
         </div>
     </div>
 
     <!-- Right panel: deploy history -->
-    <div class="panel-right">
+    <div class="panel-card panel-right">
         <p class="section-title">Deploy History</p>
 
         @if(count($history) === 0)
@@ -558,26 +695,32 @@
                 @endforeach
             </div>
         @endif
-    </div>
 
-</div>
-
-<!-- ── Terminal ───────────────────────────────────────────────── -->
-<div class="terminal-wrapper" id="terminalWrapper">
-    <div class="terminal-header">
-        <span class="terminal-title">Terminal Output</span>
-        <div class="terminal-actions">
-            <button class="term-btn" id="copyBtn" onclick="copyLogs()">📋 Copy</button>
-            <button class="term-btn" onclick="clearTerminal()">🗑 Clear</button>
-            <button class="term-btn" id="expandBtn" onclick="toggleExpand()">⤢ Expand</button>
+        <!-- ── Live Terminal Console ─────────────────────────────── -->
+        <div class="terminal-wrapper" id="terminalWrapper">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <span class="terminal-title">Live Deployment Terminal</span>
+                <div class="terminal-actions">
+                    <button class="term-btn" id="copyBtn" onclick="copyLogs()">📋 Copy</button>
+                    <button class="term-btn" onclick="clearTerminal()">🗑 Clear</button>
+                    <button class="term-btn" id="expandBtn" onclick="toggleExpand()">⤢ Expand</button>
+                </div>
+            </div>
+            <div class="terminal-body" id="terminalBody"></div>
+            <div class="post-actions" id="postActions">
+                <a href="/" target="_blank" class="post-btn primary">🌐 Open Live Site</a>
+                <button class="post-btn" onclick="deployAgain()">🔄 Deploy Again</button>
+                <button class="post-btn" onclick="clearTerminal()">🗑 Clear Output</button>
+            </div>
         </div>
+
     </div>
-    <div class="terminal-body" id="terminalBody"></div>
-    <div class="post-actions" id="postActions">
-        <a href="/" target="_blank" class="post-btn primary">🌐 Open Site</a>
-        <button class="post-btn" onclick="deployAgain()">🔄 Deploy Again</button>
-        <button class="post-btn" onclick="clearTerminal()">🗑 Clear Terminal</button>
-    </div>
+
 </div>
 
 <!-- ── Confirmation modal ─────────────────────────────────────── -->
@@ -586,10 +729,10 @@
         <div class="modal-icon">⚠️</div>
         <h2>Deploy to Production?</h2>
         <p>
-            You are about to deploy <strong id="confirmBranch" style="color:var(--warn)">main</strong> to the live site.
-            This will reset the server codebase, run migrations, and flush all caches.
+            You are about to deploy <strong id="confirmBranch" style="color:var(--primary)">main</strong> to the live site.
+            This will pull the latest commits, run database migrations, and compile production caches.
             <br><br>
-            Type <strong style="color:var(--text);font-family:var(--mono)">deploy</strong> below to confirm.
+            Type <strong style="color:var(--text);font-family:var(--mono)">deploy</strong> below to proceed.
         </p>
         <div class="modal-field">
             <label for="confirmInput">Confirmation</label>
@@ -616,8 +759,9 @@
     // ── Init ─────────────────────────────────────────────────────
     (function init() {
         if (authToken) {
-            // Attempt to restore session silently
             showDeploySection();
+        } else {
+            setStep(1);
         }
     })();
 
@@ -655,19 +799,18 @@
         document.getElementById('authSection').classList.add('hidden');
         document.getElementById('deploySection').classList.remove('hidden');
         setStep(2);
-        setStatus('ready', '🟢 Authenticated');
-        document.getElementById('headerSub').textContent = 'Authenticated — ready to deploy';
+        setStatus('ready', '🟢 Ready to Deploy');
         document.getElementById('authSecret').value = '';
     }
 
     function handleLogout() {
         authToken = '';
         sessionStorage.removeItem('deploy_auth_token');
+        if (pollTimer) clearInterval(pollTimer);
         document.getElementById('authSection').classList.remove('hidden');
         document.getElementById('deploySection').classList.add('hidden');
         setStep(1);
         setStatus('locked', 'Locked');
-        document.getElementById('headerSub').textContent = 'Enter credentials to access';
         document.getElementById('authSecret').focus();
     }
 
@@ -678,7 +821,7 @@
         branches.forEach(b => {
             const opt = document.createElement('option');
             opt.value = b;
-            opt.textContent = b === 'main' ? 'main  (Production — Recommended)' : b;
+            opt.textContent = b === 'main' ? 'main (Production — Recommended)' : b;
             sel.appendChild(opt);
         });
         const custom = document.createElement('option');
@@ -738,13 +881,13 @@
         document.getElementById('confirmDeployBtn').disabled = true;
     }
 
-    // ── Deploy execution ─────────────────────────────────────────
+    // ── Deploy execution (Live Streaming via 1s polling) ─────────
     async function startDeploy(branch) {
         const btn     = document.getElementById('deployBtn');
         const callout = document.getElementById('deployCallout');
         clearCallout(callout);
 
-        setBtn(btn, true, '<div class="spinner"></div> Starting deploy…');
+        setBtn(btn, true, '<div class="spinner"></div> Initiating…');
         setStatus('deploying', '⏳ Deploying…');
         setStep(3);
 
@@ -754,7 +897,6 @@
         await startBackgroundDeploy(branch, btn, callout);
     }
 
-    // Background mode: POST /deploy/start → poll /deploy/status/{token}
     async function startBackgroundDeploy(branch, btn, callout) {
         try {
             const res  = await post('/deploy/start', { token: authToken, branch });
@@ -768,7 +910,7 @@
             if (res.status === 409) {
                 showCallout(callout, 'error', '⛔ A deployment is already running. Please wait.');
                 setBtn(btn, false, '⚡ Deploy to Live Site');
-                setStatus('ready', '🟢 Authenticated');
+                setStatus('ready', '🟢 Ready to Deploy');
                 setStep(2);
                 return;
             }
@@ -776,7 +918,7 @@
             if (!data.success) {
                 showCallout(callout, 'error', data.message || 'Failed to start deploy.');
                 setBtn(btn, false, '⚡ Deploy to Live Site');
-                setStatus('ready', '🟢 Authenticated');
+                setStatus('ready', '🟢 Ready to Deploy');
                 setStep(2);
                 return;
             }
@@ -784,8 +926,10 @@
             pollToken    = data.deploy_token;
             renderedLogs = 0;
 
-            // Stale-spawn detection: if still pending after 8s, fall back to sync
             let pendingChecks = 0;
+            if (pollTimer) clearInterval(pollTimer);
+
+            // Stream logs in real-time every 1000ms
             pollTimer = setInterval(async () => {
                 const statusData = await fetchStatus(pollToken);
                 if (!statusData) return;
@@ -794,9 +938,9 @@
 
                 if (statusData.status === 'pending') {
                     pendingChecks++;
-                    if (pendingChecks > 5) {
+                    if (pendingChecks > 8) {
                         clearInterval(pollTimer);
-                        appendLog('❌ Background deploy process did not start. Check server shell_exec / proc_open permissions.', 'log-line log-error');
+                        appendLog('❌ Deploy process timed out while pending. Check server execution permissions.', 'log-line log-error');
                         setBtn(btn, false, '⚡ Deploy to Live Site');
                         setStatus('failed', '❌ Deploy failed');
                         setStep(2);
@@ -804,21 +948,21 @@
                     return;
                 }
 
-                pendingChecks = 0; // reset once running
+                pendingChecks = 0;
 
                 if (statusData.status === 'complete' || statusData.status === 'failed') {
                     clearInterval(pollTimer);
                     onDeployFinished(statusData, btn, callout, branch);
                 }
-            }, 1500);
+            }, 1000);
 
         } catch (err) {
             showCallout(callout, 'error', 'Network error: ' + err.message);
             setBtn(btn, false, '⚡ Deploy to Live Site');
-            setStatus('ready', '🟢 Authenticated');
+            setStatus('ready', '🟢 Ready to Deploy');
+            setStep(2);
         }
     }
-
 
     async function fetchStatus(token) {
         try {
@@ -834,16 +978,16 @@
         const success = data.status === 'complete' || data.success === true;
 
         if (success) {
-            setStatus('done', '✅ Deployed');
+            setStatus('done', '✅ Deployed Successfully');
             setBtn(btn, false, '✅ Deploy Complete');
             document.getElementById('postActions').classList.add('visible');
             setTimeout(() => setBtn(btn, false, '⚡ Deploy to Live Site'), 5000);
-            setStep(4); // mark all 3 steps complete
+            setStep(4); // All 3 steps complete
         } else {
-            setStatus('failed', '❌ Deploy failed');
-            showCallout(callout, 'error', data.message || 'Deployment failed — check the terminal for details.');
+            setStatus('failed', '❌ Deploy Failed');
+            showCallout(callout, 'error', data.message || 'Deployment failed — check terminal output for details.');
             setBtn(btn, false, '⚡ Deploy to Live Site');
-            setStep(2); // return to branch/deploy config for retry
+            setStep(2); // Return to branch config
         }
     }
 
@@ -881,9 +1025,9 @@
         const body = document.getElementById('terminalBody');
         const line = document.createElement('div');
 
-        const isSuccess = msg.includes('[SUCCESS]') || msg.includes('✅');
-        const isError   = msg.includes('[AUTH_ERROR]') || msg.includes('[EXCEPTION]') || msg.includes('❌');
-        const isWarn    = msg.includes('⚠️');
+        const isSuccess = msg.includes('[SUCCESS]') || msg.includes('✅') || msg.includes('DONE');
+        const isError   = msg.includes('[AUTH_ERROR]') || msg.includes('[EXCEPTION]') || msg.includes('❌') || msg.includes('ERROR');
+        const isWarn    = msg.includes('⚠️') || msg.includes('WARN');
 
         const cls = extraClass || (isSuccess ? 'log-line log-success' : isError ? 'log-line log-error' : isWarn ? 'log-line log-warn' : 'log-line');
         line.className = cls;
@@ -915,16 +1059,49 @@
         btn.textContent = expanded ? '⤡ Collapse' : '⤢ Expand';
     }
 
-    // ── Step indicator ───────────────────────────────────────────
-    function setStep(active) {
-        [1, 2, 3].forEach(i => {
-            const el = document.getElementById('step' + i);
-            el.classList.remove('active', 'complete');
-            if (i < active)      el.classList.add('complete');
-            else if (i === active) el.classList.add('active');
-            if (i < active) el.querySelector('.step-dot').textContent = '✓';
-            else             el.querySelector('.step-dot').textContent = String(i);
-        });
+    // ── Step indicator (Accurate 1, 2, 3 state machine) ──────────
+    function setStep(step) {
+        // step 1: Auth active
+        // step 2: Auth done (✓), Branch active (2), Deploy pending (3)
+        // step 3: Auth done (✓), Branch done (✓), Deploy active (3)
+        // step 4: Auth done (✓), Branch done (✓), Deploy done (✓)
+
+        const s1 = document.getElementById('step1');
+        const s2 = document.getElementById('step2');
+        const s3 = document.getElementById('step3');
+
+        const d1 = document.getElementById('stepDot1');
+        const d2 = document.getElementById('stepDot2');
+        const d3 = document.getElementById('stepDot3');
+
+        [s1, s2, s3].forEach(el => el.classList.remove('active', 'complete'));
+
+        if (step === 1) {
+            s1.classList.add('active');
+            d1.textContent = '1';
+            d2.textContent = '2';
+            d3.textContent = '3';
+        } else if (step === 2) {
+            s1.classList.add('complete');
+            s2.classList.add('active');
+            d1.textContent = '✓';
+            d2.textContent = '2';
+            d3.textContent = '3';
+        } else if (step === 3) {
+            s1.classList.add('complete');
+            s2.classList.add('complete');
+            s3.classList.add('active');
+            d1.textContent = '✓';
+            d2.textContent = '✓';
+            d3.textContent = '3';
+        } else if (step >= 4) {
+            s1.classList.add('complete');
+            s2.classList.add('complete');
+            s3.classList.add('complete');
+            d1.textContent = '✓';
+            d2.textContent = '✓';
+            d3.textContent = '✓';
+        }
     }
 
     // ── Status chip ──────────────────────────────────────────────
@@ -979,3 +1156,4 @@
 </script>
 </body>
 </html>
+
