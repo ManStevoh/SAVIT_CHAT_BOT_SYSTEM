@@ -168,10 +168,10 @@ class WebDeployController extends Controller
         foreach ($branches as $b) {
             $label = $b === 'main' ? "main (Production — Recommended)" : $b;
             $selected = $b === 'main' ? 'selected' : '';
-            $optionsHtml .= "<option value=\"".htmlspecialchars($b, ENT_QUOTES)."\" {$selected}>".htmlspecialchars($label)."</option>";
+            $optionsHtml .= '<option value="'.htmlspecialchars($b, ENT_QUOTES).'" '.$selected.'>'.htmlspecialchars($label).'</option>';
         }
 
-        return <<<HTML
+        $template = <<<'HTML'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -323,7 +323,7 @@ class WebDeployController extends Controller
                 <div class="field" style="margin-bottom: 20px;">
                     <label for="branch">Select Branch to Deploy</label>
                     <select id="branch" name="branch">
-                        {$optionsHtml}
+                        {{OPTIONS_HTML}}
                     </select>
                 </div>
                 <button type="submit" id="deployBtn" class="btn">
@@ -355,17 +355,17 @@ class WebDeployController extends Controller
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({ secret, branch }),
+                    body: JSON.stringify({ secret: secret, branch: branch }),
                 });
 
                 const data = await response.json();
 
                 if (data.logs && Array.isArray(data.logs)) {
-                    terminal.innerHTML = data.logs.map(log => {
-                        const isSuccess = log.includes('[SUCCESS]');
-                        const isError = log.includes('[AUTH_ERROR]') || log.includes('error') || log.includes('Unauthorized');
-                        const cls = isSuccess ? 'log-line success' : isError ? 'log-line error' : 'log-line';
-                        return `<div class="${cls}">` + escapeHtml(log) + '</div>';
+                    terminal.innerHTML = data.logs.map(function(log) {
+                        const isSuccess = log.indexOf('[SUCCESS]') !== -1;
+                        const isError = log.indexOf('[AUTH_ERROR]') !== -1 || log.indexOf('error') !== -1 || log.indexOf('Unauthorized') !== -1;
+                        const cls = isSuccess ? 'log-line success' : (isError ? 'log-line error' : 'log-line');
+                        return '<div class="' + cls + '">' + escapeHtml(log) + '</div>';
                     }).join('');
                 } else if (data.message) {
                     terminal.innerHTML += '<div class="log-line error">❌ ' + escapeHtml(data.message) + '</div>';
@@ -373,7 +373,7 @@ class WebDeployController extends Controller
 
                 if (data.success) {
                     btn.innerHTML = '<span>✅ Live Update Successful!</span>';
-                    setTimeout(() => {
+                    setTimeout(function() {
                         btn.disabled = false;
                         btn.innerHTML = '<span>⚡ Deploy to Live Site</span>';
                     }, 4000);
@@ -397,5 +397,7 @@ class WebDeployController extends Controller
 </body>
 </html>
 HTML;
+
+        return str_replace('{{OPTIONS_HTML}}', $optionsHtml, $template);
     }
 }
