@@ -114,13 +114,20 @@ class WebDeployController extends Controller
 
         $cleanBranch = $this->sanitiseBranch($branch);
 
-        $deployToken = $this->execution->startBackground($cleanBranch);
+        try {
+            $deployToken = $this->execution->startBackground($cleanBranch);
 
-        return response()->json([
-            'success'      => true,
-            'deploy_token' => $deployToken,
-            'branch'       => $cleanBranch,
-        ]);
+            return response()->json([
+                'success'      => true,
+                'deploy_token' => $deployToken,
+                'branch'       => $cleanBranch,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to initialize deployment process: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -169,9 +176,17 @@ class WebDeployController extends Controller
 
         $cleanBranch = $this->sanitiseBranch($branch);
 
-        $result = $this->execution->runSynchronous($cleanBranch);
+        try {
+            $result = $this->execution->runSynchronous($cleanBranch);
 
-        return response()->json($result);
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'status'  => 'failed',
+                'message' => 'Deployment execution failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
