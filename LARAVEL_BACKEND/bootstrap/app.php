@@ -27,6 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'deploy',
             'deploy/*',
+            'deploy/auth',
+            'deploy/start',
+            'deploy/run',
         ]);
         $middleware->encryptCookies(except: [
             'pricing_currency',

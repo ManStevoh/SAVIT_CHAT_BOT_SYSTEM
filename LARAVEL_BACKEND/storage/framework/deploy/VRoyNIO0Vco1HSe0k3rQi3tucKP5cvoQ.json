@@ -1,0 +1,18 @@
+{
+    "status": "complete",
+    "branch": "main",
+    "logs": [
+        "📂 Project root: \/var\/www\/html\/..",
+        "📥 [git fetch]: fatal: not a git repository (or any of the parent directories): .git",
+        "🔄 [git reset]: fatal: not a git repository (or any of the parent directories): .git",
+        "🗄️  [migrate]: INFO  Nothing to migrate.",
+        "🔗 [storage:link]: Link active",
+        "🧹 [optimize:clear]: Cleared",
+        "⚡ [optimize]: Bootstraps compiled",
+        "👁️  [view:cache]: Views compiled",
+        "📡 [event:cache]: Events compiled",
+        "✅ [SUCCESS] Deployment completed in 0.48s!"
+    ],
+    "updated_at": "2026-08-25T15:40:15+00:00",
+    "duration": 0.48
+}

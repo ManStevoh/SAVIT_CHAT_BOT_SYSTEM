@@ -26,3 +26,8 @@ Stack Trace:
 #5 {main}
 ----------------------------------------
 
+[2026-08-25 15:34:39] ERROR: Type of App\Console\Commands\DeployRunCommand::$hidden must not be defined (as in class Illuminate\Console\Command) in /var/www/html/app/Console/Commands/DeployRunCommand.php:12
+Stack Trace:
+#0 {main}
+----------------------------------------
+
