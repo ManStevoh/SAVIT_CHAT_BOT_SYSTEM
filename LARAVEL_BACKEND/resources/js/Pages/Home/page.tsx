@@ -41,29 +41,31 @@ export default function HomePage({
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="flex flex-col items-center text-center">
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <Sparkles className="h-7 w-7 animate-spin" />
+            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-3xl">
+              🕵️‍♂️
             </div>
-            <DialogTitle className="text-xl font-bold">🎉 Web Deploy Verified!</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Caught in 4K: Muscle Memory Too Fast! 💨</DialogTitle>
             <DialogDescription className="mt-2 text-sm text-muted-foreground">
-              This modal was deployed live from <strong>https://relayiq.app/deploy</strong> with 1-click in the browser!
+              You unconsciously ran <code className="rounded bg-muted px-1.5 py-0.5 text-foreground font-mono">~/deploy</code> in the terminal because old habits die hard! 😂
             </DialogDescription>
           </DialogHeader>
 
-          <div className="my-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-blue-700 dark:text-blue-300">
+          <div className="my-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
             <div className="flex items-center gap-2 font-semibold">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Web Console Deployment: 100% Operational</span>
+              <span>🩺 Diagnosis: Terminal Addiction Detected.</span>
             </div>
+            <p className="mt-1 text-[11px] opacity-90">
+              To cure this: You are strictly forbidden from opening cPanel SSH! Deploy this change from <strong>relayiq.app/deploy</strong> using only your mouse!
+            </p>
           </div>
 
           <DialogFooter className="sm:justify-center">
             <Button
               type="button"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white"
               onClick={() => setShowModal(false)}
             >
-              Confirm & Continue
+              I Promise To Use The Web Button 🤝
             </Button>
           </DialogFooter>
         </DialogContent>
