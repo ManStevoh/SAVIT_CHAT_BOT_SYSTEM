@@ -195,14 +195,20 @@ export function LandoFooter({
 
             <div className="shrink-0 text-sm text-muted-foreground sm:text-right">
               <p>{copy}</p>
-              <a
-                href={BRAND.companyWebsite}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 inline-block font-medium text-primary hover:underline"
-              >
-                relayiq.app
-              </a>
+              <div className="mt-1 flex items-center gap-2 sm:justify-end">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  All Systems Operational
+                </span>
+                <a
+                  href={BRAND.companyWebsite}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  relayiq.app
+                </a>
+              </div>
             </div>
           </div>
         )}
