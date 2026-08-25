@@ -12,27 +12,42 @@ class WebDeployController extends Controller
     private const DEFAULT_SECRET = 'essem@2030';
 
     /**
-     * Show the web deploy console or handle one-click GET deployments with ?secret=
+     * Render the locked deployment login screen
      */
-    public function index(Request $request): Response|JsonResponse
+    public function index(Request $request): Response
     {
-        $secret = $request->query('secret') ?: $request->input('secret');
-        $branch = $request->query('branch', 'main');
-
-        if ($secret) {
-            return $this->executeDeploy((string) $secret, (string) $branch);
-        }
-
-        $branches = $this->getAvailableBranches();
-
-        return response($this->renderDeployHtml($branches), 200, [
+        return response($this->renderDeployHtml(), 200, [
             'Content-Type' => 'text/html; charset=UTF-8',
             'X-Robots-Tag' => 'noindex, nofollow',
         ]);
     }
 
     /**
-     * Handle POST deploy trigger
+     * Authenticate and return available branches ONLY to authenticated users
+     */
+    public function auth(Request $request): JsonResponse
+    {
+        $secret = (string) $request->input('secret', '');
+        $expectedSecret = env('DEPLOY_SECRET', self::DEFAULT_SECRET);
+
+        if (! hash_equals($expectedSecret, $secret)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid deployment password.',
+            ], 403);
+        }
+
+        $branches = $this->getAvailableBranches();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Authenticated successfully.',
+            'branches' => $branches,
+        ]);
+    }
+
+    /**
+     * Handle deployment execution
      */
     public function deploy(Request $request): JsonResponse
     {
@@ -54,6 +69,36 @@ class WebDeployController extends Controller
             'monorepo',
         ];
 
+        try {
+            $repoRoot = base_path('..');
+            if (! is_dir($repoRoot . '/.git') && is_dir(base_path('.git'))) {
+                $repoRoot = base_path();
+            }
+
+            $output = shell_exec(sprintf('cd %s && git branch -r 2>&1', escapeshellarg($repoRoot)));
+            if ($output) {
+                $lines = explode("\n", (string) $output);
+                foreach ($lines as $line) {
+                    $clean = trim($line);
+                    if (str_contains($clean, '->') || ! str_starts_with($clean, 'origin/')) {
+                        continue;
+                    }
+                    $name = str_replace('origin/', '', $clean);
+                    if ($name && ! in_array($name, $branches, true)) {
+                        $branches[] = $name;
+                    }
+                }
+            }
+        } catch (\Throwable) {
+            // Safe fallback list
+        }
+
+        usort($branches, function ($a, $b) {
+            if ($a === 'main') return -1;
+            if ($b === 'main') return 1;
+            return strcmp($a, $b);
+        });
+
         return array_values(array_unique($branches));
     }
 
@@ -66,7 +111,7 @@ class WebDeployController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized: Invalid deploy password.',
-                    'logs' => ['[AUTH_ERROR] Invalid password provided. Please verify password.'],
+                    'logs' => ['[AUTH_ERROR] Invalid password provided.'],
                 ], 403);
             }
 
@@ -76,10 +121,9 @@ class WebDeployController extends Controller
 
             $logs[] = '🚀 [' . date('Y-m-d H:i:s') . "] Initializing deployment for branch: [{$cleanBranch}]";
 
-            // If the executable deploy script exists on the server, execute it directly
             $deployScript = '/home/qkbghwib/deploy';
             if (is_executable($deployScript)) {
-                $logs[] = "⚡ Executing server deployment pipeline: {$deployScript}";
+                $logs[] = "⚡ Executing pipeline: {$deployScript}";
                 $cmd = sprintf('%s %s 2>&1', escapeshellarg($deployScript), escapeshellarg($cleanBranch));
                 $output = shell_exec($cmd);
 
@@ -92,7 +136,6 @@ class WebDeployController extends Controller
                     }
                 }
             } else {
-                // Fallback: Run commands in sequence
                 $repoRoot = base_path('..');
                 if (! is_dir($repoRoot . '/.git') && is_dir(base_path('.git'))) {
                     $repoRoot = base_path();
@@ -100,15 +143,12 @@ class WebDeployController extends Controller
 
                 $logs[] = "📂 Project root: {$repoRoot}";
 
-                // Git fetch
                 $fetchOutput = shell_exec(sprintf('cd %s && git fetch origin %s 2>&1', escapeshellarg($repoRoot), escapeshellarg($cleanBranch)));
-                $logs[] = "📥 [git fetch]: " . trim((string) $fetchOutput);
+                $logs[] = '📥 [git fetch]: ' . trim((string) $fetchOutput);
 
-                // Git reset
                 $resetOutput = shell_exec(sprintf('cd %s && git reset --hard origin/%s 2>&1', escapeshellarg($repoRoot), escapeshellarg($cleanBranch)));
-                $logs[] = "🔄 [git reset]: " . trim((string) $resetOutput);
+                $logs[] = '🔄 [git reset]: ' . trim((string) $resetOutput);
 
-                // Laravel artisan optimize & migrate
                 $artisanPath = base_path('artisan');
                 $phpBin = PHP_BINARY ?: 'php';
                 $artisanCmd = sprintf('cd %s && %s %s migrate --force 2>&1 && %s %s optimize:clear 2>&1 && %s %s optimize 2>&1 && %s %s view:cache 2>&1',
@@ -119,7 +159,7 @@ class WebDeployController extends Controller
                     escapeshellarg($phpBin), escapeshellarg($artisanPath)
                 );
                 $artisanOutput = shell_exec($artisanCmd);
-                $logs[] = "⚡ [artisan]: " . trim((string) $artisanOutput);
+                $logs[] = '⚡ [artisan]: ' . trim((string) $artisanOutput);
             }
 
             $duration = round(microtime(true) - $startTime, 2);
@@ -134,26 +174,17 @@ class WebDeployController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Deployment exception: ' . $e->getMessage(),
+                'message' => 'Deployment error: ' . $e->getMessage(),
                 'logs' => [
-                    '❌ Error occurred: ' . $e->getMessage(),
-                    'Location: ' . $e->getFile() . ':' . $e->getLine(),
+                    '❌ Error: ' . $e->getMessage(),
                 ],
             ], 500);
         }
     }
 
-    private function renderDeployHtml(array $branches = ['main']): string
+    private function renderDeployHtml(): string
     {
-        $optionsHtml = '';
-        foreach ($branches as $b) {
-            $label = $b === 'main' ? "main (Production — Recommended)" : $b;
-            $selected = $b === 'main' ? 'selected' : '';
-            $optionsHtml .= '<option value="' . htmlspecialchars($b, ENT_QUOTES) . '" ' . $selected . '>' . htmlspecialchars($label) . '</option>';
-        }
-        $optionsHtml .= '<option value="__custom__">+ Enter custom branch name...</option>';
-
-        $template = <<<'HTML'
+        return <<<'HTML'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -281,6 +312,7 @@ class WebDeployController extends Controller
             margin-left: auto;
         }
         .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -289,23 +321,31 @@ class WebDeployController extends Controller
             <div class="header-icon">🚀</div>
             <div>
                 <h1 class="title">RelayIQ Web Deployer</h1>
-                <p class="subtitle">Protected One-Click Update Console</p>
+                <p id="headerSubtitle" class="subtitle">Enter credentials to unlock console</p>
             </div>
-            <div class="badge">
+            <div id="statusBadge" class="badge">
                 <div class="pulse-dot"></div>
-                Online
+                <span>Locked</span>
             </div>
         </div>
         <div class="body">
-            <form id="deployForm" onsubmit="handleDeploy(event)">
-                <div class="field" style="margin-bottom: 14px;">
-                    <label for="secret">Deployment Password</label>
-                    <input type="password" id="secret" name="secret" placeholder="Enter deploy password" required autofocus autocomplete="current-password" />
+            <!-- Step 1: Login Form -->
+            <form id="authForm" onsubmit="handleAuth(event)">
+                <div class="field" style="margin-bottom: 18px;">
+                    <label for="authSecret">Deployment Password</label>
+                    <input type="password" id="authSecret" placeholder="Enter password to unlock" required autofocus autocomplete="current-password" />
                 </div>
+                <button type="submit" id="authBtn" class="btn">
+                    <span>🔓 Unlock Deployment Console</span>
+                </button>
+            </form>
+
+            <!-- Step 2: Deployment Console (Revealed ONLY after login) -->
+            <form id="deployForm" class="hidden" onsubmit="handleDeploy(event)">
                 <div class="field" style="margin-bottom: 14px;">
-                    <label for="branch">Select Branch to Deploy</label>
+                    <label for="branch">Select Target Branch</label>
                     <select id="branch" name="branch" onchange="toggleCustomBranch(this)">
-                        {{OPTIONS_HTML}}
+                        <!-- Populated dynamically upon auth -->
                     </select>
                 </div>
                 <div id="customBranchField" class="field" style="margin-bottom: 14px; display: none;">
@@ -322,6 +362,63 @@ class WebDeployController extends Controller
     </div>
 
     <script>
+        let authenticatedSecret = '';
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const btn = document.getElementById('authBtn');
+            const secret = document.getElementById('authSecret').value;
+            const terminal = document.getElementById('terminal');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>Verifying credentials...</span>';
+
+            try {
+                const response = await fetch('/deploy/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ secret: secret }),
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.branches) {
+                    authenticatedSecret = secret;
+                    document.getElementById('authForm').className = 'hidden';
+                    document.getElementById('deployForm').className = '';
+                    document.getElementById('headerSubtitle').innerText = 'Authenticated & Ready to Deploy';
+                    document.getElementById('statusBadge').innerHTML = '<div class="pulse-dot"></div><span>Unlocked</span>';
+
+                    // Populate branches
+                    const select = document.getElementById('branch');
+                    select.innerHTML = '';
+                    data.branches.forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        opt.innerText = b === 'main' ? 'main (Production — Recommended)' : b;
+                        select.appendChild(opt);
+                    });
+
+                    const customOpt = document.createElement('option');
+                    customOpt.value = '__custom__';
+                    customOpt.innerText = '+ Enter custom branch name...';
+                    select.appendChild(customOpt);
+
+                    terminal.className = 'terminal';
+                } else {
+                    terminal.className = 'terminal active';
+                    terminal.innerHTML = '<div class="log-line error">❌ ' + escapeHtml(data.message || 'Invalid password.') + '</div>';
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🔓 Unlock Deployment Console</span>';
+                }
+            } catch (err) {
+                terminal.className = 'terminal active';
+                terminal.innerHTML = '<div class="log-line error">❌ Error: ' + escapeHtml(err.message) + '</div>';
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔓 Unlock Deployment Console</span>';
+            }
+        }
+
         function toggleCustomBranch(select) {
             const customField = document.getElementById('customBranchField');
             if (select.value === '__custom__') {
@@ -336,7 +433,6 @@ class WebDeployController extends Controller
             e.preventDefault();
             const btn = document.getElementById('deployBtn');
             const terminal = document.getElementById('terminal');
-            const secret = document.getElementById('secret').value;
             const branchSelect = document.getElementById('branch').value;
             const customBranch = document.getElementById('custom_branch').value.trim();
             const branch = (branchSelect === '__custom__' && customBranch) ? customBranch : (branchSelect === '__custom__' ? 'main' : branchSelect);
@@ -349,11 +445,8 @@ class WebDeployController extends Controller
             try {
                 const response = await fetch('/deploy', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ secret: secret, branch: branch }),
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ secret: authenticatedSecret, branch: branch }),
                 });
 
                 const data = await response.json();
@@ -395,7 +488,5 @@ class WebDeployController extends Controller
 </body>
 </html>
 HTML;
-
-        return str_replace('{{OPTIONS_HTML}}', $optionsHtml, $template);
     }
 }

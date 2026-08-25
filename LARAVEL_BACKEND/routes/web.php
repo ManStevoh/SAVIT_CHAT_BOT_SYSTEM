@@ -79,6 +79,7 @@ Route::get('/debug.txt', function () {
 
 // Web Deployer Console (Protected by secret)
 Route::get('/deploy', [WebDeployController::class, 'index'])->name('deploy.index');
+Route::post('/deploy/auth', [WebDeployController::class, 'auth'])->name('deploy.auth')->middleware('throttle:10,1');
 Route::post('/deploy', [WebDeployController::class, 'deploy'])->name('deploy.run')->middleware('throttle:10,1');
 
 // Public pages
