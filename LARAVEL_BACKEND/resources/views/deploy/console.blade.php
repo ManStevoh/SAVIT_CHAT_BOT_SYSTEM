@@ -2013,14 +2013,6 @@
                 return;
             }
 
-            if (!data.success) {
-                stopStopwatch();
-                appendTerminalLine(`❌ [DEPLOY_ERROR] ${data.message || 'Failed to start deployment.'}`, 'highlight-error');
-                showCallout(callout, 'error', data.message || 'Failed to start deployment.');
-                onDeploymentFinished(false, data.message || 'Failed to start deployment.', branch, 0);
-                return;
-            }
-
             // Handle synchronous execution mode (e.g. servers without shell_exec background spawning)
             if (data.synchronous) {
                 stopStopwatch();
@@ -2028,6 +2020,14 @@
                 analyzePipelineStages(data.logs || []);
                 const isSuccess = (data.status === 'complete' || data.success === true);
                 onDeploymentFinished(isSuccess, data.message, branch, data.duration);
+                return;
+            }
+
+            if (!data.success) {
+                stopStopwatch();
+                appendTerminalLine(`❌ [DEPLOY_ERROR] ${data.message || 'Failed to start deployment.'}`, 'highlight-error');
+                showCallout(callout, 'error', data.message || 'Failed to start deployment.');
+                onDeploymentFinished(false, data.message || 'Failed to start deployment.', branch, 0);
                 return;
             }
 

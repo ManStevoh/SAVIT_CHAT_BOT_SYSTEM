@@ -122,6 +122,7 @@ class WebDeployController extends Controller
             try {
                 $result = $this->execution->runSynchronous($cleanBranch);
                 return response()->json(array_merge($result, [
+                    'success'     => ($result['status'] ?? '') === 'complete',
                     'synchronous' => true,
                 ]));
             } catch (\Throwable $e) {
