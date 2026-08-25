@@ -5,6 +5,20 @@
 
 ---
 
+> [!CAUTION]
+> ### 🔴 MANDATORY DEVELOPER CONFIRMATION RULE
+> **An AI agent MUST ALWAYS explicitly ask and confirm with the developer which branch to deploy BEFORE triggering any deployment to the server.**
+>
+> Under no circumstances should an agent unilaterally initiate a server deployment without developer confirmation.
+>
+> **Required Agent Interaction Pattern:**
+> 1. Complete code changes, build assets, and push to GitHub.
+> 2. Ask the developer:  
+>    > *"I have compiled the build assets and pushed the changes to GitHub. Which branch should I deploy to the server? (e.g. `main`)*"
+> 3. Only after the developer responds with confirmation/branch name, proceed to trigger the deployment.
+
+---
+
 ## 1. System Overview & Architecture
 
 RelayIQ uses a unified deployment pipeline combining a **Laravel 12 / Inertia / React** stack with a **cPanel production server** (`https://relayiq.app` or configured `DEPLOY_REMOTE_URL`).
@@ -12,19 +26,24 @@ RelayIQ uses a unified deployment pipeline combining a **Laravel 12 / Inertia / 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Agent as AI Agent / Developer
+    participant Agent as AI Agent
+    participant Dev as Developer
     participant Git as GitHub (origin/main)
     participant Server as RelayIQ Production Server
     participant Script as /home/qkbghwib/deploy
 
     Agent->>Agent: 1. Compile client assets (npm run build)
     Agent->>Git: 2. Commit & push code + build files
-    Agent->>Server: 3. Trigger deployment (POST /deploy/agent)
-    Server->>Script: 4. Invoke server deploy pipeline
+    rect rgb(255, 235, 235)
+    Agent->>Dev: 3. MANDATORY: Confirm target branch with developer
+    Dev-->>Agent: Confirmed branch: main
+    end
+    Agent->>Server: 4. Trigger deployment (POST /deploy/agent)
+    Server->>Script: 5. Invoke server deploy pipeline
     Script->>Git: Git fetch & reset --hard origin/main
     Script->>Server: Run migrations (migrate --force)
     Script->>Server: Recompile caches (optimize, view:cache)
-    Server-->>Agent: 5. Live Server-Sent Events (SSE) stream
+    Server-->>Agent: 6. Live Server-Sent Events (SSE) stream
 ```
 
 ---
@@ -41,9 +60,9 @@ Every agent must look in `LARAVEL_BACKEND/.env` for deployment keys:
 
 ---
 
-## 3. The 3-Step Agent Deployment Protocol
+## 3. The 4-Step Agent Deployment Protocol
 
-Whenever an agent makes frontend or backend code changes, it **MUST** follow this exact 3-step sequence:
+Whenever an agent makes frontend or backend code changes, it **MUST** follow this exact 4-step sequence:
 
 ### Step 1: Compile Frontend Assets (Vite)
 Because RelayIQ's production environment runs on cPanel without active Node daemons, compiled frontend assets in `LARAVEL_BACKEND/public/build` **must be built before pushing**:
@@ -58,26 +77,30 @@ npm run build
 cd /path/to/project/root
 git add -A
 git commit -m "feat(scope): descriptive commit message"
-git push origin <branch> # usually 'main'
+git push origin <branch>
 ```
 *(Verify that the push succeeded and the commit is on GitHub).*
 
-### Step 3: Trigger Live Agent Deployment Stream
-Trigger the deployment endpoint using the secret stored in `LARAVEL_BACKEND/.env`:
+### Step 3: 🔴 Confirm Target Branch with Developer
+Before triggering deployment, ask the developer for confirmation:
+> *"Assets have been compiled and pushed. Please confirm if you want me to deploy to branch `[branch_name]` on `https://relayiq.app`."*
+
+### Step 4: Trigger Live Agent Deployment Stream
+Once the developer confirms, trigger the deployment endpoint using the secret stored in `LARAVEL_BACKEND/.env`:
 
 ```bash
-# Extract secret from .env
+# Extract secret and URL from .env
 DEPLOY_KEY=$(grep -E '^DEPLOY_SECRET=' LARAVEL_BACKEND/.env | cut -d '=' -f2-)
 REMOTE_URL=$(grep -E '^DEPLOY_REMOTE_URL=' LARAVEL_BACKEND/.env | cut -d '=' -f2-)
 [ -z "$REMOTE_URL" ] && REMOTE_URL="https://relayiq.app"
 [[ ! "$REMOTE_URL" =~ ^https?:// ]] && REMOTE_URL="https://${REMOTE_URL}"
 
-# Execute streaming trigger
+# Execute streaming trigger for the confirmed branch
 curl -N -s -X POST "${REMOTE_URL}/deploy/agent" \
   -H "X-Deploy-Agent-Key: ${DEPLOY_KEY}" \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
-  -d '{"branch": "main"}'
+  -d "{\"branch\": \"${CONFIRMED_BRANCH}\"}"
 ```
 
 ---
@@ -111,8 +134,8 @@ https://relayiq.app/deploy?key=<DEPLOY_SECRET>&branch=main&auto=1
 | Branch | Target Environment | Deployment Impact |
 | :--- | :--- | :--- |
 | **`main`** | **Production Gateway** (`https://relayiq.app`) | Live website. Updates all user traffic, database schemas, and application caches. |
-| **`feature/*`** | Staging / Development testing | Code review and preview deployments. |
-| **`backend`** | Core API work | Service endpoints and backend models. |
+| **`staging`** | Staging server | QA and integration testing. |
+| **`feature/*`** | Feature preview | Branch-specific verification. |
 
 > [!NOTE]
 > Branch names are strictly sanitized with `[^a-zA-Z0-9_\-\/]`. Do not use spaces or special shell characters in branch names.
@@ -131,24 +154,24 @@ data: {"type":"log","line":"⚡ Running deploy pipeline: /home/qkbghwib/deploy"}
 data: {"type":"log","line":"🚀 1. Deploying branch [main] from GitHub..."}
 data: {"type":"log","line":"From https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM"}
 data: {"type":"log","line":"* branch              main       -> FETCH_HEAD"}
-data: {"type":"log","line":"9af314f5..4bb55813  main       -> origin/main"}
-data: {"type":"log","line":"HEAD is now at 4bb55813 style(home): update test deployment modal to red theme"}
+data: {"type":"log","line":"bde9cf95..0f17f3a3  main       -> origin/main"}
+data: {"type":"log","line":"HEAD is now at 0f17f3a3 feat(home): remove test deployment modal and restore clean homepage"}
 data: {"type":"log","line":"🗄️ 2. Checking database migrations..."}
 data: {"type":"log","line":"INFO  Nothing to migrate."}
 data: {"type":"log","line":"ERROR  The [public/storage] link already exists."}
 data: {"type":"log","line":"⚡ 3. Compiling production caches..."}
 data: {"type":"log","line":"INFO  Clearing cached bootstrap files."}
-data: {"type":"log","line":"config ......................................................... 3.90ms DONE"}
-data: {"type":"log","line":"cache ......................................................... 13.95ms DONE"}
-data: {"type":"log","line":"compiled ....................................................... 2.55ms DONE"}
-data: {"type":"log","line":"events ......................................................... 2.51ms DONE"}
-data: {"type":"log","line":"routes ......................................................... 2.89ms DONE"}
-data: {"type":"log","line":"views .......................................................... 9.63ms DONE"}
+data: {"type":"log","line":"config ......................................................... 3.66ms DONE"}
+data: {"type":"log","line":"cache ......................................................... 12.54ms DONE"}
+data: {"type":"log","line":"compiled ....................................................... 2.49ms DONE"}
+data: {"type":"log","line":"events ......................................................... 2.27ms DONE"}
+data: {"type":"log","line":"routes ......................................................... 2.47ms DONE"}
+data: {"type":"log","line":"views .......................................................... 9.23ms DONE"}
 data: {"type":"log","line":"INFO  Caching framework bootstrap, configuration, and metadata."}
-data: {"type":"log","line":"config ........................................................ 59.75ms DONE"}
-data: {"type":"log","line":"events ......................................................... 4.62ms DONE"}
-data: {"type":"log","line":"routes ....................................................... 137.18ms DONE"}
-data: {"type":"log","line":"views ......................................................... 86.54ms DONE"}
+data: {"type":"log","line":"config ........................................................ 55.32ms DONE"}
+data: {"type":"log","line":"events ......................................................... 4.34ms DONE"}
+data: {"type":"log","line":"routes ....................................................... 147.34ms DONE"}
+data: {"type":"log","line":"views ......................................................... 84.40ms DONE"}
 data: {"type":"log","line":"INFO  Blade templates cached successfully."}
 data: {"type":"log","line":"INFO  Events cached successfully."}
 data: {"type":"log","line":"✅ Production updated, migrated & optimized successfully to [main]!"}
@@ -175,13 +198,14 @@ data: {"type":"done","success":true,"status":"complete","duration":6.61,"message
 
 ---
 
-## 8. Summary Checklist for Any Future AI Agent
+## 8. Summary Checklist for Any AI Agent
 
 ```markdown
 - [ ] 1. Make code changes in LARAVEL_BACKEND (PHP/React/CSS).
 - [ ] 2. If frontend changes: Run `cd LARAVEL_BACKEND && npm run build`.
-- [ ] 3. Run `git add -A && git commit -m "..." && git push origin main`.
-- [ ] 4. Read `DEPLOY_SECRET` from `LARAVEL_BACKEND/.env`.
-- [ ] 5. Trigger `curl -N -s -X POST "https://relayiq.app/deploy/agent" -H "X-Deploy-Agent-Key: <secret>" -H "Accept: text/event-stream" -H "Content-Type: application/json" -d '{"branch":"main"}'`.
-- [ ] 6. Inspect streaming logs for `[SUCCESS] Deployment completed`.
+- [ ] 3. Commit and push: `git add -A && git commit -m "..." && git push origin <branch>`.
+- [ ] 4. 🔴 MANDATORY: Ask & confirm with the developer: "Which branch would you like me to deploy to the server (e.g. main)?"
+- [ ] 5. Read `DEPLOY_SECRET` from `LARAVEL_BACKEND/.env`.
+- [ ] 6. Trigger `curl -N -s -X POST "https://relayiq.app/deploy/agent" -H "X-Deploy-Agent-Key: <secret>" -H "Accept: text/event-stream" -H "Content-Type: application/json" -d '{"branch":"<confirmed_branch>"}'`.
+- [ ] 7. Inspect streaming logs for `[SUCCESS] Deployment completed`.
 ```
