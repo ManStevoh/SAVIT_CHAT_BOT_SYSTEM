@@ -134,15 +134,15 @@
             margin: 0 6px;
         }
         .step-dot {
-            width: 22px; height: 22px;
+            width: 24px; height: 24px;
             border-radius: 50%;
             border: 2px solid var(--border-sub);
             display: flex; align-items: center; justify-content: center;
-            font-size: 10px;
+            font-size: 11px; font-weight: 700;
             flex-shrink: 0;
             transition: all .2s;
         }
-        .step.active .step-dot    { border-color: var(--primary); color: var(--primary); }
+        .step.active .step-dot    { border-color: var(--primary); background: var(--primary); color: #fff; }
         .step.active              { color: var(--text); }
         .step.complete .step-dot  { border-color: var(--success); background: var(--success); color: #fff; }
         .step.complete            { color: var(--text-muted); }
@@ -385,6 +385,43 @@
             .app-header-sub { display: none; }
         }
 
+        /* ── Light mode (system colour scheme) ───────────────────── */
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg:           #f1f5f9;
+                --surface:      #ffffff;
+                --surface-hi:   #f8fafc;
+                --border:       #e2e8f0;
+                --border-sub:   #cbd5e1;
+                --text:         #0f172a;
+                --text-muted:   #475569;
+                --text-dim:     #94a3b8;
+                --primary-glow: rgba(59, 130, 246, 0.18);
+                --success-dim:  rgba(34, 197, 94, 0.10);
+                --danger-dim:   rgba(239, 68, 68, 0.10);
+                --warn-dim:     rgba(245, 158, 11, 0.10);
+            }
+            input, select {
+                background: #f8fafc;
+                border-color: var(--border-sub);
+            }
+            select option { background: #ffffff; color: var(--text); }
+            .modal {
+                box-shadow: 0 24px 60px rgba(0,0,0,.10);
+            }
+            /* ── Terminal always stays dark ── */
+            .terminal-wrapper  { background: #0d1117; }
+            .terminal-header   { background: #161b22; border-color: #30363d; }
+            .terminal-title    { color: #8b949e; }
+            .terminal-body     { background: #040710; color: #cbd5e1; }
+            .term-btn          { background: #21262d; border-color: #30363d; color: #8b949e; }
+            .term-btn:hover    { color: #f0f6fc; border-color: #8b949e; }
+            .post-actions      { background: #161b22; border-color: #30363d; }
+            .post-btn          { background: #21262d; border-color: #30363d; color: #8b949e; }
+            .post-btn:hover    { color: #f0f6fc; }
+            .post-btn.primary  { background: var(--success-dim); border-color: rgba(34,197,94,.3); color: var(--success); }
+        }
+
         /* ── Spinner ─────────────────────────────────────────────── */
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner {
@@ -575,7 +612,6 @@
     let pollTimer      = null;
     let pollToken      = '';
     let renderedLogs   = 0;
-    let useBackground  = true; // overridden by auth response
 
     // ── Init ─────────────────────────────────────────────────────
     (function init() {
@@ -602,7 +638,6 @@
             if (data.success && data.token) {
                 authToken = data.token;
                 sessionStorage.setItem('deploy_auth_token', authToken);
-                useBackground = !!data.background;
                 populateBranches(data.branches || []);
                 showDeploySection();
                 clearCallout(callout);
@@ -716,11 +751,7 @@
         openTerminal();
         appendLog(`🚀 Initiating deploy to [${escapeHtml(branch)}]…`, 'log-line');
 
-        if (useBackground) {
-            await startBackgroundDeploy(branch, btn, callout);
-        } else {
-            await startSyncDeploy(branch, btn, callout);
-        }
+        await startBackgroundDeploy(branch, btn, callout);
     }
 
     // Background mode: POST /deploy/start → poll /deploy/status/{token}
@@ -765,9 +796,10 @@
                     pendingChecks++;
                     if (pendingChecks > 5) {
                         clearInterval(pollTimer);
-                        appendLog('⚠️ Background spawn timed out — falling back to synchronous mode…', 'log-line log-warn');
-                        useBackground = false;
-                        await startSyncDeploy(branch, btn, callout);
+                        appendLog('❌ Background deploy process did not start. Check server shell_exec / proc_open permissions.', 'log-line log-error');
+                        setBtn(btn, false, '⚡ Deploy to Live Site');
+                        setStatus('failed', '❌ Deploy failed');
+                        setStep(2);
                     }
                     return;
                 }
@@ -787,29 +819,6 @@
         }
     }
 
-    // Synchronous mode: POST /deploy/run — waits for full response
-    async function startSyncDeploy(branch, btn, callout) {
-        try {
-            const res  = await post('/deploy/run', { token: authToken, branch });
-            const data = await res.json();
-
-            if (res.status === 401) { handleSessionExpired(callout, btn); return; }
-            if (res.status === 409) {
-                showCallout(callout, 'error', '⛔ A deployment is already running.');
-                setBtn(btn, false, '⚡ Deploy to Live Site');
-                setStatus('ready', '🟢 Authenticated');
-                setStep(2);
-                return;
-            }
-
-            renderNewLogs(data.logs || []);
-            onDeployFinished(data, btn, callout, branch);
-        } catch (err) {
-            appendLog('❌ Network error: ' + escapeHtml(err.message), 'log-line log-error');
-            setBtn(btn, false, '⚡ Deploy to Live Site');
-            setStatus('failed', '❌ Deploy failed');
-        }
-    }
 
     async function fetchStatus(token) {
         try {
@@ -829,18 +838,20 @@
             setBtn(btn, false, '✅ Deploy Complete');
             document.getElementById('postActions').classList.add('visible');
             setTimeout(() => setBtn(btn, false, '⚡ Deploy to Live Site'), 5000);
+            setStep(4); // mark all 3 steps complete
         } else {
             setStatus('failed', '❌ Deploy failed');
             showCallout(callout, 'error', data.message || 'Deployment failed — check the terminal for details.');
             setBtn(btn, false, '⚡ Deploy to Live Site');
+            setStep(2); // return to branch/deploy config for retry
         }
-        setStep(2);
     }
 
     function deployAgain() {
         document.getElementById('postActions').classList.remove('visible');
         clearTerminal();
         document.getElementById('deployCallout').innerHTML = '';
+        setStep(2);
     }
 
     function handleSessionExpired(callout, btn) {
