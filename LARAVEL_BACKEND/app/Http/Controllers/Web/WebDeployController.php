@@ -24,7 +24,9 @@ class WebDeployController extends Controller
             return $this->executeDeploy((string) $secret, (string) $branch);
         }
 
-        return response($this->renderDeployHtml(), 200, [
+        $branches = $this->getAvailableBranches();
+
+        return response($this->renderDeployHtml($branches), 200, [
             'Content-Type' => 'text/html; charset=UTF-8',
             'X-Robots-Tag' => 'noindex, nofollow',
         ]);
@@ -39,6 +41,45 @@ class WebDeployController extends Controller
         $branch = (string) $request->input('branch', 'main');
 
         return $this->executeDeploy($secret, $branch);
+    }
+
+    private function getAvailableBranches(): array
+    {
+        $repoRoot = base_path('..');
+        if (! is_dir($repoRoot.'/.git') && is_dir(base_path('.git'))) {
+            $repoRoot = base_path();
+        }
+
+        $branches = ['main'];
+
+        try {
+            // Fetch branch list from git
+            $output = shell_exec(sprintf('cd %s && git branch -r 2>&1', escapeshellarg($repoRoot)));
+            if ($output) {
+                $lines = explode("\n", (string) $output);
+                foreach ($lines as $line) {
+                    $clean = trim($line);
+                    if (str_contains($clean, '->') || ! str_starts_with($clean, 'origin/')) {
+                        continue;
+                    }
+                    $name = str_replace('origin/', '', $clean);
+                    if ($name && ! in_array($name, $branches, true)) {
+                        $branches[] = $name;
+                    }
+                }
+            }
+        } catch (\Throwable) {
+            // Fallback list
+        }
+
+        // Always ensure main is first
+        usort($branches, function ($a, $b) {
+            if ($a === 'main') return -1;
+            if ($b === 'main') return 1;
+            return strcmp($a, $b);
+        });
+
+        return array_values(array_unique($branches));
     }
 
     private function executeDeploy(string $secret, string $branch): JsonResponse
@@ -121,9 +162,16 @@ class WebDeployController extends Controller
         ]);
     }
 
-    private function renderDeployHtml(): string
+    private function renderDeployHtml(array $branches = ['main']): string
     {
-        return <<<'HTML'
+        $optionsHtml = '';
+        foreach ($branches as $b) {
+            $label = $b === 'main' ? "main (Production — Recommended)" : $b;
+            $selected = $b === 'main' ? 'selected' : '';
+            $optionsHtml .= "<option value=\"".htmlspecialchars($b, ENT_QUOTES)."\" {$selected}>".htmlspecialchars($label)."</option>";
+        }
+
+        return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -187,7 +235,7 @@ class WebDeployController extends Controller
         .body { padding: 24px; display: flex; flex-direction: column; gap: 18px; }
         .field { display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
-        input {
+        input, select {
             background: rgba(0, 0, 0, 0.35);
             border: 1px solid var(--border);
             color: #fff;
@@ -197,7 +245,12 @@ class WebDeployController extends Controller
             outline: none;
             transition: border 0.15s;
         }
-        input:focus { border-color: var(--primary); }
+        select option {
+            background: #111827;
+            color: #fff;
+            padding: 8px;
+        }
+        input:focus, select:focus { border-color: var(--primary); }
         .btn {
             background: var(--primary);
             color: #fff;
@@ -268,8 +321,10 @@ class WebDeployController extends Controller
                     <input type="password" id="secret" name="secret" placeholder="Enter deploy password" required autofocus autocomplete="current-password" />
                 </div>
                 <div class="field" style="margin-bottom: 20px;">
-                    <label for="branch">Branch to Deploy</label>
-                    <input type="text" id="branch" name="branch" value="main" placeholder="main" required />
+                    <label for="branch">Select Branch to Deploy</label>
+                    <select id="branch" name="branch">
+                        {$optionsHtml}
+                    </select>
                 </div>
                 <button type="submit" id="deployBtn" class="btn">
                     <span>⚡ Deploy to Live Site</span>
@@ -289,7 +344,7 @@ class WebDeployController extends Controller
             const branch = document.getElementById('branch').value;
 
             btn.disabled = true;
-            btn.innerHTML = '<span>⏳ Deploying, Migrating & Optimizing...</span>';
+            btn.innerHTML = '<span>⏳ Deploying ' + escapeHtml(branch) + '...</span>';
             terminal.className = 'terminal active';
             terminal.innerHTML = '<div class="log-line">🚀 Connecting to server deployment pipeline...</div>';
 
@@ -299,7 +354,6 @@ class WebDeployController extends Controller
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                     },
                     body: JSON.stringify({ secret, branch }),
                 });
@@ -311,10 +365,10 @@ class WebDeployController extends Controller
                         const isSuccess = log.includes('[SUCCESS]');
                         const isError = log.includes('[AUTH_ERROR]') || log.includes('error') || log.includes('Unauthorized');
                         const cls = isSuccess ? 'log-line success' : isError ? 'log-line error' : 'log-line';
-                        return `<div class="${cls}">${escapeHtml(log)}</div>`;
+                        return `<div class="${cls}">` + escapeHtml(log) + '</div>';
                     }).join('');
                 } else if (data.message) {
-                    terminal.innerHTML += `<div class="log-line error">❌ ${escapeHtml(data.message)}</div>`;
+                    terminal.innerHTML += '<div class="log-line error">❌ ' + escapeHtml(data.message) + '</div>';
                 }
 
                 if (data.success) {
@@ -328,7 +382,7 @@ class WebDeployController extends Controller
                     btn.innerHTML = '<span>⚡ Deploy to Live Site</span>';
                 }
             } catch (err) {
-                terminal.innerHTML += `<div class="log-line error">❌ Network or server error: ${escapeHtml(err.message)}</div>`;
+                terminal.innerHTML += '<div class="log-line error">❌ Network or server error: ' + escapeHtml(err.message) + '</div>';
                 btn.disabled = false;
                 btn.innerHTML = '<span>⚡ Deploy to Live Site</span>';
             }
