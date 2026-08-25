@@ -114,6 +114,25 @@ class WebDeployController extends Controller
 
         $cleanBranch = $this->sanitiseBranch($branch);
 
+        // If background spawning is not supported or enabled on this host, automatically run synchronously
+        if (! $this->authService->canSpawnBackground()) {
+            @set_time_limit(0);
+            @ignore_user_abort(true);
+
+            try {
+                $result = $this->execution->runSynchronous($cleanBranch);
+                return response()->json(array_merge($result, [
+                    'synchronous' => true,
+                ]));
+            } catch (\Throwable $e) {
+                return response()->json([
+                    'success' => false,
+                    'status'  => 'failed',
+                    'message' => 'Deployment execution failed: ' . $e->getMessage(),
+                ], 500);
+            }
+        }
+
         try {
             $deployToken = $this->execution->startBackground($cleanBranch);
 

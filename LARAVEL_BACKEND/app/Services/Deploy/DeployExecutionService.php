@@ -123,7 +123,13 @@ class DeployExecutionService
             . ' ' . escapeshellarg($branch)
             . ' > /dev/null 2>&1 &';
 
-        @shell_exec($cmd);
+        if (function_exists('shell_exec')) {
+            @shell_exec($cmd);
+        } elseif (function_exists('exec')) {
+            @exec($cmd);
+        } else {
+            throw new \RuntimeException('Background process spawning is not supported on this host (shell_exec/exec is disabled in PHP configuration).');
+        }
 
         return $deployToken;
     }
@@ -427,14 +433,32 @@ class DeployExecutionService
             } catch (\Throwable) {}
         }
 
-        // Method 3: shell_exec (last resort)
-        $out = (string) @shell_exec($cmd);
-        foreach (explode("\n", trim($out)) as $l) {
-            $lTrim = trim($l);
-            if ($lTrim !== '') {
-                $logs[] = $lTrim;
-            }
+        // Method 3: shell_exec / exec / system fallback
+        $out = '';
+        if (function_exists('shell_exec')) {
+            $out = (string) @shell_exec($cmd);
+        } elseif (function_exists('exec')) {
+            $lines = [];
+            @exec($cmd, $lines);
+            $out = implode("\n", $lines);
+        } elseif (function_exists('system')) {
+            ob_start();
+            @system($cmd);
+            $out = (string) ob_get_clean();
+        } elseif (function_exists('passthru')) {
+            ob_start();
+            @passthru($cmd);
+            $out = (string) ob_get_clean();
         }
-        $this->flushLogs($statusFile, 'running', $branch, $logs);
+
+        if ($out !== '') {
+            foreach (explode("\n", trim($out)) as $l) {
+                $lTrim = trim($l);
+                if ($lTrim !== '') {
+                    $logs[] = $lTrim;
+                }
+            }
+            $this->flushLogs($statusFile, 'running', $branch, $logs);
+        }
     }
 }

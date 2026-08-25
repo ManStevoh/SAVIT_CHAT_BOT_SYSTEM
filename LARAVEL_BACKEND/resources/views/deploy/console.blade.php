@@ -2025,6 +2025,16 @@
                 return;
             }
 
+            // Handle synchronous execution mode (e.g. servers without shell_exec background spawning)
+            if (data.synchronous) {
+                stopStopwatch();
+                renderNewLogs(data.logs || []);
+                analyzePipelineStages(data.logs || []);
+                const isSuccess = (data.status === 'complete' || data.success === true);
+                onDeploymentFinished(isSuccess, data.message, branch, data.duration);
+                return;
+            }
+
             pollToken = data.deploy_token;
             renderedLogs = 0;
             let consecutivePendingChecks = 0;
