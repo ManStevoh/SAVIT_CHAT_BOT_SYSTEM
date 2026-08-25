@@ -1179,6 +1179,50 @@
             color: var(--danger-text);
         }
 
+        /* ── Authentication Gateway Modal & Background Shroud ────── */
+        .console-workspace {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .console-workspace.authenticated {
+            display: block;
+            opacity: 1;
+        }
+
+        .auth-modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #f8fafc;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .auth-modal-backdrop.open {
+            display: flex;
+        }
+
+        .auth-modal-box {
+            max-width: 440px;
+            background: var(--bg-canvas);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 26px 28px;
+            box-shadow: var(--shadow-float);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .auth-modal-icon {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+        }
+
         /* ── Modal Dialog: Production Confirmation ───────────────── */
         .modal-backdrop {
             display: none;
@@ -1344,6 +1388,48 @@
     </div>
 </header>
 
+<!-- ── Authentication Gateway Modal Dialog ──────────────────── -->
+<div class="auth-modal-backdrop open" id="authModal">
+    <div class="modal-dialog-box auth-modal-box" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+        <div class="modal-top-icon auth-modal-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+
+        <div>
+            <h2 class="modal-heading" id="authModalTitle">Authenticate Deploy Console</h2>
+            <p class="modal-body-text" style="margin-top: 6px;">
+                Enter the deployment secret password (<code style="font-family:var(--mono); color:#2563eb; background:#eff6ff; padding:1px 5px; border-radius:4px; font-weight:600;">DEPLOY_SECRET</code>) to unlock the production deployment gateway and terminal stream.
+            </p>
+        </div>
+
+        <div class="form-group" style="margin-top: 4px;">
+            <label for="authSecret" class="form-label">
+                <span>Deploy Console Password</span>
+                <span style="font-size: 11px; color: var(--text-dim); font-family: var(--mono);">DEPLOY_SECRET</span>
+            </label>
+            <div class="input-with-action">
+                <input type="password" id="authSecret" class="form-input"
+                       placeholder="Enter deploy password"
+                       autocomplete="current-password"
+                       autofocus required />
+                <button type="button" class="input-toggle-visibility" onclick="togglePasswordVisibility('authSecret', this)" title="Toggle password visibility">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="authCallout" class="callout-box error"></div>
+
+        <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+            <span>Unlock Deployment Console</span>
+        </button>
+    </div>
+</div>
+
+<!-- ── Authenticated Console Workspace (Hidden Until Unlocked) ── -->
+<div id="consoleWorkspace" class="console-workspace">
+
 <!-- ── Telemetry & Overview Bar ──────────────────────────────── -->
 <section class="telemetry-strip">
     <div class="telemetry-card">
@@ -1395,11 +1481,11 @@
 
         <!-- Operational Workflow Stepper -->
         <nav class="workflow-stepper" aria-label="Deployment steps">
-            <div class="workflow-step active" id="stepIndicator1">
-                <span class="step-index" id="stepIndex1">1</span>
+            <div class="workflow-step complete" id="stepIndicator1">
+                <span class="step-index" id="stepIndex1">✓</span>
                 <span>Authenticate</span>
             </div>
-            <div class="workflow-step" id="stepIndicator2">
+            <div class="workflow-step active" id="stepIndicator2">
                 <span class="step-index" id="stepIndex2">2</span>
                 <span>Target & Review</span>
             </div>
@@ -1409,34 +1495,8 @@
             </div>
         </nav>
 
-        <!-- ── Step 1: Authentication Gateway View ──────────────── -->
-        <div id="authSection" class="deck-section">
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label for="authSecret" class="form-label">
-                    <span>Deploy Console Password</span>
-                    <span style="font-size: 11px; color: var(--text-dim); font-family: var(--mono);">DEPLOY_SECRET</span>
-                </label>
-                <div class="input-with-action">
-                    <input type="password" id="authSecret" class="form-input"
-                           placeholder="Enter deploy password"
-                           autocomplete="current-password"
-                           autofocus required />
-                    <button type="button" class="input-toggle-visibility" onclick="togglePasswordVisibility('authSecret', this)" title="Toggle password visibility">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    </button>
-                </div>
-            </div>
-
-            <div id="authCallout" class="callout-box error" style="margin-bottom: 16px;"></div>
-
-            <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
-                <span>Unlock Deployment Console</span>
-            </button>
-        </div>
-
         <!-- ── Step 2: Target Selection & Pre-Flight Review ──────── -->
-        <div id="configSection" class="deck-section hidden">
+        <div id="configSection" class="deck-section">
             <div class="form-group" style="margin-bottom: 14px;">
                 <label for="branchSelect" class="form-label">
                     <span>Select Git Branch</span>
@@ -1732,6 +1792,8 @@
 
 </main>
 
+</div> <!-- /consoleWorkspace -->
+
 <!-- ── Production Confirmation Modal Dialog ─────────────────── -->
 <div class="modal-backdrop" id="productionModal" onclick="handleModalBackdropClick(event)">
     <div class="modal-dialog-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -1811,6 +1873,14 @@
         } else {
             setWorkflowStep(1);
             setSentinelStatus('locked', 'Locked');
+            const authModal = document.getElementById('authModal');
+            if (authModal) authModal.classList.add('open');
+            const workspace = document.getElementById('consoleWorkspace');
+            if (workspace) workspace.classList.remove('authenticated');
+            setTimeout(() => {
+                const input = document.getElementById('authSecret');
+                if (input) input.focus();
+            }, 100);
         }
 
         // Handle ESC key for modal
@@ -1910,12 +1980,16 @@
     }
 
     function showAuthenticatedView() {
-        document.getElementById('authSection').classList.add('hidden');
+        const authModal = document.getElementById('authModal');
+        if (authModal) authModal.classList.remove('open');
+        const workspace = document.getElementById('consoleWorkspace');
+        if (workspace) workspace.classList.add('authenticated');
         document.getElementById('configSection').classList.remove('hidden');
         document.getElementById('headerLockBtn').classList.remove('hidden');
         setWorkflowStep(2);
         setSentinelStatus('ready', 'Ready to Deploy');
-        document.getElementById('authSecret').value = '';
+        const input = document.getElementById('authSecret');
+        if (input) input.value = '';
     }
 
     function handleLockSession() {
@@ -1924,14 +1998,24 @@
         if (pollTimer) clearInterval(pollTimer);
         if (stopwatchTimer) clearInterval(stopwatchTimer);
 
-        document.getElementById('authSection').classList.remove('hidden');
+        const workspace = document.getElementById('consoleWorkspace');
+        if (workspace) workspace.classList.remove('authenticated');
+        const authModal = document.getElementById('authModal');
+        if (authModal) authModal.classList.add('open');
+
         document.getElementById('configSection').classList.add('hidden');
         document.getElementById('deployWorkspace').classList.remove('visible');
         document.getElementById('headerLockBtn').classList.add('hidden');
 
         setWorkflowStep(1);
         setSentinelStatus('locked', 'Locked');
-        document.getElementById('authSecret').focus();
+        setTimeout(() => {
+            const input = document.getElementById('authSecret');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }, 50);
     }
 
     function togglePasswordVisibility(inputId, triggerBtn) {
