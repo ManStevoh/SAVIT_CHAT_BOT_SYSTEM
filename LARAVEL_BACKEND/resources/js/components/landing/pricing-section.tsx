@@ -8,6 +8,7 @@ import { Check } from "lucide-react"
 import { usePlans } from "@/lib/api-hooks"
 import { createCheckoutSession } from "@/lib/api-actions"
 import { getAuthToken } from "@/lib/api-client"
+import { PlanPrice } from "@/components/shared/plan-price"
 import { SectionHeader } from "@/components/shared/section-header"
 import { FadeIn } from "@/components/shared/fade-in"
 import { cn } from "@/lib/utils"
@@ -117,12 +118,12 @@ export function PricingSection() {
                     <div className="mb-7 text-center">
                       <h3 className="text-base font-semibold text-foreground">{plan.name}</h3>
                       <div className="mt-3">
-                        <span className="text-4xl font-semibold tabular-nums tracking-tight text-foreground">
-                          {plan.price ?? plan.priceDisplay}
-                        </span>
-                        {(plan.price ?? plan.priceDisplay) !== "Custom" && (
-                          <span className="text-sm text-muted-foreground">/month</span>
-                        )}
+                        <PlanPrice
+                          price={plan.price ?? plan.priceDisplay}
+                          originalPrice={plan.originalPrice}
+                          offer={plan.offer}
+                          period="/month"
+                        />
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
                     </div>

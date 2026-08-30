@@ -128,7 +128,7 @@ class SubscriptionOffersAndLifecycleTest extends TestCase
 
         Sanctum::actingAs($owner);
 
-        $original = 12999.0; // regional KES price for professional
+        $original = (float) app(\App\Services\RegionalPricingService::class)->amountForPlan($plan, 'KES');
         $expectedFinal = round($original * 0.9, 2);
 
         $this->postJson('/api/company/coupon/preview', [

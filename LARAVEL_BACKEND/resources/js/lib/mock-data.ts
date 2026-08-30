@@ -243,6 +243,17 @@ export interface Plan {
   price?: string
   priceDisplay?: string
   priceAmount?: number | null
+  originalPrice?: string | null
+  originalPriceAmount?: number | null
+  salePriceAmount?: number | null
+  offer?: {
+    code: string
+    name?: string
+    discountType: 'percent' | 'fixed'
+    discountValue: number
+    discountAmount: number
+  } | null
+  regionalPrices?: { KES?: number | null; USD?: number | null; NGN?: number | null }
   currency?: string
   description?: string
   features: string[]

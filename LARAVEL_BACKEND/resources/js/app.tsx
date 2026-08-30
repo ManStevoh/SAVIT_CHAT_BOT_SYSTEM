@@ -15,6 +15,22 @@ import AuthLayout from './layouts/AuthLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 
 const appName = import.meta.env.VITE_APP_NAME || 'RelayIQ'
+const GA_MEASUREMENT_ID = 'G-V0C1J7FCY2'
+
+function trackPageView(url: string) {
+  const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag
+  if (typeof gtag !== 'function') return
+  gtag('config', GA_MEASUREMENT_ID, { page_path: url })
+}
+
+let isInitialPageView = true
+router.on('navigate', (event) => {
+  if (isInitialPageView) {
+    isInitialPageView = false
+    return
+  }
+  trackPageView(event.detail.page.url)
+})
 
 function resolveLayout(name: string) {
   const lower = name.toLowerCase()

@@ -20,6 +20,8 @@ class RegionalPricingTest extends TestCase
 
     public function test_public_plans_default_to_usd_without_geo(): void
     {
+        config(['pricing.default_currency' => 'USD']);
+
         $response = $this->getJson('/api/plans')->assertOk();
 
         $response->assertJsonPath('currency', 'USD')

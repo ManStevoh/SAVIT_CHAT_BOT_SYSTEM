@@ -10,6 +10,7 @@ import 'core/onboarding/onboarding_controller.dart';
 import 'core/shell/shell_badges.dart';
 import 'features/admin/admin_repository.dart';
 import 'features/chats/chat_repository.dart';
+import 'features/companion/companion_repository.dart';
 import 'features/contacts/customer_repository.dart';
 import 'features/faqs/faq_repository.dart';
 import 'features/growth/growth_repository.dart';
@@ -51,6 +52,7 @@ Future<void> main() async {
         Provider.value(value: TaxRepository(api)),
         Provider.value(value: FaqRepository(api)),
         Provider.value(value: GrowthRepository(api)),
+        Provider.value(value: CompanionRepository(api)),
         Provider.value(value: AdminRepository(api)),
       ],
       child: const RelayApp(),

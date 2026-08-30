@@ -40,15 +40,20 @@ class SubscriptionPricingService
         }
 
         if ($couponCode === null || trim($couponCode) === '') {
-            return [
-                'success' => true,
-                'original_amount' => $original,
-                'discount_amount' => 0.0,
-                'final_amount' => $original,
-                'currency' => $currency,
-                'offer' => null,
-                'code' => null,
-            ];
+            $publicOffer = $this->bestOfferForPlan($plan, $currency, $original);
+            if (! $publicOffer || ! $this->companyCanRedeem($company, $publicOffer)) {
+                return [
+                    'success' => true,
+                    'original_amount' => $original,
+                    'discount_amount' => 0.0,
+                    'final_amount' => $original,
+                    'currency' => $currency,
+                    'offer' => null,
+                    'code' => null,
+                ];
+            }
+
+            return $this->quoteFromOffer($original, $currency, $publicOffer);
         }
 
         $offer = SubscriptionOffer::query()
@@ -67,22 +72,97 @@ class SubscriptionPricingService
             return ['success' => false, 'message' => 'This coupon is not valid for the current payment currency ('.$currency.').'];
         }
 
-        // Drop abandoned checkout holds so companies are not locked out of a code.
-        CouponRedemption::where('company_id', $company->id)
-            ->where('subscription_offer_id', $offer->id)
-            ->where('status', 'pending')
-            ->where('created_at', '<', now()->subHours(2))
-            ->update(['status' => 'void']);
-
-        $companyRedemptions = CouponRedemption::where('company_id', $company->id)
-            ->where('subscription_offer_id', $offer->id)
-            ->whereIn('status', ['applied', 'pending'])
-            ->count();
-
-        if ($companyRedemptions >= max(1, (int) $offer->max_per_company)) {
+        if (! $this->companyCanRedeem($company, $offer)) {
             return ['success' => false, 'message' => 'This coupon has already been used for your company.'];
         }
 
+        $quoted = $this->quoteFromOffer($original, $currency, $offer);
+        if (! ($quoted['success'] ?? false)) {
+            return $quoted;
+        }
+
+        return $quoted;
+    }
+
+    /**
+     * Best currently-valid public offer for a plan + currency (no company redemption check).
+     *
+     * @param  iterable<SubscriptionOffer>|null  $offers
+     */
+    public function bestOfferForPlan(Plan $plan, string $currency, float $original, ?iterable $offers = null): ?SubscriptionOffer
+    {
+        if ($original <= 0 || $plan->is_free) {
+            return null;
+        }
+
+        $currency = strtoupper($currency);
+        $pool = $offers ?? SubscriptionOffer::query()->orderByDesc('id')->get();
+        $best = null;
+        $bestDiscount = 0.0;
+
+        foreach ($pool as $offer) {
+            if (! $offer instanceof SubscriptionOffer || ! $offer->isCurrentlyValid()) {
+                continue;
+            }
+            if ($offer->plan_id && (int) $offer->plan_id !== (int) $plan->id) {
+                continue;
+            }
+            if ($offer->currency && strtoupper((string) $offer->currency) !== $currency) {
+                continue;
+            }
+            $discount = $this->computeDiscount($original, $offer);
+            $final = max(0, round($original - $discount, 2));
+            if ($discount <= 0 || $final <= 0) {
+                continue;
+            }
+            if ($discount > $bestDiscount) {
+                $bestDiscount = $discount;
+                $best = $offer;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * @return array{code: string, name: string, discountType: string, discountValue: float, discountAmount: float}
+     */
+    public function publicOfferPayload(SubscriptionOffer $offer, float $original): array
+    {
+        return [
+            'code' => $offer->code,
+            'name' => $offer->name,
+            'discountType' => $offer->discount_type,
+            'discountValue' => (float) $offer->discount_value,
+            'discountAmount' => $this->computeDiscount($original, $offer),
+        ];
+    }
+
+    public function computeDiscount(float $original, SubscriptionOffer $offer): float
+    {
+        if ($offer->discount_type === 'percent') {
+            $pct = min(100, max(0, (float) $offer->discount_value));
+
+            return round($original * ($pct / 100), 2);
+        }
+
+        return min($original, max(0, (float) $offer->discount_value));
+    }
+
+    /**
+     * @return array{
+     *   success: bool,
+     *   message?: string,
+     *   original_amount?: float,
+     *   discount_amount?: float,
+     *   final_amount?: float,
+     *   currency?: string,
+     *   offer?: SubscriptionOffer,
+     *   code?: string
+     * }
+     */
+    private function quoteFromOffer(float $original, string $currency, SubscriptionOffer $offer): array
+    {
         $discount = $this->computeDiscount($original, $offer);
         $final = max(0, round($original - $discount, 2));
 
@@ -101,15 +181,20 @@ class SubscriptionPricingService
         ];
     }
 
-    public function computeDiscount(float $original, SubscriptionOffer $offer): float
+    private function companyCanRedeem(Company $company, SubscriptionOffer $offer): bool
     {
-        if ($offer->discount_type === 'percent') {
-            $pct = min(100, max(0, (float) $offer->discount_value));
+        CouponRedemption::where('company_id', $company->id)
+            ->where('subscription_offer_id', $offer->id)
+            ->where('status', 'pending')
+            ->where('created_at', '<', now()->subHours(2))
+            ->update(['status' => 'void']);
 
-            return round($original * ($pct / 100), 2);
-        }
+        $companyRedemptions = CouponRedemption::where('company_id', $company->id)
+            ->where('subscription_offer_id', $offer->id)
+            ->whereIn('status', ['applied', 'pending'])
+            ->count();
 
-        return min($original, max(0, (float) $offer->discount_value));
+        return $companyRedemptions < max(1, (int) $offer->max_per_company);
     }
 
     /**

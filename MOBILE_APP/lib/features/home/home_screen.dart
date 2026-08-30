@@ -238,10 +238,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   onTap: () => context.go('/orders'),
                                 ),
                                 _QuickAction(
-                                  icon: Icons.inventory_2_outlined,
-                                  label: 'Products',
+                                  icon: Icons.insights_outlined,
+                                  label: 'Analytics',
                                   color: AppColors.accentBlue,
-                                  onTap: () => context.go('/more/products'),
+                                  onTap: () => context.go('/more/analytics'),
                                 ),
                               ],
                             ),
@@ -300,12 +300,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const Spacer(),
                                 if (data.unreadNotifications > 0)
-                                  Text(
-                                    '${data.unreadNotifications} unread',
-                                    style: GoogleFonts.manrope(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
+                                  TextButton(
+                                    onPressed: () async {
+                                      try {
+                                        await context
+                                            .read<HomeRepository>()
+                                            .markAllNotificationsRead();
+                                        if (context.mounted) await _reload();
+                                      } on ApiException catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(content: Text(e.message)),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    child: Text(
+                                      'Mark ${data.unreadNotifications} read',
+                                      style: GoogleFonts.manrope(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
                               ],

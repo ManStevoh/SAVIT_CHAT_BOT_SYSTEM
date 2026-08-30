@@ -50,6 +50,12 @@ import {
   type SubscriptionOffer,
 } from "@/lib/api-actions"
 
+function toDateTimeLocalValue(value?: string | null): string {
+  if (!value) return ""
+  const match = value.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)
+  return match?.[1] ?? value.slice(0, 16)
+}
+
 const emptyForm: SubscriptionOfferPayload = {
   name: "",
   code: "",
@@ -93,8 +99,8 @@ export default function AdminOffersPage() {
       planId: offer.planId,
       maxRedemptions: offer.maxRedemptions,
       maxPerCompany: offer.maxPerCompany,
-      startsAt: offer.startsAt ? offer.startsAt.slice(0, 16) : "",
-      endsAt: offer.endsAt ? offer.endsAt.slice(0, 16) : "",
+      startsAt: toDateTimeLocalValue(offer.startsAt),
+      endsAt: toDateTimeLocalValue(offer.endsAt),
       isActive: offer.isActive,
       firstPaymentOnly: offer.firstPaymentOnly,
     })
@@ -346,6 +352,9 @@ export default function AdminOffersPage() {
                   onChange={(e) => setForm({ ...form, endsAt: e.target.value })}
                 />
               </div>
+              <p className="col-span-2 text-xs text-muted-foreground">
+                Times use the platform timezone (Africa/Nairobi unless Admin → Settings says otherwise). Leave start empty to begin immediately.
+              </p>
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <Label>Active</Label>

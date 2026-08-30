@@ -18,13 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe, Cookie, Code } from "lucide-react"
+import { Settings, Shield, Mail, Bell, Plug, Palette, Upload, Globe, Cookie, Code, Loader2, CheckCircle2, XCircle, Circle } from "lucide-react"
 import {
   getPlatformSettings,
   updatePlatformSettings,
   sendTestEmail,
+  testOpenAiConnection,
   type PlatformSettings,
   type AiLearningConfig,
+  type OpenAiConnectionTestResult,
 } from "@/lib/api-actions"
 import { useToast } from "@/hooks/use-toast"
 import { getTimezoneGroups } from "@/lib/timezones"
@@ -50,6 +52,8 @@ export default function AdminSettingsPage() {
   const [savingNotifications, setSavingNotifications] = useState(false)
   const [savingLanding, setSavingLanding] = useState(false)
   const [sendingTest, setSendingTest] = useState(false)
+  const [testingOpenAi, setTestingOpenAi] = useState(false)
+  const [openAiTestResult, setOpenAiTestResult] = useState<OpenAiConnectionTestResult | null>(null)
   const [testEmailTo, setTestEmailTo] = useState("")
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -303,6 +307,31 @@ export default function AdminSettingsPage() {
       toast({ title: "Failed to save integrations", variant: "destructive" })
     } finally {
       setSavingIntegrations(false)
+    }
+  }
+
+  const handleTestOpenAi = async () => {
+    setTestingOpenAi(true)
+    setOpenAiTestResult(null)
+    try {
+      const enteredKey = settings?.openaiApiKey?.trim() ?? ""
+      const res = await testOpenAiConnection({
+        openaiApiKey: enteredKey && enteredKey !== "********" ? enteredKey : undefined,
+        openaiModel: settings?.openaiModel ?? undefined,
+        openaiMaxTokens: settings?.openaiMaxTokens ?? undefined,
+      })
+      setOpenAiTestResult(res)
+      if (res.success) {
+        toast({ title: res.message })
+      } else {
+        toast({ title: res.message, variant: "destructive" })
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to test OpenAI connection"
+      setOpenAiTestResult({ success: false, message })
+      toast({ title: message, variant: "destructive" })
+    } finally {
+      setTestingOpenAi(false)
     }
   }
 
@@ -1145,7 +1174,10 @@ export default function AdminSettingsPage() {
                     id="openaiApiKey"
                     type="password"
                     value={settings?.openaiApiKey ?? ""}
-                    onChange={(e) => updateSetting("openaiApiKey", e.target.value)}
+                    onChange={(e) => {
+                      setOpenAiTestResult(null)
+                      updateSetting("openaiApiKey", e.target.value)
+                    }}
                     placeholder="sk-... Leave blank to keep existing"
                   />
                 </Field>
@@ -1154,7 +1186,10 @@ export default function AdminSettingsPage() {
                   <Input
                     id="openaiModel"
                     value={settings?.openaiModel ?? ""}
-                    onChange={(e) => updateSetting("openaiModel", e.target.value)}
+                    onChange={(e) => {
+                      setOpenAiTestResult(null)
+                      updateSetting("openaiModel", e.target.value)
+                    }}
                     placeholder="gpt-4o-mini"
                   />
                 </Field>
@@ -1164,14 +1199,110 @@ export default function AdminSettingsPage() {
                     id="openaiMaxTokens"
                     type="number"
                     value={settings?.openaiMaxTokens ?? ""}
-                    onChange={(e) => updateSetting("openaiMaxTokens", e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) => {
+                      setOpenAiTestResult(null)
+                      updateSetting("openaiMaxTokens", e.target.value ? Number(e.target.value) : null)
+                    }}
                     placeholder="512"
                   />
                 </Field>
               </FieldGroup>
-              <Button onClick={handleSaveIntegrations} disabled={savingIntegrations}>
-                {savingIntegrations ? "Saving…" : "Save Integrations"}
-              </Button>
+              {openAiTestResult && (
+                <div
+                  className={`rounded-lg border p-4 space-y-3 ${
+                    openAiTestResult.success
+                      ? "border-emerald-500/30 bg-emerald-500/5"
+                      : "border-destructive/30 bg-destructive/5"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {openAiTestResult.success ? (
+                      <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+                    )}
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-medium text-foreground">
+                        {openAiTestResult.success ? "OpenAI connection verified" : "OpenAI connection failed"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{openAiTestResult.message}</p>
+                    </div>
+                  </div>
+                  {openAiTestResult.details?.checks && openAiTestResult.details.checks.length > 0 && (
+                    <ul className="space-y-1.5 text-sm">
+                      {openAiTestResult.details.checks.map((check) => (
+                        <li key={check.id} className="flex items-center gap-2">
+                          {check.status === "passed" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
+                          {check.status === "failed" && <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                          {check.status === "skipped" && <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                          <span className={check.status === "skipped" ? "text-muted-foreground" : "text-foreground"}>
+                            {check.label}
+                            {check.status === "skipped" ? " — not checked" : check.status === "failed" ? " — failed" : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {!openAiTestResult.success && (
+                    <dl className="grid gap-1 text-xs text-muted-foreground">
+                      {openAiTestResult.details?.model && (
+                        <div>
+                          <span className="font-medium text-foreground">Model:</span> {openAiTestResult.details.model}
+                        </div>
+                      )}
+                      {openAiTestResult.details?.httpStatus != null && (
+                        <div>
+                          <span className="font-medium text-foreground">HTTP status:</span> {openAiTestResult.details.httpStatus}
+                        </div>
+                      )}
+                      {openAiTestResult.details?.openaiCode && (
+                        <div>
+                          <span className="font-medium text-foreground">OpenAI code:</span> {openAiTestResult.details.openaiCode}
+                          {openAiTestResult.details.openaiType ? ` (${openAiTestResult.details.openaiType})` : ""}
+                        </div>
+                      )}
+                      {openAiTestResult.details?.openaiError && (
+                        <div className="break-words">
+                          <span className="font-medium text-foreground">OpenAI error:</span> {openAiTestResult.details.openaiError}
+                        </div>
+                      )}
+                      {openAiTestResult.details?.hint && (
+                        <div className="pt-1 text-foreground/80">{openAiTestResult.details.hint}</div>
+                      )}
+                    </dl>
+                  )}
+                  {openAiTestResult.success && (
+                    <p className="text-xs text-muted-foreground">
+                      {openAiTestResult.details?.model ? `Model ${openAiTestResult.details.model}` : "Model"}
+                      {openAiTestResult.details?.latencyMs != null ? ` · ${openAiTestResult.details.latencyMs} ms` : ""}
+                      {openAiTestResult.details?.replyPreview ? ` · reply: “${openAiTestResult.details.replyPreview}”` : ""}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleSaveIntegrations} disabled={savingIntegrations || testingOpenAi}>
+                  {savingIntegrations ? "Saving…" : "Save Integrations"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTestOpenAi}
+                  disabled={testingOpenAi || savingIntegrations}
+                >
+                  {testingOpenAi ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Testing…
+                    </>
+                  ) : (
+                    "Test OpenAI connection"
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Test uses the key and model currently in the form. A saved key is used if you leave the key field blank. This does not save settings.
+              </p>
             </CardContent>
           </Card>
 

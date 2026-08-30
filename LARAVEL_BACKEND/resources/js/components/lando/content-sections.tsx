@@ -16,6 +16,7 @@ import { getAuthToken } from "@/lib/api-client"
 import { toast } from "sonner"
 import { RecaptchaWidget, resetRecaptchaWidget } from "@/components/compliance/RecaptchaWidget"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
+import { PlanPrice } from "@/components/shared/plan-price"
 import { Reveal } from "./reveal"
 import { WhatsAppPartnerBadge } from "./whatsapp-partner-badge"
 
@@ -190,10 +191,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                 </span>
               )}
               <h3 className="text-xl font-bold text-card-foreground">{plan.name}</h3>
-              <p className="mt-4 text-4xl font-bold text-card-foreground">{plan.price}</p>
-              {(plan.price ?? "") !== "Custom" && (
-                <p className="text-sm text-muted-foreground">per month</p>
-              )}
+              <div className="mt-4">
+                <PlanPrice price={plan.price} originalPrice={plan.originalPrice} offer={plan.offer} />
+              </div>
               <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
               <ul className="mt-6 space-y-3">
                 {(plan.features ?? []).map((f) => (

@@ -66,6 +66,7 @@ class ChatMessage {
     required this.timestamp,
     this.status,
     this.replyTo,
+    this.learningFeedback,
   });
 
   final String id;
@@ -74,12 +75,27 @@ class ChatMessage {
   final String timestamp;
   final String? status;
   final QuotedMessage? replyTo;
+  final int? learningFeedback;
 
   bool get isIncoming => sender == 'customer';
 
   bool get isFailed => status == 'failed';
 
   bool get isOutbound => sender == 'agent' || sender == 'bot';
+
+  bool get isBot => sender == 'bot';
+
+  ChatMessage copyWith({int? learningFeedback}) {
+    return ChatMessage(
+      id: id,
+      content: content,
+      sender: sender,
+      timestamp: timestamp,
+      status: status,
+      replyTo: replyTo,
+      learningFeedback: learningFeedback ?? this.learningFeedback,
+    );
+  }
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     QuotedMessage? replyTo;
@@ -95,6 +111,7 @@ class ChatMessage {
       timestamp: jsonString(json['timestamp']),
       status: jsonStringOrNull(json['status']),
       replyTo: replyTo,
+      learningFeedback: (json['learningFeedback'] as num?)?.toInt(),
     );
   }
 }

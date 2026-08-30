@@ -88,6 +88,7 @@ const defaultForm: CreatePlanData & { featuresText: string; entitlements: PlanEn
   slug: "",
   priceDisplay: "",
   priceAmount: null,
+  regionalPrices: { KES: null, USD: null, NGN: null },
   description: "",
   features: [],
   featuresText: "",
@@ -176,6 +177,11 @@ export default function AdminPlansPage() {
       slug: plan.slug,
       priceDisplay: plan.priceDisplay ?? plan.price ?? "",
       priceAmount: plan.priceAmount ?? null,
+      regionalPrices: {
+        KES: plan.regionalPrices?.KES ?? null,
+        USD: plan.regionalPrices?.USD ?? null,
+        NGN: plan.regionalPrices?.NGN ?? null,
+      },
       description: plan.description ?? "",
       features: plan.features ?? [],
       featuresText: (plan.features ?? []).join("\n"),
@@ -213,6 +219,11 @@ export default function AdminPlansPage() {
       slug: form.slug.trim() || slugify(form.name),
       priceDisplay: form.priceDisplay.trim(),
       priceAmount: form.priceAmount != null ? Number(form.priceAmount) : null,
+      regionalPrices: {
+        KES: form.regionalPrices?.KES ?? null,
+        USD: form.regionalPrices?.USD ?? null,
+        NGN: form.regionalPrices?.NGN ?? null,
+      },
       description: form.description?.trim() || undefined,
       features,
       popular: form.popular,
@@ -359,10 +370,12 @@ export default function AdminPlansPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {plan.priceDisplay ?? plan.price ?? "—"}
-                      {plan.priceAmount != null && (
-                        <span className="ml-1 text-muted-foreground text-xs">({plan.priceAmount})</span>
-                      )}
+                      <div>{plan.priceDisplay ?? plan.price ?? "—"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        KES {plan.regionalPrices?.KES ?? "—"}
+                        {" · "}USD {plan.regionalPrices?.USD ?? "—"}
+                        {" · "}NGN {plan.regionalPrices?.NGN ?? "—"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs max-w-[240px]">
                       {plan.entitlements ? (
@@ -471,13 +484,46 @@ export default function AdminPlansPage() {
                   min={0}
                   step={0.01}
                   value={form.priceAmount ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, priceAmount: e.target.value === "" ? null : Number(e.target.value) }))}
+                  onChange={(e) => {
+                    const next = e.target.value === "" ? null : Number(e.target.value)
+                    setForm((f) => ({
+                      ...f,
+                      priceAmount: next,
+                      regionalPrices: { ...f.regionalPrices, KES: next },
+                    }))
+                  }}
                   placeholder="99"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Numeric amount charged by Paystack/M-Pesa. Use the same currency configured under Admin → Payment Gateways (e.g. KES, NGN). Price display is label-only.
+                  Fallback amount. The public pricing page uses the regional amounts below — changing only this field also updates the default currency (KES).
                 </p>
               </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {(["KES", "USD", "NGN"] as const).map((code) => (
+                <div key={code} className="grid gap-2">
+                  <Label htmlFor={`plan-price-${code}`}>{code} list price</Label>
+                  <Input
+                    id={`plan-price-${code}`}
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.regionalPrices?.[code] ?? ""}
+                    onChange={(e) => {
+                      const next = e.target.value === "" ? null : Number(e.target.value)
+                      setForm((f) => ({
+                        ...f,
+                        priceAmount: code === "KES" ? next : f.priceAmount,
+                        regionalPrices: {
+                          ...f.regionalPrices,
+                          [code]: next,
+                        },
+                      }))
+                    }}
+                    placeholder={code === "KES" ? "3799" : code === "USD" ? "12" : "18000"}
+                  />
+                </div>
+              ))}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="plan-description">Description</Label>

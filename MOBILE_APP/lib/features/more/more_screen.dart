@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/branding/branding_copy.dart';
+import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/safe_url.dart';
 import '../../shared/widgets/app_surface.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -16,6 +18,7 @@ class MoreScreen extends StatelessWidget {
     final user = context.watch<AuthController>().user;
     final isAdmin = user?.isPlatformAdmin ?? false;
     final adminOnly = user?.isPlatformAdminOnly ?? false;
+    final web = context.read<AppConfig>();
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
@@ -39,6 +42,21 @@ class MoreScreen extends StatelessWidget {
             ),
           ],
           if (!adminOnly) ...[
+            const _SectionLabel('Insights'),
+            _MoreTile(
+              icon: Icons.insights_outlined,
+              title: 'Analytics',
+              subtitle: 'Messages, orders, revenue & products',
+              color: AppColors.accentBlue,
+              onTap: () => context.go('/more/analytics'),
+            ),
+            _MoreTile(
+              icon: Icons.workspace_premium_outlined,
+              title: 'Subscription',
+              subtitle: 'Plan, usage and invoices',
+              color: AppColors.primary,
+              onTap: () => context.go('/more/subscription'),
+            ),
             const _SectionLabel('Catalog'),
             _MoreTile(
               icon: Icons.inventory_2_outlined,
@@ -68,12 +86,56 @@ class MoreScreen extends StatelessWidget {
               color: AppColors.primary,
               onTap: () => context.go('/more/storefront'),
             ),
+            const _SectionLabel('Commerce'),
+            _MoreTile(
+              icon: Icons.local_shipping_outlined,
+              title: 'Delivery zones',
+              subtitle: 'Fees, keywords and coverage',
+              color: AppColors.accentTeal,
+              onTap: () => context.go('/more/delivery'),
+            ),
+            _MoreTile(
+              icon: Icons.table_restaurant_outlined,
+              title: 'Dine-in',
+              subtitle: 'Tables and QR order links',
+              color: AppColors.accentAmber,
+              onTap: () => context.go('/more/dine-in'),
+            ),
             _MoreTile(
               icon: Icons.event_available_outlined,
               title: 'Bookings',
-              subtitle: 'Meetings & calendar feed',
+              subtitle: 'Meetings, slots & calendar feed',
               color: AppColors.accentTeal,
               onTap: () => context.go('/more/bookings'),
+            ),
+            _MoreTile(
+              icon: Icons.local_offer_outlined,
+              title: 'Coupons',
+              subtitle: 'Storefront discount codes',
+              color: AppColors.accentRose,
+              onTap: () => context.go('/more/coupons'),
+            ),
+            _MoreTile(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Payments',
+              subtitle: 'M-Pesa, Paystack, Stripe & COD',
+              color: AppColors.accentBlue,
+              onTap: () => context.go('/more/payments'),
+            ),
+            const _SectionLabel('Marketing'),
+            _MoreTile(
+              icon: Icons.campaign_outlined,
+              title: 'Campaigns',
+              subtitle: 'WhatsApp broadcasts',
+              color: AppColors.primary,
+              onTap: () => context.go('/more/campaigns'),
+            ),
+            _MoreTile(
+              icon: Icons.trending_up,
+              title: 'Growth',
+              subtitle: 'Posts, approve & publish',
+              color: AppColors.primary,
+              onTap: () => context.go('/more/growth'),
             ),
             _MoreTile(
               icon: Icons.help_outline,
@@ -82,13 +144,56 @@ class MoreScreen extends StatelessWidget {
               color: AppColors.accentAmber,
               onTap: () => context.go('/more/faqs'),
             ),
-            const _SectionLabel('Growth'),
+            const _SectionLabel('Workspace'),
             _MoreTile(
-              icon: Icons.trending_up,
-              title: 'Growth',
-              subtitle: 'Posts, approve & publish',
+              icon: Icons.chat_outlined,
+              title: 'WhatsApp',
+              subtitle: 'Connection status & quality',
+              color: AppColors.success,
+              onTap: () => context.go('/more/whatsapp'),
+            ),
+            _MoreTile(
+              icon: Icons.smart_toy_outlined,
+              title: 'AI replies',
+              subtitle: 'Greeting, tone and learning',
               color: AppColors.primary,
-              onTap: () => context.go('/more/growth'),
+              onTap: () => context.go('/more/ai'),
+            ),
+            _MoreTile(
+              icon: Icons.groups_outlined,
+              title: 'Team',
+              subtitle: 'Invite agents and share access',
+              color: AppColors.accentBlue,
+              onTap: () => context.go('/more/team'),
+            ),
+            _MoreTile(
+              icon: Icons.business_outlined,
+              title: 'Business',
+              subtitle: 'Name, mode, bookings & dine-in',
+              color: AppColors.accentTeal,
+              onTap: () => context.go('/more/business'),
+            ),
+            const _SectionLabel('On the web'),
+            _MoreTile(
+              icon: Icons.auto_graph_outlined,
+              title: 'Executive & mission control',
+              subtitle: 'Advanced AI consoles stay on web',
+              color: AppColors.textMuted,
+              onTap: () => openHttpsUrl(web.dashboardUrl('/dashboard/executive')),
+            ),
+            _MoreTile(
+              icon: Icons.psychology_outlined,
+              title: 'Cognitive AI',
+              subtitle: 'Plans, simulation and memory',
+              color: AppColors.textMuted,
+              onTap: () => openHttpsUrl(web.dashboardUrl('/dashboard/cognitive')),
+            ),
+            _MoreTile(
+              icon: Icons.store_mall_directory_outlined,
+              title: 'Marketplace',
+              subtitle: 'Install optional modules',
+              color: AppColors.textMuted,
+              onTap: () => openHttpsUrl(web.dashboardUrl('/dashboard/marketplace')),
             ),
           ],
           const _SectionLabel('Account'),

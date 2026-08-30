@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformSetting;
 use App\Services\AI\AiLearningConfig;
+use App\Services\AI\OpenAiConnectionTester;
 use App\Services\MailService;
 use App\Services\Platform\AuditService;
 use App\Services\WhatsApp\WhatsAppBillingModel;
@@ -389,5 +390,20 @@ class PlatformSettingsController extends Controller
                 'message' => 'Failed to send test email. Check SMTP settings and try again.',
             ], 422);
         }
+    }
+
+    public function testOpenAi(Request $request, OpenAiConnectionTester $tester): JsonResponse
+    {
+        $validated = $request->validate([
+            'openaiApiKey' => 'nullable|string|max:500',
+            'openaiModel' => 'nullable|string|max:100',
+            'openaiMaxTokens' => 'nullable|integer|min:1|max:4096',
+        ]);
+
+        return response()->json($tester->test(
+            $validated['openaiApiKey'] ?? null,
+            $validated['openaiModel'] ?? null,
+            isset($validated['openaiMaxTokens']) ? (int) $validated['openaiMaxTokens'] : null,
+        ));
     }
 }

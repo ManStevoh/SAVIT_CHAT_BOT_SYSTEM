@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Services\Platform\EntitlementService;
+use App\Services\RegionalPricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -13,6 +14,7 @@ class PlanController extends Controller
 {
     public function __construct(
         protected EntitlementService $entitlements,
+        protected RegionalPricingService $regionalPricing,
     ) {}
 
     public function index(): JsonResponse
@@ -31,6 +33,7 @@ class PlanController extends Controller
             'slug' => $p->slug,
             'priceDisplay' => $p->price_display,
             'priceAmount' => $p->price_amount !== null ? (float) $p->price_amount : null,
+            'regionalPrices' => $this->regionalPricesForApi($p),
             'description' => $p->description ?? '',
             'features' => $p->features ?? [],
             'popular' => (bool) $p->popular,
@@ -190,6 +193,10 @@ class PlanController extends Controller
             'slug' => 'required|string|max:255|unique:plans,slug|regex:/^[a-z0-9_-]+$/',
             'priceDisplay' => 'required|string|max:50',
             'priceAmount' => 'nullable|numeric|min:0',
+            'regionalPrices' => 'sometimes|array',
+            'regionalPrices.KES' => 'nullable|numeric|min:0',
+            'regionalPrices.USD' => 'nullable|numeric|min:0',
+            'regionalPrices.NGN' => 'nullable|numeric|min:0',
             'description' => 'nullable|string|max:500',
             'features' => 'nullable|array',
             'features.*' => 'string|max:255',
@@ -206,11 +213,19 @@ class PlanController extends Controller
         $entitlements = $this->entitlementsFromRequest($validated, $validated['slug'])
             ?? EntitlementService::normalizeAdminEntitlements([], $validated['slug']);
 
+        $pricing = $this->regionalPricing->mergeAdminPricing(
+            null,
+            isset($validated['priceAmount']) ? (float) $validated['priceAmount'] : null,
+            $validated['priceDisplay'] ?? null,
+            $validated,
+        );
+
         $plan = Plan::create([
             'name' => $validated['name'],
             'slug' => $validated['slug'],
-            'price_display' => $validated['priceDisplay'],
-            'price_amount' => isset($validated['priceAmount']) ? (float) $validated['priceAmount'] : null,
+            'price_display' => $pricing['price_display'] ?: $validated['priceDisplay'],
+            'price_amount' => $pricing['price_amount'],
+            'regional_prices' => $pricing['regional_prices'] ?: null,
             'description' => $validated['description'] ?? null,
             'features' => $validated['features'] ?? [],
             'popular' => $validated['popular'] ?? false,
@@ -237,6 +252,10 @@ class PlanController extends Controller
             'slug' => ['sometimes', 'string', 'max:255', 'regex:/^[a-z0-9_-]+$/', Rule::unique('plans')->ignore($plan->id)],
             'priceDisplay' => 'sometimes|string|max:50',
             'priceAmount' => 'nullable|numeric|min:0',
+            'regionalPrices' => 'sometimes|array',
+            'regionalPrices.KES' => 'nullable|numeric|min:0',
+            'regionalPrices.USD' => 'nullable|numeric|min:0',
+            'regionalPrices.NGN' => 'nullable|numeric|min:0',
             'description' => 'nullable|string|max:500',
             'features' => 'nullable|array',
             'features.*' => 'string|max:255',
@@ -257,13 +276,19 @@ class PlanController extends Controller
         if (array_key_exists('slug', $validated)) {
             $data['slug'] = $validated['slug'];
         }
-        if (array_key_exists('priceDisplay', $validated)) {
-            $data['price_display'] = $validated['priceDisplay'];
-        }
-        if (array_key_exists('priceAmount', $validated)) {
-            $data['price_amount'] = $validated['priceAmount'] !== null && $validated['priceAmount'] !== ''
-                ? (float) $validated['priceAmount']
-                : null;
+        if (array_key_exists('priceDisplay', $validated)
+            || array_key_exists('priceAmount', $validated)
+            || array_key_exists('regionalPrices', $validated)
+        ) {
+            $pricing = $this->regionalPricing->mergeAdminPricing(
+                is_array($plan->regional_prices) ? $plan->regional_prices : null,
+                $plan->price_amount !== null ? (float) $plan->price_amount : null,
+                $plan->price_display,
+                $validated,
+            );
+            $data['price_display'] = $pricing['price_display'];
+            $data['price_amount'] = $pricing['price_amount'];
+            $data['regional_prices'] = $pricing['regional_prices'] ?: null;
         }
         if (array_key_exists('description', $validated)) {
             $data['description'] = $validated['description'];
@@ -315,5 +340,21 @@ class PlanController extends Controller
         $plan->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * @return array{KES: float|null, USD: float|null, NGN: float|null}
+     */
+    private function regionalPricesForApi(Plan $p): array
+    {
+        $stored = is_array($p->regional_prices) ? $p->regional_prices : [];
+        $out = [];
+        foreach (['KES', 'USD', 'NGN'] as $code) {
+            $out[$code] = array_key_exists($code, $stored) && $stored[$code] !== null && $stored[$code] !== ''
+                ? (float) $stored[$code]
+                : $this->regionalPricing->amountForPlan($p, $code);
+        }
+
+        return $out;
     }
 }

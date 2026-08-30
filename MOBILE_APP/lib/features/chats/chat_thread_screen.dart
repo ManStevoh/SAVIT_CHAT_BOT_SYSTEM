@@ -245,6 +245,56 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
     setState(() => _replyingTo = message);
   }
 
+  Future<void> _clearHistory() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear this chat?'),
+        content: const Text(
+          'Deletes messages and model memory for this conversation. Developer mode must be on.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Clear')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await context.read<ChatRepository>().clearHistory(widget.chatId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chat history cleared')),
+      );
+      await _reload();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Future<void> _rateBot(ChatMessage message, int feedback) async {
+    try {
+      await context.read<ChatRepository>().learningFeedback(
+            chatId: widget.chatId,
+            messageId: message.id,
+            feedback: feedback,
+          );
+      if (!mounted) return;
+      final current = await _future;
+      setState(() {
+        _future = Future.value(
+          current
+              .map((m) => m.id == message.id ? m.copyWith(learningFeedback: feedback) : m)
+              .toList(),
+        );
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = (_customerName != null && _customerName!.trim().isNotEmpty)
@@ -316,6 +366,17 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
               onPressed: _handBack,
               icon: const Icon(Icons.refresh),
             ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'clear') _clearHistory();
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'clear',
+                child: Text('Clear history'),
+              ),
+            ],
+          ),
         ],
       ),
       body: Column(
@@ -371,6 +432,9 @@ class _ChatThreadScreenState extends State<ChatThreadScreen>
                           message: message,
                           showTimestamp: showTimestamp,
                           onReply: () => _setReply(message),
+                          onFeedback: message.isBot
+                              ? (score) => _rateBot(message, score)
+                              : null,
                         );
                       },
                     );
@@ -527,11 +591,13 @@ class _Bubble extends StatelessWidget {
     required this.message,
     required this.showTimestamp,
     required this.onReply,
+    this.onFeedback,
   });
 
   final ChatMessage message;
   final bool showTimestamp;
   final VoidCallback onReply;
+  final ValueChanged<int>? onFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -592,7 +658,7 @@ class _Bubble extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.ink.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border(
+                    border: const Border(
                       left: BorderSide(color: AppColors.primary, width: 3),
                     ),
                   ),
@@ -618,6 +684,25 @@ class _Bubble extends StatelessWidget {
                   color: AppColors.ink,
                 ),
               ),
+              if (onFeedback != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _FeedbackChip(
+                      icon: Icons.thumb_up_alt_outlined,
+                      selected: message.learningFeedback == 1,
+                      onTap: () => onFeedback!(1),
+                    ),
+                    const SizedBox(width: 6),
+                    _FeedbackChip(
+                      icon: Icons.thumb_down_alt_outlined,
+                      selected: message.learningFeedback == -1,
+                      onTap: () => onFeedback!(-1),
+                    ),
+                  ],
+                ),
+              ],
               if (failed) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -651,6 +736,34 @@ class _Bubble extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackChip extends StatelessWidget {
+  const _FeedbackChip({
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(99),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Icon(
+          icon,
+          size: 16,
+          color: selected ? AppColors.primary : AppColors.textMuted,
         ),
       ),
     );

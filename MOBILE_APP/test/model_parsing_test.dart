@@ -2,13 +2,21 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:essem_mobile/core/auth/auth_user.dart';
 import 'package:essem_mobile/core/utils/phone_utils.dart';
+import 'package:essem_mobile/core/config/app_config.dart';
 import 'package:essem_mobile/features/chats/chat_models.dart';
+import 'package:essem_mobile/features/companion/companion_models.dart';
 import 'package:essem_mobile/features/faqs/faq_models.dart';
 import 'package:essem_mobile/features/growth/growth_models.dart';
 import 'package:essem_mobile/features/orders/order_models.dart';
 import 'package:essem_mobile/features/products/product_models.dart';
 
 void main() {
+  test('AppConfig derives dashboard URLs from the API root', () {
+    const config = AppConfig(apiBaseUrl: 'https://relayiq.app/api');
+    expect(config.webOrigin, 'https://relayiq.app');
+    expect(config.dashboardUrl('/dashboard/subscription'), 'https://relayiq.app/dashboard/subscription');
+  });
+
   test('AuthUser parses Laravel login user shape', () {
     final user = AuthUser.fromJson({
       'id': 7,
@@ -171,5 +179,89 @@ void main() {
     });
     expect(ig.needsMediaForPublish, isTrue);
     expect(ig.canPublish, isFalse);
+  });
+
+  test('companion billing and commerce models parse API shapes', () {
+    final analytics = AnalyticsSnapshot.fromJson({
+      'totalMessages': 12,
+      'totalOrders': 3,
+      'totalCustomers': 8,
+      'totalRevenue': 1499.5,
+      'messagesChange': 4.2,
+      'topProducts': [
+        {'name': 'Bag', 'sales': 2, 'revenue': 200},
+      ],
+    }, '7d');
+    expect(analytics.totalRevenue, 1499.5);
+    expect(analytics.topProducts.first.name, 'Bag');
+
+    final sub = SubscriptionOverview.fromJson({
+      'plan': 'growth',
+      'planName': 'Growth',
+      'status': 'active',
+      'endDate': '2026-09-28',
+      'daysRemaining': 12,
+      'isExpiringSoon': false,
+      'accessEndsLabel': 'Renews on',
+    });
+    expect(sub.planName, 'Growth');
+
+    final usage = UsageMeter.fromJson({'name': 'Messages', 'used': 40, 'limit': 100});
+    expect(usage.progress, closeTo(0.4, 0.001));
+
+    final zone = DeliveryZone.fromJson({
+      'id': 4,
+      'name': 'Nairobi',
+      'fee': 250,
+      'keywords': ['westlands', 'cbd'],
+    });
+    expect(zone.id, '4');
+    expect(zone.keywords, ['westlands', 'cbd']);
+
+    final coupon = StoreCoupon.fromJson({
+      'id': 9,
+      'code': 'SAVE50',
+      'type': 'percent',
+      'value': 50,
+      'isCurrentlyValid': true,
+    });
+    expect(coupon.label, '50% off');
+
+    final campaign = CampaignSummary.fromJson({
+      'id': 2,
+      'name': 'August blast',
+      'status': 'draft',
+      'segment': 'all',
+      'sentCount': 0,
+      'totalRecipients': 12,
+    });
+    expect(campaign.status, 'draft');
+
+    final wa = WhatsAppStatus.fromJson({
+      'connected': true,
+      'displayPhoneNumber': '+254700000000',
+      'webhookSubscribed': true,
+    });
+    expect(wa.connected, isTrue);
+
+    final payments = PaymentCollectionSettings.fromJson({
+      'ordersCollectPaymentEnabled': true,
+      'ordersAcceptMpesa': true,
+      'ordersAcceptCod': true,
+    });
+    expect(payments.acceptMpesa, isTrue);
+    expect(payments.acceptStripe, isFalse);
+  });
+
+  test('chat messages keep learning feedback', () {
+    final message = ChatMessage.fromJson({
+      'id': 11,
+      'content': 'Karibu',
+      'sender': 'bot',
+      'timestamp': '10:01 AM',
+      'learningFeedback': 1,
+    });
+    expect(message.isBot, isTrue);
+    expect(message.copyWith(learningFeedback: -1).learningFeedback, -1);
   });
 }

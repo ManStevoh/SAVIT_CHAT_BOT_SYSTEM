@@ -96,4 +96,27 @@ class ChatRepository {
       throw ApiException.fromDio(e);
     }
   }
+
+  Future<void> clearHistory(String chatId) async {
+    try {
+      await _api.dio.delete('/company/chats/$chatId/clear-history');
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<void> learningFeedback({
+    required String chatId,
+    required String messageId,
+    required int feedback,
+  }) async {
+    try {
+      await _api.dio.post(
+        '/company/chats/$chatId/messages/$messageId/learning-feedback',
+        data: {'feedback': feedback},
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

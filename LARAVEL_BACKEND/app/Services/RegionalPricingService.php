@@ -87,6 +87,77 @@ class RegionalPricingService
         return $default;
     }
 
+    /**
+     * Keep admin price_amount, price_display, and regional_prices in sync so
+     * /pricing shows the same numbers the admin just saved.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array{regional_prices: array<string, float>, price_amount: float|null, price_display: string|null}
+     */
+    public function mergeAdminPricing(
+        ?array $existingRegional,
+        ?float $existingAmount,
+        ?string $existingDisplay,
+        array $validated,
+    ): array {
+        $default = $this->normalizeCurrency(config('pricing.default_currency')) ?: 'KES';
+        $regional = is_array($existingRegional) ? $existingRegional : [];
+        $regionalProvided = array_key_exists('regionalPrices', $validated) && is_array($validated['regionalPrices']);
+        $amountProvided = array_key_exists('priceAmount', $validated);
+
+        if ($regionalProvided) {
+            foreach (['KES', 'USD', 'NGN'] as $code) {
+                if (! array_key_exists($code, $validated['regionalPrices'])) {
+                    continue;
+                }
+                $val = $validated['regionalPrices'][$code];
+                if ($val === null || $val === '') {
+                    unset($regional[$code]);
+                } else {
+                    $regional[$code] = round((float) $val, 2);
+                }
+            }
+        }
+
+        $amount = $existingAmount;
+        if ($amountProvided) {
+            $amount = $validated['priceAmount'] !== null && $validated['priceAmount'] !== ''
+                ? round((float) $validated['priceAmount'], 2)
+                : null;
+            if ($amount !== null) {
+                $regional[$default] = $amount;
+            }
+        }
+        if ($regionalProvided && array_key_exists($default, $validated['regionalPrices'])) {
+            $defaultVal = $validated['regionalPrices'][$default];
+            if ($defaultVal !== null && $defaultVal !== '') {
+                $regional[$default] = round((float) $defaultVal, 2);
+                if (! $amountProvided) {
+                    $amount = $regional[$default];
+                }
+            }
+        }
+
+        $display = array_key_exists('priceDisplay', $validated)
+            ? (string) $validated['priceDisplay']
+            : $existingDisplay;
+
+        $explicitCustom = array_key_exists('priceDisplay', $validated)
+            && strcasecmp(trim((string) $validated['priceDisplay']), 'Custom') === 0;
+        $shouldRefreshDisplay = ($amountProvided || ($regionalProvided && isset($regional[$default])))
+            && $amount !== null
+            && ! $explicitCustom;
+        if ($shouldRefreshDisplay) {
+            $display = $this->formatAmount($amount, $default);
+        }
+
+        return [
+            'regional_prices' => $regional,
+            'price_amount' => $amount,
+            'price_display' => $display,
+        ];
+    }
+
     public function amountForPlan(Plan $plan, string $currency): ?float
     {
         $currency = $this->normalizeCurrency($currency) ?: 'USD';

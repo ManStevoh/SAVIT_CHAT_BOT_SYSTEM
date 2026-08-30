@@ -1850,6 +1850,7 @@ export interface CreatePlanData {
   slug: string
   priceDisplay: string
   priceAmount?: number | null
+  regionalPrices?: { KES?: number | null; USD?: number | null; NGN?: number | null }
   description?: string
   features?: string[]
   popular?: boolean
@@ -1868,6 +1869,7 @@ export interface UpdatePlanData {
   slug?: string
   priceDisplay?: string
   priceAmount?: number | null
+  regionalPrices?: { KES?: number | null; USD?: number | null; NGN?: number | null }
   description?: string
   features?: string[]
   popular?: boolean
@@ -1999,6 +2001,7 @@ export interface SubscriptionOffer {
   maxPerCompany: number
   startsAt?: string | null
   endsAt?: string | null
+  timezone?: string | null
   isActive: boolean
   firstPaymentOnly: boolean
   isCurrentlyValid: boolean
@@ -3245,6 +3248,77 @@ export async function sendTestEmail(to: string): Promise<{ success: boolean; mes
     })
   } catch (e) {
     return handleApiError(e)
+  }
+}
+
+export interface OpenAiConnectionCheck {
+  id: string
+  label: string
+  status: "passed" | "failed" | "skipped"
+}
+
+export interface OpenAiConnectionTestResult {
+  success: boolean
+  message: string
+  failedStep?: string | null
+  details?: {
+    httpStatus?: number | null
+    openaiError?: string | null
+    openaiCode?: string | null
+    openaiType?: string | null
+    model?: string | null
+    latencyMs?: number | null
+    hint?: string | null
+    replyPreview?: string | null
+    checks?: OpenAiConnectionCheck[]
+  }
+}
+
+/**
+ * Verify the platform OpenAI key and model without saving.
+ * Laravel: POST /api/admin/settings/test-openai
+ */
+export async function testOpenAiConnection(data: {
+  openaiApiKey?: string
+  openaiModel?: string
+  openaiMaxTokens?: number
+}): Promise<OpenAiConnectionTestResult> {
+  if (useMockApi()) {
+    await delay(800)
+    return {
+      success: true,
+      message: `Connected (mock). Model ${data.openaiModel || "gpt-4o-mini"} replied successfully.`,
+      details: {
+        model: data.openaiModel || "gpt-4o-mini",
+        latencyMs: 120,
+        replyPreview: "ok",
+        checks: [
+          { id: "api_key", label: "API key", status: "passed" },
+          { id: "model", label: "Model availability", status: "passed" },
+          { id: "completion", label: "Generate a test reply", status: "passed" },
+        ],
+      },
+    }
+  }
+  try {
+    return await apiRequest<OpenAiConnectionTestResult>("/api/admin/settings/test-openai", {
+      method: "POST",
+      body: data,
+    })
+  } catch (e) {
+    const err = e as Error & { responseData?: OpenAiConnectionTestResult }
+    if (err.responseData && typeof err.responseData === "object") {
+      return {
+        success: false,
+        message: err.responseData.message ?? (err instanceof Error ? err.message : "Connection test failed"),
+        failedStep: err.responseData.failedStep,
+        details: err.responseData.details,
+      }
+    }
+    return {
+      success: false,
+      message: e instanceof Error ? e.message : "Connection test failed",
+    }
   }
 }
 

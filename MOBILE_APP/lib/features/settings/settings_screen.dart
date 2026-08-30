@@ -403,7 +403,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 22),
                 Text(
-                  'STORE',
+                  'WORKSPACE',
                   style: GoogleFonts.manrope(
                     fontWeight: FontWeight.w800,
                     color: AppColors.textMuted,
@@ -413,23 +413,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 10),
                 AppSurface(
-                  onTap: () => context.go('/more/storefront'),
+                  onTap: () => context.go('/more/business'),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
                     vertical: 4,
                   ),
                   child: ListTile(
                     leading: const AppIconChip(
-                      icon: Icons.storefront_outlined,
+                      icon: Icons.business_outlined,
+                      color: AppColors.accentTeal,
+                      size: 44,
+                    ),
+                    title: Text(
+                      'Business',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      'Name, mode, bookings & dine-in',
+                      style: GoogleFonts.manrope(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                AppSurface(
+                  onTap: () => context.go('/more/whatsapp'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: ListTile(
+                    leading: const AppIconChip(
+                      icon: Icons.chat_outlined,
+                      color: AppColors.success,
+                      size: 44,
+                    ),
+                    title: Text(
+                      'WhatsApp',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      'Connection status & quality',
+                      style: GoogleFonts.manrope(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                AppSurface(
+                  onTap: () => context.go('/more/ai'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: ListTile(
+                    leading: const AppIconChip(
+                      icon: Icons.smart_toy_outlined,
                       color: AppColors.primary,
                       size: 44,
                     ),
                     title: Text(
-                      'Storefront',
+                      'AI replies',
                       style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
                     ),
                     subtitle: Text(
-                      'Store link, COD, delivery fees & dine-in',
+                      'Greeting, tone and learning',
+                      style: GoogleFonts.manrope(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                AppSurface(
+                  onTap: () => context.go('/more/subscription'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: ListTile(
+                    leading: const AppIconChip(
+                      icon: Icons.workspace_premium_outlined,
+                      color: AppColors.accentAmber,
+                      size: 44,
+                    ),
+                    title: Text(
+                      'Subscription',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      'Plan, usage and invoices',
                       style: GoogleFonts.manrope(
                         color: AppColors.textMuted,
                         fontSize: 13,

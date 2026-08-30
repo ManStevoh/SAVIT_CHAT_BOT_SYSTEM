@@ -8,6 +8,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_surface.dart';
+import '../companion/companion_repository.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
@@ -85,6 +86,32 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
+  Future<void> _editSettings() async {
+    if (_settings == null) return;
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _BookingSettingsSheet(settings: _settings!),
+    );
+    if (saved == true) await _load();
+  }
+
+  Future<void> _setStatus(Map<String, dynamic> booking, String status) async {
+    final id = booking['id']?.toString();
+    if (id == null || id.isEmpty) return;
+    try {
+      await context.read<CompanionRepository>().updateBookingStatus(id, status);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Booking $status')),
+      );
+      await _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,6 +122,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
           style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Booking settings',
+            onPressed: _loading || _settings == null ? null : _editSettings,
+            icon: const Icon(Icons.tune),
+          ),
           IconButton(
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
@@ -203,18 +235,26 @@ class _BookingsScreenState extends State<BookingsScreen> {
                             ),
                           ),
                           if (_settings != null)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Timezone: ${_settings!['timezone']} · '
-                                  '${_settings!['defaultDurationMinutes']} min slots',
-                                  style: GoogleFonts.manrope(
-                                    color: AppColors.textMuted,
-                                    fontSize: 12,
-                                  ),
+                            ListTile(
+                              title: Text(
+                                'Slot settings',
+                                style: GoogleFonts.manrope(
+                                  fontWeight: FontWeight.w700,
                                 ),
+                              ),
+                              subtitle: Text(
+                                '${_settings!['isEnabled'] == false ? 'Disabled' : 'Enabled'} · '
+                                '${_settings!['timezone']} · '
+                                '${_settings!['defaultDurationMinutes']} min · '
+                                '${_settings!['bufferMinutes'] ?? 0} min buffer',
+                                style: GoogleFonts.manrope(
+                                  color: AppColors.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              trailing: TextButton(
+                                onPressed: _editSettings,
+                                child: const Text('Edit'),
                               ),
                             ),
                         ],
@@ -273,21 +313,162 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                 ),
                               ),
                               isThreeLine: true,
-                              trailing: google == null
-                                  ? null
-                                  : IconButton(
-                                      icon: const Icon(
-                                        Icons.copy_all_outlined,
-                                      ),
-                                      tooltip: 'Copy Google Calendar link',
-                                      onPressed: () => _copy(google),
+                              trailing: PopupMenuButton<String>(
+                                onSelected: (value) {
+                                  if (value == 'copy' && google != null) {
+                                    _copy(google);
+                                    return;
+                                  }
+                                  _setStatus(b, value);
+                                },
+                                itemBuilder: (context) => [
+                                  if (status != 'confirmed')
+                                    const PopupMenuItem(
+                                      value: 'confirmed',
+                                      child: Text('Confirm'),
                                     ),
+                                  if (status != 'completed')
+                                    const PopupMenuItem(
+                                      value: 'completed',
+                                      child: Text('Complete'),
+                                    ),
+                                  if (status != 'cancelled')
+                                    const PopupMenuItem(
+                                      value: 'cancelled',
+                                      child: Text('Cancel'),
+                                    ),
+                                  if (google != null)
+                                    const PopupMenuItem(
+                                      value: 'copy',
+                                      child: Text('Copy calendar link'),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         );
                       }),
                   ],
                 ),
+    );
+  }
+}
+
+class _BookingSettingsSheet extends StatefulWidget {
+  const _BookingSettingsSheet({required this.settings});
+
+  final Map<String, dynamic> settings;
+
+  @override
+  State<_BookingSettingsSheet> createState() => _BookingSettingsSheetState();
+}
+
+class _BookingSettingsSheetState extends State<_BookingSettingsSheet> {
+  late final TextEditingController _timezone;
+  late final TextEditingController _duration;
+  late final TextEditingController _buffer;
+  late bool _enabled;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timezone = TextEditingController(
+      text: widget.settings['timezone']?.toString() ?? 'Africa/Nairobi',
+    );
+    _duration = TextEditingController(
+      text: '${widget.settings['defaultDurationMinutes'] ?? 30}',
+    );
+    _buffer = TextEditingController(
+      text: '${widget.settings['bufferMinutes'] ?? 0}',
+    );
+    _enabled = widget.settings['isEnabled'] != false;
+  }
+
+  @override
+  void dispose() {
+    _timezone.dispose();
+    _duration.dispose();
+    _buffer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final duration = int.tryParse(_duration.text.trim());
+    final buffer = int.tryParse(_buffer.text.trim());
+    if (duration == null || duration < 5 || duration > 480) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Duration must be 5–480 minutes.')),
+      );
+      return;
+    }
+    if (buffer == null || buffer < 0 || buffer > 240) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Buffer must be 0–240 minutes.')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await context.read<CompanionRepository>().updateBookingSettings({
+        'timezone': _timezone.text.trim(),
+        'defaultDurationMinutes': duration,
+        'bufferMinutes': buffer,
+        'isEnabled': _enabled,
+      });
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        16 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Booking settings',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w800, fontSize: 18),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _enabled,
+            onChanged: (v) => setState(() => _enabled = v),
+            title: const Text('Accept bookings'),
+          ),
+          TextField(
+            controller: _timezone,
+            decoration: const InputDecoration(labelText: 'Timezone'),
+          ),
+          TextField(
+            controller: _duration,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Slot length (minutes)'),
+          ),
+          TextField(
+            controller: _buffer,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Buffer (minutes)'),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: Text(_saving ? 'Saving…' : 'Save settings'),
+          ),
+        ],
+      ),
     );
   }
 }

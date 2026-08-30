@@ -96,4 +96,12 @@ class HomeRepository {
       throw ApiException.fromDio(e);
     }
   }
+
+  Future<void> markAllNotificationsRead() async {
+    try {
+      await _api.dio.post('/company/notifications/read-all');
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

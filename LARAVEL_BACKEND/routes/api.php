@@ -454,6 +454,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::put('settings', [PlatformSettingsController::class, 'update']);
     Route::post('settings', [PlatformSettingsController::class, 'update']);
     Route::post('settings/test-email', [PlatformSettingsController::class, 'testEmail']);
+    Route::post('settings/test-openai', [PlatformSettingsController::class, 'testOpenAi']);
     Route::post('export', [App\Http\Controllers\Api\Admin\ExportController::class, 'export']);
     Route::get('export/download/{filename}', [App\Http\Controllers\Api\Admin\ExportController::class, 'download']);
     Route::post('impersonate/user/{user}', [ImpersonateController::class, 'impersonateUser']);

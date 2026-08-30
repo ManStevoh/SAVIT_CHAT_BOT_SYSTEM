@@ -8,6 +8,8 @@ import 'package:essem_mobile/core/branding/branding_repository.dart';
 import 'package:essem_mobile/core/onboarding/onboarding_controller.dart';
 import 'package:essem_mobile/core/theme/app_theme.dart';
 import 'package:essem_mobile/features/onboarding/onboarding_screen.dart';
+import 'package:essem_mobile/features/settings/company_settings_controller.dart';
+import 'package:essem_mobile/features/settings/company_settings_models.dart';
 import 'package:essem_mobile/features/splash/splash_screen.dart';
 
 void main() {
@@ -25,6 +27,11 @@ void main() {
           ChangeNotifierProvider.value(
             value: BrandingRepository.seeded(
               const AppBranding(applicationName: 'RelayIQ'),
+            ),
+          ),
+          ChangeNotifierProvider.value(
+            value: CompanySettingsController.seeded(
+              const CompanyCommerceSettings(),
             ),
           ),
         ],

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentGateway;
 use App\Models\Plan;
+use App\Models\SubscriptionOffer;
 use App\Services\Platform\EntitlementService;
 use App\Services\PlatformPayments\PlatformPaymentRegistry;
 use App\Services\RegionalPricingService;
+use App\Services\SubscriptionPricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -39,7 +41,9 @@ class PlanController extends Controller
             : null;
 
         $plans = Plan::orderBy('sort_order')->orderBy('id')->get();
-        $data = $plans->map(function (Plan $p) use ($availableDrivers, $paystackCurrency, $pricing, $currency) {
+        $offerPricing = app(SubscriptionPricingService::class);
+        $publicOffers = SubscriptionOffer::query()->orderByDesc('id')->get();
+        $data = $plans->map(function (Plan $p) use ($availableDrivers, $paystackCurrency, $pricing, $currency, $offerPricing, $publicOffers) {
             $planMethods = [];
             foreach ($availableDrivers as $driver) {
                 if ($driver->getId() === 'stripe' && empty($p->stripe_price_id)) {
@@ -60,13 +64,34 @@ class PlanController extends Controller
 
             $limits = app(EntitlementService::class)->limitsForPlanSlug($p->slug);
             $amount = $pricing->amountForPlan($p, $currency);
+            $listAmount = $amount !== null ? (float) $amount : null;
+            $offer = $listAmount !== null
+                ? $offerPricing->bestOfferForPlan($p, $currency, $listAmount, $publicOffers)
+                : null;
+            $saleAmount = null;
+            $offerPayload = null;
+            if ($offer && $listAmount !== null) {
+                $discount = $offerPricing->computeDiscount($listAmount, $offer);
+                $saleAmount = max(0, round($listAmount - $discount, 2));
+                if ($saleAmount > 0 && $saleAmount < $listAmount) {
+                    $offerPayload = $offerPricing->publicOfferPayload($offer, $listAmount);
+                } else {
+                    $saleAmount = null;
+                }
+            }
 
             return [
                 'id' => (string) $p->id,
                 'name' => $p->name,
                 'slug' => $p->slug,
-                'price' => $pricing->displayForPlan($p, $currency),
-                'priceAmount' => $amount,
+                'price' => $saleAmount !== null
+                    ? $pricing->formatAmount($saleAmount, $currency)
+                    : $pricing->displayForPlan($p, $currency),
+                'priceAmount' => $listAmount,
+                'originalPrice' => $offerPayload ? $pricing->displayForPlan($p, $currency) : null,
+                'originalPriceAmount' => $offerPayload ? $listAmount : null,
+                'salePriceAmount' => $saleAmount,
+                'offer' => $offerPayload,
                 'currency' => $currency,
                 'paystackCurrency' => ! empty($planMethods['paystack']) ? $paystackCurrency : null,
                 'description' => $p->description ?? '',

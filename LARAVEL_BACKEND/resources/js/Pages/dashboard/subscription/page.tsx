@@ -22,6 +22,7 @@ import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout,
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { PlanPrice } from "@/components/shared/plan-price"
 
 function SubscriptionPageContent() {
   const searchParams = useSearchParams()
@@ -86,6 +87,8 @@ function SubscriptionPageContent() {
     name: p.name,
     slug: p.slug,
     price: p.price ?? p.priceDisplay ?? "—",
+    originalPrice: p.originalPrice ?? null,
+    offer: p.offer ?? null,
     features: Array.isArray(p.features) ? p.features : [],
     current: p.slug === planSlug,
     isFree: !!p.isFree,
@@ -851,10 +854,13 @@ function SubscriptionPageContent() {
                 <div className="text-center mb-6">
                   <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
                   <div className="mt-2">
-                    <span className="text-3xl font-bold text-foreground">{plan.price}</span>
-                    {plan.price !== "Custom" && (
-                      <span className="text-muted-foreground">/month</span>
-                    )}
+                    <PlanPrice
+                      price={plan.price}
+                      originalPrice={plan.originalPrice}
+                      offer={plan.offer}
+                      period="/month"
+                      size="md"
+                    />
                   </div>
                 </div>
                 <ul className="space-y-3 mb-6">

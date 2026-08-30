@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\SubscriptionOffer;
+use App\Support\PlatformDateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -94,8 +95,8 @@ class SubscriptionOfferController extends Controller
             'plan_id' => $validated['planId'] ?? null,
             'max_redemptions' => $validated['maxRedemptions'] ?? null,
             'max_per_company' => $validated['maxPerCompany'] ?? 1,
-            'starts_at' => $validated['startsAt'] ?? null,
-            'ends_at' => $validated['endsAt'] ?? null,
+            'starts_at' => PlatformDateTime::parse($validated['startsAt'] ?? null),
+            'ends_at' => PlatformDateTime::parse($validated['endsAt'] ?? null),
             'is_active' => $validated['isActive'] ?? true,
             'first_payment_only' => $validated['firstPaymentOnly'] ?? true,
         ];
@@ -119,8 +120,9 @@ class SubscriptionOfferController extends Controller
             'maxRedemptions' => $o->max_redemptions,
             'redemptionCount' => (int) $o->redemption_count,
             'maxPerCompany' => (int) $o->max_per_company,
-            'startsAt' => $o->starts_at?->toIso8601String(),
-            'endsAt' => $o->ends_at?->toIso8601String(),
+            'startsAt' => PlatformDateTime::toApiString($o->starts_at),
+            'endsAt' => PlatformDateTime::toApiString($o->ends_at),
+            'timezone' => PlatformDateTime::timezone(),
             'isActive' => (bool) $o->is_active,
             'firstPaymentOnly' => (bool) $o->first_payment_only,
             'isCurrentlyValid' => $o->isCurrentlyValid(),

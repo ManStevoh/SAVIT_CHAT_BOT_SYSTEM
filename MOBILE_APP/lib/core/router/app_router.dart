@@ -1,14 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/bookings/bookings_screen.dart';
 import '../../features/admin/admin_home_screen.dart';
+import '../../features/analytics/analytics_screen.dart';
 import '../../features/auth/forgot_password_screen.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/bookings/bookings_screen.dart';
+import '../../features/campaigns/campaigns_screen.dart';
 import '../../features/chats/chat_list_screen.dart';
 import '../../features/chats/chat_thread_screen.dart';
 import '../../features/contacts/add_contact_screen.dart';
 import '../../features/contacts/contacts_screen.dart';
+import '../../features/coupons/coupons_screen.dart';
+import '../../features/delivery/delivery_screen.dart';
+import '../../features/dine_in/dine_in_screen.dart';
 import '../../features/faqs/faqs_screen.dart';
 import '../../features/growth/growth_screen.dart';
 import '../../features/home/home_screen.dart';
@@ -16,12 +21,18 @@ import '../../features/more/more_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/orders/orders_screen.dart';
 import '../../features/products/products_screen.dart';
+import '../../features/settings/ai_settings_screen.dart';
+import '../../features/settings/business_settings_screen.dart';
 import '../../features/settings/currency_settings_screen.dart';
+import '../../features/settings/payments_settings_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/settings/whatsapp_status_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/storefront/storefront_settings_screen.dart';
+import '../../features/subscription/subscription_screen.dart';
 import '../../features/taxes/taxes_screen.dart';
+import '../../features/team/team_screen.dart';
 import '../auth/auth_controller.dart';
 import '../onboarding/onboarding_controller.dart';
 
@@ -164,6 +175,14 @@ GoRouter createAppRouter(
                 builder: (context, state) => const MoreScreen(),
                 routes: [
                   GoRoute(
+                    path: 'analytics',
+                    builder: (context, state) => const AnalyticsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'subscription',
+                    builder: (context, state) => const SubscriptionScreen(),
+                  ),
+                  GoRoute(
                     path: 'products',
                     builder: (context, state) => const ProductsScreen(),
                   ),
@@ -181,8 +200,24 @@ GoRouter createAppRouter(
                         const StorefrontSettingsScreen(),
                   ),
                   GoRoute(
+                    path: 'delivery',
+                    builder: (context, state) => const DeliveryScreen(),
+                  ),
+                  GoRoute(
+                    path: 'dine-in',
+                    builder: (context, state) => const DineInScreen(),
+                  ),
+                  GoRoute(
+                    path: 'coupons',
+                    builder: (context, state) => const CouponsScreen(),
+                  ),
+                  GoRoute(
                     path: 'bookings',
                     builder: (context, state) => const BookingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'campaigns',
+                    builder: (context, state) => const CampaignsScreen(),
                   ),
                   GoRoute(
                     path: 'faqs',
@@ -191,6 +226,26 @@ GoRouter createAppRouter(
                   GoRoute(
                     path: 'growth',
                     builder: (context, state) => const GrowthScreen(),
+                  ),
+                  GoRoute(
+                    path: 'team',
+                    builder: (context, state) => const TeamScreen(),
+                  ),
+                  GoRoute(
+                    path: 'whatsapp',
+                    builder: (context, state) => const WhatsAppStatusScreen(),
+                  ),
+                  GoRoute(
+                    path: 'ai',
+                    builder: (context, state) => const AiSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'business',
+                    builder: (context, state) => const BusinessSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'payments',
+                    builder: (context, state) => const PaymentsSettingsScreen(),
                   ),
                   GoRoute(
                     path: 'settings',
