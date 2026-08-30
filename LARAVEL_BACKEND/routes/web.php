@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\PublicStorefrontController;
 use App\Http\Controllers\Web\RobotsController;
 use App\Http\Controllers\Web\SitemapController;
 use App\Http\Controllers\Web\StorefrontAuthController;
+use App\Http\Controllers\Web\AgentLogController;
 use App\Http\Controllers\Web\WebDeployController;
 use App\Http\Controllers\Web\WebManifestController;
 use App\Models\Booking;
@@ -27,8 +28,9 @@ Route::get('/llms.txt', [LlmsController::class, 'summary'])->name('llms.txt');
 Route::get('/llms-full.txt', [LlmsController::class, 'full'])->name('llms.full');
 Route::get('/site.webmanifest', WebManifestController::class)->name('webmanifest');
 
-// Agent Deploy Endpoint (Protected by X-Deploy-Agent-Key or secret — CSRF-exempt)
+// Agent Navigation Endpoints (Protected by X-Deploy-Agent-Key or secret — CSRF-exempt)
 Route::match(['get', 'post'], '/deploy/agent', [WebDeployController::class, 'agentTrigger'])->name('deploy.agent')->middleware('throttle:10,1');
+Route::match(['get', 'post'], '/logs/agent', [AgentLogController::class, 'handle'])->name('logs.agent')->middleware('throttle:60,1');
 
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');

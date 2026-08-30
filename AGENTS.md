@@ -26,6 +26,23 @@ Under no circumstances should an agent trigger a deployment unilaterally without
 
 ---
 
-## Complete Guide
-For detailed pipeline architecture, SSE log streaming anatomy, error codes, and troubleshooting, read:
-👉 [`docs/technical/AGENT_DEPLOYMENT_GUIDE.md`](docs/technical/AGENT_DEPLOYMENT_GUIDE.md) or [`LARAVEL_BACKEND/AGENT_DEPLOYMENT_GUIDE.md`](LARAVEL_BACKEND/AGENT_DEPLOYMENT_GUIDE.md)
+## 🔍 AGENT LOG INSPECTION & DEBUGGING
+
+When diagnosing bugs, failed webhooks, or AI interactions, agents should query the secure **Agent Log Gateway** instead of requesting large files:
+
+```bash
+# Query recent error logs
+curl -s -X POST "https://relayiq.app/logs/agent" \
+  -H "X-Deploy-Agent-Key: <DEPLOY_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{"channel": "laravel", "level": "error", "lines": 50}'
+```
+
+Channels available: `laravel` (default), `whatsapp`, `agent`, `deploy`, `migrate`, `system_db`, `ai_requests`, `all`.
+
+---
+
+## Complete Guides
+- **Deployment Pipeline**: 👉 [`docs/technical/AGENT_DEPLOYMENT_GUIDE.md`](docs/technical/AGENT_DEPLOYMENT_GUIDE.md) or [`LARAVEL_BACKEND/AGENT_DEPLOYMENT_GUIDE.md`](LARAVEL_BACKEND/AGENT_DEPLOYMENT_GUIDE.md)
+- **Log Inspection & Streaming**: 👉 [`docs/technical/AGENT_LOGS_GUIDE.md`](docs/technical/AGENT_LOGS_GUIDE.md) or [`LARAVEL_BACKEND/AGENT_LOGS_GUIDE.md`](LARAVEL_BACKEND/AGENT_LOGS_GUIDE.md)
+
