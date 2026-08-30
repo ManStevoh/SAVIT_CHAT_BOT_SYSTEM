@@ -189,6 +189,7 @@ export async function register(data: RegisterData): Promise<{
       marketingConsent: !!data.marketingConsent,
       planId: data.planId || undefined,
       intent: data.intent || undefined,
+      recaptchaToken: data.recaptchaToken || undefined,
     }
     return await apiRequest('/api/auth/register', {
       method: 'POST',
