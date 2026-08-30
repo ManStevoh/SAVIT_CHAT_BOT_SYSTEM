@@ -10,7 +10,7 @@ if [ ! -f .env ]; then
 fi
 
 # Ensure database directory and storage subdirectories exist
-mkdir -p database storage/framework/views storage/framework/cache storage/framework/sessions storage/logs
+mkdir -p database storage/framework/views storage/framework/cache storage/framework/sessions storage/framework/deploy storage/logs
 touch database/database.sqlite
 chmod -R 777 storage database
 

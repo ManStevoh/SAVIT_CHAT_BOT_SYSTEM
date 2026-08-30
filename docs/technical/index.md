@@ -37,6 +37,7 @@ Essem Chat Bot/
 | Social attribution | [Growth Engine](growth-engine.md) |
 | Sanctum, roles, CORS | [Auth & Security](auth-security.md) |
 | Single-app cPanel production | [Deployment](deployment.md) |
+| Autonomous Agent Navigation | [Agent Deployment Guide](AGENT_DEPLOYMENT_GUIDE.md) |
 | Automated CI/CD (local → server) | [CI/CD Pipeline](ci-cd.md) |
 | `.env` reference | [Environment Variables](environment-variables.md) |
 | Cron, queues, jobs | [Queues & Scheduler](queues-scheduler.md) |
