@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ContactSubmission;
 use App\Models\PlatformSetting;
 use App\Services\MailService;
 use App\Services\RecaptchaService;
@@ -21,6 +22,13 @@ class ContactController extends Controller
         ]);
 
         $recaptcha->assertValid($validated['recaptchaToken'] ?? null, $request->ip());
+
+        ContactSubmission::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'message' => $validated['message'],
+            'ip_address' => $request->ip(),
+        ]);
 
         $settings = PlatformSetting::first();
         $to = $settings?->support_email ?? config('mail.from.address');

@@ -16,6 +16,7 @@ export type SeoPayload = {
   siteName?: string | null
   twitterCard?: string | null
   twitterSite?: string | null
+  sameAs?: string[] | null
   articlePublishedTime?: string | null
   articleModifiedTime?: string | null
   jsonLd?: Record<string, unknown> | null
@@ -37,6 +38,9 @@ export function SeoHead({ seo, fallbackTitle }: SeoHeadProps) {
       {seo?.description ? <meta head-key="description" name="description" content={seo.description} /> : null}
       {seo?.robots ? <meta head-key="robots" name="robots" content={seo.robots} /> : null}
       {seo?.canonical ? <link head-key="canonical" rel="canonical" href={seo.canonical} /> : null}
+      {(seo?.sameAs ?? []).filter(Boolean).map((url) => (
+        <link key={url} head-key={`me-${url}`} rel="me" href={url} />
+      ))}
       <meta head-key="og:type" property="og:type" content={seo?.ogType || "website"} />
       {seo?.siteName ? <meta head-key="og:site_name" property="og:site_name" content={seo.siteName} /> : null}
       {seo?.ogLocale ? <meta head-key="og:locale" property="og:locale" content={seo.ogLocale} /> : null}
@@ -124,6 +128,7 @@ export function buildSeoFromCmsPage(
     siteName: initialSeo?.siteName || "RelayIQ",
     twitterCard: initialSeo?.twitterCard || "summary_large_image",
     twitterSite: initialSeo?.twitterSite,
+    sameAs: initialSeo?.sameAs,
     articlePublishedTime: initialSeo?.articlePublishedTime,
     articleModifiedTime: initialSeo?.articleModifiedTime,
     jsonLd: initialSeo?.jsonLd || null,

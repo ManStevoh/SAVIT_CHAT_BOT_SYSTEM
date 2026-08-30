@@ -1,7 +1,7 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
-import { BRAND } from "@/lib/branding"
+import { BRAND, resolveSocialLinks } from "@/lib/branding"
 import { cn } from "@/lib/utils"
 import type { CmsLink } from "./types"
 import { WhatsAppPartnerBadge } from "./whatsapp-partner-badge"
@@ -111,6 +111,7 @@ export function LandoFooter({
   mobileApp,
 }: LandoFooterProps) {
   const copy = copyright?.trim() || BRAND.copyright()
+  const resolvedSocial = resolveSocialLinks(socialLinks)
   const showApp = Boolean(mobileApp?.enabled)
   const playUrl = mobileApp?.playStoreUrl?.trim() || ""
   const appUrl = mobileApp?.appStoreUrl?.trim() || ""
@@ -147,15 +148,21 @@ export function LandoFooter({
                 ))}
               </FooterLinkColumn>
             )}
-            {socialLinks.length > 0 && (
+            {resolvedSocial.length > 0 && (
               <FooterLinkColumn title="Social">
-                {socialLinks.map((link) => (
+                {resolvedSocial.map((link) => (
                   <a
                     key={link.label}
                     href={link.href}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel="me noopener noreferrer"
                     className="text-sm font-medium text-foreground hover:text-primary"
+                    aria-label={`${BRAND.productName} on ${link.label}`}
+                    onClick={(event) => {
+                      if (!/^https?:\/\//i.test(link.href)) {
+                        event.preventDefault()
+                      }
+                    }}
                   >
                     {link.label}
                   </a>

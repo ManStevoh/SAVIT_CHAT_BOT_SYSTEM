@@ -257,6 +257,55 @@ class AdminPlatformSettingsTest extends TestCase
             ->assertJsonPath('details.checks.2.status', 'passed');
     }
 
+    public function test_admin_test_email_requires_saved_smtp(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->postJson('/api/admin/settings/test-email', [
+            'to' => 'stephenmusyoka207@gmail.com',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonFragment(['message' => 'Save Email Settings first: host, port, username, mailbox password, and from address.']);
+
+        $this->assertDatabaseHas('system_logs', [
+            'source' => 'smtp',
+            'type' => 'warning',
+        ]);
+    }
+
+    public function test_admin_test_email_rejects_truncated_address(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->postJson('/api/admin/settings/test-email', [
+            'to' => 'stephenmusyoka207@gmail.c',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['to']);
+    }
+
+    public function test_admin_test_email_sends_when_smtp_is_ready(): void
+    {
+        $this->actingAsAdmin();
+        $settings = PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'RelayIQ']);
+        $settings->forceFill([
+            'smtp_host' => 'mail.relayiq.app',
+            'smtp_port' => 465,
+            'smtp_encryption' => 'ssl',
+            'smtp_username' => 'info@relayiq.app',
+            'smtp_password' => 'mailbox-password',
+            'mail_from_address' => 'info@relayiq.app',
+            'mail_from_name' => 'RelayIQ',
+        ])->save();
+
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $this->postJson('/api/admin/settings/test-email', [
+            'to' => 'stephenmusyoka207@gmail.com',
+        ])->assertOk()->assertJsonPath('success', true);
+    }
+
     public function test_company_user_cannot_test_openai_connection(): void
     {
         Sanctum::actingAs(User::factory()->create([

@@ -1382,6 +1382,33 @@ export interface AdminTestimonial {
  * Fetch all testimonials (admin only)
  * API Endpoint: GET /api/admin/testimonials
  */
+export interface AdminContactSubmission {
+  id: string
+  name: string
+  email: string
+  message: string
+  ipAddress?: string | null
+  isRead: boolean
+  readAt?: string | null
+  createdAt?: string | null
+}
+
+export function useAdminContactSubmissions(unreadOnly = false) {
+  return useSWR<{ submissions: AdminContactSubmission[]; unreadCount: number }>(
+    ['admin-contact-submissions', unreadOnly],
+    async () => {
+      if (!useMockApi()) {
+        return apiRequest<{ submissions: AdminContactSubmission[]; unreadCount: number }>(
+          unreadOnly ? '/api/admin/contact-submissions?unread=1' : '/api/admin/contact-submissions'
+        )
+      }
+      await delay(200)
+      return { submissions: [], unreadCount: 0 }
+    },
+    { revalidateOnFocus: false }
+  )
+}
+
 export function useAdminTestimonials() {
   return useSWR<AdminTestimonial[]>(
     'admin-testimonials',

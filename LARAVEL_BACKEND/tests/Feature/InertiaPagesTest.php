@@ -55,6 +55,7 @@ class InertiaPagesTest extends TestCase
             'admin cms' => ['/admin/cms'],
             'admin blog' => ['/admin/blog'],
             'admin landing faqs' => ['/admin/landing-faqs'],
+            'admin contact' => ['/admin/contact'],
             'admin logs' => ['/admin/logs'],
             'admin payment gateways' => ['/admin/payment-gateways'],
             'admin plans' => ['/admin/plans'],

@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { Twitter, Linkedin, Github } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { useAppBranding } from "@/components/providers/AppBrandingProvider"
+import { BRAND } from "@/lib/branding"
 
 const DOCS_URL = "https://manstevoh.github.io/SAVIT_CHAT_BOT_SYSTEM/"
 const CONTACT_EMAIL = "support@relayiq.app"
@@ -45,19 +45,17 @@ export function Footer() {
                 RelayIQ is a product of Essem Digital Innovation Limited.
               </p>
               <div className="mt-6 flex gap-4">
-                {[
-                  { Icon: Twitter, label: "Twitter" },
-                  { Icon: Linkedin, label: "LinkedIn" },
-                  { Icon: Github, label: "GitHub" },
-                ].map(({ Icon, label }) => (
-                  <Link
-                    key={label}
-                    href="#"
-                    className="text-muted-foreground transition-colors hover:text-foreground"
+                {BRAND.social.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="me noopener noreferrer"
+                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                   >
-                    <Icon className="h-4 w-4" />
-                    <span className="sr-only">{label}</span>
-                  </Link>
+                    {link.label}
+                    <span className="sr-only"> (opens in a new tab)</span>
+                  </a>
                 ))}
               </div>
             </div>

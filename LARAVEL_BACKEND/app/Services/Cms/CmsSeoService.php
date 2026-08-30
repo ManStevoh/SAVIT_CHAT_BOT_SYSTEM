@@ -10,6 +10,7 @@ use App\Models\LandingFaq;
 use App\Models\Plan;
 use App\Models\PlatformSetting;
 use App\Models\Product;
+use App\Support\BrandSocial;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -78,22 +79,19 @@ class CmsSeoService
 
         $pageSpecificNode = null;
         if ($page->slug === 'contact') {
+            $contactOrg = $this->organizationNode($base, $siteName, false);
+            $contactOrg['contactPoint'] = [
+                '@type' => 'ContactPoint',
+                'contactType' => 'customer support',
+                'url' => $canonical,
+            ];
             $pageSpecificNode = [
                 '@type' => 'ContactPage',
                 '@id' => $canonical.'#contactpage',
                 'url' => $canonical,
                 'name' => $title,
                 'description' => $description ?: null,
-                'mainEntity' => [
-                    '@type' => 'Organization',
-                    'name' => $siteName,
-                    'url' => $base,
-                    'contactPoint' => [
-                        '@type' => 'ContactPoint',
-                        'contactType' => 'customer support',
-                        'url' => $canonical,
-                    ],
-                ],
+                'mainEntity' => $contactOrg,
             ];
         } elseif ($page->slug === 'about') {
             $pageSpecificNode = [
@@ -109,13 +107,7 @@ class CmsSeoService
         $jsonLd = [
             '@context' => 'https://schema.org',
             '@graph' => array_values(array_filter([
-                [
-                    '@type' => 'Organization',
-                    '@id' => $base.'/#organization',
-                    'name' => $siteName,
-                    'url' => $base,
-                    'logo' => $this->defaultOgImage(),
-                ],
+                $this->organizationNode($base, $siteName),
                 $websiteNode,
                 [
                     '@type' => 'WebPage',
@@ -706,11 +698,7 @@ class CmsSeoService
                         'name' => $title,
                         'url' => $canonical,
                         'description' => $description,
-                        'publisher' => [
-                            '@type' => 'Organization',
-                            'name' => $siteName,
-                            'url' => $base,
-                        ],
+                        'publisher' => $this->organizationNode($base, $siteName, false),
                     ],
                     $this->breadcrumbNode([
                         ['name' => 'Home', 'url' => $base.'/'],
@@ -776,12 +764,7 @@ class CmsSeoService
                             '@type' => 'Organization',
                             'name' => $siteName,
                         ],
-                        'publisher' => [
-                            '@type' => 'Organization',
-                            'name' => $siteName,
-                            'url' => $base,
-                            'logo' => $this->defaultOgImage(),
-                        ],
+                        'publisher' => $this->organizationNode($base, $siteName, false),
                     ],
                     $this->breadcrumbNode([
                         ['name' => 'Home', 'url' => $base.'/'],
@@ -821,6 +804,7 @@ class CmsSeoService
         $ogImage = $payload['ogImage'] ?? null;
         $payload['ogLocale'] = $payload['ogLocale'] ?? str_replace('-', '_', (string) config('app.locale', 'en'));
         $payload['twitterSite'] = $payload['twitterSite'] ?? $this->twitterSiteHandle();
+        $payload['sameAs'] = $payload['sameAs'] ?? BrandSocial::urls();
         // Only advertise OG dimensions when the caller already set them (known asset).
         if (! isset($payload['ogImageWidth']) || ! isset($payload['ogImageHeight'])) {
             unset($payload['ogImageWidth'], $payload['ogImageHeight']);
@@ -944,7 +928,7 @@ class CmsSeoService
     {
         $offers = $this->planOffers($base);
 
-        return [
+        $node = [
             '@type' => 'SoftwareApplication',
             'name' => $siteName,
             'applicationCategory' => 'BusinessApplication',
@@ -953,6 +937,43 @@ class CmsSeoService
             'description' => $description ?: null,
             'offers' => $offers,
         ];
+
+        $sameAs = BrandSocial::urls();
+        if ($sameAs !== []) {
+            $node['sameAs'] = $sameAs;
+        }
+
+        return $node;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function organizationNode(string $base, string $siteName, bool $withId = true): array
+    {
+        $node = [
+            '@type' => 'Organization',
+            'name' => $siteName,
+            'alternateName' => array_values(array_filter([
+                $siteName !== 'RelayIQ' ? 'RelayIQ' : null,
+                'Relay IQ',
+                'RelayIQ.app',
+            ])),
+            'url' => $base,
+            'logo' => $this->defaultOgImage(),
+            'description' => 'RelayIQ is an AI sales agent for WhatsApp that automates WhatsApp sales, product recommendations, and in-chat payments.',
+        ];
+
+        if ($withId) {
+            $node['@id'] = $base.'/#organization';
+        }
+
+        $sameAs = BrandSocial::urls();
+        if ($sameAs !== []) {
+            $node['sameAs'] = $sameAs;
+        }
+
+        return $node;
     }
 
     /**

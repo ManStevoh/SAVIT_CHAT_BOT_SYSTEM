@@ -355,6 +355,11 @@ class PageController extends Controller
         return Inertia::render('admin/landing-faqs/page');
     }
 
+    public function adminContact(): Response
+    {
+        return Inertia::render('admin/contact/page');
+    }
+
     public function adminLogs(): Response
     {
         return Inertia::render('admin/logs/page');

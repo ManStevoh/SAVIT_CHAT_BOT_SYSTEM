@@ -7,6 +7,7 @@ use App\Models\PlatformSetting;
 use App\Services\AI\AiLearningConfig;
 use App\Services\AI\OpenAiConnectionTester;
 use App\Services\MailService;
+use App\Support\PlatformSmtpConfig;
 use App\Services\Platform\AuditService;
 use App\Services\WhatsApp\WhatsAppBillingModel;
 use App\Services\WhatsApp\WhatsAppPlatformConfig;
@@ -373,21 +374,62 @@ class PlatformSettingsController extends Controller
     public function testEmail(Request $request, MailService $mailService): JsonResponse
     {
         $validated = $request->validate([
-            'to' => 'required|email',
+            'to' => ['required', 'email', 'regex:/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/'],
+        ], [
+            'to.regex' => 'Enter a complete address such as you@gmail.com — the last part needs at least two letters.',
         ]);
 
-        try {
-            $mailService->sendTestEmail($validated['to']);
-            return response()->json([
-                'success' => true,
-                'message' => 'Test email sent successfully. Check the inbox for ' . $validated['to'],
+        $settings = PlatformSetting::first();
+        if (! $settings || ! PlatformSmtpConfig::isReady($settings)) {
+            $message = 'Save Email Settings first: host, port, username, mailbox password, and from address.';
+            PlatformSmtpConfig::writeLog('warning', $message, [
+                'to' => $validated['to'],
+                'ready' => false,
             ]);
-        } catch (\Throwable $e) {
-            report($e);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send test email. Check SMTP settings and try again.',
+                'message' => $message,
+                'reason' => $message,
+            ], 422);
+        }
+
+        $resolved = PlatformSmtpConfig::resolve($settings);
+        $diag = [
+            'to' => $validated['to'],
+            'host' => $resolved['host'],
+            'port' => $resolved['port'],
+            'scheme' => $resolved['scheme'],
+            'username' => $resolved['username'],
+            'from' => $resolved['fromAddress'],
+        ];
+
+        try {
+            $mailService->sendTestEmail($validated['to']);
+            $message = 'Test email sent successfully. Check the inbox (and spam) for '.$validated['to'];
+            PlatformSmtpConfig::writeLog('success', $message, $diag);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'reason' => $message,
+                'diagnostics' => $diag,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            $raw = PlatformSmtpConfig::sanitizedException($e);
+            $reason = PlatformSmtpConfig::publicError($e->getMessage());
+            PlatformSmtpConfig::writeLog('error', $reason, array_merge($diag, [
+                'exception' => $raw,
+                'exceptionClass' => $e::class,
+            ]));
+
+            return response()->json([
+                'success' => false,
+                'message' => $reason,
+                'reason' => $reason,
+                'detail' => $raw,
+                'diagnostics' => $diag,
             ], 422);
         }
     }

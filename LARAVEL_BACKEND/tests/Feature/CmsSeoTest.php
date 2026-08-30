@@ -38,6 +38,27 @@ class CmsSeoTest extends TestCase
         $response->assertSee('rel="canonical"', false);
     }
 
+    public function test_marketing_json_ld_includes_official_social_profiles(): void
+    {
+        CmsPage::create([
+            'slug' => 'home',
+            'title' => 'Home',
+            'meta_title' => 'RelayIQ | AI Sales Agent for WhatsApp',
+            'meta_description' => 'Turn WhatsApp conversations into sales with RelayIQ.',
+            'is_published' => true,
+        ]);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('sameAs', false);
+        $response->assertSee('https://www.instagram.com/relayiq.app', false);
+        $response->assertSee('https://www.facebook.com/share/1KxpxJ2VtK', false);
+        $response->assertSee('rel="me"', false);
+        $response->assertSee('Relay IQ', false);
+        $response->assertSee('RelayIQ.app', false);
+    }
+
     public function test_sitemap_lists_published_cms_pages(): void
     {
         CmsPage::create([
@@ -156,6 +177,43 @@ class CmsSeoTest extends TestCase
             'https://play.google.com/store/apps/details?id=com.example',
             $footer['content']['playStoreUrl'] ?? null
         );
+    }
+
+    public function test_public_footer_replaces_placeholder_social_links(): void
+    {
+        $page = CmsPage::create([
+            'slug' => 'global',
+            'title' => 'Global',
+            'is_published' => true,
+        ]);
+        \App\Models\CmsSection::create([
+            'cms_page_id' => $page->id,
+            'section_key' => 'footer',
+            'label' => 'Footer',
+            'is_enabled' => true,
+            'sort_order' => 1,
+            'content' => [
+                'socialLinks' => [
+                    ['label' => 'Facebook', 'href' => '#'],
+                    ['label' => 'Instagram', 'href' => '#'],
+                    ['label' => 'Twitter', 'href' => '#'],
+                    ['label' => 'Linkedin', 'href' => '#'],
+                ],
+            ],
+        ]);
+
+        $response = $this->getJson('/api/cms/global');
+        $response->assertOk();
+        $footer = collect($response->json('sections'))->firstWhere('key', 'footer');
+        $links = $footer['content']['socialLinks'] ?? [];
+        $hrefs = array_column($links, 'href');
+        $labels = array_column($links, 'label');
+
+        $this->assertContains('https://www.instagram.com/relayiq.app', $hrefs);
+        $this->assertContains('https://www.facebook.com/share/1KxpxJ2VtK/', $hrefs);
+        $this->assertNotContains('#', $hrefs);
+        $this->assertNotContains('Twitter', $labels);
+        $this->assertNotContains('Linkedin', $labels);
     }
 
     public function test_cms_image_upload_accepts_file_within_limit(): void

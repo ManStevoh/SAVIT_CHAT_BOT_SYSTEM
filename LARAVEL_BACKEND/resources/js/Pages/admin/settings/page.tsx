@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +31,7 @@ import {
 } from "@/lib/api-actions"
 import { useToast } from "@/hooks/use-toast"
 import { getTimezoneGroups } from "@/lib/timezones"
+import { useAdminLogs } from "@/lib/api-hooks"
 
 const timezoneGroups = getTimezoneGroups()
 
@@ -55,6 +57,13 @@ export default function AdminSettingsPage() {
   const [testingOpenAi, setTestingOpenAi] = useState(false)
   const [openAiTestResult, setOpenAiTestResult] = useState<OpenAiConnectionTestResult | null>(null)
   const [testEmailTo, setTestEmailTo] = useState("")
+  const [emailTestResult, setEmailTestResult] = useState<{
+    success: boolean
+    message: string
+    detail?: string
+    diagnostics?: Record<string, unknown>
+  } | null>(null)
+  const { data: smtpLogs, mutate: mutateSmtpLogs } = useAdminLogs({ source: "smtp" })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [faviconFile, setFaviconFile] = useState<File | null>(null)
@@ -145,7 +154,7 @@ export default function AdminSettingsPage() {
     }
   }
 
-  const handleSaveEmail = async () => {
+  const handleSaveEmail = async (opts?: { silent?: boolean }) => {
     setSavingEmail(true)
     try {
       const res = await updatePlatformSettings({
@@ -158,13 +167,17 @@ export default function AdminSettingsPage() {
         fromName: settings?.fromName ?? undefined,
       })
       if (res.success) {
-        toast({ title: res.message ?? "Email settings saved" })
-      } else {
-        toast({ title: res.message ?? "Save failed", variant: "destructive" })
+        if (!opts?.silent) {
+          toast({ title: res.message ?? "Email settings saved" })
+        }
+        return true
       }
+      toast({ title: res.message ?? "Save failed", variant: "destructive" })
+      return false
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to save email settings"
       toast({ title: message, variant: "destructive" })
+      return false
     } finally {
       setSavingEmail(false)
     }
@@ -341,13 +354,30 @@ export default function AdminSettingsPage() {
       toast({ title: "Enter an email address to send the test to", variant: "destructive" })
       return
     }
+    if (!/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(to)) {
+      toast({
+        title: "Enter a complete address such as you@gmail.com",
+        variant: "destructive",
+      })
+      return
+    }
     setSendingTest(true)
     try {
+      const saved = await handleSaveEmail({ silent: true })
+      if (!saved) return
       const res = await sendTestEmail(to)
+      const message = res.reason || res.message || (res.success ? "Test email sent" : "Failed to send test email")
+      setEmailTestResult({
+        success: Boolean(res.success),
+        message,
+        detail: res.detail,
+        diagnostics: res.diagnostics,
+      })
+      void mutateSmtpLogs()
       if (res.success) {
-        toast({ title: res.message ?? "Test email sent" })
+        toast({ title: message })
       } else {
-        toast({ title: res.message ?? "Failed to send test email", variant: "destructive" })
+        toast({ title: message, variant: "destructive" })
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to send test email"
@@ -864,7 +894,7 @@ export default function AdminSettingsPage() {
                     id="smtpHost"
                     value={settings?.smtpHost ?? ""}
                     onChange={(e) => updateSetting("smtpHost", e.target.value)}
-                    placeholder="e.g. smtp.sendgrid.net"
+                    placeholder="mail.relayiq.app"
                   />
                 </Field>
 
@@ -876,7 +906,7 @@ export default function AdminSettingsPage() {
                       type="number"
                       value={settings?.smtpPort ?? ""}
                       onChange={(e) => updateSetting("smtpPort", e.target.value ? Number(e.target.value) : null)}
-                      placeholder="587"
+                      placeholder="465"
                     />
                   </Field>
                   <Field>
@@ -940,28 +970,75 @@ export default function AdminSettingsPage() {
                 </Field>
               </FieldGroup>
 
+              <p className="text-xs text-muted-foreground">
+                For the RelayIQ mailbox use host <code>mail.relayiq.app</code>, port <code>465</code>, encryption <strong>SSL</strong>,
+                username <code>info@relayiq.app</code>, and that mailbox password. Test saves first. Use a full inbox such as you@gmail.com.
+              </p>
               <div className="flex flex-wrap gap-2 items-end">
-                <Button type="button" onClick={handleSaveEmail} disabled={savingEmail}>
+                <Button type="button" onClick={() => void handleSaveEmail()} disabled={savingEmail}>
                   {savingEmail ? "Saving…" : "Save Email Settings"}
                 </Button>
                 <div className="flex gap-2 items-center">
                   <Input
                     type="email"
-                    placeholder="Email to receive test"
+                    placeholder="you@gmail.com"
                     value={testEmailTo}
                     onChange={(e) => setTestEmailTo(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
-                        handleSendTestEmail()
+                        void handleSendTestEmail()
                       }
                     }}
-                    className="w-56"
+                    className="w-72"
                   />
-                  <Button type="button" variant="outline" onClick={handleSendTestEmail} disabled={sendingTest}>
+                  <Button type="button" variant="outline" onClick={() => void handleSendTestEmail()} disabled={sendingTest || savingEmail}>
                     {sendingTest ? "Sending…" : "Send Test Email"}
                   </Button>
                 </div>
+              </div>
+              {emailTestResult && (
+                <div
+                  className={
+                    emailTestResult.success
+                      ? "rounded-md border border-green-500/30 bg-green-500/10 p-3 text-sm"
+                      : "rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm"
+                  }
+                >
+                  <p className="font-medium">{emailTestResult.message}</p>
+                  {emailTestResult.detail && (
+                    <p className="mt-2 whitespace-pre-wrap font-mono text-xs text-muted-foreground">{emailTestResult.detail}</p>
+                  )}
+                  {emailTestResult.diagnostics && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Tried {String(emailTestResult.diagnostics.host || "—")}:{String(emailTestResult.diagnostics.port || "—")} (
+                      {String(emailTestResult.diagnostics.scheme || "smtp")}) as {String(emailTestResult.diagnostics.username || "—")}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Recent SMTP logs</p>
+                  <Link href="/admin/logs" className="text-xs text-primary hover:underline">
+                    Open System Logs
+                  </Link>
+                </div>
+                {(smtpLogs ?? []).slice(0, 6).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No SMTP attempts logged yet. Send a test to see the exact failure here.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {(smtpLogs ?? []).slice(0, 6).map((log) => (
+                      <li key={log.id} className="rounded-md border border-border px-3 py-2 text-xs">
+                        <p className="font-medium">
+                          {log.type.toUpperCase()} · {new Date(log.timestamp).toLocaleString()}
+                        </p>
+                        <p className="mt-1 text-muted-foreground">{log.message}</p>
+                        {log.details ? <p className="mt-1 font-mono text-muted-foreground">{log.details}</p> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </CardContent>
           </Card>

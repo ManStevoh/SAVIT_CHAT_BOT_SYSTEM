@@ -58,6 +58,11 @@
     @if (!empty($seo['canonical']))
     <link rel="canonical" href="{{ $seo['canonical'] }}">
     @endif
+    @foreach (($seo['sameAs'] ?? []) as $sameAsUrl)
+        @if (is_string($sameAsUrl) && $sameAsUrl !== '')
+    <link rel="me" href="{{ $sameAsUrl }}">
+        @endif
+    @endforeach
     @if (!empty($seo['googleSiteVerification']))
     <meta name="google-site-verification" content="{{ $seo['googleSiteVerification'] }}">
     @endif
