@@ -29,3 +29,12 @@ LARAVEL_BACKEND/node_modules/
 EssemChat-cPanel.zip
 scripts/pack-cpanel.py
 scripts/pack_*.py
+
+# Log files
+*.log
+*.log.*
+*.log.__*
+debug.log*
+LARAVEL_BACKEND/public/whatsapp_debug.txt
+LARAVEL_BACKEND/public/error_log.txt
+scripts/*.log

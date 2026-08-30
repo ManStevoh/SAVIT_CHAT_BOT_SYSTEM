@@ -26,56 +26,6 @@ Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/llms.txt', [LlmsController::class, 'summary'])->name('llms.txt');
 Route::get('/llms-full.txt', [LlmsController::class, 'full'])->name('llms.full');
 Route::get('/site.webmanifest', WebManifestController::class)->name('webmanifest');
-Route::get('/whatsapp-debug-log', function () {
-    $storageLog = storage_path('logs/whatsapp_debug.log');
-    $publicLog = public_path('whatsapp_debug.txt');
-
-    $content = '';
-    if (file_exists($publicLog) && filesize($publicLog) > 0) {
-        $content = file_get_contents($publicLog);
-    } elseif (file_exists($storageLog) && filesize($storageLog) > 0) {
-        $content = file_get_contents($storageLog);
-    }
-
-    return response($content !== '' ? $content : "No WhatsApp debug logs recorded yet.\nSend a message on WhatsApp and refresh this URL to see step-by-step pipeline execution.", 200, [
-        'Content-Type' => 'text/plain; charset=UTF-8',
-        'X-Robots-Tag' => 'noindex, nofollow',
-    ]);
-});
-
-Route::get('/whatsapp_debug.txt', function () {
-    $publicLog = public_path('whatsapp_debug.txt');
-    $storageLog = storage_path('logs/whatsapp_debug.log');
-
-    $content = '';
-    if (file_exists($publicLog) && filesize($publicLog) > 0) {
-        $content = file_get_contents($publicLog);
-    } elseif (file_exists($storageLog) && filesize($storageLog) > 0) {
-        $content = file_get_contents($storageLog);
-    }
-
-    return response($content !== '' ? $content : "No WhatsApp debug logs recorded yet.\nSend a message on WhatsApp and refresh this URL.", 200, [
-        'Content-Type' => 'text/plain; charset=UTF-8',
-        'X-Robots-Tag' => 'noindex, nofollow',
-    ]);
-});
-
-Route::get('/debug.txt', function () {
-    $publicLog = public_path('whatsapp_debug.txt');
-    $storageLog = storage_path('logs/whatsapp_debug.log');
-
-    $content = '';
-    if (file_exists($publicLog) && filesize($publicLog) > 0) {
-        $content = file_get_contents($publicLog);
-    } elseif (file_exists($storageLog) && filesize($storageLog) > 0) {
-        $content = file_get_contents($storageLog);
-    }
-
-    return response($content !== '' ? $content : "No WhatsApp debug logs recorded yet.\nSend a message on WhatsApp and refresh this URL.", 200, [
-        'Content-Type' => 'text/plain; charset=UTF-8',
-        'X-Robots-Tag' => 'noindex, nofollow',
-    ]);
-});
 
 // Agent Deploy Endpoint (Protected by X-Deploy-Agent-Key or secret — CSRF-exempt)
 Route::match(['get', 'post'], '/deploy/agent', [WebDeployController::class, 'agentTrigger'])->name('deploy.agent')->middleware('throttle:10,1');
@@ -274,27 +224,3 @@ Route::get('/invoice/{token}', [PublicStorefrontController::class, 'invoice'])->
 // Dine-in table QR
 Route::get('/t/{qrToken}', [PublicDineInController::class, 'byToken'])->name('dinein.token');
 Route::get('/s/{slug}/table/{qrToken}', [PublicDineInController::class, 'storeTable'])->name('storefront.table');
-
-// Diagnostic: show recent error entries (separate from WhatsApp debug log)
-Route::get('/debug-error', function () {
-    $file = public_path('error_log.txt');
-    if (! file_exists($file)) {
-        return response('<pre>No errors logged yet. Try visiting the failing page first, then reload this page.</pre>', 200, ['Content-Type' => 'text/html']);
-    }
-    $content = file_get_contents($file);
-    // Extract just the ERROR summary lines (first line of each entry has the message)
-    $lines = explode("\n", $content);
-    $summaries = [];
-    foreach ($lines as $line) {
-        if (str_starts_with($line, '[') && str_contains($line, 'ERROR:')) {
-            $summaries[] = $line;
-        }
-    }
-    if (empty($summaries)) {
-        return response('<pre>Log file exists but no ERROR entries found. Raw first 2000 chars:\n\n' . htmlspecialchars(substr($content, 0, 2000)) . '</pre>', 200, ['Content-Type' => 'text/html']);
-    }
-    // Show last 20 error summaries
-    $recent = array_slice($summaries, -20);
-    $output = "Found " . count($summaries) . " error(s). Showing last " . count($recent) . ":\n\n" . implode("\n\n", $recent);
-    return response('<pre>' . htmlspecialchars($output) . '</pre>', 200, ['Content-Type' => 'text/html']);
-});

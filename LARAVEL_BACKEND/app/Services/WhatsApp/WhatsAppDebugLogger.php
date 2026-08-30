@@ -24,17 +24,6 @@ class WhatsAppDebugLogger
         } catch (Throwable) {
             // Ignore file write issues
         }
-
-        // Also append to public/whatsapp_debug.txt for easy web/cPanel reading if public folder exists
-        try {
-            $publicPath = public_path('whatsapp_debug.txt');
-            $dir = dirname($publicPath);
-            if (is_dir($dir)) {
-                File::append($publicPath, $line);
-            }
-        } catch (Throwable) {
-            // Ignore file write issues
-        }
     }
 
     public static function registerShutdownHandler(array $context = []): void
@@ -77,10 +66,6 @@ class WhatsAppDebugLogger
     {
         try {
             File::put(storage_path('logs/whatsapp_debug.log'), '');
-            $publicPath = public_path('whatsapp_debug.txt');
-            if (File::exists($publicPath)) {
-                File::put($publicPath, '');
-            }
         } catch (Throwable) {
         }
     }

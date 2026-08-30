@@ -24,3 +24,8 @@ Homestead.yaml
 Thumbs.db
 /test-results/
 /playwright-report/
+/public/whatsapp_debug.txt
+/public/error_log.txt
+/public/*.log
+/public/*.txt
+*.log.*

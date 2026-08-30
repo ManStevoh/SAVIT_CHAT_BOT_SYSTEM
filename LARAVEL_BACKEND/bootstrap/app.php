@@ -82,22 +82,4 @@ return Application::configure(basePath: dirname(__DIR__))
 
             abort(404);
         });
-
-        // Log all exceptions to a publicly-accessible debug file for cPanel debugging
-        $exceptions->report(function (\Throwable $e) {
-            try {
-                $logFile = public_path('error_log.txt');
-                $logLine = sprintf(
-                    "[%s] ERROR: %s in %s:%d\nStack Trace:\n%s\n----------------------------------------\n\n",
-                    now()->toDateTimeString(),
-                    $e->getMessage(),
-                    $e->getFile(),
-                    $e->getLine(),
-                    $e->getTraceAsString()
-                );
-                file_put_contents($logFile, $logLine, FILE_APPEND);
-            } catch (\Throwable) {}
-
-            return false; // Allow default Laravel logging to continue
-        });
     })->create();

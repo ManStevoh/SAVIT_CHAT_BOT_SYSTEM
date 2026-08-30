@@ -63,7 +63,7 @@ class SeoRoadmapTest extends TestCase
         $robots->assertOk();
         $robots->assertSee('Disallow: /login', false);
         $robots->assertSee('Disallow: /pay/', false);
-        $robots->assertSee('Disallow: /whatsapp-debug-log', false);
+        $robots->assertSee('Disallow: /admin', false);
     }
 
     public function test_storefront_product_includes_product_json_ld_and_og_image(): void
