@@ -38,6 +38,27 @@ class CmsSeoTest extends TestCase
         $response->assertSee('rel="canonical"', false);
     }
 
+    public function test_marketing_json_ld_includes_official_social_profiles(): void
+    {
+        CmsPage::create([
+            'slug' => 'home',
+            'title' => 'Home',
+            'meta_title' => 'RelayIQ | AI Sales Agent for WhatsApp',
+            'meta_description' => 'Turn WhatsApp conversations into sales with RelayIQ.',
+            'is_published' => true,
+        ]);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('sameAs', false);
+        $response->assertSee('https://www.instagram.com/relayiq.app', false);
+        $response->assertSee('https://www.facebook.com/share/1KxpxJ2VtK', false);
+        $response->assertSee('rel="me"', false);
+        $response->assertSee('Relay IQ', false);
+        $response->assertSee('RelayIQ.app', false);
+    }
+
     public function test_sitemap_lists_published_cms_pages(): void
     {
         CmsPage::create([

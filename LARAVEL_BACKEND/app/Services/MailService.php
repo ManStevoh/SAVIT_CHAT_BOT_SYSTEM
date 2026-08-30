@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PlatformSetting;
 use App\Models\User;
+use App\Support\PlatformSmtpConfig;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
@@ -95,7 +96,7 @@ class MailService
     public function send(string $to, string $subject, string $htmlBody, ?string $textBody = null): void
     {
         $settings = PlatformSetting::first();
-        if ($settings && $settings->hasSmtpConfigured()) {
+        if ($settings && PlatformSmtpConfig::isReady($settings)) {
             $this->sendViaPlatformSmtp($settings, $to, $subject, $htmlBody, $textBody);
             return;
         }
@@ -277,24 +278,42 @@ class MailService
 
     private function sendViaPlatformSmtp(PlatformSetting $settings, string $to, string $subject, string $htmlBody, ?string $textBody): void
     {
-        $config = [
-            'transport' => 'smtp',
-            'host' => $settings->smtp_host,
-            'port' => (int) ($settings->smtp_port ?: 587),
-            'encryption' => $this->normalizeEncryption($settings->smtp_encryption),
-            'username' => $settings->smtp_username,
-            'password' => $settings->smtp_password,
-            'timeout' => null,
-        ];
-        $fromAddress = $settings->mail_from_address ?: config('mail.from.address');
-        $fromName = $settings->mail_from_name ?: config('mail.from.name');
+        $resolved = PlatformSmtpConfig::resolve($settings);
+        $config = PlatformSmtpConfig::mailerArray($settings);
 
+        $this->dispatchPlatformSmtp($config, $resolved['fromAddress'], $resolved['fromName'], $to, $subject, $htmlBody);
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    private function dispatchPlatformSmtp(
+        array $config,
+        string $fromAddress,
+        string $fromName,
+        string $to,
+        string $subject,
+        string $htmlBody,
+        bool $allowInsecureRetry = true
+    ): void {
         Config::set('mail.mailers.platform_smtp', $config);
-        Mail::mailer('platform_smtp')->html($htmlBody, function ($message) use ($to, $subject, $fromAddress, $fromName) {
-            $message->to($to)
-                ->from($fromAddress, $fromName)
-                ->subject($subject);
-        });
+        Mail::purge('platform_smtp');
+
+        try {
+            Mail::mailer('platform_smtp')->html($htmlBody, function ($message) use ($to, $subject, $fromAddress, $fromName) {
+                $message->to($to)
+                    ->from($fromAddress, $fromName)
+                    ->subject($subject);
+            });
+        } catch (\Throwable $e) {
+            if ($allowInsecureRetry && PlatformSmtpConfig::isCertificateError($e->getMessage())) {
+                $config['verify_peer'] = false;
+                $this->dispatchPlatformSmtp($config, $fromAddress, $fromName, $to, $subject, $htmlBody, false);
+
+                return;
+            }
+            throw $e;
+        }
     }
 
     private function sendViaDefaultMailer(string $to, string $subject, string $htmlBody, ?string $textBody): void
@@ -304,11 +323,4 @@ class MailService
         });
     }
 
-    private function normalizeEncryption(?string $encryption): ?string
-    {
-        if (empty($encryption) || strtolower($encryption) === 'none') {
-            return null;
-        }
-        return strtolower($encryption) === 'ssl' ? 'ssl' : 'tls';
-    }
 }

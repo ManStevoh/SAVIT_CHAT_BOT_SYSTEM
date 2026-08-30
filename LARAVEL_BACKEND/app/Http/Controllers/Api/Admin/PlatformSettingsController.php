@@ -7,6 +7,7 @@ use App\Models\PlatformSetting;
 use App\Services\AI\AiLearningConfig;
 use App\Services\AI\OpenAiConnectionTester;
 use App\Services\MailService;
+use App\Support\PlatformSmtpConfig;
 use App\Services\Platform\AuditService;
 use App\Services\WhatsApp\WhatsAppBillingModel;
 use App\Services\WhatsApp\WhatsAppPlatformConfig;
@@ -373,21 +374,32 @@ class PlatformSettingsController extends Controller
     public function testEmail(Request $request, MailService $mailService): JsonResponse
     {
         $validated = $request->validate([
-            'to' => 'required|email',
+            'to' => ['required', 'email', 'regex:/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/'],
+        ], [
+            'to.regex' => 'Enter a complete address such as you@gmail.com — the last part needs at least two letters.',
         ]);
+
+        $settings = PlatformSetting::first();
+        if (! $settings || ! PlatformSmtpConfig::isReady($settings)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Save Email Settings first: host, port, username, mailbox password, and from address.',
+            ], 422);
+        }
 
         try {
             $mailService->sendTestEmail($validated['to']);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Test email sent successfully. Check the inbox for ' . $validated['to'],
+                'message' => 'Test email sent successfully. Check the inbox (and spam) for '.$validated['to'],
             ]);
         } catch (\Throwable $e) {
             report($e);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send test email. Check SMTP settings and try again.',
+                'message' => PlatformSmtpConfig::publicError($e->getMessage()),
             ], 422);
         }
     }

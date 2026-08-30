@@ -18,6 +18,15 @@ return [
 
     'company_website' => 'https://relayiq.app',
 
+    /*
+    | Official public profiles. Instagram uses the handle URL (no share params).
+    | Facebook uses the current public page share URL.
+    */
+    'social' => [
+        'instagram' => 'https://www.instagram.com/relayiq.app',
+        'facebook' => 'https://www.facebook.com/share/1KxpxJ2VtK/',
+    ],
+
     'product_tagline' => 'Every Conversation. Smarter.',
 
     'whatsapp_partner' => 'Official WhatsApp Business Partner',

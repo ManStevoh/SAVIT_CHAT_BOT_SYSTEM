@@ -145,7 +145,7 @@ export default function AdminSettingsPage() {
     }
   }
 
-  const handleSaveEmail = async () => {
+  const handleSaveEmail = async (opts?: { silent?: boolean }) => {
     setSavingEmail(true)
     try {
       const res = await updatePlatformSettings({
@@ -158,13 +158,17 @@ export default function AdminSettingsPage() {
         fromName: settings?.fromName ?? undefined,
       })
       if (res.success) {
-        toast({ title: res.message ?? "Email settings saved" })
-      } else {
-        toast({ title: res.message ?? "Save failed", variant: "destructive" })
+        if (!opts?.silent) {
+          toast({ title: res.message ?? "Email settings saved" })
+        }
+        return true
       }
+      toast({ title: res.message ?? "Save failed", variant: "destructive" })
+      return false
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to save email settings"
       toast({ title: message, variant: "destructive" })
+      return false
     } finally {
       setSavingEmail(false)
     }
@@ -341,8 +345,17 @@ export default function AdminSettingsPage() {
       toast({ title: "Enter an email address to send the test to", variant: "destructive" })
       return
     }
+    if (!/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(to)) {
+      toast({
+        title: "Enter a complete address such as you@gmail.com",
+        variant: "destructive",
+      })
+      return
+    }
     setSendingTest(true)
     try {
+      const saved = await handleSaveEmail({ silent: true })
+      if (!saved) return
       const res = await sendTestEmail(to)
       if (res.success) {
         toast({ title: res.message ?? "Test email sent" })
@@ -864,7 +877,7 @@ export default function AdminSettingsPage() {
                     id="smtpHost"
                     value={settings?.smtpHost ?? ""}
                     onChange={(e) => updateSetting("smtpHost", e.target.value)}
-                    placeholder="e.g. smtp.sendgrid.net"
+                    placeholder="mail.relayiq.app"
                   />
                 </Field>
 
@@ -876,7 +889,7 @@ export default function AdminSettingsPage() {
                       type="number"
                       value={settings?.smtpPort ?? ""}
                       onChange={(e) => updateSetting("smtpPort", e.target.value ? Number(e.target.value) : null)}
-                      placeholder="587"
+                      placeholder="465"
                     />
                   </Field>
                   <Field>
@@ -940,25 +953,29 @@ export default function AdminSettingsPage() {
                 </Field>
               </FieldGroup>
 
+              <p className="text-xs text-muted-foreground">
+                For the RelayIQ mailbox use host <code>mail.relayiq.app</code>, port <code>465</code>, encryption <strong>SSL</strong>,
+                username <code>info@relayiq.app</code>, and that mailbox password. Test saves first. Use a full inbox such as you@gmail.com.
+              </p>
               <div className="flex flex-wrap gap-2 items-end">
-                <Button type="button" onClick={handleSaveEmail} disabled={savingEmail}>
+                <Button type="button" onClick={() => void handleSaveEmail()} disabled={savingEmail}>
                   {savingEmail ? "Saving…" : "Save Email Settings"}
                 </Button>
                 <div className="flex gap-2 items-center">
                   <Input
                     type="email"
-                    placeholder="Email to receive test"
+                    placeholder="you@gmail.com"
                     value={testEmailTo}
                     onChange={(e) => setTestEmailTo(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
-                        handleSendTestEmail()
+                        void handleSendTestEmail()
                       }
                     }}
-                    className="w-56"
+                    className="w-72"
                   />
-                  <Button type="button" variant="outline" onClick={handleSendTestEmail} disabled={sendingTest}>
+                  <Button type="button" variant="outline" onClick={() => void handleSendTestEmail()} disabled={sendingTest || savingEmail}>
                     {sendingTest ? "Sending…" : "Send Test Email"}
                   </Button>
                 </div>

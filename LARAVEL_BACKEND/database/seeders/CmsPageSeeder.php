@@ -6,6 +6,7 @@ use App\Models\CmsPage;
 use App\Models\CmsSection;
 use App\Models\LandingFaq;
 use App\Models\Testimonial;
+use App\Support\BrandSocial;
 use Illuminate\Database\Seeder;
 
 class CmsPageSeeder extends Seeder
@@ -73,12 +74,7 @@ class CmsPageSeeder extends Seeder
                                 ['label' => 'Blog', 'href' => '/blog'],
                                 ['label' => 'Contact', 'href' => '/contact'],
                             ],
-                            'socialLinks' => [
-                                ['label' => 'Facebook', 'href' => '#'],
-                                ['label' => 'Instagram', 'href' => '#'],
-                                ['label' => 'Twitter', 'href' => '#'],
-                                ['label' => 'Linkedin', 'href' => '#'],
-                            ],
+                            'socialLinks' => BrandSocial::links(),
                             'legalLinks' => [
                                 ['label' => 'Privacy Policy', 'href' => '/privacy'],
                                 ['label' => 'Terms Of Service', 'href' => '/terms'],
