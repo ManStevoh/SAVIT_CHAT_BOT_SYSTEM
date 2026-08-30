@@ -49,8 +49,11 @@ npm run test:e2e              # Playwright (14 tests)
 npm run test:e2e:journey      # Full admin/company/public journeys
 ```
 
-## Docs
+## Docs & Agent Guides
 
+- [AI Agent Rules & Instructions](AGENTS.md)
+- [Agent Deployment Guide](docs/technical/AGENT_DEPLOYMENT_GUIDE.md)
+- [Agent Log Gateway Guide](docs/technical/AGENT_LOGS_GUIDE.md)
 - [Inertia migration guide](LARAVEL_BACKEND/INERTIA_MIGRATION.md)
 - [Technical docs](docs/technical/index.md)
 - [Mobile App V1 Vision](docs/technical/MOBILE_APP_V1_VISION.md)
