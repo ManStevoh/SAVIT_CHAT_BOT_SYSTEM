@@ -30,4 +30,15 @@ test.describe('Admin (authenticated)', () => {
       page.getByRole('heading', { name: /growth portfolio/i })
     ).toBeVisible({ timeout: 15_000 })
   })
+
+  test('admin companies page loads without crashing', async ({ page }) => {
+    await page.goto('/admin/companies')
+    await expect(
+      page.getByRole('heading', { name: /^companies$/i })
+    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/something went wrong/i)).toHaveCount(0)
+    await expect(
+      page.getByText(/manage all registered companies/i)
+    ).toBeVisible()
+  })
 })

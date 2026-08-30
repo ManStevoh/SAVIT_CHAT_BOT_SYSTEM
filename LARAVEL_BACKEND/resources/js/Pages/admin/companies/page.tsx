@@ -87,44 +87,6 @@ export default function AdminCompaniesPage() {
     status: statusFilter !== "all" ? statusFilter : undefined,
   })
 
-  if (isLoading && !companies) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Companies</h1>
-          <p className="text-muted-foreground">Manage all registered companies on the platform</p>
-        </div>
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex items-center justify-center gap-2 text-muted-foreground">
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              Loading companies...
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Companies</h1>
-          <p className="text-muted-foreground">Manage all registered companies on the platform</p>
-        </div>
-        <Card className="border-destructive/50">
-          <CardContent className="p-6">
-            <p className="text-destructive">Failed to load companies. Please try again.</p>
-            <Button variant="outline" className="mt-2" onClick={() => mutate()}>Retry</Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const list = companies ?? []
-
   const openEditDialog = useCallback(async (company: Company) => {
     setEditingCompany(company)
     setEditForm({
@@ -196,6 +158,44 @@ export default function AdminCompaniesPage() {
     },
     [router]
   )
+
+  const list = Array.isArray(companies) ? companies : []
+
+  if (isLoading && !companies) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Companies</h1>
+          <p className="text-muted-foreground">Manage all registered companies on the platform</p>
+        </div>
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Loading companies...
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Companies</h1>
+          <p className="text-muted-foreground">Manage all registered companies on the platform</p>
+        </div>
+        <Card className="border-destructive/50">
+          <CardContent className="p-6">
+            <p className="text-destructive">Failed to load companies. Please try again.</p>
+            <Button variant="outline" className="mt-2" onClick={() => mutate()}>Retry</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const stats = [
     { name: "Total Companies", value: list.length.toLocaleString(), icon: Building2 },
@@ -277,11 +277,11 @@ export default function AdminCompaniesPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-sm font-medium text-primary">
-                          {company.name.charAt(0)}
+                          {(company.name ?? "?").charAt(0)}
                         </div>
                         <div>
-                          <div className="font-medium text-foreground">{company.name}</div>
-                          <div className="text-sm text-muted-foreground">{company.email}</div>
+                          <div className="font-medium text-foreground">{company.name || "Unnamed company"}</div>
+                          <div className="text-sm text-muted-foreground">{company.email || "—"}</div>
                         </div>
                       </div>
                     </TableCell>
@@ -297,14 +297,16 @@ export default function AdminCompaniesPage() {
                         <span className="text-xs text-muted-foreground">Not connected</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-foreground">{company.totalChats.toLocaleString()}</TableCell>
-                    <TableCell className="text-foreground">{company.totalOrders.toLocaleString()}</TableCell>
+                    <TableCell className="text-foreground">{Number(company.totalChats ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-foreground">{Number(company.totalOrders ?? 0).toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant={company.status === "active" ? "default" : company.status === "pending" ? "secondary" : "destructive"}>
                         {company.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{new Date(company.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {company.createdAt ? new Date(company.createdAt).toLocaleDateString() : "—"}
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
