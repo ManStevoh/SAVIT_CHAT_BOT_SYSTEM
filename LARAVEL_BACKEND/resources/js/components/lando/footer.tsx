@@ -158,6 +158,11 @@ export function LandoFooter({
                     rel="me noopener noreferrer"
                     className="text-sm font-medium text-foreground hover:text-primary"
                     aria-label={`${BRAND.productName} on ${link.label}`}
+                    onClick={(event) => {
+                      if (!/^https?:\/\//i.test(link.href)) {
+                        event.preventDefault()
+                      }
+                    }}
                   >
                     {link.label}
                   </a>

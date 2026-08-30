@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\AiConfigController;
 use App\Http\Controllers\Api\Admin\CompanyController;
 use App\Http\Controllers\Api\Admin\ImpersonateController;
 use App\Http\Controllers\Api\Admin\CmsAdminController;
+use App\Http\Controllers\Api\Admin\ContactSubmissionController;
 use App\Http\Controllers\Api\Admin\LandingFaqController;
 use App\Http\Controllers\Api\Admin\LogController;
 use App\Http\Controllers\Api\Admin\OverviewController;
@@ -459,6 +460,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::get('export/download/{filename}', [App\Http\Controllers\Api\Admin\ExportController::class, 'download']);
     Route::post('impersonate/user/{user}', [ImpersonateController::class, 'impersonateUser']);
     Route::post('impersonate/company/{company}', [ImpersonateController::class, 'impersonateCompany']);
+    Route::get('contact-submissions', [ContactSubmissionController::class, 'index']);
+    Route::post('contact-submissions/{contact_submission}/read', [ContactSubmissionController::class, 'markRead']);
+    Route::post('contact-submissions/{contact_submission}/unread', [ContactSubmissionController::class, 'markUnread']);
+    Route::delete('contact-submissions/{contact_submission}', [ContactSubmissionController::class, 'destroy']);
     Route::get('testimonials', [TestimonialController::class, 'index']);
     Route::post('testimonials', [TestimonialController::class, 'store']);
     Route::put('testimonials/{testimonial}', [TestimonialController::class, 'update']);

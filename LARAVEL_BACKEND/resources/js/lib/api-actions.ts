@@ -53,6 +53,9 @@ function appendToFormData(form: FormData, key: string, value: unknown): void {
 function handleApiError(e: unknown): { success: false; message: string; code?: string } {
   const err = e as Error & { code?: string; responseData?: { message?: string; errors?: Record<string, string[]> } }
   const data = err?.responseData
+  if (typeof data?.message === 'string' && data.message.trim() !== '') {
+    return { success: false, message: data.message, code: err?.code }
+  }
   if (data?.errors && typeof data.errors === 'object') {
     const first = Object.values(data.errors).flat().find((m) => typeof m === 'string' && m.trim() !== '')
     if (first) {
@@ -2138,6 +2141,42 @@ export async function updateTestimonial(testimonialId: string, data: UpdateTesti
   }
 }
 
+export async function markContactSubmissionRead(id: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(200)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/admin/contact-submissions/${id}/read`, { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function markContactSubmissionUnread(id: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(200)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/admin/contact-submissions/${id}/unread`, { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deleteContactSubmission(id: string): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(200)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>(`/api/admin/contact-submissions/${id}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 export async function deleteTestimonial(testimonialId: string): Promise<{ success: boolean; message?: string }> {
   if (useMockApi()) {
     await delay(300)
@@ -3236,18 +3275,36 @@ export async function getAppBranding(): Promise<AppBranding> {
  * Send a test email (admin only). Uses current SMTP settings.
  * Laravel: POST /api/admin/settings/test-email
  */
-export async function sendTestEmail(to: string): Promise<{ success: boolean; message?: string }> {
+export async function sendTestEmail(to: string): Promise<{
+  success: boolean
+  message?: string
+  reason?: string
+  detail?: string
+  diagnostics?: Record<string, unknown>
+}> {
   if (useMockApi()) {
     await delay(1500)
     return { success: true, message: `Test email sent to ${to}` }
   }
   try {
-    return await apiRequest<{ success: boolean; message?: string }>('/api/admin/settings/test-email', {
+    return await apiRequest<{
+      success: boolean
+      message?: string
+      reason?: string
+      detail?: string
+      diagnostics?: Record<string, unknown>
+    }>('/api/admin/settings/test-email', {
       method: 'POST',
       body: { to },
     })
   } catch (e) {
-    return handleApiError(e)
+    const err = e as Error & { responseData?: { reason?: string; detail?: string; diagnostics?: Record<string, unknown> } }
+    return {
+      ...handleApiError(e),
+      reason: err.responseData?.reason,
+      detail: err.responseData?.detail,
+      diagnostics: err.responseData?.diagnostics,
+    }
   }
 }
 

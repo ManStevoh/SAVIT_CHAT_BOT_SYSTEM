@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +31,7 @@ import {
 } from "@/lib/api-actions"
 import { useToast } from "@/hooks/use-toast"
 import { getTimezoneGroups } from "@/lib/timezones"
+import { useAdminLogs } from "@/lib/api-hooks"
 
 const timezoneGroups = getTimezoneGroups()
 
@@ -55,6 +57,13 @@ export default function AdminSettingsPage() {
   const [testingOpenAi, setTestingOpenAi] = useState(false)
   const [openAiTestResult, setOpenAiTestResult] = useState<OpenAiConnectionTestResult | null>(null)
   const [testEmailTo, setTestEmailTo] = useState("")
+  const [emailTestResult, setEmailTestResult] = useState<{
+    success: boolean
+    message: string
+    detail?: string
+    diagnostics?: Record<string, unknown>
+  } | null>(null)
+  const { data: smtpLogs, mutate: mutateSmtpLogs } = useAdminLogs({ source: "smtp" })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [faviconFile, setFaviconFile] = useState<File | null>(null)
@@ -357,10 +366,18 @@ export default function AdminSettingsPage() {
       const saved = await handleSaveEmail({ silent: true })
       if (!saved) return
       const res = await sendTestEmail(to)
+      const message = res.reason || res.message || (res.success ? "Test email sent" : "Failed to send test email")
+      setEmailTestResult({
+        success: Boolean(res.success),
+        message,
+        detail: res.detail,
+        diagnostics: res.diagnostics,
+      })
+      void mutateSmtpLogs()
       if (res.success) {
-        toast({ title: res.message ?? "Test email sent" })
+        toast({ title: message })
       } else {
-        toast({ title: res.message ?? "Failed to send test email", variant: "destructive" })
+        toast({ title: message, variant: "destructive" })
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to send test email"
@@ -979,6 +996,49 @@ export default function AdminSettingsPage() {
                     {sendingTest ? "Sending…" : "Send Test Email"}
                   </Button>
                 </div>
+              </div>
+              {emailTestResult && (
+                <div
+                  className={
+                    emailTestResult.success
+                      ? "rounded-md border border-green-500/30 bg-green-500/10 p-3 text-sm"
+                      : "rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm"
+                  }
+                >
+                  <p className="font-medium">{emailTestResult.message}</p>
+                  {emailTestResult.detail && (
+                    <p className="mt-2 whitespace-pre-wrap font-mono text-xs text-muted-foreground">{emailTestResult.detail}</p>
+                  )}
+                  {emailTestResult.diagnostics && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Tried {String(emailTestResult.diagnostics.host || "—")}:{String(emailTestResult.diagnostics.port || "—")} (
+                      {String(emailTestResult.diagnostics.scheme || "smtp")}) as {String(emailTestResult.diagnostics.username || "—")}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Recent SMTP logs</p>
+                  <Link href="/admin/logs" className="text-xs text-primary hover:underline">
+                    Open System Logs
+                  </Link>
+                </div>
+                {(smtpLogs ?? []).slice(0, 6).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No SMTP attempts logged yet. Send a test to see the exact failure here.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {(smtpLogs ?? []).slice(0, 6).map((log) => (
+                      <li key={log.id} className="rounded-md border border-border px-3 py-2 text-xs">
+                        <p className="font-medium">
+                          {log.type.toUpperCase()} · {new Date(log.timestamp).toLocaleString()}
+                        </p>
+                        <p className="mt-1 text-muted-foreground">{log.message}</p>
+                        {log.details ? <p className="mt-1 font-mono text-muted-foreground">{log.details}</p> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </CardContent>
           </Card>

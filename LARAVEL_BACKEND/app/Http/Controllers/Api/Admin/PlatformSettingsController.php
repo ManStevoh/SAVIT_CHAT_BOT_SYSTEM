@@ -381,25 +381,55 @@ class PlatformSettingsController extends Controller
 
         $settings = PlatformSetting::first();
         if (! $settings || ! PlatformSmtpConfig::isReady($settings)) {
+            $message = 'Save Email Settings first: host, port, username, mailbox password, and from address.';
+            PlatformSmtpConfig::writeLog('warning', $message, [
+                'to' => $validated['to'],
+                'ready' => false,
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Save Email Settings first: host, port, username, mailbox password, and from address.',
+                'message' => $message,
+                'reason' => $message,
             ], 422);
         }
 
+        $resolved = PlatformSmtpConfig::resolve($settings);
+        $diag = [
+            'to' => $validated['to'],
+            'host' => $resolved['host'],
+            'port' => $resolved['port'],
+            'scheme' => $resolved['scheme'],
+            'username' => $resolved['username'],
+            'from' => $resolved['fromAddress'],
+        ];
+
         try {
             $mailService->sendTestEmail($validated['to']);
+            $message = 'Test email sent successfully. Check the inbox (and spam) for '.$validated['to'];
+            PlatformSmtpConfig::writeLog('success', $message, $diag);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Test email sent successfully. Check the inbox (and spam) for '.$validated['to'],
+                'message' => $message,
+                'reason' => $message,
+                'diagnostics' => $diag,
             ]);
         } catch (\Throwable $e) {
             report($e);
+            $raw = PlatformSmtpConfig::sanitizedException($e);
+            $reason = PlatformSmtpConfig::publicError($e->getMessage());
+            PlatformSmtpConfig::writeLog('error', $reason, array_merge($diag, [
+                'exception' => $raw,
+                'exceptionClass' => $e::class,
+            ]));
 
             return response()->json([
                 'success' => false,
-                'message' => PlatformSmtpConfig::publicError($e->getMessage()),
+                'message' => $reason,
+                'reason' => $reason,
+                'detail' => $raw,
+                'diagnostics' => $diag,
             ], 422);
         }
     }

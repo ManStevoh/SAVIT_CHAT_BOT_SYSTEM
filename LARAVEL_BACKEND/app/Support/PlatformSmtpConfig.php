@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\PlatformSetting;
+use App\Models\SystemLog;
 
 /**
  * Builds a Laravel 12 Symfony SMTP mailer array from Admin → Email settings.
@@ -88,7 +89,7 @@ class PlatformSmtpConfig
         $lower = strtolower($safe);
 
         if (str_contains($lower, 'authenticate') || str_contains($lower, '535') || str_contains($lower, '534') || str_contains($lower, 'invalid login')) {
-            return 'SMTP rejected the username or password. Use the mailbox password for that address, click Save Email Settings, then test again.';
+            return 'SMTP rejected the username or password. Use the mailbox password for info@relayiq.app (not the admin login), click Save Email Settings, then test again.';
         }
         if (str_contains($lower, 'connection refused') || str_contains($lower, 'timed out') || str_contains($lower, 'timed-out') || str_contains($lower, 'network is unreachable')) {
             return 'Could not reach the mail server. Use host mail.relayiq.app, port 465 with SSL (or 587 with TLS), and confirm the server can open that outbound port.';
@@ -100,5 +101,29 @@ class PlatformSmtpConfig
         $trimmed = trim(preg_replace('/\s+/', ' ', $safe) ?? $safe);
 
         return 'Failed to send test email: '.mb_substr($trimmed, 0, 280);
+    }
+
+    public static function sanitizedException(\Throwable $e): string
+    {
+        $safe = preg_replace('/:[^:\s\/]+@/', ':***@', $e->getMessage()) ?? $e->getMessage();
+
+        return trim(preg_replace('/\s+/', ' ', $safe) ?? $safe);
+    }
+
+    /**
+     * @param  array<string, mixed>  $details
+     */
+    public static function writeLog(string $type, string $message, array $details = []): void
+    {
+        try {
+            SystemLog::create([
+                'type' => $type,
+                'message' => mb_substr($message, 0, 255),
+                'source' => 'smtp',
+                'details' => json_encode($details, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            ]);
+        } catch (\Throwable) {
+            // Logging must never block send/test.
+        }
     }
 }

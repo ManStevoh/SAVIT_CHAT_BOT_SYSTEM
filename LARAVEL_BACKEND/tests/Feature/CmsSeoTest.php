@@ -179,6 +179,43 @@ class CmsSeoTest extends TestCase
         );
     }
 
+    public function test_public_footer_replaces_placeholder_social_links(): void
+    {
+        $page = CmsPage::create([
+            'slug' => 'global',
+            'title' => 'Global',
+            'is_published' => true,
+        ]);
+        \App\Models\CmsSection::create([
+            'cms_page_id' => $page->id,
+            'section_key' => 'footer',
+            'label' => 'Footer',
+            'is_enabled' => true,
+            'sort_order' => 1,
+            'content' => [
+                'socialLinks' => [
+                    ['label' => 'Facebook', 'href' => '#'],
+                    ['label' => 'Instagram', 'href' => '#'],
+                    ['label' => 'Twitter', 'href' => '#'],
+                    ['label' => 'Linkedin', 'href' => '#'],
+                ],
+            ],
+        ]);
+
+        $response = $this->getJson('/api/cms/global');
+        $response->assertOk();
+        $footer = collect($response->json('sections'))->firstWhere('key', 'footer');
+        $links = $footer['content']['socialLinks'] ?? [];
+        $hrefs = array_column($links, 'href');
+        $labels = array_column($links, 'label');
+
+        $this->assertContains('https://www.instagram.com/relayiq.app', $hrefs);
+        $this->assertContains('https://www.facebook.com/share/1KxpxJ2VtK/', $hrefs);
+        $this->assertNotContains('#', $hrefs);
+        $this->assertNotContains('Twitter', $labels);
+        $this->assertNotContains('Linkedin', $labels);
+    }
+
     public function test_cms_image_upload_accepts_file_within_limit(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

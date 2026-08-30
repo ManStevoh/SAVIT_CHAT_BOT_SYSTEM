@@ -21,6 +21,7 @@ import {
   Newspaper,
   Layout,
   Tag,
+  Mail,
 } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
@@ -44,6 +45,7 @@ const navigationConfig = [
 
 const navigationOther = [
   { name: "Website CMS", href: "/admin/cms", icon: Layout },
+  { name: "Contact inbox", href: "/admin/contact", icon: Mail },
   { name: "Blog", href: "/admin/blog", icon: Newspaper },
   { name: "Testimonials", href: "/admin/testimonials", icon: Quote },
   { name: "Landing FAQ", href: "/admin/landing-faqs", icon: HelpCircle },

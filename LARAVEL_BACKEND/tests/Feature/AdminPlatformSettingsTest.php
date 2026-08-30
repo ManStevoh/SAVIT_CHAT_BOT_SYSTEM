@@ -267,6 +267,11 @@ class AdminPlatformSettingsTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('success', false)
             ->assertJsonFragment(['message' => 'Save Email Settings first: host, port, username, mailbox password, and from address.']);
+
+        $this->assertDatabaseHas('system_logs', [
+            'source' => 'smtp',
+            'type' => 'warning',
+        ]);
     }
 
     public function test_admin_test_email_rejects_truncated_address(): void

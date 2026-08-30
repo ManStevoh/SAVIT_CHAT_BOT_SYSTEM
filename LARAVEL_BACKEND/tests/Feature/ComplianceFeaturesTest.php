@@ -99,6 +99,11 @@ class ComplianceFeaturesTest extends TestCase
             'message' => 'Hello there',
             'recaptchaToken' => 'valid-token',
         ])->assertOk()->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('contact_submissions', [
+            'email' => 'ada@example.com',
+            'message' => 'Hello there',
+        ]);
     }
 
     public function test_register_requires_recaptcha_when_enabled(): void

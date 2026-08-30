@@ -6,6 +6,7 @@ use App\Models\CmsPage;
 use App\Models\LandingFaq;
 use App\Models\PlatformSetting;
 use App\Models\Testimonial;
+use App\Support\BrandSocial;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -99,15 +100,75 @@ class CmsPagePayloadBuilder
                 'canonicalUrl' => $page->canonical_url,
                 'robots' => $page->robots,
             ],
-            'sections' => $page->sections->map(fn ($s) => [
-                'key' => $s->section_key,
-                'label' => $s->label,
-                'isEnabled' => (bool) $s->is_enabled,
-                'sortOrder' => (int) $s->sort_order,
-                'content' => $s->content ?? [],
-            ])->values()->all(),
+            'sections' => $page->sections->map(function ($s) {
+                $content = $s->content ?? [];
+                if ($s->section_key === 'footer' && is_array($content)) {
+                    $content['socialLinks'] = $this->publicSocialLinks($content['socialLinks'] ?? []);
+                }
+
+                return [
+                    'key' => $s->section_key,
+                    'label' => $s->label,
+                    'isEnabled' => (bool) $s->is_enabled,
+                    'sortOrder' => (int) $s->sort_order,
+                    'content' => $content,
+                ];
+            })->values()->all(),
             ...$extras,
         ];
+    }
+
+    /**
+     * Official Facebook + Instagram always win over CMS "#" placeholders.
+     *
+     * @param  mixed  $cmsLinks
+     * @return list<array{label: string, href: string}>
+     */
+    private function publicSocialLinks(mixed $cmsLinks): array
+    {
+        $official = BrandSocial::links();
+        $officialLabels = array_map(
+            static fn (array $link): string => strtolower($link['label']),
+            $official
+        );
+
+        $extra = [];
+        if (is_array($cmsLinks)) {
+            foreach ($cmsLinks as $link) {
+                if (! is_array($link)) {
+                    continue;
+                }
+                $label = strtolower(trim((string) ($link['label'] ?? '')));
+                $href = trim((string) ($link['href'] ?? $link['url'] ?? ''));
+                if (in_array($label, $officialLabels, true)) {
+                    continue;
+                }
+                if ($this->isPublicExternalUrl($href)) {
+                    $extra[] = [
+                        'label' => trim((string) ($link['label'] ?? 'Social')),
+                        'href' => $href,
+                    ];
+                }
+            }
+        }
+
+        return array_values([...$official, ...$extra]);
+    }
+
+    private function isPublicExternalUrl(string $href): bool
+    {
+        if (! preg_match('#^https?://#i', $href)) {
+            return false;
+        }
+
+        $host = parse_url($href, PHP_URL_HOST);
+        if (! is_string($host) || $host === '') {
+            return false;
+        }
+
+        $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+        return strtolower($host) !== strtolower((string) $appHost);
     }
 
     private function resolveImageUrl(?string $path): ?string

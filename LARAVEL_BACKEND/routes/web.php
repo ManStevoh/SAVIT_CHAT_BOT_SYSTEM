@@ -149,6 +149,7 @@ Route::get('/admin/growth', [PageController::class, 'adminGrowth'])->name('admin
 Route::get('/admin/cms', [PageController::class, 'adminCms'])->name('admin.cms');
 Route::get('/admin/blog', [PageController::class, 'adminBlog'])->name('admin.blog');
 Route::get('/admin/landing-faqs', [PageController::class, 'adminLandingFaqs'])->name('admin.landing-faqs');
+Route::get('/admin/contact', [PageController::class, 'adminContact'])->name('admin.contact');
 Route::get('/admin/logs', [PageController::class, 'adminLogs'])->name('admin.logs');
 Route::get('/admin/payment-gateways', [PageController::class, 'adminPaymentGateways'])->name('admin.payment-gateways');
 Route::get('/admin/plans', [PageController::class, 'adminPlans'])->name('admin.plans');

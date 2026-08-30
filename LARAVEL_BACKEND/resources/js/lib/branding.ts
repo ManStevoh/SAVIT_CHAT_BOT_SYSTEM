@@ -18,15 +18,32 @@ export const BRAND = {
   ],
 } as const
 
-/** Prefer CMS social links when they are real URLs; otherwise official profiles. */
+function isExternalSocialUrl(href: string): boolean {
+  if (!/^https?:\/\//i.test(href)) return false
+  try {
+    const host = new URL(href).hostname.toLowerCase()
+    return host !== "" && host !== "relayiq.app" && host !== "www.relayiq.app"
+  } catch {
+    return false
+  }
+}
+
+/** Official Facebook + Instagram always win over CMS "#" / same-site placeholders. */
 export function resolveSocialLinks(
-  cmsLinks?: Array<{ label: string; href: string }> | null
+  cmsLinks?: Array<{ label: string; href?: string; url?: string }> | null
 ): Array<{ label: string; href: string }> {
   const official = BRAND.social.map((link) => ({ label: link.label, href: link.href }))
-  const usable = (cmsLinks ?? []).filter((link) => {
-    const href = (link.href || "").trim()
-    return href !== "" && href !== "#" && !href.toLowerCase().startsWith("javascript:")
-  })
+  const officialLabels = new Set(official.map((link) => link.label.toLowerCase()))
+  const extra: Array<{ label: string; href: string }> = []
 
-  return usable.length > 0 ? usable : official
+  for (const link of cmsLinks ?? []) {
+    const label = (link.label || "").trim()
+    const href = (link.href || link.url || "").trim()
+    if (!label || officialLabels.has(label.toLowerCase())) continue
+    if (isExternalSocialUrl(href)) {
+      extra.push({ label, href })
+    }
+  }
+
+  return [...official, ...extra]
 }
