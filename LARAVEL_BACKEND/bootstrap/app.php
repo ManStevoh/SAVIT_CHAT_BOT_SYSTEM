@@ -25,11 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->statefulApi();
         $middleware->validateCsrfTokens(except: [
-            'deploy',
-            'deploy/*',
-            'deploy/auth',
-            'deploy/start',
-            'deploy/run',
+            'deploy/agent',
         ]);
         $middleware->encryptCookies(except: [
             'pricing_currency',

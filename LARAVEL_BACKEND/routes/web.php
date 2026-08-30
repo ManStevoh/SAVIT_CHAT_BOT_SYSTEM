@@ -77,14 +77,8 @@ Route::get('/debug.txt', function () {
     ]);
 });
 
-// Web Deployer Console (Protected by secret — CSRF-exempt, see bootstrap/app.php)
-Route::get('/deploy', [WebDeployController::class, 'index'])->name('deploy.index')->middleware('throttle:30,1');
-Route::post('/deploy/auth', [WebDeployController::class, 'auth'])->name('deploy.auth')->middleware('throttle:10,1');
-Route::post('/deploy/start', [WebDeployController::class, 'start'])->name('deploy.start')->middleware('throttle:5,1');
-Route::match(['get', 'post'], '/deploy/stream', [WebDeployController::class, 'stream'])->name('deploy.stream')->middleware('throttle:10,1');
+// Agent Deploy Endpoint (Protected by X-Deploy-Agent-Key or secret — CSRF-exempt)
 Route::match(['get', 'post'], '/deploy/agent', [WebDeployController::class, 'agentTrigger'])->name('deploy.agent')->middleware('throttle:10,1');
-Route::get('/deploy/status/{token}', [WebDeployController::class, 'status'])->name('deploy.status')->middleware('throttle:120,1');
-Route::post('/deploy/run', [WebDeployController::class, 'run'])->name('deploy.run')->middleware('throttle:5,1');
 
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');

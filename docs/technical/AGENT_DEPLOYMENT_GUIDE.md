@@ -105,10 +105,10 @@ curl -N -s -X POST "${REMOTE_URL}/deploy/agent" \
 
 ---
 
-## 4. Alternative Execution Modes
+## 4. Execution Mode
 
-### Mode A: CLI Artisan Command (`php artisan deploy:agent`)
-If you have shell/SSH access to the environment:
+### CLI Artisan Command (`php artisan deploy:agent`) / HTTP API Stream
+Agents trigger the deployment via headless HTTP stream or CLI command without any GUI interface:
 ```bash
 # Execute local deployment with real-time stdout streaming:
 php artisan deploy:agent main
@@ -116,16 +116,6 @@ php artisan deploy:agent main
 # Trigger remote production deploy via configured DEPLOY_REMOTE_URL:
 php artisan deploy:agent main --remote=https://relayiq.app
 ```
-
-### Mode B: Direct Web Console Deep Link
-If generating a link for the user or automated browser testing:
-```
-https://relayiq.app/deploy?key=<DEPLOY_SECRET>&branch=main&auto=1
-```
-* **Auto-Authentication**: Automatically skips the password prompt.
-* **Auto-Branch**: Pre-selects `branch=main`.
-* **Auto-Execute**: When `auto=1` or `auto=true`, immediately begins the live SSE deployment stream without button clicks.
-* **Security Scrub**: The browser immediately removes the `key` parameter from the URL address bar via `history.replaceState`.
 
 ---
 
