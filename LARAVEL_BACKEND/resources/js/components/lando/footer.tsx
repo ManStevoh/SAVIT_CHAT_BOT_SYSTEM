@@ -155,7 +155,7 @@ export function LandoFooter({
                     key={link.label}
                     href={link.href}
                     target="_blank"
-                    rel="me noopener noreferrer"
+                    rel="noopener noreferrer"
                     className="text-sm font-medium text-foreground hover:text-primary"
                     aria-label={`${BRAND.productName} on ${link.label}`}
                     onClick={(event) => {
