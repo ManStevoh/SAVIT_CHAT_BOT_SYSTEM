@@ -50,7 +50,7 @@ final class AgentCustomerIntelligenceContext
         }
 
         if ($orders->isNotEmpty()) {
-            $ccy = $company->settings?->displayCurrencyCode() ?? 'USD';
+            $ccy = $company->settings?->displayCurrencyCode() ?? 'KES';
             $moneyOpts = MoneyFormatter::displayOptionsFromSettings($company->settings);
             $lines = ['Recent orders for this customer (authoritative — use search_orders for full detail):'];
             foreach ($orders as $order) {

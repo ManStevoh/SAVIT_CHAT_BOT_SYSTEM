@@ -34,16 +34,69 @@ class AgentStoreService
             });
         }
 
-        $companies = $query->orderBy('name')->get();
+        $companies = $query->with('settings')->orderBy('name')->get();
 
         return $companies->map(fn (Company $c) => [
-            'id'             => $c->id,
-            'name'           => $c->name,
-            'store_slug'     => $c->store_slug,
-            'status'         => $c->status,
-            'email'          => $c->email,
-            'products_count' => $c->products_count,
+            'id'              => $c->id,
+            'name'            => $c->name,
+            'store_slug'      => $c->store_slug,
+            'status'          => $c->status,
+            'email'           => $c->email,
+            'currency'        => $c->settings?->displayCurrencyCode() ?? 'KES',
+            'currency_symbol' => $c->settings?->currency_symbol ?? 'KSh',
+            'products_count'  => $c->products_count,
         ])->all();
+    }
+
+    /**
+     * Update store settings (e.g. display_currency, currency_symbol, store_name).
+     */
+    public function updateStoreSettings(Company $company, array $data): array
+    {
+        $company->loadMissing('settings');
+        $settings = $company->settings;
+        if (! $settings) {
+            $settings = $company->settings()->create([
+                'display_currency' => 'KES',
+                'currency_symbol'  => 'KSh',
+            ]);
+        }
+
+        $fields = [];
+        if (isset($data['display_currency']) || isset($data['currency'])) {
+            $raw = (string) ($data['display_currency'] ?? $data['currency']);
+            $code = strtoupper(preg_replace('/[^A-Za-z]/', '', $raw) ?? '');
+            $fields['display_currency'] = strlen($code) >= 3 ? substr($code, 0, 3) : 'KES';
+        }
+
+        if (array_key_exists('currency_symbol', $data) || array_key_exists('symbol', $data)) {
+            $symbol = $data['currency_symbol'] ?? $data['symbol'];
+            $fields['currency_symbol'] = is_string($symbol) && trim($symbol) !== ''
+                ? mb_substr(trim($symbol), 0, 16)
+                : null;
+        }
+
+        if (! empty($fields)) {
+            $settings->update($fields);
+        }
+
+        if (! empty($data['store_name']) || ! empty($data['name'])) {
+            $company->update(['name' => trim((string) ($data['store_name'] ?? $data['name']))]);
+        }
+
+        $this->recordAudit('agent_store_settings_updated', $company->id, [
+            'updates' => array_keys($fields),
+        ]);
+
+        return [
+            'success'         => true,
+            'company_id'      => $company->id,
+            'company_name'    => $company->fresh()->name,
+            'store_slug'      => $company->store_slug,
+            'currency'        => $settings->fresh()->displayCurrencyCode(),
+            'currency_symbol' => $settings->fresh()->currency_symbol,
+            'message'         => "Store '{$company->name}' settings updated successfully.",
+        ];
     }
 
     /**

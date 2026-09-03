@@ -110,7 +110,7 @@ class SettingsController extends Controller
             'orderPaymentPesapalConfig' => $settings ? $this->maskOrderPaymentPesapalConfig($settings->order_payment_pesapal_config) : null,
             'orderPaymentFlutterwaveConfig' => $settings ? $this->maskOrderPaymentFlutterwaveConfig($settings->order_payment_flutterwave_config) : null,
             'orderPaymentPayPalConfig' => $settings ? $this->maskOrderPaymentPayPalConfig($settings->order_payment_paypal_config) : null,
-            'displayCurrency' => $settings?->displayCurrencyCode() ?? 'USD',
+            'displayCurrency' => $settings?->displayCurrencyCode() ?? 'KES',
             'currencySymbol' => $settings?->currency_symbol,
             'thousandsSeparator' => MoneyFormatter::normalizeThousands($settings?->thousands_separator),
             'decimalSeparator' => MoneyFormatter::normalizeDecimal(

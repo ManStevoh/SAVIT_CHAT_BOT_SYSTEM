@@ -55,7 +55,7 @@ class OrderInvoiceService
     public function generatePdf(Order $order): array
     {
         $order->loadMissing(['orderProducts', 'company.settings']);
-        $currency = $order->company?->settings?->displayCurrencyCode() ?? 'USD';
+        $currency = $order->company?->settings?->displayCurrencyCode() ?? 'KES';
         $moneyOpts = MoneyFormatter::displayOptionsFromSettings($order->company?->settings);
         $companyName = e($order->company?->name ?? 'Invoice');
         $orderNumber = e((string) ($order->order_number ?: $order->id));
@@ -211,7 +211,7 @@ HTML;
             ];
         }
 
-        $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
+        $currency = $company->settings?->displayCurrencyCode() ?? 'KES';
         $defaultCaption = sprintf(
             "📄 *Invoice for Order #%s*\nTotal: *%s*\nStatus: %s (Payment: %s)\n\n🔗 *View Online:*\n%s",
             $order->order_number,
@@ -248,7 +248,7 @@ HTML;
 
     protected function formatTotal(Order $order): string
     {
-        $currency = $order->company?->settings?->displayCurrencyCode() ?? 'USD';
+        $currency = $order->company?->settings?->displayCurrencyCode() ?? 'KES';
 
         return MoneyFormatter::formatFromSettings((float) $order->total, $order->company?->settings);
     }

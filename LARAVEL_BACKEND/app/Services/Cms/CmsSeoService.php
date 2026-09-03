@@ -297,10 +297,10 @@ class CmsSeoService
         }
         $ogImage = $ogImage ?: ($company->logo ? asset('storage/'.$company->logo) : $this->defaultOgImage());
 
-        $currency = 'USD';
+        $currency = 'KES';
         try {
             $company->loadMissing('settings');
-            $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
+            $currency = $company->settings?->displayCurrencyCode() ?? 'KES';
         } catch (\Throwable) {
             // ignore
         }

@@ -152,7 +152,7 @@ class DashboardSummaryController extends Controller
         // ── Settings (currency only, lightweight) ─────────────────────────────
         $companySettings = $company->settings()->first();
         $settingsData    = [
-            'displayCurrency' => $companySettings?->display_currency ?? 'USD',
+            'displayCurrency' => $companySettings?->display_currency ?? 'KES',
             'companyName'     => $company->name,
         ];
 

@@ -17,7 +17,7 @@ final class MoneyFormatter
             return substr($raw, 0, 3);
         }
 
-        return 'USD';
+        return 'KES';
     }
 
     /**

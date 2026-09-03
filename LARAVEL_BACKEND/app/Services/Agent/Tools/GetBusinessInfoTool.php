@@ -46,7 +46,7 @@ final class GetBusinessInfoTool implements AgentTool
 
         return [
             'business_name' => $company->name,
-            'currency' => $settings?->displayCurrencyCode() ?? 'USD',
+            'currency' => $settings?->displayCurrencyCode() ?? 'KES',
             'timezone' => $settings?->timezone,
             'working_hours' => $settings?->working_hours,
             'ai_tone' => $settings?->ai_tone,

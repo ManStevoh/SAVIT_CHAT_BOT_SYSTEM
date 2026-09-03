@@ -217,7 +217,7 @@ class SystemPromptBuilder
         }
         $company->loadMissing('settings');
         $settings = $company->settings;
-        $ccy = $settings?->displayCurrencyCode() ?? 'USD';
+        $ccy = $settings?->displayCurrencyCode() ?? 'KES';
         $parts[] = "\nProducts (do not invent; refer to catalog if they ask). All prices are in {$ccy}. Customers can order by number in WhatsApp:";
 
         $added = 0;

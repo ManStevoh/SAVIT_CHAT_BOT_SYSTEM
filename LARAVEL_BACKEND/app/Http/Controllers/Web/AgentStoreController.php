@@ -40,11 +40,12 @@ class AgentStoreController extends Controller
                 'list_products', 'products' => $this->handleListProducts($request),
                 'add_product', 'create', 'add' => $this->handleAddProduct($request),
                 'update_product', 'update' => $this->handleUpdateProduct($request),
+                'update_store', 'store_settings', 'settings' => $this->handleUpdateStore($request),
                 'remove_product', 'delete', 'archive' => $this->handleDeleteProduct($request),
                 'bulk_import', 'bulk' => $this->handleBulkImport($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, remove_product, bulk_import.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -188,5 +189,24 @@ class AgentStoreController extends Controller
         $result = $this->storeService->bulkImport($company, $items);
 
         return response()->json($result, $result['success'] ? 200 : 207);
+    }
+
+    private function handleUpdateStore(Request $request): JsonResponse
+    {
+        $storeId = $request->input('company_id') ?: $request->input('store');
+        $company = $this->storeService->resolveCompany($storeId);
+
+        if (! $company) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store '{$storeId}' not found. Specify a valid company_id or store_slug.",
+            ], 404);
+        }
+
+        $settings = (array) ($request->input('settings') ?: $request->all());
+
+        $result = $this->storeService->updateStoreSettings($company, $settings);
+
+        return response()->json($result);
     }
 }

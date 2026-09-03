@@ -34,7 +34,7 @@ final class GetProductRelationshipsTool implements AgentTool
     public function execute(AgentToolContext $context, array $arguments): array
     {
         $companyId = (int) $context->company->id;
-        $currency = $context->company->settings?->displayCurrencyCode() ?? 'USD';
+        $currency = $context->company->settings?->displayCurrencyCode() ?? 'KES';
         $productId = (int) ($arguments['product_id'] ?? 0);
 
         if ($productId <= 0) {

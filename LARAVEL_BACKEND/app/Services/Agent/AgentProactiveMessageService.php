@@ -35,7 +35,7 @@ final class AgentProactiveMessageService
         }
 
         $company->loadMissing('settings');
-        $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
+        $currency = $company->settings?->displayCurrencyCode() ?? 'KES';
         $context = [
             'event' => 'payment_received',
             'order_number' => $order->order_number,

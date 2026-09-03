@@ -156,7 +156,7 @@ class StorefrontWhatsAppBridgeService
         $order->loadMissing(['company.settings', 'orderProducts']);
         $company = $order->company;
         $settings = $company?->settings;
-        $currency = $settings?->displayCurrencyCode() ?? 'USD';
+        $currency = $settings?->displayCurrencyCode() ?? 'KES';
         $moneyOpts = MoneyFormatter::displayOptionsFromSettings($settings);
         $total = MoneyFormatter::format((float) $order->total, $currency, $moneyOpts);
 
@@ -216,7 +216,7 @@ class StorefrontWhatsAppBridgeService
         }
 
         $company->loadMissing('settings');
-        $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
+        $currency = $company->settings?->displayCurrencyCode() ?? 'KES';
         $moneyOpts = MoneyFormatter::displayOptionsFromSettings($company->settings);
         $totalLabel = MoneyFormatter::format($subtotal, $currency, $moneyOpts);
         $cartUrl = rtrim((string) config('app.url'), '/').'/s/'.$company->store_slug.'/cart';

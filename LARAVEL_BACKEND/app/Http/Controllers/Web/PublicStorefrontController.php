@@ -801,7 +801,7 @@ class PublicStorefrontController extends Controller
         }
         $company->loadMissing('settings');
         $settings = $company->settings;
-        $baseCurrency = $settings?->displayCurrencyCode() ?? 'USD';
+        $baseCurrency = $settings?->displayCurrencyCode() ?? 'KES';
         $altCurrencies = $settings?->altCurrencyOptions() ?? [];
 
         // Feature 18: `?currency=` picks an alt display currency for formatPrice only — the
@@ -827,7 +827,7 @@ class PublicStorefrontController extends Controller
             'name' => $company->name,
             'logo' => $company->logo ? asset('storage/'.$company->logo) : null,
             'currency' => $baseCurrency,
-            'moneyOptions' => $settings?->moneyDisplayOptions() ?? ['symbol' => null, 'thousands' => ',', 'decimal' => '.'],
+            'moneyOptions' => $settings?->moneyDisplayOptions() ?? ['symbol' => 'KSh', 'thousands' => ',', 'decimal' => '.'],
             'whatsappNumber' => $settings?->whatsapp_number,
             'whatsappUrl' => $this->whatsappUrl($settings?->whatsapp_number, $prefill),
             'altCurrencies' => $altCurrencies,

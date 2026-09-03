@@ -44,7 +44,7 @@ final class TraceCustomerGraphTool implements AgentTool
             (int) $context->company->id,
             $context->customerPhone,
             $query !== '' ? $query : null,
-            $context->company->settings?->displayCurrencyCode() ?? 'USD',
+            $context->company->settings?->displayCurrencyCode() ?? 'KES',
         );
 
         $reorder = $this->intentChains->reorderSignal((int) $context->company->id, $context->customerPhone);

@@ -54,8 +54,8 @@ export function currencyDisplayFromSettings(
 }
 
 export function normalizeCurrencyCode(code: string | undefined | null): string {
-  const raw = (code ?? 'USD').replace(/[^A-Za-z]/g, '').toUpperCase()
-  return raw.length >= 3 ? raw.slice(0, 3) : 'USD'
+  const raw = (code ?? 'KES').replace(/[^A-Za-z]/g, '').toUpperCase()
+  return raw.length >= 3 ? raw.slice(0, 3) : 'KES'
 }
 
 export function normalizeThousandsSeparator(value: string | undefined | null): string {

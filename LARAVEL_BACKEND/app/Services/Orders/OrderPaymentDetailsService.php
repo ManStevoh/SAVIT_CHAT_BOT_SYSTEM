@@ -55,7 +55,7 @@ class OrderPaymentDetailsService
 
         $drivers = $this->registry->getAvailableDrivers($company);
         $methods = array_map(fn ($d) => $d->getId(), $drivers);
-        $currency = $company->settings?->displayCurrencyCode() ?? 'USD';
+        $currency = $company->settings?->displayCurrencyCode() ?? 'KES';
         $moneyOpts = MoneyFormatter::displayOptionsFromSettings($company->settings);
         $total = MoneyFormatter::format((float) $order->total, $currency, $moneyOpts);
         $taxTotal = (float) ($order->tax_total ?? 0);
