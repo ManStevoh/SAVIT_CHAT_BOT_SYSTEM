@@ -42,7 +42,32 @@ Channels available: `laravel` (default), `whatsapp`, `agent`, `deploy`, `migrate
 
 ---
 
+## 🛒 AGENT STORE & CATALOG MANAGEMENT
+
+To add, update, archive, or remove items from a live store **without deploying code or writing seeders**, use the **Agent Store Gateway**:
+
+```bash
+# Add a product to Store #1:
+curl -s -X POST "https://relayiq.app/api/agent/store" \
+  -H "X-Deploy-Agent-Key: <DEPLOY_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "add_product",
+    "store": 1,
+    "product": {"name": "Cold Brew", "price": 4.50, "stock": 50, "category": "Coffee"}
+  }'
+
+# Remove / archive a product from Store #1:
+curl -s -X POST "https://relayiq.app/api/agent/store" \
+  -H "X-Deploy-Agent-Key: <DEPLOY_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "remove_product", "store": 1, "name": "Cold Brew"}'
+```
+
+---
+
 ## Complete Guides
 - **Deployment Pipeline**: 👉 [`docs/technical/AGENT_DEPLOYMENT_GUIDE.md`](docs/technical/AGENT_DEPLOYMENT_GUIDE.md) or [`LARAVEL_BACKEND/AGENT_DEPLOYMENT_GUIDE.md`](LARAVEL_BACKEND/AGENT_DEPLOYMENT_GUIDE.md)
 - **Log Inspection & Streaming**: 👉 [`docs/technical/AGENT_LOGS_GUIDE.md`](docs/technical/AGENT_LOGS_GUIDE.md) or [`LARAVEL_BACKEND/AGENT_LOGS_GUIDE.md`](LARAVEL_BACKEND/AGENT_LOGS_GUIDE.md)
+- **Store & Catalog Gateway**: 👉 [`docs/technical/AGENT_STORE_GUIDE.md`](docs/technical/AGENT_STORE_GUIDE.md) or [`LARAVEL_BACKEND/AGENT_STORE_GUIDE.md`](LARAVEL_BACKEND/AGENT_STORE_GUIDE.md)
 

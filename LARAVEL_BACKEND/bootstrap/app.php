@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'deploy/agent',
             'logs/agent',
+            'api/agent/store',
         ]);
         $middleware->encryptCookies(except: [
             'pricing_currency',

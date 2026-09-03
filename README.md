@@ -54,6 +54,7 @@ npm run test:e2e:journey      # Full admin/company/public journeys
 - [AI Agent Rules & Instructions](AGENTS.md)
 - [Agent Deployment Guide](docs/technical/AGENT_DEPLOYMENT_GUIDE.md)
 - [Agent Log Gateway Guide](docs/technical/AGENT_LOGS_GUIDE.md)
+- [Agent Store Gateway Guide](docs/technical/AGENT_STORE_GUIDE.md)
 - [Inertia migration guide](LARAVEL_BACKEND/INERTIA_MIGRATION.md)
 - [Technical docs](docs/technical/index.md)
 - [Mobile App V1 Vision](docs/technical/MOBILE_APP_V1_VISION.md)
