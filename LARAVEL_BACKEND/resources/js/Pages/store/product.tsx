@@ -252,6 +252,18 @@ export default function StoreProductPage({
     >
       <SeoHead seo={seo} fallbackTitle={product.name} />
 
+      {company.theme?.announcement_bar ? (
+        <div
+          className="px-4 py-2 text-center text-xs font-semibold shadow-xs"
+          style={{
+            background: 'var(--sf-announcement-bg, var(--sf-accent, #2563eb))',
+            color: 'var(--sf-announcement-text, #ffffff)',
+          }}
+        >
+          {company.theme.announcement_bar}
+        </div>
+      ) : null}
+
       {/* Top Navbar */}
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5">
@@ -492,7 +504,11 @@ export default function StoreProductPage({
                 type="submit"
                 disabled={submitting || !!soldOut}
                 size="lg"
-                className="flex-1 gap-2 rounded-2xl bg-slate-900 py-6 text-sm font-semibold text-white shadow-md transition-all hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                className="flex-1 gap-2 py-6 text-sm font-semibold text-white shadow-md transition-all hover:opacity-90"
+                style={{
+                  background: 'var(--sf-primary, #0f172a)',
+                  borderRadius: 'var(--sf-radius, 1rem)',
+                }}
               >
                 <ShoppingBag className="h-4 w-4" />
                 {soldOut ? 'Sold Out' : submitting ? 'Adding to Cart…' : 'Add to Cart'}
@@ -504,7 +520,10 @@ export default function StoreProductPage({
                 disabled={buyingNow || !!soldOut}
                 size="lg"
                 variant="outline"
-                className="flex-1 gap-2 rounded-2xl border-slate-900 bg-slate-900 text-white hover:bg-slate-800 dark:border-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 py-6 text-sm font-bold shadow-md"
+                className="flex-1 gap-2 border-slate-900 bg-slate-900 text-white hover:bg-slate-800 dark:border-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 py-6 text-sm font-bold shadow-md"
+                style={{
+                  borderRadius: 'var(--sf-radius, 1rem)',
+                }}
               >
                 <Zap className="h-4 w-4 text-amber-400" />
                 {buyingNow ? 'Redirecting…' : 'Buy Now'}
@@ -682,6 +701,11 @@ export default function StoreProductPage({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Custom Footer */}
+      <footer className="border-t border-slate-200/80 py-8 text-center text-xs font-medium text-slate-400 dark:border-slate-800">
+        {company.theme?.footer_text || 'Powered by RelayIQ'}
+      </footer>
 
       {/* Lightbox Modal */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>

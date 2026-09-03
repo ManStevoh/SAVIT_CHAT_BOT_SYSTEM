@@ -895,9 +895,24 @@ class PublicStorefrontController extends Controller
      */
     protected function resolveSections(Company $company, array $catalogProducts): array
     {
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
         $sections = is_array($company->storefront_sections) && $company->storefront_sections !== []
             ? $company->storefront_sections
-            : [['type' => 'catalog']];
+            : null;
+
+        if ($sections === null) {
+            $sections = [];
+            if (! empty($theme['hero_enabled'])) {
+                $sections[] = [
+                    'type' => 'hero',
+                    'headline' => ! empty($theme['hero_headline']) ? $theme['hero_headline'] : $company->name,
+                    'subhead' => ! empty($theme['hero_subhead']) ? $theme['hero_subhead'] : null,
+                    'cta_label' => ! empty($theme['hero_cta_label']) ? $theme['hero_cta_label'] : 'Shop Now',
+                    'cta_href' => ! empty($theme['hero_cta_href']) ? $theme['hero_cta_href'] : '#catalog',
+                ];
+            }
+            $sections[] = ['type' => 'catalog'];
+        }
 
         return array_values(array_map(function ($section) use ($catalogProducts) {
             if (! is_array($section)) {

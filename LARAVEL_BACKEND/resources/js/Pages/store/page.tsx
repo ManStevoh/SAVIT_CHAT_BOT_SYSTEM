@@ -274,7 +274,10 @@ function ProductCard({
   const href = `/s/${slug}/p/${product.slug || product.id}`
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900">
+    <div
+      className="group relative flex flex-col overflow-hidden border border-slate-200/80 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900"
+      style={{ borderRadius: 'var(--sf-radius, 1.5rem)' }}
+    >
       {/* Badges */}
       <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
         {product.onSale && (
@@ -366,7 +369,11 @@ function ProductCard({
               e.preventDefault()
               onQuickAdd(product)
             }}
-            className="h-8 rounded-xl bg-slate-900 px-3 text-[11px] font-bold text-white shadow-xs transition-all hover:scale-105 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+            className="h-8 px-3 text-[11px] font-bold text-white shadow-xs transition-all hover:scale-105 hover:opacity-90"
+            style={{
+              background: 'var(--sf-primary, #0f172a)',
+              borderRadius: 'var(--sf-radius, 0.75rem)',
+            }}
           >
             <Plus className="h-3 w-3 mr-1" /> Add
           </Button>
@@ -507,7 +514,13 @@ export default function StorePage({
       <SeoHead seo={seo} fallbackTitle={`${company.name} — Shop`} />
 
       {theme.announcement_bar ? (
-        <div className="bg-[var(--sf-accent)] px-4 py-2 text-center text-xs font-semibold text-white shadow-xs">
+        <div
+          className="px-4 py-2 text-center text-xs font-semibold shadow-xs"
+          style={{
+            background: 'var(--sf-announcement-bg, var(--sf-accent, #2563eb))',
+            color: 'var(--sf-announcement-text, #ffffff)',
+          }}
+        >
           {theme.announcement_bar}
         </div>
       ) : null}
@@ -658,7 +671,15 @@ export default function StorePage({
                 <span className="hidden sm:inline">Filters</span>
               </Button>
 
-              <Button type="submit" size="default" className="rounded-2xl bg-slate-900 px-5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-emerald-600">
+              <Button
+                type="submit"
+                size="default"
+                className="px-5 text-xs font-bold text-white shadow-xs transition-opacity hover:opacity-90"
+                style={{
+                  background: 'var(--sf-primary, #0f172a)',
+                  borderRadius: 'var(--sf-radius, 1rem)',
+                }}
+              >
                 <Search className="h-3.5 w-3.5 mr-1" /> Search
               </Button>
             </div>
@@ -734,26 +755,31 @@ export default function StorePage({
               onClick={() => setCategory(null)}
               className={`rounded-full px-4 py-2 text-xs font-bold transition-all ${
                 !filters.category
-                  ? 'bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900'
+                  ? 'text-white shadow-md'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
               }`}
+              style={!filters.category ? { background: 'var(--sf-primary, #0f172a)' } : undefined}
             >
               All Categories
             </button>
-            {allCategories.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCategory(c)}
-                className={`rounded-full px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
-                  filters.category === c
-                    ? 'bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
+            {allCategories.map((c) => {
+              const isActive = filters.category === c
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  className={`rounded-full px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
+                    isActive
+                      ? 'text-white shadow-md'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+                  }`}
+                  style={isActive ? { background: 'var(--sf-primary, #0f172a)' } : undefined}
+                >
+                  {c}
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -874,7 +900,7 @@ export default function StorePage({
           style={{ background: '#128C7E' }}
         >
           <MessageCircle className="h-4 w-4" />
-          Chat on WhatsApp
+          {theme.whatsapp_btn_text || 'Chat on WhatsApp'}
         </a>
       )}
 
@@ -883,7 +909,11 @@ export default function StorePage({
         <div className="fixed bottom-4 left-4 right-4 z-30 sm:hidden">
           <Link
             href={`/s/${slug}/cart`}
-            className="flex items-center justify-between rounded-2xl bg-slate-900 p-3.5 text-white shadow-2xl transition-transform active:scale-98 dark:bg-emerald-600"
+            className="flex items-center justify-between p-3.5 text-white shadow-2xl transition-transform active:scale-98"
+            style={{
+              background: 'var(--sf-primary, #0f172a)',
+              borderRadius: 'var(--sf-radius, 1rem)',
+            }}
           >
             <div className="flex items-center gap-2.5">
               <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/20 text-xs font-extrabold">

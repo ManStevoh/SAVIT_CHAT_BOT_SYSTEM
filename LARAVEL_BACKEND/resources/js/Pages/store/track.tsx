@@ -280,6 +280,10 @@ export default function StoreTrackPage({ slug, company, order, defaultPhone = ''
           </div>
         )}
       </main>
+
+      <footer className="border-t border-slate-200/80 py-8 text-center text-xs font-medium text-slate-400 dark:border-slate-800">
+        {company.theme?.footer_text || 'Powered by RelayIQ'}
+      </footer>
     </div>
   )
 }

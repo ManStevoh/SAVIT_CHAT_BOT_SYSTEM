@@ -529,17 +529,6 @@ export default function DashboardStorefrontPage() {
             />
             Abandoned cart recovery (WhatsApp cart link)
           </label>
-          <div>
-            <Label>Announcement bar (sales banner)</Label>
-            <Input
-              value={announcementBar}
-              onChange={(e) => setAnnouncementBar(e.target.value)}
-              placeholder="Black Friday — 30% off with code BF30"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Shown at the top of your public storefront. Leave empty to hide.
-            </p>
-          </div>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

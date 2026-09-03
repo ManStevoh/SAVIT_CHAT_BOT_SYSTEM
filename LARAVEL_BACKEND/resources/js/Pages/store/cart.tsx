@@ -113,6 +113,18 @@ export default function StoreCartPage({ slug, company, cart, related = [] }: Pro
       className="min-h-screen bg-slate-50/80 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100"
       style={style}
     >
+      {company.theme?.announcement_bar ? (
+        <div
+          className="px-4 py-2 text-center text-xs font-semibold shadow-xs"
+          style={{
+            background: 'var(--sf-announcement-bg, var(--sf-accent, #2563eb))',
+            color: 'var(--sf-announcement-text, #ffffff)',
+          }}
+        >
+          {company.theme.announcement_bar}
+        </div>
+      ) : null}
+
       {/* Top Navbar */}
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3.5">
@@ -323,7 +335,14 @@ export default function StoreCartPage({ slug, company, cart, related = [] }: Pro
 
                   <div className="space-y-3 pt-2">
                     <Link href={`/s/${slug}/checkout`} className="block">
-                      <Button size="lg" className="w-full gap-2 rounded-2xl bg-slate-900 py-6 text-sm font-semibold shadow-md transition-all hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500">
+                      <Button
+                        size="lg"
+                        className="w-full gap-2 py-6 text-sm font-semibold text-white shadow-md transition-all hover:opacity-90"
+                        style={{
+                          background: 'var(--sf-primary, #0f172a)',
+                          borderRadius: 'var(--sf-radius, 1rem)',
+                        }}
+                      >
                         Proceed to Checkout <ArrowRight className="h-4 w-4" />
                       </Button>
                     </Link>
@@ -393,6 +412,10 @@ export default function StoreCartPage({ slug, company, cart, related = [] }: Pro
           </div>
         )}
       </main>
+
+      <footer className="border-t border-slate-200/80 py-8 text-center text-xs font-medium text-slate-400 dark:border-slate-800">
+        {company.theme?.footer_text || 'Powered by RelayIQ'}
+      </footer>
 
       <StorefrontAuthModal
         open={authModalOpen}

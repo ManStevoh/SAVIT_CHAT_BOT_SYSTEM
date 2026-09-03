@@ -8,6 +8,12 @@ export type BrandTheme = {
   announcement_bar_bg?: string | null
   announcement_bar_text?: string | null
   footer_text?: string | null
+  whatsapp_btn_text?: string | null
+  hero_enabled?: boolean | null
+  hero_headline?: string | null
+  hero_subhead?: string | null
+  hero_cta_label?: string | null
+  hero_cta_href?: string | null
   seo_title?: string | null
   seo_description?: string | null
 }
@@ -63,10 +69,16 @@ export function resolveStorefrontStyle(theme?: BrandTheme | null): React.CSSProp
   const t = theme || {}
   const fontOpt = FONT_OPTIONS.find((f) => f.value === t.font_family)
   const radiusOpt = RADIUS_OPTIONS.find((r) => r.value === t.border_radius)
+  const primary = t.primary_color || '#0f172a'
+  const accent = t.accent_color || primary
+  const announcementBg = t.announcement_bar_bg || accent
+  const announcementText = t.announcement_bar_text || '#ffffff'
 
   return {
-    ['--sf-primary' as string]: t.primary_color || '#0f172a',
-    ['--sf-accent' as string]: t.accent_color || t.primary_color || '#0f172a',
+    ['--sf-primary' as string]: primary,
+    ['--sf-accent' as string]: accent,
+    ['--sf-announcement-bg' as string]: announcementBg,
+    ['--sf-announcement-text' as string]: announcementText,
     ['--sf-bg' as string]: t.bg_color || '#ffffff',
     ['--sf-font' as string]: fontOpt?.fontFamily || "'Inter', system-ui, -apple-system, sans-serif",
     ['--sf-radius' as string]: radiusOpt?.radius || '12px',

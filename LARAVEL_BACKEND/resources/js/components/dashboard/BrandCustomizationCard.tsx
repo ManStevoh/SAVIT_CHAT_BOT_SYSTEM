@@ -69,6 +69,12 @@ export function BrandCustomizationCard({
   const [announcementBg, setAnnouncementBg] = useState(initialTheme?.announcement_bar_bg || '')
   const [announcementText, setAnnouncementText] = useState(initialTheme?.announcement_bar_text || '')
   const [footerText, setFooterText] = useState(initialTheme?.footer_text || initialFooterText || '')
+  const [whatsappBtnText, setWhatsappBtnText] = useState(initialTheme?.whatsapp_btn_text || '')
+  const [heroEnabled, setHeroEnabled] = useState(Boolean(initialTheme?.hero_enabled))
+  const [heroHeadline, setHeroHeadline] = useState(initialTheme?.hero_headline || '')
+  const [heroSubhead, setHeroSubhead] = useState(initialTheme?.hero_subhead || '')
+  const [heroCtaLabel, setHeroCtaLabel] = useState(initialTheme?.hero_cta_label || 'Shop Catalog')
+  const [heroCtaHref, setHeroCtaHref] = useState(initialTheme?.hero_cta_href || '#catalog')
 
   const [previewTab, setPreviewTab] = useState<'storefront' | 'bio' | 'widget'>('storefront')
   const [saving, setSaving] = useState(false)
@@ -86,9 +92,17 @@ export function BrandCustomizationCard({
     if (initialTheme?.announcement_bar || initialAnnouncementBar) {
       setAnnouncementBar(initialTheme?.announcement_bar || initialAnnouncementBar || '')
     }
+    if (initialTheme?.announcement_bar_bg) setAnnouncementBg(initialTheme.announcement_bar_bg)
+    if (initialTheme?.announcement_bar_text) setAnnouncementText(initialTheme.announcement_bar_text)
     if (initialTheme?.footer_text || initialFooterText) {
       setFooterText(initialTheme?.footer_text || initialFooterText || '')
     }
+    if (initialTheme?.whatsapp_btn_text) setWhatsappBtnText(initialTheme.whatsapp_btn_text)
+    if (initialTheme?.hero_enabled !== undefined) setHeroEnabled(Boolean(initialTheme.hero_enabled))
+    if (initialTheme?.hero_headline) setHeroHeadline(initialTheme.hero_headline)
+    if (initialTheme?.hero_subhead) setHeroSubhead(initialTheme.hero_subhead)
+    if (initialTheme?.hero_cta_label) setHeroCtaLabel(initialTheme.hero_cta_label)
+    if (initialTheme?.hero_cta_href) setHeroCtaHref(initialTheme.hero_cta_href)
   }, [initialLogo, initialTheme, initialAnnouncementBar, initialFooterText])
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,6 +172,12 @@ export function BrandCustomizationCard({
         announcement_bar_bg: announcementBg || null,
         announcement_bar_text: announcementText || null,
         footer_text: footerText || null,
+        whatsapp_btn_text: whatsappBtnText || null,
+        hero_enabled: heroEnabled,
+        hero_headline: heroHeadline || null,
+        hero_subhead: heroSubhead || null,
+        hero_cta_label: heroCtaLabel || null,
+        hero_cta_href: heroCtaHref || null,
       }
 
       const res = await apiRequest<{ success: boolean }>('/api/company/settings', {
@@ -483,33 +503,164 @@ export function BrandCustomizationCard({
             </CardContent>
           </Card>
 
-          {/* Announcement Bar & Footer Text */}
+          {/* Announcement Bar & Custom Colors */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle className="text-base">Storefront Banners &amp; Footer</CardTitle>
-                  <CardDescription>Add announcement sales messages and custom footer branding</CardDescription>
+                  <CardTitle className="text-base">Storefront Announcement Banner</CardTitle>
+                  <CardDescription>Top sales messages, offers, or notice across all store pages</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="announcementBar">Top Announcement Banner (Sales / Notice)</Label>
+                <Label htmlFor="announcementBar">Top Announcement Banner Text</Label>
                 <Input
                   id="announcementBar"
                   value={announcementBar}
                   onChange={(e) => setAnnouncementBar(e.target.value)}
-                  placeholder="e.g. 🎉 Free express delivery on all orders this weekend!"
+                  placeholder="e.g. 🎉 Free express delivery on all orders over $50 this weekend!"
                   maxLength={200}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Displays at the very top of your public store. Leave empty to hide banner.
+                  Displays across your public store header. Leave empty to hide banner.
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="space-y-2">
+                  <Label htmlFor="announcementBg" className="text-xs">Banner Background (Optional)</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden shadow-xs">
+                      <input
+                        type="color"
+                        value={announcementBg || accentColor}
+                        onChange={(e) => setAnnouncementBg(e.target.value)}
+                        className="absolute -inset-2 h-14 w-14 cursor-pointer border-0 p-0"
+                      />
+                    </div>
+                    <Input
+                      id="announcementBg"
+                      value={announcementBg}
+                      onChange={(e) => setAnnouncementBg(e.target.value)}
+                      placeholder={accentColor}
+                      className="font-mono text-xs h-9"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Defaults to accent color if empty.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="announcementText" className="text-xs">Banner Text Color (Optional)</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden shadow-xs">
+                      <input
+                        type="color"
+                        value={announcementText || '#ffffff'}
+                        onChange={(e) => setAnnouncementText(e.target.value)}
+                        className="absolute -inset-2 h-14 w-14 cursor-pointer border-0 p-0"
+                      />
+                    </div>
+                    <Input
+                      id="announcementText"
+                      value={announcementText}
+                      onChange={(e) => setAnnouncementText(e.target.value)}
+                      placeholder="#ffffff"
+                      className="font-mono text-xs h-9"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Defaults to crisp white.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Promotional Hero Banner & Floating CTA */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Store className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <CardTitle className="text-base">Promotional Hero &amp; Actions</CardTitle>
+                  <CardDescription>Featured hero section and floating customer action buttons</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={heroEnabled}
+                  onChange={(e) => setHeroEnabled(e.target.checked)}
+                  className="h-4 w-4 rounded border-input"
+                />
+                Enable promotional hero banner on store homepage
+              </label>
+
+              {heroEnabled && (
+                <div className="space-y-3 rounded-xl border bg-muted/20 p-3.5">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Hero Headline</Label>
+                    <Input
+                      value={heroHeadline}
+                      onChange={(e) => setHeroHeadline(e.target.value)}
+                      placeholder={`Welcome to ${businessName}`}
+                      maxLength={120}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Hero Subtitle / Description</Label>
+                    <Input
+                      value={heroSubhead}
+                      onChange={(e) => setHeroSubhead(e.target.value)}
+                      placeholder="Browse our new collection and enjoy fast WhatsApp ordering & instant checkout."
+                      maxLength={255}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">CTA Button Label</Label>
+                      <Input
+                        value={heroCtaLabel}
+                        onChange={(e) => setHeroCtaLabel(e.target.value)}
+                        placeholder="Shop Now"
+                        maxLength={64}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">CTA Button Target</Label>
+                      <Input
+                        value={heroCtaHref}
+                        onChange={(e) => setHeroCtaHref(e.target.value)}
+                        placeholder="#catalog"
+                        maxLength={255}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="whatsappBtnText">Custom WhatsApp Floating Chat Button Text</Label>
+                <Input
+                  id="whatsappBtnText"
+                  value={whatsappBtnText}
+                  onChange={(e) => setWhatsappBtnText(e.target.value)}
+                  placeholder="Chat on WhatsApp"
+                  maxLength={64}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Customizes the floating green WhatsApp button text on public store pages. Defaults to "Chat on WhatsApp".
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t">
                 <Label htmlFor="footerText">Custom Footer Copyright / Tagline</Label>
                 <Input
                   id="footerText"
@@ -519,7 +670,7 @@ export function BrandCustomizationCard({
                   maxLength={255}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Shown in the footer of your public storefront and order tracking pages.
+                  Shown in the footer across public storefront, product, cart, and checkout pages.
                 </p>
               </div>
             </CardContent>
@@ -583,8 +734,12 @@ export function BrandCustomizationCard({
                   {/* Announcement Banner */}
                   {announcementBar && (
                     <div
-                      className="px-3 py-1.5 text-center text-[11px] font-medium text-white shadow-xs"
-                      style={{ background: accentColor, borderRadius: activeRadius }}
+                      className="px-3 py-1.5 text-center text-[11px] font-medium shadow-xs"
+                      style={{
+                        background: announcementBg || accentColor,
+                        color: announcementText || '#ffffff',
+                        borderRadius: activeRadius,
+                      }}
                     >
                       {announcementBar}
                     </div>
@@ -623,6 +778,25 @@ export function BrandCustomizationCard({
                       <ShoppingBag className="h-3 w-3" /> Cart (1)
                     </button>
                   </div>
+
+                  {/* Hero Banner Mockup if enabled */}
+                  {heroEnabled && (
+                    <div
+                      className="p-4 rounded-xl text-white space-y-1.5 shadow-sm"
+                      style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`, borderRadius: activeRadius }}
+                    >
+                      <p className="font-extrabold text-sm">{heroHeadline || `Welcome to ${businessName}`}</p>
+                      <p className="text-[11px] text-white/80 leading-relaxed">
+                        {heroSubhead || 'Explore our featured products and order online.'}
+                      </p>
+                      <div
+                        className="inline-block px-3 py-1 text-[10px] font-bold bg-white text-slate-900 shadow-xs"
+                        style={{ borderRadius: activeRadius }}
+                      >
+                        {heroCtaLabel || 'Shop Now'}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Hero / Catalog Search mockup */}
                   <div className="p-3 bg-slate-50 border rounded-xl space-y-2">
@@ -667,6 +841,16 @@ export function BrandCustomizationCard({
                           Add to Cart
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Floating WhatsApp preview */}
+                  <div className="flex justify-end pt-1">
+                    <div
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm"
+                      style={{ background: '#128C7E', borderRadius: '9999px' }}
+                    >
+                      <MessageSquare className="h-3 w-3" /> {whatsappBtnText || 'Chat on WhatsApp'}
                     </div>
                   </div>
 

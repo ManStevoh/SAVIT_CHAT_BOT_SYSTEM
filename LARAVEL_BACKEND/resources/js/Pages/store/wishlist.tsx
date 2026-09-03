@@ -237,7 +237,11 @@ export default function StoreWishlistPage({
                   size="sm"
                   disabled={movingAll}
                   onClick={moveAllToCart}
-                  className="gap-1.5 rounded-xl bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 dark:bg-emerald-600"
+                  className="gap-1.5 px-3 text-xs font-bold text-white shadow-xs transition-opacity hover:opacity-90"
+                  style={{
+                    background: 'var(--sf-primary, #0f172a)',
+                    borderRadius: 'var(--sf-radius, 0.75rem)',
+                  }}
                 >
                   <ShoppingBag className="h-3.5 w-3.5" />
                   {movingAll ? 'Moving…' : 'Move All to Cart'}
@@ -246,7 +250,10 @@ export default function StoreWishlistPage({
             </div>
 
             {/* List */}
-            <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+            <div
+              className="overflow-hidden border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
+              style={{ borderRadius: 'var(--sf-radius, 1.5rem)' }}
+            >
               {products.map((product) => {
                 const href = `/s/${slug}/p/${product.slug || product.id}`
                 const busy = busyId === product.id
@@ -291,7 +298,11 @@ export default function StoreWishlistPage({
                         size="sm"
                         disabled={busy || !!product.soldOut}
                         onClick={() => addToCart(product.id)}
-                        className="rounded-xl bg-slate-900 px-3.5 text-xs font-bold text-white hover:bg-slate-800 dark:bg-emerald-600"
+                        className="px-3.5 text-xs font-bold text-white shadow-xs transition-opacity hover:opacity-90"
+                        style={{
+                          background: 'var(--sf-primary, #0f172a)',
+                          borderRadius: 'var(--sf-radius, 0.75rem)',
+                        }}
                       >
                         <Plus className="h-3.5 w-3.5 mr-1" /> Add to Cart
                       </Button>
@@ -313,6 +324,10 @@ export default function StoreWishlistPage({
           </div>
         )}
       </main>
+
+      <footer className="border-t border-slate-200/80 py-8 text-center text-xs font-medium text-slate-400 dark:border-slate-800">
+        {company.theme?.footer_text || 'Powered by RelayIQ'}
+      </footer>
 
       <StorefrontAuthModal
         open={authModalOpen}

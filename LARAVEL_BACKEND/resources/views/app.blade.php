@@ -110,7 +110,7 @@
     <title inertia>{{ config('app.name', 'RelayIQ') }}</title>
 @endif
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-serif:400|plus-jakarta-sans:400,500,600,700|geist-mono:400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=instrument-serif:400|plus-jakarta-sans:400,500,600,700|geist-mono:400|outfit:400,500,600,700|playfair-display:400,600,700|jetbrains-mono:400,500&display=swap" rel="stylesheet" />
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
     @inertiaHead

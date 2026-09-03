@@ -353,6 +353,12 @@ class SettingsController extends Controller
             'storefrontTheme.announcement_bar_bg' => 'sometimes|nullable|string|max:32',
             'storefrontTheme.announcement_bar_text' => 'sometimes|nullable|string|max:32',
             'storefrontTheme.footer_text' => 'sometimes|nullable|string|max:255',
+            'storefrontTheme.whatsapp_btn_text' => 'sometimes|nullable|string|max:64',
+            'storefrontTheme.hero_enabled' => 'sometimes|nullable|boolean',
+            'storefrontTheme.hero_headline' => 'sometimes|nullable|string|max:120',
+            'storefrontTheme.hero_subhead' => 'sometimes|nullable|string|max:255',
+            'storefrontTheme.hero_cta_label' => 'sometimes|nullable|string|max:64',
+            'storefrontTheme.hero_cta_href' => 'sometimes|nullable|string|max:255',
             'storefrontTheme.seo_title' => 'sometimes|nullable|string|max:70',
             'storefrontTheme.seo_description' => 'sometimes|nullable|string|max:320',
         ]);
@@ -410,6 +416,11 @@ class SettingsController extends Controller
                     'announcement_bar_bg',
                     'announcement_bar_text',
                     'footer_text',
+                    'whatsapp_btn_text',
+                    'hero_headline',
+                    'hero_subhead',
+                    'hero_cta_label',
+                    'hero_cta_href',
                     'seo_title',
                     'seo_description',
                     'og_image',
@@ -423,6 +434,9 @@ class SettingsController extends Controller
                         $val = $companyValidated['storefrontTheme'][$key];
                         $theme[$key] = is_string($val) && trim($val) !== '' ? trim($val) : null;
                     }
+                }
+                if (array_key_exists('hero_enabled', $companyValidated['storefrontTheme'])) {
+                    $theme['hero_enabled'] = (bool) $companyValidated['storefrontTheme']['hero_enabled'];
                 }
             }
             if (array_key_exists('storefrontAnnouncementBar', $companyValidated)) {

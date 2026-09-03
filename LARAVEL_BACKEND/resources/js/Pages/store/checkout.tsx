@@ -572,7 +572,11 @@ export default function StoreCheckoutPage({
                 type="submit"
                 disabled={submitting}
                 size="lg"
-                className="w-full gap-2 rounded-2xl bg-slate-900 py-6 text-base font-semibold shadow-md transition-all hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                className="w-full gap-2 py-6 text-base font-semibold text-white shadow-md transition-all hover:opacity-90"
+                style={{
+                  background: 'var(--sf-primary, #0f172a)',
+                  borderRadius: 'var(--sf-radius, 1rem)',
+                }}
               >
                 {submitting ? 'Processing Order…' : 'Place Order Now'} <ArrowRight className="h-5 w-5" />
               </Button>
@@ -675,6 +679,10 @@ export default function StoreCheckoutPage({
           </div>
         </div>
       </main>
+
+      <footer className="border-t border-slate-200/80 py-8 text-center text-xs font-medium text-slate-400 dark:border-slate-800">
+        {company.theme?.footer_text || 'Powered by RelayIQ'}
+      </footer>
 
       <StorefrontAuthModal
         open={authModalOpen}
