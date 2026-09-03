@@ -29,7 +29,7 @@ class BrandSocial
     }
 
     /**
-     * Stable profile URLs for schema.org sameAs and rel="me".
+     * Official profile URLs for footer links.
      *
      * @return list<string>
      */

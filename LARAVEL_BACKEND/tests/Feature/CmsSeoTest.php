@@ -38,7 +38,7 @@ class CmsSeoTest extends TestCase
         $response->assertSee('rel="canonical"', false);
     }
 
-    public function test_marketing_json_ld_includes_official_social_profiles(): void
+    public function test_marketing_json_ld_does_not_claim_social_profile_urls(): void
     {
         CmsPage::create([
             'slug' => 'home',
@@ -51,10 +51,8 @@ class CmsSeoTest extends TestCase
         $response = $this->get('/');
 
         $response->assertOk();
-        $response->assertSee('sameAs', false);
-        $response->assertSee('https://www.instagram.com/relayiq.app', false);
-        $response->assertSee('https://www.facebook.com/share/1KxpxJ2VtK', false);
-        $response->assertSee('rel="me"', false);
+        $response->assertDontSee('sameAs', false);
+        $response->assertDontSee('rel="me"', false);
         $response->assertSee('Relay IQ', false);
         $response->assertSee('RelayIQ.app', false);
     }

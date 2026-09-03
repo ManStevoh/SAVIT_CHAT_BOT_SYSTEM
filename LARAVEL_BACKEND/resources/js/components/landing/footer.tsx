@@ -50,7 +50,7 @@ export function Footer() {
                     key={link.label}
                     href={link.href}
                     target="_blank"
-                    rel="me noopener noreferrer"
+                    rel="noopener noreferrer"
                     className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                   >
                     {link.label}

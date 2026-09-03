@@ -10,7 +10,6 @@ use App\Models\LandingFaq;
 use App\Models\Plan;
 use App\Models\PlatformSetting;
 use App\Models\Product;
-use App\Support\BrandSocial;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -804,7 +803,6 @@ class CmsSeoService
         $ogImage = $payload['ogImage'] ?? null;
         $payload['ogLocale'] = $payload['ogLocale'] ?? str_replace('-', '_', (string) config('app.locale', 'en'));
         $payload['twitterSite'] = $payload['twitterSite'] ?? $this->twitterSiteHandle();
-        $payload['sameAs'] = $payload['sameAs'] ?? BrandSocial::urls();
         // Only advertise OG dimensions when the caller already set them (known asset).
         if (! isset($payload['ogImageWidth']) || ! isset($payload['ogImageHeight'])) {
             unset($payload['ogImageWidth'], $payload['ogImageHeight']);
@@ -938,11 +936,6 @@ class CmsSeoService
             'offers' => $offers,
         ];
 
-        $sameAs = BrandSocial::urls();
-        if ($sameAs !== []) {
-            $node['sameAs'] = $sameAs;
-        }
-
         return $node;
     }
 
@@ -966,11 +959,6 @@ class CmsSeoService
 
         if ($withId) {
             $node['@id'] = $base.'/#organization';
-        }
-
-        $sameAs = BrandSocial::urls();
-        if ($sameAs !== []) {
-            $node['sameAs'] = $sameAs;
         }
 
         return $node;
