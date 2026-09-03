@@ -81,6 +81,31 @@ export function BrandCustomizationCard({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  // Baseline snapshot for dirty tracking
+  const [initialSnapshot, setInitialSnapshot] = useState<string>('')
+
+  const currentSnapshot = JSON.stringify({
+    primaryColor,
+    accentColor,
+    bgColor,
+    fontFamily,
+    borderRadius,
+    announcementBar,
+    announcementBg,
+    announcementText,
+    footerText,
+    whatsappBtnText,
+    heroEnabled,
+    heroHeadline,
+    heroSubhead,
+    heroCtaLabel,
+    heroCtaHref,
+    logoRemoved,
+    hasNewLogo: Boolean(logoFile),
+  })
+
+  const isDirty = initialSnapshot !== '' && initialSnapshot !== currentSnapshot
+
   // Sync initial props if they update from parent fetch
   useEffect(() => {
     if (initialLogo !== undefined) setLogoUrl(initialLogo)
@@ -103,7 +128,58 @@ export function BrandCustomizationCard({
     if (initialTheme?.hero_subhead) setHeroSubhead(initialTheme.hero_subhead)
     if (initialTheme?.hero_cta_label) setHeroCtaLabel(initialTheme.hero_cta_label)
     if (initialTheme?.hero_cta_href) setHeroCtaHref(initialTheme.hero_cta_href)
+
+    setInitialSnapshot(JSON.stringify({
+      primaryColor: initialTheme?.primary_color || '#2563eb',
+      accentColor: initialTheme?.accent_color || '#3b82f6',
+      bgColor: initialTheme?.bg_color || '#ffffff',
+      fontFamily: initialTheme?.font_family || 'sans',
+      borderRadius: initialTheme?.border_radius || 'md',
+      announcementBar: initialTheme?.announcement_bar || initialAnnouncementBar || '',
+      announcementBg: initialTheme?.announcement_bar_bg || '',
+      announcementText: initialTheme?.announcement_bar_text || '',
+      footerText: initialTheme?.footer_text || initialFooterText || '',
+      whatsappBtnText: initialTheme?.whatsapp_btn_text || '',
+      heroEnabled: Boolean(initialTheme?.hero_enabled),
+      heroHeadline: initialTheme?.hero_headline || '',
+      heroSubhead: initialTheme?.hero_subhead || '',
+      heroCtaLabel: initialTheme?.hero_cta_label || 'Shop Catalog',
+      heroCtaHref: initialTheme?.hero_cta_href || '#catalog',
+      logoRemoved: false,
+      hasNewLogo: false,
+    }))
   }, [initialLogo, initialTheme, initialAnnouncementBar, initialFooterText])
+
+  const discardChanges = () => {
+    if (initialSnapshot) {
+      try {
+        const snap = JSON.parse(initialSnapshot)
+        setPrimaryColor(snap.primaryColor)
+        setAccentColor(snap.accentColor)
+        setBgColor(snap.bgColor)
+        setFontFamily(snap.fontFamily)
+        setBorderRadius(snap.borderRadius)
+        setAnnouncementBar(snap.announcementBar)
+        setAnnouncementBg(snap.announcementBg)
+        setAnnouncementText(snap.announcementText)
+        setFooterText(snap.footerText)
+        setWhatsappBtnText(snap.whatsappBtnText)
+        setHeroEnabled(snap.heroEnabled)
+        setHeroHeadline(snap.heroHeadline)
+        setHeroSubhead(snap.heroSubhead)
+        setHeroCtaLabel(snap.heroCtaLabel)
+        setHeroCtaHref(snap.heroCtaHref)
+        setLogoFile(null)
+        setLogoRemoved(false)
+        setLogoUrl(initialLogo || null)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -978,6 +1054,46 @@ export function BrandCustomizationCard({
               )}
             </CardContent>
           </Card>
+        </div>
+      </div>
+
+      {/* Floating Sticky Unsaved Changes Action Bar (Brand Customization) */}
+      <div
+        className={`fixed bottom-6 inset-x-0 mx-auto max-w-2xl px-4 z-40 transition-all duration-300 pointer-events-none ${
+          isDirty ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/95 p-3.5 text-white shadow-2xl backdrop-blur-md pointer-events-auto dark:border-slate-700/80 dark:bg-slate-950/95">
+          <div className="flex items-center gap-2.5 pl-1.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+            </span>
+            <span className="text-xs font-semibold text-slate-200">You have unsaved brand &amp; design changes</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={discardChanges}
+              disabled={saving}
+              className="h-8 rounded-xl px-3 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              Discard
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+              className="h-8 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-md transition-all hover:opacity-95"
+            >
+              {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
+              Save Brand Settings
+            </Button>
+          </div>
         </div>
       </div>
     </div>

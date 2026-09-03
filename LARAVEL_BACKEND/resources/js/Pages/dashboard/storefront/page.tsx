@@ -118,6 +118,40 @@ export default function DashboardStorefrontPage() {
   const [storefrontGoogleSiteVerification, setStorefrontGoogleSiteVerification] = useState('')
   const [storefrontBusinessType, setStorefrontBusinessType] = useState('OnlineStore')
 
+  // Baseline state snapshot for dirty check
+  const [initialSnapshot, setInitialSnapshot] = useState<string>('')
+
+  const currentSnapshot = JSON.stringify({
+    storeSlug,
+    storefrontEnabled,
+    linkInBioEnabled,
+    linkInBioHeadline,
+    linkInBioBio,
+    linkInBioLinks,
+    ordersAcceptCod,
+    ordersAcceptBankTransfer,
+    bankTransferInstructions,
+    paymentRecoveryEnabled,
+    abandonedCartRecoveryEnabled,
+    storefrontWhatsappOrderNotify,
+    abandonedCartTemplateName,
+    birthdayAutomationEnabled,
+    birthdayCouponPercent,
+    winbackAutomationEnabled,
+    winbackDaysInactive,
+    spamOrderProtectionEnabled,
+    spamMaxOrdersPerHour,
+    spamMaxOrdersPerDay,
+    dineInEnabled,
+    storefrontSeoTitle,
+    storefrontSeoDescription,
+    storefrontOgImage,
+    storefrontGoogleSiteVerification,
+    storefrontBusinessType,
+  })
+
+  const isDirty = initialSnapshot !== '' && initialSnapshot !== currentSnapshot
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -155,6 +189,35 @@ export default function DashboardStorefrontPage() {
       setStorefrontOgImage(data.storefrontOgImage || '')
       setStorefrontGoogleSiteVerification(data.storefrontGoogleSiteVerification || '')
       setStorefrontBusinessType(data.storefrontBusinessType || 'OnlineStore')
+
+      setInitialSnapshot(JSON.stringify({
+        storeSlug: data.storeSlug || '',
+        storefrontEnabled: !!data.storefrontEnabled,
+        linkInBioEnabled: !!data.linkInBioEnabled,
+        linkInBioHeadline: data.linkInBioHeadline || '',
+        linkInBioBio: data.linkInBioBio || '',
+        linkInBioLinks: data.linkInBioLinks?.length ? data.linkInBioLinks : [],
+        ordersAcceptCod: !!data.ordersAcceptCod,
+        ordersAcceptBankTransfer: !!data.ordersAcceptBankTransfer,
+        bankTransferInstructions: data.bankTransferInstructions || '',
+        paymentRecoveryEnabled: data.paymentRecoveryEnabled !== false,
+        abandonedCartRecoveryEnabled: !!data.abandonedCartRecoveryEnabled,
+        storefrontWhatsappOrderNotify: data.storefrontWhatsappOrderNotify !== false,
+        abandonedCartTemplateName: data.abandonedCartTemplateName || '',
+        birthdayAutomationEnabled: !!data.birthdayAutomationEnabled,
+        birthdayCouponPercent: String(data.birthdayCouponPercent ?? 10),
+        winbackAutomationEnabled: !!data.winbackAutomationEnabled,
+        winbackDaysInactive: String(data.winbackDaysInactive ?? 30),
+        spamOrderProtectionEnabled: data.spamOrderProtectionEnabled !== false,
+        spamMaxOrdersPerHour: String(data.spamMaxOrdersPerHour ?? 5),
+        spamMaxOrdersPerDay: String(data.spamMaxOrdersPerDay ?? 20),
+        dineInEnabled: !!data.dineInEnabled,
+        storefrontSeoTitle: data.storefrontSeoTitle || '',
+        storefrontSeoDescription: data.storefrontSeoDescription || '',
+        storefrontOgImage: data.storefrontOgImage || '',
+        storefrontGoogleSiteVerification: data.storefrontGoogleSiteVerification || '',
+        storefrontBusinessType: data.storefrontBusinessType || 'OnlineStore',
+      }))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load settings')
     } finally {
@@ -165,6 +228,42 @@ export default function DashboardStorefrontPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const discardChanges = () => {
+    if (initialSnapshot) {
+      try {
+        const snap = JSON.parse(initialSnapshot)
+        setStoreSlug(snap.storeSlug)
+        setStorefrontEnabled(snap.storefrontEnabled)
+        setLinkInBioEnabled(snap.linkInBioEnabled)
+        setLinkInBioHeadline(snap.linkInBioHeadline)
+        setLinkInBioBio(snap.linkInBioBio)
+        setLinkInBioLinks(snap.linkInBioLinks)
+        setOrdersAcceptCod(snap.ordersAcceptCod)
+        setOrdersAcceptBankTransfer(snap.ordersAcceptBankTransfer)
+        setBankTransferInstructions(snap.bankTransferInstructions)
+        setPaymentRecoveryEnabled(snap.paymentRecoveryEnabled)
+        setAbandonedCartRecoveryEnabled(snap.abandonedCartRecoveryEnabled)
+        setStorefrontWhatsappOrderNotify(snap.storefrontWhatsappOrderNotify)
+        setAbandonedCartTemplateName(snap.abandonedCartTemplateName)
+        setBirthdayAutomationEnabled(snap.birthdayAutomationEnabled)
+        setBirthdayCouponPercent(snap.birthdayCouponPercent)
+        setWinbackAutomationEnabled(snap.winbackAutomationEnabled)
+        setWinbackDaysInactive(snap.winbackDaysInactive)
+        setSpamOrderProtectionEnabled(snap.spamOrderProtectionEnabled)
+        setSpamMaxOrdersPerHour(snap.spamMaxOrdersPerHour)
+        setSpamMaxOrdersPerDay(snap.spamMaxOrdersPerDay)
+        setDineInEnabled(snap.dineInEnabled)
+        setStorefrontSeoTitle(snap.storefrontSeoTitle)
+        setStorefrontSeoDescription(snap.storefrontSeoDescription)
+        setStorefrontOgImage(snap.storefrontOgImage)
+        setStorefrontGoogleSiteVerification(snap.storefrontGoogleSiteVerification)
+        setStorefrontBusinessType(snap.storefrontBusinessType)
+      } catch {
+        void load()
+      }
+    }
+  }
 
   const save = async () => {
     setSaving(true)
@@ -962,6 +1061,46 @@ export default function DashboardStorefrontPage() {
           <StorefrontCouponsCard />
         </TabsContent>
       </Tabs>
+
+      {/* Floating Sticky Unsaved Changes Action Bar (Shopify / Stripe UX Pattern) */}
+      <div
+        className={`fixed bottom-6 inset-x-0 mx-auto max-w-2xl px-4 z-40 transition-all duration-300 pointer-events-none ${
+          isDirty ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/95 p-3.5 text-white shadow-2xl backdrop-blur-md pointer-events-auto dark:border-slate-700/80 dark:bg-slate-950/95">
+          <div className="flex items-center gap-2.5 pl-1.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+            </span>
+            <span className="text-xs font-semibold text-slate-200">You have unsaved storefront changes</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={discardChanges}
+              disabled={saving}
+              className="h-8 rounded-xl px-3 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              Discard
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void save()}
+              disabled={saving}
+              className="h-8 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-md transition-all hover:opacity-95"
+            >
+              {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
