@@ -69,6 +69,31 @@ class StorefrontAndLinkInBioTest extends TestCase
         );
     }
 
+    public function test_add_to_cart_from_shop_or_product_stays_on_that_page(): void
+    {
+        [$company, $product] = $this->seedStorefront();
+        $slug = $company->store_slug;
+
+        $this->from("/s/{$slug}")
+            ->post("/s/{$slug}/cart", [
+                'productId' => $product->id,
+                'quantity' => 1,
+            ])
+            ->assertRedirect("/s/{$slug}");
+
+        $this->from("/s/{$slug}/p/headphones")
+            ->post("/s/{$slug}/cart", [
+                'productId' => $product->id,
+                'quantity' => 1,
+            ])
+            ->assertRedirect("/s/{$slug}/p/headphones");
+
+        $this->get("/s/{$slug}/cart")->assertOk()->assertInertia(fn ($page) => $page
+            ->component('store/cart')
+            ->where('cart.itemCount', 2)
+        );
+    }
+
     public function test_add_to_cart_and_checkout_creates_order_with_pay_token(): void
     {
         [$company, $product] = $this->seedStorefront();
@@ -84,10 +109,11 @@ class StorefrontAndLinkInBioTest extends TestCase
             ->where('cart.itemCount', 2)
         );
 
-        $checkoutResponse = $this->post("/s/{$slug}/checkout", [
+        $checkoutResponse = $this->post("/s/{$slug}/checkout?phone=254711222333", [
             'customerName' => 'Jane Buyer',
             'customerPhone' => '254711222333',
             'fulfillmentType' => 'pickup',
+            'acceptTerms' => true,
         ]);
 
         $order = Order::where('company_id', $company->id)->first();
@@ -110,10 +136,11 @@ class StorefrontAndLinkInBioTest extends TestCase
         $slug = $company->store_slug;
 
         $this->post("/s/{$slug}/cart", ['productId' => $product->id, 'quantity' => 1]);
-        $this->post("/s/{$slug}/checkout", [
+        $this->post("/s/{$slug}/checkout?phone=254711222333", [
             'customerName' => 'Jane Buyer',
             'customerPhone' => '254711222333',
             'fulfillmentType' => 'pickup',
+            'acceptTerms' => true,
         ]);
 
         $order = Order::where('company_id', $company->id)->firstOrFail();
@@ -302,10 +329,11 @@ class StorefrontAndLinkInBioTest extends TestCase
         $slug = $company->store_slug;
 
         $this->post("/s/{$slug}/cart", ['productId' => $product->id, 'quantity' => 1]);
-        $this->post("/s/{$slug}/checkout", [
+        $this->post("/s/{$slug}/checkout?phone=254711222333", [
             'customerName' => 'Jane Buyer',
             'customerPhone' => '254711222333',
             'fulfillmentType' => 'pickup',
+            'acceptTerms' => true,
         ]);
 
         $order = Order::where('company_id', $company->id)->firstOrFail();

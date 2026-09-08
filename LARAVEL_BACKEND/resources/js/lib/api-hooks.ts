@@ -293,7 +293,14 @@ export function useCmsPage(slug: string, initialData?: CmsPageData | null) {
     slug ? `cms-page-${slug}` : null,
     async () => {
       if (!useMockApi()) {
-        return apiRequest<CmsPageData>(`/api/cms/pages/${slug}`)
+        try {
+          return await apiRequest<CmsPageData>(`/api/cms/pages/${slug}`)
+        } catch {
+          if (initialData) {
+            return initialData
+          }
+          throw new Error("CMS page not found")
+        }
       }
       await delay(300)
       return {

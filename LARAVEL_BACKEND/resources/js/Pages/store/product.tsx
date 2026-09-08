@@ -68,6 +68,7 @@ type Props = {
     whatsappUrl?: string | null
     authCustomer?: { id: number; name: string; email: string } | null
     theme?: BrandTheme
+    termsUrl?: string
   }
   product: StoreProduct
   related?: StoreProduct[]
@@ -144,7 +145,10 @@ export default function StoreProductPage({
         productVariantId: selectedVariant?.id || null,
         quantity,
       },
-      { onFinish: () => setSubmitting(false) }
+      {
+        preserveScroll: true,
+        onFinish: () => setSubmitting(false),
+      }
     )
   }
 
@@ -743,6 +747,7 @@ export default function StoreProductPage({
         onOpenChange={setAuthModalOpen}
         slug={slug}
         companyName={company.name}
+        termsUrl={company.termsUrl}
       />
     </div>
   )

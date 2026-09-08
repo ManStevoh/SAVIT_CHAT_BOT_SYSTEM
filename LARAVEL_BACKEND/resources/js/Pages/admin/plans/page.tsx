@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -323,10 +324,15 @@ export default function AdminPlansPage() {
           <h1 className="text-2xl font-bold text-foreground">Plans</h1>
           <p className="text-muted-foreground">Create and manage pricing plans, marketing features, and enforceable limits</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Plan
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/settings">Default signup plan</Link>
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Plan
+          </Button>
+        </div>
       </div>
 
       <Card>

@@ -169,7 +169,7 @@ class SettingsController extends Controller
                 ? (string) ($company->storefront_theme['seo_description'] ?? '')
                 : '',
             'storefrontOgImage' => is_array($company->storefront_theme)
-                ? (string) ($company->storefront_theme['og_image'] ?? '')
+                ? $this->publicThemeImageUrl((string) ($company->storefront_theme['og_image'] ?? ''))
                 : '',
             'storefrontGoogleSiteVerification' => is_array($company->storefront_theme)
                 ? (string) ($company->storefront_theme['google_site_verification'] ?? '')
@@ -177,6 +177,12 @@ class SettingsController extends Controller
             'storefrontBusinessType' => is_array($company->storefront_theme)
                 ? (string) ($company->storefront_theme['business_type'] ?? 'OnlineStore')
                 : 'OnlineStore',
+            'storefrontTermsTitle' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['terms_title'] ?? '')
+                : '',
+            'storefrontTermsBody' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['terms_body'] ?? '')
+                : '',
         ]);
     }
 
@@ -343,6 +349,11 @@ class SettingsController extends Controller
             'storefrontAnnouncementBar' => 'sometimes|nullable|string|max:200',
             'storefrontSeoTitle' => 'sometimes|nullable|string|max:70',
             'storefrontSeoDescription' => 'sometimes|nullable|string|max:320',
+            'storefrontOgImage' => 'sometimes|nullable|string|max:2048',
+            'storefrontGoogleSiteVerification' => 'sometimes|nullable|string|max:255',
+            'storefrontBusinessType' => 'sometimes|nullable|string|max:80',
+            'storefrontTermsTitle' => 'sometimes|nullable|string|max:160',
+            'storefrontTermsBody' => 'sometimes|nullable|string|max:20000',
             'storefrontTheme' => 'sometimes|nullable|array',
             'storefrontTheme.primary_color' => 'sometimes|nullable|string|max:32',
             'storefrontTheme.accent_color' => 'sometimes|nullable|string|max:32',
@@ -403,6 +414,8 @@ class SettingsController extends Controller
             || array_key_exists('storefrontOgImage', $companyValidated)
             || array_key_exists('storefrontGoogleSiteVerification', $companyValidated)
             || array_key_exists('storefrontBusinessType', $companyValidated)
+            || array_key_exists('storefrontTermsTitle', $companyValidated)
+            || array_key_exists('storefrontTermsBody', $companyValidated)
         ) {
             $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
             if (array_key_exists('storefrontTheme', $companyValidated) && is_array($companyValidated['storefrontTheme'])) {
@@ -452,8 +465,16 @@ class SettingsController extends Controller
                 $theme['seo_description'] = is_string($seoDesc) && trim($seoDesc) !== '' ? trim($seoDesc) : null;
             }
             if (array_key_exists('storefrontOgImage', $companyValidated)) {
-                $ogImg = $companyValidated['storefrontOgImage'];
-                $theme['og_image'] = is_string($ogImg) && trim($ogImg) !== '' ? trim($ogImg) : null;
+                $ogImg = is_string($companyValidated['storefrontOgImage'] ?? null)
+                    ? trim($companyValidated['storefrontOgImage'])
+                    : '';
+                $normalized = $this->normalizeOgImageValue($ogImg);
+                if ($normalized === '') {
+                    $this->deleteStoredOgImage($company);
+                    $theme['og_image'] = null;
+                } else {
+                    $theme['og_image'] = $normalized;
+                }
             }
             if (array_key_exists('storefrontGoogleSiteVerification', $companyValidated)) {
                 $gTag = $companyValidated['storefrontGoogleSiteVerification'];
@@ -462,6 +483,14 @@ class SettingsController extends Controller
             if (array_key_exists('storefrontBusinessType', $companyValidated)) {
                 $bType = $companyValidated['storefrontBusinessType'];
                 $theme['business_type'] = is_string($bType) && trim($bType) !== '' ? trim($bType) : 'OnlineStore';
+            }
+            if (array_key_exists('storefrontTermsTitle', $companyValidated)) {
+                $termsTitle = $companyValidated['storefrontTermsTitle'];
+                $theme['terms_title'] = is_string($termsTitle) && trim($termsTitle) !== '' ? trim($termsTitle) : null;
+            }
+            if (array_key_exists('storefrontTermsBody', $companyValidated)) {
+                $termsBody = $companyValidated['storefrontTermsBody'];
+                $theme['terms_body'] = is_string($termsBody) && trim($termsBody) !== '' ? trim($termsBody) : null;
             }
             $company->storefront_theme = array_filter(
                 $theme,
@@ -1168,5 +1197,115 @@ class SettingsController extends Controller
         }
 
         return $slug;
+    }
+
+    public function uploadOgImage(Request $request): JsonResponse
+    {
+        $company = $request->user()?->company;
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'No company.'], 403);
+        }
+
+        $maxKb = (int) config('cms.upload_max_kb', 10240);
+        $request->validate(
+            [
+                'image' => 'required|image|mimes:jpeg,jpg,png,webp,gif|max:'.$maxKb,
+            ],
+            [
+                'image.max' => 'The image may not be greater than '.round($maxKb / 1024, 1).' MB. Compress it or use a smaller file.',
+                'image.image' => 'The file must be an image (JPEG, PNG, GIF, or WebP).',
+            ]
+        );
+
+        $this->deleteStoredOgImage($company);
+
+        $path = $request->file('image')->store('storefront-og/'.$company->id, 'public');
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        $theme['og_image'] = $path;
+        $company->storefront_theme = $theme;
+        $company->save();
+
+        $url = asset('storage/'.$path);
+
+        return response()->json([
+            'success' => true,
+            'url' => $url,
+            'path' => $path,
+            'storefrontOgImage' => $url,
+        ]);
+    }
+
+    public function destroyOgImage(Request $request): JsonResponse
+    {
+        $company = $request->user()?->company;
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'No company.'], 403);
+        }
+
+        $this->deleteStoredOgImage($company);
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        unset($theme['og_image']);
+        $company->storefront_theme = $theme ?: null;
+        $company->save();
+
+        return response()->json([
+            'success' => true,
+            'storefrontOgImage' => '',
+        ]);
+    }
+
+    private function publicThemeImageUrl(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        if (str_starts_with($value, '/storage/')) {
+            return asset(ltrim($value, '/'));
+        }
+        if (str_starts_with($value, '/')) {
+            return url($value);
+        }
+
+        return asset('storage/'.$value);
+    }
+
+    private function normalizeOgImageValue(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        return $this->storagePathFromOgValue($value) ?? $value;
+    }
+
+    private function deleteStoredOgImage(Company $company): void
+    {
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        $path = $this->storagePathFromOgValue(trim((string) ($theme['og_image'] ?? '')));
+        if ($path && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    private function storagePathFromOgValue(string $value): ?string
+    {
+        if ($value === '') {
+            return null;
+        }
+        if (str_starts_with($value, 'storefront-og/')) {
+            return $value;
+        }
+        $marker = '/storage/storefront-og/';
+        $pos = strpos($value, $marker);
+        if ($pos !== false) {
+            return substr($value, $pos + strlen('/storage/'));
+        }
+
+        return null;
     }
 }

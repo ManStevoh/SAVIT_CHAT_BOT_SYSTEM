@@ -232,10 +232,16 @@ class AuthController extends Controller
             $selectedPlan = Plan::find($validated['planId']);
         }
 
+        $registrationPlans = app(\App\Services\RegistrationPlanService::class);
+        if ($registrationPlans->shouldForceDefault()) {
+            $selectedPlan = $registrationPlans->configuredDefault();
+        }
+
         $subscribeIntent = ($validated['intent'] ?? null) === 'subscribe'
             && $selectedPlan
             && ! $selectedPlan->is_free
-            && (float) ($selectedPlan->price_amount ?? 0) > 0;
+            && (float) ($selectedPlan->price_amount ?? 0) > 0
+            && ! $registrationPlans->shouldForceDefault();
 
         $company = Company::create([
             'name' => $validated['companyName'],
@@ -263,6 +269,9 @@ class AuthController extends Controller
         $user->save();
 
         $trial = $this->createTrialSubscriptionForRegistration($company, $selectedPlan);
+        if ($trial) {
+            $company->update(['plan' => $trial['plan_slug']]);
+        }
         app(\App\Services\Agent\AgentCommerceProvisioningService::class)->syncForCompany($company);
 
         $requiresPayment = $subscribeIntent || (
@@ -477,23 +486,7 @@ class AuthController extends Controller
      */
     private function createTrialSubscriptionForRegistration(Company $company, ?Plan $selectedPlan): ?array
     {
-        $plan = null;
-        if ($selectedPlan && $selectedPlan->has_trial && ! $selectedPlan->is_free) {
-            $plan = $selectedPlan;
-        } elseif ($selectedPlan && $selectedPlan->is_free) {
-            $plan = $selectedPlan;
-        }
-
-        if (! $plan) {
-            $defaultSlug = config('subscription.default_plan_slug', 'starter');
-            $default = Plan::where('slug', $defaultSlug)->first();
-            if ($default && ($default->has_trial || $default->is_free)) {
-                $plan = $default;
-            } else {
-                $plan = Plan::where('has_trial', true)->orderBy('sort_order')->first()
-                    ?? Plan::where('is_free', true)->orderBy('sort_order')->first();
-            }
-        }
+        $plan = app(\App\Services\RegistrationPlanService::class)->resolveForSignup($selectedPlan);
 
         if (! $plan) {
             return null;

@@ -298,6 +298,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::put('settings', [SettingsController::class, 'update']);
     Route::patch('settings', [SettingsController::class, 'update']);
     Route::post('settings', [SettingsController::class, 'update']); // multipart logo (PHP files require POST)
+    Route::post('settings/og-image', [SettingsController::class, 'uploadOgImage']);
+    Route::delete('settings/og-image', [SettingsController::class, 'destroyOgImage']);
     Route::get('setup-status', [SetupStatusController::class, 'show']);
     Route::post('setup-status/dismiss', [SetupStatusController::class, 'dismiss']);
     Route::get('commerce-brief', [CommerceBriefController::class, 'today']);
@@ -456,6 +458,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::post('settings', [PlatformSettingsController::class, 'update']);
     Route::post('settings/test-email', [PlatformSettingsController::class, 'testEmail']);
     Route::post('settings/test-openai', [PlatformSettingsController::class, 'testOpenAi']);
+    Route::post('settings/test-meta', [PlatformSettingsController::class, 'testMeta']);
     Route::post('export', [App\Http\Controllers\Api\Admin\ExportController::class, 'export']);
     Route::get('export/download/{filename}', [App\Http\Controllers\Api\Admin\ExportController::class, 'download']);
     Route::post('impersonate/user/{user}', [ImpersonateController::class, 'impersonateUser']);

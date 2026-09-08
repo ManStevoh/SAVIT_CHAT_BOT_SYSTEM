@@ -40,6 +40,7 @@ type Props = {
     displayRate?: number
     authCustomer?: { id: number; name: string; email: string } | null
     theme?: BrandTheme
+    termsUrl?: string
   }
   products: StoreProduct[]
   wishlist?: string[]
@@ -334,6 +335,7 @@ export default function StoreWishlistPage({
         onOpenChange={setAuthModalOpen}
         slug={slug}
         companyName={company.name}
+        termsUrl={company.termsUrl}
       />
     </div>
   )

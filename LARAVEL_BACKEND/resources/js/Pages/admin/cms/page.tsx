@@ -31,11 +31,38 @@ const PAGE_SLUGS = [
   { slug: "whatsapp-lead-generation", label: "SEO: Lead Generation" },
   { slug: "ai-customer-service", label: "SEO: Customer Service" },
   { slug: "whatsapp-for-ecommerce", label: "SEO: WhatsApp Ecommerce" },
+  { slug: "ai-sales-agent-kenya", label: "SEO: Kenya" },
+  { slug: "kenya-whatsapp-mpesa-playbook", label: "SEO: Kenya playbook" },
+  { slug: "whatsapp-mpesa", label: "SEO: M-Pesa" },
+  { slug: "ai-sales-assistant", label: "SEO: AI Sales Assistant" },
+  { slug: "solutions-restaurants", label: "SEO: Restaurants" },
+  { slug: "solutions-retail", label: "SEO: Retail" },
+  { slug: "solutions-ecommerce", label: "SEO: Ecommerce" },
+  { slug: "solutions-services", label: "SEO: Services" },
+  { slug: "use-cases-order-taking", label: "SEO: Order taking" },
+  { slug: "use-cases-follow-ups", label: "SEO: Follow-ups" },
+  { slug: "use-cases-lead-generation", label: "SEO: Lead gen use case" },
+  { slug: "whatsapp-chatbot-vs-ai-sales-agent", label: "SEO: Chatbot vs agent" },
   { slug: "about", label: "About" },
   { slug: "contact", label: "Contact" },
   { slug: "privacy", label: "Privacy" },
   { slug: "terms", label: "Terms" },
 ]
+
+function cmsPreviewHref(slug: string): string {
+  if (slug === "global" || slug === "home") return "/"
+  const nested: Record<string, string> = {
+    "solutions-restaurants": "/solutions/restaurants",
+    "solutions-retail": "/solutions/retail",
+    "solutions-ecommerce": "/solutions/ecommerce",
+    "solutions-services": "/solutions/services",
+    "use-cases-order-taking": "/use-cases/order-taking",
+    "use-cases-follow-ups": "/use-cases/follow-ups",
+    "use-cases-lead-generation": "/use-cases/lead-generation",
+    "kenya-whatsapp-mpesa-playbook": "/case-study/kenya-whatsapp-mpesa",
+  }
+  return nested[slug] ?? `/${slug}`
+}
 
 function Field({
   label,
@@ -812,8 +839,7 @@ function PageEditor({ slug }: { slug: string }) {
     }
   }
 
-  const previewHref =
-    slug === "global" ? "/" : slug === "home" ? "/" : `/${slug}`
+  const previewHref = cmsPreviewHref(slug)
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
   if (!data) return <p className="text-sm text-muted-foreground">Page not found.</p>

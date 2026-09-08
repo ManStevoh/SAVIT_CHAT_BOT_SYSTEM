@@ -483,6 +483,9 @@ class OrderPaymentService
         $this->recordExperimentConversionIfAssigned($order);
         $this->sendPaymentConfirmationToCustomer($fresh->fresh(['orderProducts', 'chat', 'company.whatsappAccount']));
         $this->fulfillmentService->sendPaidFulfillment($fresh->fresh(['orderProducts', 'chat', 'company.whatsappAccount']));
+        app(MailService::class)->sendCustomerPaymentFulfillmentSafely(
+            $fresh->fresh(['orderProducts', 'company.settings'])
+        );
     }
 
     private function recordExperimentConversionIfAssigned(Order $order): void

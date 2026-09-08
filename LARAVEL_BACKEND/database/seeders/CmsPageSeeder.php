@@ -91,10 +91,10 @@ class CmsPageSeeder extends Seeder
             [
                 'slug' => 'home',
                 'title' => 'Home',
-                'meta_title' => 'RelayIQ | AI Sales Agent for WhatsApp',
-                'meta_description' => 'Turn WhatsApp conversations into sales with RelayIQ. AI-powered sales automation that answers customers, recommends products, follows up with leads and helps businesses close more sales.',
-                'og_title' => 'RelayIQ | Turn WhatsApp Conversations Into Sales With AI',
-                'og_description' => 'AI sales agent for WhatsApp — engage customers, recommend products, follow up leads, and close more sales automatically.',
+                'meta_title' => 'AI Sales Agent on WhatsApp for Kenyan Businesses | RelayIQ.app',
+                'meta_description' => 'RelayIQ.app is an AI WhatsApp sales platform for African businesses. Answer customers in English and Kiswahili, take orders, and send M-Pesa STK on the number they already message.',
+                'og_title' => 'AI Sales Agent on WhatsApp for Kenyan Businesses | RelayIQ.app',
+                'og_description' => 'Answer customers, take orders, and send M-Pesa prompts on the WhatsApp number Kenyan buyers already use.',
                 'sections' => [
                     [
                         'section_key' => 'hero',
@@ -102,12 +102,12 @@ class CmsPageSeeder extends Seeder
                         'sort_order' => 1,
                         'content' => [
                             'kicker' => 'FREE 14-DAY TRIAL',
-                            'title' => 'Turn WhatsApp Conversations Into Sales With AI',
-                            'description' => 'RelayIQ is an AI-powered WhatsApp sales assistant that engages customers, answers questions, recommends products, follows up with leads, and helps businesses close more sales automatically.',
+                            'title' => 'AI sales agent on WhatsApp for Kenyan businesses',
+                            'description' => 'Answer customers, take orders, and send M-Pesa prompts on the WhatsApp number they already use — then hand off to your team when a human should close.',
                             'primaryCtaText' => 'Start free trial',
                             'primaryCtaHref' => '/register',
-                            'secondaryCtaText' => 'See how it works',
-                            'secondaryCtaHref' => '/whatsapp-ai-sales-agent',
+                            'secondaryCtaText' => 'Kenya playbook',
+                            'secondaryCtaHref' => '/ai-sales-agent-kenya',
                             'showFlowSimulation' => true,
                             'imageUrl' => $heroImage,
                             'imageAlt' => 'RelayIQ AI sales agent for WhatsApp converting chats into orders',
@@ -594,8 +594,8 @@ class CmsPageSeeder extends Seeder
                                         'One menu for chat + tables + storefront',
                                         'Payment confirmation without screenshots',
                                     ],
-                                    'ctaText' => 'Start restaurant trial',
-                                    'ctaHref' => '/register',
+                                    'ctaText' => 'Restaurant playbook',
+                                    'ctaHref' => '/solutions/restaurants',
                                 ],
                                 [
                                     'icon' => 'package',
@@ -606,8 +606,8 @@ class CmsPageSeeder extends Seeder
                                         'WhatsApp + /s/{slug} share inventory',
                                         'Campaigns attributed back to chats',
                                     ],
-                                    'ctaText' => 'Start retail trial',
-                                    'ctaHref' => '/register',
+                                    'ctaText' => 'Retail playbook',
+                                    'ctaHref' => '/solutions/retail',
                                 ],
                                 [
                                     'icon' => 'booking',

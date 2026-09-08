@@ -12,6 +12,7 @@ use App\Services\OrderPaymentService;
 use App\Services\PaymentGateways\PaymentGatewayRegistry;
 use App\Services\Storefront\StorefrontService;
 use App\Support\MoneyFormatter;
+use App\Support\StorefrontLegalCopy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -269,7 +270,44 @@ class PublicStorefrontController extends Controller
 
         $this->storefront->recordEvent($company, 'add_to_cart', $session->session_token, $product->id);
 
-        return redirect()->to(url("/s/{$slug}/cart"));
+        return redirect()->to($this->addToCartReturnUrl($request, $slug));
+    }
+
+    /**
+     * Keep the shopper on the page they added from. Only open the cart if
+     * there is no storefront referrer (direct POST / bot / test).
+     */
+    private function addToCartReturnUrl(Request $request, string $slug): string
+    {
+        $cartUrl = url("/s/{$slug}/cart");
+        $previous = url()->previous();
+        if ($previous === '' || $previous === $request->fullUrl()) {
+            return $cartUrl;
+        }
+
+        $path = parse_url($previous, PHP_URL_PATH) ?? '';
+        $host = parse_url($previous, PHP_URL_HOST);
+        $sameHost = $host === null
+            || $host === $request->getHost()
+            || $host === parse_url((string) config('app.url'), PHP_URL_HOST);
+
+        if (! $sameHost) {
+            return $cartUrl;
+        }
+
+        if (str_starts_with($path, '/s/'.$slug)) {
+            return $previous;
+        }
+
+        $customStorefront = $path === '/'
+            || $path === '/cart'
+            || $path === '/wishlist'
+            || $path === '/checkout'
+            || $path === '/search'
+            || str_starts_with($path, '/p/')
+            || str_starts_with($path, '/c/');
+
+        return $customStorefront ? $previous : $cartUrl;
     }
 
     public function cartUpdate(string $slug, Request $request): RedirectResponse
@@ -331,6 +369,8 @@ class PublicStorefrontController extends Controller
             'deliveryFeesEnabled' => (bool) ($settings?->delivery_fees_enabled ?? false),
             'presetDineInTableCode' => $request->query('table') ? (string) $request->query('table') : null,
             'suggestedAddress' => $this->storefront->suggestedAddressForPhone($company, is_string($phone) ? $phone : null),
+            'digitalOnly' => (bool) ($cart['digitalOnly'] ?? false),
+            'hasDigitalItems' => (bool) ($cart['hasDigitalItems'] ?? false),
             'locale' => $locale,
             'chrome' => self::CHROME_STRINGS[$locale] ?? self::CHROME_STRINGS['en'],
             'seo' => $this->seo->noindex('Checkout — '.$company->name),
@@ -353,18 +393,33 @@ class PublicStorefrontController extends Controller
             ])->withInput();
         }
 
+        $cart = $this->storefront->cartSummary($company, $session);
+        $hasDigitalItems = (bool) ($cart['hasDigitalItems'] ?? false);
+        $digitalOnly = (bool) ($cart['digitalOnly'] ?? false);
+        $emailRequired = (bool) $authCustomer || $hasDigitalItems;
+
         $validated = $request->validate([
             'customerName' => 'required|string|max:255',
             'customerPhone' => $hasWhatsAppPhone ? 'required|string|max:40' : 'nullable|string|max:40',
-            'customerEmail' => $authCustomer ? 'required|email|max:255' : 'nullable|email|max:255',
-            'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in',
+            'customerEmail' => $emailRequired ? 'required|email|max:255' : 'nullable|email|max:255',
+            'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in,digital',
             'deliveryAddress' => 'nullable|string|max:1000',
             'dineInTableCode' => 'nullable|string|max:100',
             'orderNotes' => 'nullable|string|max:1000',
             'giftMessage' => 'nullable|string|max:500',
             'tipAmount' => 'nullable|numeric|min:0',
             'couponCode' => 'nullable|string|max:64',
+            'acceptTerms' => 'accepted',
+            'marketingConsent' => 'sometimes|boolean',
+        ], [
+            'acceptTerms.accepted' => 'Please agree to this store\'s terms and conditions.',
+            'customerEmail.required' => 'An email address is required for digital product delivery.',
         ]);
+        $validated['acceptTerms'] = true;
+        $validated['marketingConsent'] = $request->boolean('marketingConsent');
+        if ($digitalOnly) {
+            $validated['fulfillmentType'] = 'digital';
+        }
 
         $session->update([
             'customer_name' => $validated['customerName'] ?? null,
@@ -394,6 +449,23 @@ class PublicStorefrontController extends Controller
         return redirect()->to(url("/s/{$slug}/order/{$order->pay_token}"));
     }
 
+    public function terms(string $slug): Response
+    {
+        $company = $this->storefront->resolveCompanyBySlug($slug);
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        $body = trim((string) ($theme['terms_body'] ?? ''));
+        $title = trim((string) ($theme['terms_title'] ?? ''));
+
+        return Inertia::render('store/terms', [
+            'slug' => $slug,
+            'company' => $this->companyPayload($company),
+            'title' => $title !== '' ? $title : ($company->name.' — Terms and conditions'),
+            'body' => $body !== '' ? $body : StorefrontLegalCopy::defaultTerms((string) $company->name),
+            'isDefault' => $body === '',
+            'seo' => $this->seo->noindex(($title !== '' ? $title : 'Terms').' — '.$company->name),
+        ]);
+    }
+
     public function checkoutQuote(string $slug, Request $request): JsonResponse
     {
         $company = $this->storefront->resolveCompanyBySlug($slug);
@@ -401,7 +473,7 @@ class PublicStorefrontController extends Controller
         $this->persistCartToken($company, $session->session_token);
 
         $validated = $request->validate([
-            'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in',
+            'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in,digital',
             'deliveryAddress' => 'nullable|string|max:1000',
             'couponCode' => 'nullable|string|max:64',
             'tipAmount' => 'nullable|numeric|min:0',
@@ -842,6 +914,8 @@ class PublicStorefrontController extends Controller
                 'name' => $authCustomer->name,
                 'email' => $authCustomer->email,
             ] : null,
+            'termsUrl' => '/s/'.$company->store_slug.'/terms',
+            'hasCustomTerms' => filled(is_array($company->storefront_theme) ? ($company->storefront_theme['terms_body'] ?? '') : ''),
         ];
     }
 

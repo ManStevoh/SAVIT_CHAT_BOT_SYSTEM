@@ -2363,6 +2363,36 @@ export async function reorderCmsSections(
   }
 }
 
+export async function uploadStorefrontOgImage(file: File): Promise<{ success: boolean; url?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, url: URL.createObjectURL(file) }
+  }
+  try {
+    const form = new FormData()
+    form.append('image', file)
+    return await apiRequest<{ success: boolean; url: string }>('/api/company/settings/og-image', {
+      method: 'POST',
+      body: form,
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
+export async function removeStorefrontOgImage(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>('/api/company/settings/og-image', {
+      method: 'DELETE',
+    })
+  } catch (e) {
+    return { ...handleApiError(e), success: false }
+  }
+}
+
 export async function uploadCmsImage(file: File): Promise<{ success: boolean; url?: string; message?: string }> {
   if (useMockApi()) {
     await delay(400)
@@ -2862,6 +2892,8 @@ export interface PlatformSettings {
   defaultTimezone?: string | null
   maintenanceMessage?: string | null
   allowNewRegistrations?: boolean
+  defaultRegistrationPlanSlug?: string | null
+  forceDefaultRegistrationPlan?: boolean
   requireEmailVerification?: boolean
   aiModel?: string | null
   maxTokensPerRequest?: number | null
@@ -2929,6 +2961,8 @@ export interface UpdatePlatformSettingsData {
   defaultTimezone?: string
   maintenanceMessage?: string
   allowNewRegistrations?: boolean
+  defaultRegistrationPlanSlug?: string | null
+  forceDefaultRegistrationPlan?: boolean
   requireEmailVerification?: boolean
   aiModel?: string
   maxTokensPerRequest?: number
@@ -3180,6 +3214,8 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
       defaultTimezone: 'UTC',
       maintenanceMessage: null,
       allowNewRegistrations: true,
+      defaultRegistrationPlanSlug: 'free',
+      forceDefaultRegistrationPlan: false,
       smtpHost: 'smtp.sendgrid.net',
       smtpPort: 587,
       smtpEncryption: 'tls',
@@ -3315,6 +3351,30 @@ export interface OpenAiConnectionCheck {
   status: "passed" | "failed" | "skipped"
 }
 
+export interface MetaConnectionCheck {
+  id: string
+  label: string
+  field?: string
+  status: "passed" | "failed" | "skipped"
+  detail?: string | null
+}
+
+export interface MetaConnectionTestResult {
+  success: boolean
+  message: string
+  failedStep?: string | null
+  details?: {
+    httpStatus?: number | null
+    graphError?: string | null
+    graphCode?: number | null
+    appName?: string | null
+    latencyMs?: number | null
+    hint?: string | null
+    failedCheck?: string | null
+    checks?: MetaConnectionCheck[]
+  }
+}
+
 export interface OpenAiConnectionTestResult {
   success: boolean
   message: string
@@ -3376,6 +3436,61 @@ export async function testOpenAiConnection(data: {
     return {
       success: false,
       message: e instanceof Error ? e.message : "Connection test failed",
+    }
+  }
+}
+
+/**
+ * Verify platform Meta App ID / secrets / config against Graph API.
+ * Laravel: POST /api/admin/settings/test-meta
+ */
+export async function testMetaConnection(data: {
+  whatsappWebhookVerifyToken?: string
+  metaAppSecret?: string
+  whatsappEmbeddedAppId?: string
+  whatsappEmbeddedConfigId?: string
+  whatsappEmbeddedAppSecret?: string
+  whatsappEmbeddedRedirectUri?: string
+  whatsappCreditSharingSystemToken?: string
+}): Promise<MetaConnectionTestResult> {
+  if (useMockApi()) {
+    await delay(600)
+    return {
+      success: true,
+      message: "Meta App ID and token-exchange secret are valid (mock).",
+      details: {
+        appName: "RelayIQ",
+        latencyMs: 90,
+        checks: [
+          { id: "app_id", label: "Meta App ID", status: "passed" },
+          { id: "embedded_secret", label: "Meta App Secret (token exchange)", status: "passed" },
+          { id: "webhook_secret", label: "Meta App Secret (webhooks)", status: "passed" },
+          { id: "config_id", label: "Embedded Signup Config ID", status: "passed" },
+          { id: "verify_token", label: "Webhook verify token", status: "passed" },
+          { id: "redirect_uri", label: "OAuth redirect URI", status: "passed" },
+          { id: "credit_token", label: "Solution Partner system token", status: "skipped", detail: "Not set" },
+        ],
+      },
+    }
+  }
+  try {
+    return await apiRequest<MetaConnectionTestResult>("/api/admin/settings/test-meta", {
+      method: "POST",
+      body: data,
+    })
+  } catch (e) {
+    const err = e as Error & { responseData?: MetaConnectionTestResult }
+    if (err.responseData && typeof err.responseData === "object") {
+      return {
+        success: false,
+        message: err.responseData.message ?? (err instanceof Error ? err.message : "Meta connection test failed"),
+        failedStep: err.responseData.failedStep,
+        details: err.responseData.details,
+      }
+    }
+    return {
+      success: false,
+      message: e instanceof Error ? e.message : "Meta connection test failed",
     }
   }
 }

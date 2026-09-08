@@ -318,11 +318,196 @@ class AdminPlatformSettingsTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_meta_connection_reports_missing_app_id(): void
+    {
+        $this->actingAsAdmin();
+        config(['whatsapp.embedded_signup_app_id' => '']);
+
+        $this->postJson('/api/admin/settings/test-meta', [
+            'whatsappEmbeddedAppSecret' => 'some-secret',
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('failedStep', 'app_id')
+            ->assertJsonPath('details.failedCheck', 'app_id')
+            ->assertJsonPath('details.checks.0.id', 'app_id')
+            ->assertJsonPath('details.checks.0.status', 'failed');
+    }
+
+    public function test_meta_connection_reports_invalid_app_id(): void
+    {
+        $this->actingAsAdmin();
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            if (str_contains($request->url(), 'oauth/access_token')) {
+                return Http::response([
+                    'error' => [
+                        'message' => 'Error validating application. Invalid application ID.',
+                        'type' => 'OAuthException',
+                        'code' => 101,
+                    ],
+                ], 400);
+            }
+
+            return Http::response(['id' => '1'], 200);
+        });
+
+        $this->postJson('/api/admin/settings/test-meta', [
+            'whatsappEmbeddedAppId' => '111111111111111',
+            'whatsappEmbeddedAppSecret' => 'any-secret',
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('failedStep', 'app_id')
+            ->assertJsonPath('details.failedCheck', 'app_id')
+            ->assertJsonPath('details.httpStatus', 400)
+            ->assertJsonPath('details.checks.0.status', 'failed')
+            ->assertJsonPath('details.checks.1.status', 'skipped');
+    }
+
+    public function test_meta_connection_reports_invalid_token_exchange_secret(): void
+    {
+        $this->actingAsAdmin();
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            if (str_contains($request->url(), 'oauth/access_token')) {
+                return Http::response([
+                    'error' => [
+                        'message' => 'Error validating client secret.',
+                        'type' => 'OAuthException',
+                        'code' => 1,
+                    ],
+                ], 400);
+            }
+
+            return Http::response(['id' => '1'], 200);
+        });
+
+        $this->postJson('/api/admin/settings/test-meta', [
+            'whatsappEmbeddedAppId' => '846055524940193',
+            'whatsappEmbeddedAppSecret' => 'wrong-secret',
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('failedStep', 'embedded_secret')
+            ->assertJsonPath('details.failedCheck', 'embedded_secret')
+            ->assertJsonPath('details.checks.1.id', 'embedded_secret')
+            ->assertJsonPath('details.checks.1.status', 'failed');
+    }
+
+    public function test_meta_connection_reports_wrong_webhook_secret_separately(): void
+    {
+        $this->actingAsAdmin();
+        $this->seedMetaVerifyToken('relayiq-test-verify');
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            $url = $request->url();
+            parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+
+            if (str_contains($url, 'oauth/access_token')) {
+                if (($query['client_secret'] ?? '') === 'wrong-webhook-secret') {
+                    return Http::response([
+                        'error' => [
+                            'message' => 'Error validating client secret.',
+                            'code' => 1,
+                        ],
+                    ], 400);
+                }
+
+                return Http::response(['access_token' => 'app|ok'], 200);
+            }
+
+            return Http::response(['id' => '846055524940193', 'name' => 'RelayIQ'], 200);
+        });
+
+        $this->postJson('/api/admin/settings/test-meta', [
+            'whatsappEmbeddedAppId' => '846055524940193',
+            'whatsappEmbeddedAppSecret' => 'good-embedded-secret',
+            'metaAppSecret' => 'wrong-webhook-secret',
+            'whatsappEmbeddedConfigId' => '108970426887711',
+            'whatsappWebhookVerifyToken' => 'relayiq-test-verify',
+            'whatsappEmbeddedRedirectUri' => 'https://relayiq.app/dashboard/settings',
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('failedStep', 'webhook_secret')
+            ->assertJsonPath('details.checks.0.status', 'passed')
+            ->assertJsonPath('details.checks.1.status', 'passed')
+            ->assertJsonPath('details.checks.2.id', 'webhook_secret')
+            ->assertJsonPath('details.checks.2.status', 'failed');
+    }
+
+    public function test_meta_connection_succeeds_and_uses_saved_secret_when_masked(): void
+    {
+        $settings = PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'RelayIQ']);
+        $settings->forceFill([
+            'whatsapp_embedded_app_id' => '846055524940193',
+            'whatsapp_embedded_app_secret' => 'saved-embedded-secret',
+            'meta_app_secret' => 'saved-embedded-secret',
+            'whatsapp_embedded_config_id' => '108970426887711',
+            'whatsapp_webhook_verify_token' => 'relayiq-test-verify',
+            'whatsapp_embedded_redirect_uri' => 'https://relayiq.app/dashboard/settings',
+        ])->save();
+        \App\Services\WhatsApp\WhatsAppPlatformConfig::clearCache();
+
+        $this->actingAsAdmin();
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            $url = $request->url();
+            parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+
+            if (str_contains($url, 'oauth/access_token')) {
+                $this->assertSame('saved-embedded-secret', $query['client_secret'] ?? null);
+
+                return Http::response(['access_token' => 'app|ok'], 200);
+            }
+
+            return Http::response(['id' => '846055524940193', 'name' => 'RelayIQ'], 200);
+        });
+
+        $this->postJson('/api/admin/settings/test-meta', [
+            'whatsappEmbeddedAppId' => '846055524940193',
+            'whatsappEmbeddedAppSecret' => '********',
+            'metaAppSecret' => '********',
+            'whatsappEmbeddedConfigId' => '108970426887711',
+            'whatsappWebhookVerifyToken' => '********',
+            'whatsappEmbeddedRedirectUri' => 'https://relayiq.app/dashboard/settings',
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('failedStep', null)
+            ->assertJsonPath('details.appName', 'RelayIQ')
+            ->assertJsonPath('details.checks.0.status', 'passed')
+            ->assertJsonPath('details.checks.1.status', 'passed')
+            ->assertJsonPath('details.checks.2.status', 'passed');
+    }
+
+    public function test_company_user_cannot_test_meta_connection(): void
+    {
+        Sanctum::actingAs(User::factory()->create([
+            'role' => 'company_admin',
+            'email_verified_at' => now(),
+        ]));
+
+        $this->postJson('/api/admin/settings/test-meta', [
+            'whatsappEmbeddedAppId' => '846055524940193',
+        ])->assertForbidden();
+    }
+
     private function actingAsAdmin(): void
     {
         Sanctum::actingAs(User::factory()->create([
             'role' => 'admin',
             'email_verified_at' => now(),
         ]));
+    }
+
+    private function seedMetaVerifyToken(string $token): void
+    {
+        $settings = PlatformSetting::first() ?? PlatformSetting::create(['platform_name' => 'RelayIQ']);
+        $settings->forceFill([
+            'whatsapp_webhook_verify_token' => $token,
+        ])->save();
+        \App\Services\WhatsApp\WhatsAppPlatformConfig::clearCache();
     }
 }

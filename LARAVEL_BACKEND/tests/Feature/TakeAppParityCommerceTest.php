@@ -109,11 +109,12 @@ class TakeAppParityCommerceTest extends TestCase
             'quantity' => 2,
         ])->assertRedirect();
 
-        $this->post('/s/parity-cafe/checkout', [
+        $this->post('/s/parity-cafe/checkout?phone=254711223344', [
             'customerName' => 'Ada',
             'customerPhone' => '254711223344',
             'fulfillmentType' => 'delivery',
             'deliveryAddress' => 'Westlands Nairobi',
+            'acceptTerms' => true,
         ])->assertRedirect();
 
         $order = Order::where('company_id', $company->id)->latest('id')->first();

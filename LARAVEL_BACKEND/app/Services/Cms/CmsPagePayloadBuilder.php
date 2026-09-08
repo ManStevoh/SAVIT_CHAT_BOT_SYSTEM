@@ -7,6 +7,8 @@ use App\Models\LandingFaq;
 use App\Models\PlatformSetting;
 use App\Models\Testimonial;
 use App\Support\BrandSocial;
+use App\Support\HomeSeoCopy;
+use App\Support\SeoLandingCatalog;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -20,20 +22,62 @@ class CmsPagePayloadBuilder
     public function forSlug(string $slug): ?array
     {
         if (! Schema::hasTable('cms_pages')) {
-            return null;
+            return SeoLandingCatalog::payload($slug);
         }
 
         try {
             $page = CmsPage::where('slug', $slug)->where('is_published', true)->first();
         } catch (\Throwable) {
-            return null;
+            return SeoLandingCatalog::payload($slug);
         }
 
         if (! $page) {
-            return null;
+            return SeoLandingCatalog::payload($slug);
         }
 
-        return $this->toArray($page);
+        $payload = $this->toArray($page);
+
+        return $this->hasRenderableBody($payload)
+            ? $this->enrichFromCatalog($slug, $payload)
+            : (SeoLandingCatalog::payload($slug) ?? $payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function hasRenderableBody(array $payload): bool
+    {
+        foreach ($payload['sections'] ?? [] as $section) {
+            if (! ($section['isEnabled'] ?? false)) {
+                continue;
+            }
+            $content = is_array($section['content'] ?? null) ? $section['content'] : [];
+            $key = (string) ($section['key'] ?? '');
+            if ($key === 'prose' && filled($content['html'] ?? $content['body'] ?? '')) {
+                return true;
+            }
+            if ($key === 'hero' && filled($content['title'] ?? $content['headline'] ?? '')) {
+                return true;
+            }
+            if (in_array($key, ['capabilities', 'solution_pillars', 'industries'], true) && ! empty($content['items'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function enrichFromCatalog(string $slug, array $payload): array
+    {
+        if (empty($payload['faqs']) && SeoLandingCatalog::faqs($slug) !== []) {
+            $payload['faqs'] = SeoLandingCatalog::faqs($slug);
+        }
+
+        return $payload;
     }
 
     /**
@@ -88,22 +132,42 @@ class CmsPagePayloadBuilder
             }
         }
 
+        $pageMeta = [
+            'slug' => $page->slug,
+            'title' => $page->title,
+            'metaTitle' => $page->meta_title,
+            'metaDescription' => $page->meta_description,
+            'ogImage' => $this->resolveImageUrl($page->og_image),
+            'ogTitle' => $page->og_title,
+            'ogDescription' => $page->og_description,
+            'canonicalUrl' => $page->canonical_url,
+            'robots' => $page->robots,
+        ];
+        if ($page->slug === 'home' && HomeSeoCopy::shouldReplaceMeta(
+            (string) ($pageMeta['metaTitle'] ?? ''),
+            (string) ($pageMeta['metaDescription'] ?? '')
+        )) {
+            $pageMeta['metaTitle'] = HomeSeoCopy::title();
+            $pageMeta['metaDescription'] = HomeSeoCopy::description();
+        }
+        if ($page->slug === 'home' && HomeSeoCopy::shouldReplaceMeta(
+            (string) ($pageMeta['ogTitle'] ?? ''),
+            (string) ($pageMeta['ogDescription'] ?? '')
+        )) {
+            $pageMeta['ogTitle'] = HomeSeoCopy::title();
+            $pageMeta['ogDescription'] = HomeSeoCopy::description();
+        }
+
         return [
-            'page' => [
-                'slug' => $page->slug,
-                'title' => $page->title,
-                'metaTitle' => $page->meta_title,
-                'metaDescription' => $page->meta_description,
-                'ogImage' => $this->resolveImageUrl($page->og_image),
-                'ogTitle' => $page->og_title,
-                'ogDescription' => $page->og_description,
-                'canonicalUrl' => $page->canonical_url,
-                'robots' => $page->robots,
-            ],
-            'sections' => $page->sections->map(function ($s) {
+            'page' => $pageMeta,
+            'sections' => $page->sections->map(function ($s) use ($page) {
                 $content = $s->content ?? [];
+                if ($page->slug === 'home' && $s->section_key === 'hero' && is_array($content)) {
+                    $content = HomeSeoCopy::applyHero($content);
+                }
                 if ($s->section_key === 'footer' && is_array($content)) {
                     $content['socialLinks'] = $this->publicSocialLinks($content['socialLinks'] ?? []);
+                    $content['navLinks'] = $this->mergeSeoFooterLinks($content['navLinks'] ?? []);
                 }
 
                 return [
@@ -116,6 +180,38 @@ class CmsPagePayloadBuilder
             })->values()->all(),
             ...$extras,
         ];
+    }
+
+    /**
+     * @param  mixed  $cmsLinks
+     * @return list<array{label: string, href: string}>
+     */
+    private function mergeSeoFooterLinks(mixed $cmsLinks): array
+    {
+        $links = [];
+        $hrefs = [];
+        if (is_array($cmsLinks)) {
+            foreach ($cmsLinks as $link) {
+                if (! is_array($link)) {
+                    continue;
+                }
+                $href = trim((string) ($link['href'] ?? ''));
+                $label = trim((string) ($link['label'] ?? ''));
+                if ($href === '' || $label === '') {
+                    continue;
+                }
+                $links[] = ['label' => $label, 'href' => $href];
+                $hrefs[] = rtrim($href, '/');
+            }
+        }
+        foreach (SeoLandingCatalog::footerLinks() as $extra) {
+            if (! in_array(rtrim($extra['href'], '/'), $hrefs, true)) {
+                $links[] = $extra;
+                $hrefs[] = rtrim($extra['href'], '/');
+            }
+        }
+
+        return $links;
     }
 
     /**

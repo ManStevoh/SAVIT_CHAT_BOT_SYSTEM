@@ -72,6 +72,8 @@ final class OrderDomainService
             ]);
         }
 
+        app(\App\Services\MailService::class)->sendCustomerOrderConfirmationSafely($order);
+
         return $order;
     }
 }

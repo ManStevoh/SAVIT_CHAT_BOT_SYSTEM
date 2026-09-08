@@ -25,13 +25,15 @@ import {
   updatePlatformSettings,
   sendTestEmail,
   testOpenAiConnection,
+  testMetaConnection,
   type PlatformSettings,
   type AiLearningConfig,
   type OpenAiConnectionTestResult,
+  type MetaConnectionTestResult,
 } from "@/lib/api-actions"
 import { useToast } from "@/hooks/use-toast"
 import { getTimezoneGroups } from "@/lib/timezones"
-import { useAdminLogs } from "@/lib/api-hooks"
+import { useAdminLogs, useAdminPlans } from "@/lib/api-hooks"
 
 const timezoneGroups = getTimezoneGroups()
 
@@ -56,6 +58,8 @@ export default function AdminSettingsPage() {
   const [sendingTest, setSendingTest] = useState(false)
   const [testingOpenAi, setTestingOpenAi] = useState(false)
   const [openAiTestResult, setOpenAiTestResult] = useState<OpenAiConnectionTestResult | null>(null)
+  const [testingMeta, setTestingMeta] = useState(false)
+  const [metaTestResult, setMetaTestResult] = useState<MetaConnectionTestResult | null>(null)
   const [testEmailTo, setTestEmailTo] = useState("")
   const [emailTestResult, setEmailTestResult] = useState<{
     success: boolean
@@ -64,6 +68,8 @@ export default function AdminSettingsPage() {
     diagnostics?: Record<string, unknown>
   } | null>(null)
   const { data: smtpLogs, mutate: mutateSmtpLogs } = useAdminLogs({ source: "smtp" })
+  const { data: adminPlans } = useAdminPlans()
+  const ENV_DEFAULT_PLAN = "__config__"
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [faviconFile, setFaviconFile] = useState<File | null>(null)
@@ -95,6 +101,8 @@ export default function AdminSettingsPage() {
         defaultTimezone: settings.defaultTimezone ?? undefined,
         maintenanceMessage: settings.maintenanceMessage ?? undefined,
         allowNewRegistrations: settings.allowNewRegistrations,
+        defaultRegistrationPlanSlug: settings.defaultRegistrationPlanSlug || null,
+        forceDefaultRegistrationPlan: settings.forceDefaultRegistrationPlan ?? false,
         requireEmailVerification: settings.requireEmailVerification,
       })
       if (res.success) {
@@ -320,6 +328,38 @@ export default function AdminSettingsPage() {
       toast({ title: "Failed to save integrations", variant: "destructive" })
     } finally {
       setSavingIntegrations(false)
+    }
+  }
+
+  const handleTestMeta = async () => {
+    setTestingMeta(true)
+    setMetaTestResult(null)
+    try {
+      const secret = (value?: string | null) => {
+        const trimmed = value?.trim() ?? ""
+        return trimmed && trimmed !== "********" ? trimmed : undefined
+      }
+      const res = await testMetaConnection({
+        whatsappWebhookVerifyToken: secret(settings?.whatsappWebhookVerifyToken),
+        metaAppSecret: secret(settings?.metaAppSecret),
+        whatsappEmbeddedAppId: settings?.whatsappEmbeddedAppId ?? undefined,
+        whatsappEmbeddedConfigId: settings?.whatsappEmbeddedConfigId ?? undefined,
+        whatsappEmbeddedAppSecret: secret(settings?.whatsappEmbeddedAppSecret),
+        whatsappEmbeddedRedirectUri: settings?.whatsappEmbeddedRedirectUri ?? undefined,
+        whatsappCreditSharingSystemToken: secret(settings?.whatsappCreditSharingSystemToken),
+      })
+      setMetaTestResult(res)
+      if (res.success) {
+        toast({ title: res.message })
+      } else {
+        toast({ title: res.message, variant: "destructive" })
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to test Meta connection"
+      setMetaTestResult({ success: false, message })
+      toast({ title: message, variant: "destructive" })
+    } finally {
+      setTestingMeta(false)
     }
   }
 
@@ -551,6 +591,51 @@ export default function AdminSettingsPage() {
                   <Switch
                     checked={settings?.allowNewRegistrations ?? true}
                     onCheckedChange={(v) => updateSetting("allowNewRegistrations", v)}
+                  />
+                </div>
+
+                <Field>
+                  <FieldLabel htmlFor="defaultRegistrationPlan">Default plan for new companies</FieldLabel>
+                  <Select
+                    value={settings?.defaultRegistrationPlanSlug || ENV_DEFAULT_PLAN}
+                    onValueChange={(v) =>
+                      updateSetting("defaultRegistrationPlanSlug", v === ENV_DEFAULT_PLAN ? null : v)
+                    }
+                  >
+                    <SelectTrigger id="defaultRegistrationPlan" className="w-full max-w-md">
+                      <SelectValue placeholder="Select a plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ENV_DEFAULT_PLAN}>Use env default (Starter trial)</SelectItem>
+                      {(adminPlans ?? []).map((plan) => (
+                        <SelectItem key={plan.id} value={plan.slug ?? plan.id}>
+                          {plan.name}
+                          {plan.isFree ? " — Free" : ""}
+                          {plan.hasTrial ? ` — ${plan.trialDays ?? 14}-day trial` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Used when a signup does not pick a paid trial. Choose Free to start every company on a limited no-cost plan. Configure product, message, and WhatsApp limits under{" "}
+                    <Link href="/admin/plans" className="underline underline-offset-2">
+                      Admin → Plans
+                    </Link>
+                    .
+                  </p>
+                </Field>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">Assign default plan to every signup</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ignore the plan chosen on pricing and put all new companies on the default plan above. Turn this on with Free if you want every registration on the free tier.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.forceDefaultRegistrationPlan ?? false}
+                    onCheckedChange={(v) => updateSetting("forceDefaultRegistrationPlan", v)}
+                    disabled={!settings?.defaultRegistrationPlanSlug}
                   />
                 </div>
 
@@ -1139,7 +1224,10 @@ export default function AdminSettingsPage() {
                           id="whatsappCreditSharingSystemToken"
                           type="password"
                           value={settings?.whatsappCreditSharingSystemToken ?? ""}
-                          onChange={(e) => updateSetting("whatsappCreditSharingSystemToken", e.target.value)}
+                          onChange={(e) => {
+                            setMetaTestResult(null)
+                            updateSetting("whatsappCreditSharingSystemToken", e.target.value)
+                          }}
                           placeholder="System token with business_management permission"
                         />
                       </Field>
@@ -1184,7 +1272,10 @@ export default function AdminSettingsPage() {
                   <Input
                     id="whatsappWebhookVerifyToken"
                     value={settings?.whatsappWebhookVerifyToken ?? ""}
-                    onChange={(e) => updateSetting("whatsappWebhookVerifyToken", e.target.value)}
+                    onChange={(e) => {
+                      setMetaTestResult(null)
+                      updateSetting("whatsappWebhookVerifyToken", e.target.value)
+                    }}
                     placeholder="Same value as in Meta App → WhatsApp → Configuration"
                   />
                 </Field>
@@ -1194,7 +1285,10 @@ export default function AdminSettingsPage() {
                     id="metaAppSecret"
                     type="password"
                     value={settings?.metaAppSecret ?? ""}
-                    onChange={(e) => updateSetting("metaAppSecret", e.target.value)}
+                    onChange={(e) => {
+                      setMetaTestResult(null)
+                      updateSetting("metaAppSecret", e.target.value)
+                    }}
                     placeholder="Leave blank to keep existing"
                   />
                 </Field>
@@ -1203,7 +1297,10 @@ export default function AdminSettingsPage() {
                   <Input
                     id="whatsappEmbeddedAppId"
                     value={settings?.whatsappEmbeddedAppId ?? ""}
-                    onChange={(e) => updateSetting("whatsappEmbeddedAppId", e.target.value)}
+                    onChange={(e) => {
+                      setMetaTestResult(null)
+                      updateSetting("whatsappEmbeddedAppId", e.target.value)
+                    }}
                     placeholder="From Meta App Dashboard"
                   />
                 </Field>
@@ -1212,7 +1309,10 @@ export default function AdminSettingsPage() {
                   <Input
                     id="whatsappEmbeddedConfigId"
                     value={settings?.whatsappEmbeddedConfigId ?? ""}
-                    onChange={(e) => updateSetting("whatsappEmbeddedConfigId", e.target.value)}
+                    onChange={(e) => {
+                      setMetaTestResult(null)
+                      updateSetting("whatsappEmbeddedConfigId", e.target.value)
+                    }}
                     placeholder="From Embedded Signup Builder"
                   />
                 </Field>
@@ -1222,7 +1322,10 @@ export default function AdminSettingsPage() {
                     id="whatsappEmbeddedAppSecret"
                     type="password"
                     value={settings?.whatsappEmbeddedAppSecret ?? ""}
-                    onChange={(e) => updateSetting("whatsappEmbeddedAppSecret", e.target.value)}
+                    onChange={(e) => {
+                      setMetaTestResult(null)
+                      updateSetting("whatsappEmbeddedAppSecret", e.target.value)
+                    }}
                     placeholder="Leave blank to keep existing"
                   />
                 </Field>
@@ -1231,7 +1334,10 @@ export default function AdminSettingsPage() {
                   <Input
                     id="whatsappEmbeddedRedirectUri"
                     value={settings?.whatsappEmbeddedRedirectUri ?? ""}
-                    onChange={(e) => updateSetting("whatsappEmbeddedRedirectUri", e.target.value)}
+                    onChange={(e) => {
+                      setMetaTestResult(null)
+                      updateSetting("whatsappEmbeddedRedirectUri", e.target.value)
+                    }}
                     placeholder="https://your-domain.com/dashboard/settings"
                   />
                 </Field>
@@ -1245,6 +1351,96 @@ export default function AdminSettingsPage() {
                     onCheckedChange={(v) => updateSetting("whatsappEnableCoexist", v)}
                   />
                 </Field>
+              </FieldGroup>
+              {metaTestResult && (
+                <div
+                  className={`rounded-lg border p-4 space-y-3 ${
+                    metaTestResult.success
+                      ? "border-emerald-500/30 bg-emerald-500/5"
+                      : "border-destructive/30 bg-destructive/5"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {metaTestResult.success ? (
+                      <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+                    )}
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-medium text-foreground">
+                        {metaTestResult.success ? "Meta connection verified" : "Meta connection failed"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{metaTestResult.message}</p>
+                    </div>
+                  </div>
+                  {metaTestResult.details?.checks && metaTestResult.details.checks.length > 0 && (
+                    <ul className="space-y-2 text-sm">
+                      {metaTestResult.details.checks.map((check) => (
+                        <li key={check.id} className="flex items-start gap-2">
+                          {check.status === "passed" && <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-emerald-600 shrink-0" />}
+                          {check.status === "failed" && <XCircle className="h-3.5 w-3.5 mt-0.5 text-destructive shrink-0" />}
+                          {check.status === "skipped" && <Circle className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />}
+                          <div className="min-w-0">
+                            <span className={check.status === "skipped" ? "text-muted-foreground" : "text-foreground"}>
+                              {check.label}
+                              {check.status === "skipped" ? " — not checked" : check.status === "failed" ? " — rejected" : ""}
+                            </span>
+                            {check.detail ? (
+                              <p className="text-xs text-muted-foreground mt-0.5">{check.detail}</p>
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {(metaTestResult.details?.hint || metaTestResult.details?.graphError || metaTestResult.details?.appName) && (
+                    <dl className="grid gap-1 text-xs text-muted-foreground">
+                      {metaTestResult.details?.appName && (
+                        <div>
+                          <span className="font-medium text-foreground">App:</span> {metaTestResult.details.appName}
+                        </div>
+                      )}
+                      {metaTestResult.details?.httpStatus != null && (
+                        <div>
+                          <span className="font-medium text-foreground">HTTP status:</span> {metaTestResult.details.httpStatus}
+                        </div>
+                      )}
+                      {metaTestResult.details?.graphError && (
+                        <div className="break-words">
+                          <span className="font-medium text-foreground">Meta error:</span> {metaTestResult.details.graphError}
+                        </div>
+                      )}
+                      {metaTestResult.details?.hint && (
+                        <div className="pt-1 text-foreground/80">{metaTestResult.details.hint}</div>
+                      )}
+                    </dl>
+                  )}
+                  {metaTestResult.success && metaTestResult.details?.latencyMs != null && (
+                    <p className="text-xs text-muted-foreground">{metaTestResult.details.latencyMs} ms</p>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTestMeta}
+                  disabled={testingMeta || savingIntegrations}
+                >
+                  {testingMeta ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Testing Meta…
+                    </>
+                  ) : (
+                    "Test Meta connection"
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Test calls Meta Graph with the App ID and secrets in the form (a saved secret is used if a field is blank or masked). It reports which credential Graph rejected. This does not save settings. Config ID cannot always be inspected from the server — confirm it in Meta if that row is skipped.
+              </p>
+              <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="openaiApiKey">OpenAI API key</FieldLabel>
                   <Input
@@ -1358,7 +1554,7 @@ export default function AdminSettingsPage() {
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                <Button onClick={handleSaveIntegrations} disabled={savingIntegrations || testingOpenAi}>
+                <Button onClick={handleSaveIntegrations} disabled={savingIntegrations || testingOpenAi || testingMeta}>
                   {savingIntegrations ? "Saving…" : "Save Integrations"}
                 </Button>
                 <Button
