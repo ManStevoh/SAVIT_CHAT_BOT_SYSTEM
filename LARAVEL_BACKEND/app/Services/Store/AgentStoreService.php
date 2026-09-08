@@ -284,6 +284,11 @@ class AgentStoreService
             }
         }
 
+        if (array_key_exists('requires_delivery_address', $data) || array_key_exists('requiresDeliveryAddress', $data)) {
+            $val = $data['requires_delivery_address'] ?? $data['requiresDeliveryAddress'];
+            $fields['requires_delivery_address'] = (bool) $val;
+        }
+
         if (! empty($fields)) {
             $product->update($fields);
             $this->syncEmbeddings($product);
