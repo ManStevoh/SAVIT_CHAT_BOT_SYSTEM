@@ -386,17 +386,10 @@ class PublicStorefrontController extends Controller
         $hasWhatsAppPhone = is_string($sessionPhone) && trim($sessionPhone) !== '';
         $authCustomer = StorefrontAuthController::getAuthenticatedCustomer($company);
 
-        // Web Direct visitors (non-WhatsApp) MUST be logged in to track orders
-        if (! $hasWhatsAppPhone && ! $authCustomer) {
-            return back()->withErrors([
-                'checkout' => 'Please sign in or create an account with your Email & Password to complete your order.',
-            ])->withInput();
-        }
-
         $cart = $this->storefront->cartSummary($company, $session);
         $hasDigitalItems = (bool) ($cart['hasDigitalItems'] ?? false);
         $digitalOnly = (bool) ($cart['digitalOnly'] ?? false);
-        $emailRequired = (bool) $authCustomer || $hasDigitalItems;
+        $emailRequired = ! $hasWhatsAppPhone || (bool) $authCustomer || $hasDigitalItems;
 
         $validated = $request->validate([
             'customerName' => 'required|string|max:255',
@@ -413,7 +406,7 @@ class PublicStorefrontController extends Controller
             'marketingConsent' => 'sometimes|boolean',
         ], [
             'acceptTerms.accepted' => 'Please agree to this store\'s terms and conditions.',
-            'customerEmail.required' => 'An email address is required for digital product delivery.',
+            'customerEmail.required' => 'An email address is required so we can send your order receipt and tracking.',
         ]);
         $validated['acceptTerms'] = true;
         $validated['marketingConsent'] = $request->boolean('marketingConsent');

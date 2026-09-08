@@ -486,6 +486,7 @@ class OrderPaymentService
         app(MailService::class)->sendCustomerPaymentFulfillmentSafely(
             $fresh->fresh(['orderProducts', 'company.settings'])
         );
+        $this->provisionPaidCustomerAccountSafely($fresh->fresh(['company']));
     }
 
     private function recordExperimentConversionIfAssigned(Order $order): void
@@ -550,6 +551,75 @@ class OrderPaymentService
             ]);
         } else {
             Log::warning('OrderPaymentService: WhatsApp send failed', ['order_id' => $order->id, 'error' => $result['error'] ?? 'unknown']);
+        }
+    }
+
+    /**
+     * Automatically provision a StorefrontCustomer account upon payment if the customer provided an email
+     * and does not yet have a password set, and send an email with a secure link to set their password.
+     */
+    private function provisionPaidCustomerAccountSafely(Order $order): void
+    {
+        $email = strtolower(trim((string) ($order->customer_email ?? '')));
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        $company = $order->company;
+        if (! $company) {
+            return;
+        }
+
+        try {
+            $customer = \App\Models\StorefrontCustomer::where('company_id', $company->id)
+                ->where('email', $email)
+                ->first();
+
+            $isNewOrNoPassword = ! $customer || empty($customer->password);
+
+            if (! $customer) {
+                $customer = \App\Models\StorefrontCustomer::create([
+                    'company_id' => $company->id,
+                    'email' => $email,
+                    'name' => trim((string) ($order->customer_name ?: 'Customer')),
+                    'phone' => $order->customer_phone ?: null,
+                    'last_order_at' => now(),
+                    'terms_accepted_at' => now(),
+                ]);
+            } else {
+                $customer->update([
+                    'last_order_at' => now(),
+                    'name' => $customer->name ?: trim((string) ($order->customer_name ?: 'Customer')),
+                    'phone' => $customer->phone ?: ($order->customer_phone ?: null),
+                ]);
+            }
+
+            if ($order->delivery_address) {
+                app(\App\Services\Storefront\StorefrontService::class)->saveDefaultAddress($customer, $order->delivery_address);
+            }
+
+            // Only send account creation & password setup link if they haven't set a password yet
+            if ($isNewOrNoPassword) {
+                $setupUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                    'storefront.account.set-password',
+                    now()->addDays(7),
+                    ['slug' => $company->store_slug, 'customer' => $customer->id]
+                );
+
+                app(MailService::class)->sendStorefrontCustomerPasswordSetupEmail(
+                    $customer,
+                    $company,
+                    $setupUrl,
+                    false,
+                    $order
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to auto-provision storefront customer account on payment', [
+                'order_id' => $order->id,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

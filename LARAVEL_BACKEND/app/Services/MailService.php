@@ -304,6 +304,45 @@ class MailService
     }
 
     /**
+     * Send automatic storefront customer account creation & password setup/reset email.
+     */
+    public function sendStorefrontCustomerPasswordSetupEmail(
+        \App\Models\StorefrontCustomer $customer,
+        \App\Models\Company $company,
+        string $setupPasswordUrl,
+        bool $isReset = false,
+        ?\App\Models\Order $order = null
+    ): void {
+        $to = strtolower(trim((string) $customer->email));
+        if ($to === '' || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        $store = trim((string) ($company->name ?? '')) ?: 'the store';
+        $name = trim((string) ($customer->name ?? '')) ?: 'there';
+
+        if ($isReset) {
+            $subject = 'Reset your password for '.$store;
+            $html = '<p>Hi '.e($name).',</p>';
+            $html .= '<p>We received a request to set or reset the password for your customer account at <strong>'.e($store).'</strong>.</p>';
+            $html .= '<p>Click the secure button below to set your password:</p>';
+            $html .= $this->emailButton($setupPasswordUrl, 'Set / Reset Password');
+            $html .= '<p class="text-muted" style="color:#6b7280;font-size:12px;">This link is valid for 7 days. If you did not request this, you can safely ignore this email.</p>';
+        } else {
+            $orderRef = $order ? ' for your order #'.$order->order_number : '';
+            $subject = 'Your account at '.$store.$orderRef;
+            $html = '<p>Hi '.e($name).',</p>';
+            $html .= '<p>Thank you for your purchase from <strong>'.e($store).'</strong>!</p>';
+            $html .= '<p>An account has been automatically created for you using <strong>'.e($to).'</strong> so you can easily track your order, view past receipts, and speed up future checkout.</p>';
+            $html .= '<p>To access your account and manage your orders, please set a password:</p>';
+            $html .= $this->emailButton($setupPasswordUrl, 'Create Your Password');
+            $html .= '<p class="text-muted" style="color:#6b7280;font-size:12px;">This secure link is valid for 7 days. You can also request a new link anytime from the store login screen.</p>';
+        }
+
+        $this->send($to, $subject, self::wrapEmailBody($html), strip_tags($html));
+    }
+
+    /**
      * Confirmation email to the shopper after any purchase (storefront, WhatsApp, or dashboard).
      */
     public function sendCustomerOrderConfirmation(Order $order): void

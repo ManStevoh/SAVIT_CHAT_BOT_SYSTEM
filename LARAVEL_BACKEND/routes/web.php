@@ -212,7 +212,11 @@ Route::get('/s/{slug}/wishlist', [PublicStorefrontController::class, 'wishlist']
 Route::post('/s/{slug}/wishlist/toggle', [PublicStorefrontController::class, 'wishlistToggle'])->name('storefront.wishlist.toggle');
 Route::post('/s/{slug}/p/{product}/reviews', [PublicStorefrontController::class, 'reviewStore'])->name('storefront.product.reviews.store');
 
-// Storefront Customer Auth (Email + Password for non-WhatsApp buyers)
+// Storefront Customer Auth
+Route::post('/s/{slug}/account/check-email', [StorefrontAuthController::class, 'checkEmail'])->name('storefront.account.check-email');
+Route::post('/s/{slug}/account/forgot-password', [StorefrontAuthController::class, 'forgotPassword'])->name('storefront.account.forgot-password');
+Route::get('/s/{slug}/account/set-password/{customer}', [StorefrontAuthController::class, 'showSetPassword'])->middleware('signed')->name('storefront.account.set-password');
+Route::post('/s/{slug}/account/set-password/{customer}', [StorefrontAuthController::class, 'setPassword'])->middleware('signed')->name('storefront.account.set-password.submit');
 Route::post('/s/{slug}/account/register', [StorefrontAuthController::class, 'register'])->name('storefront.account.register');
 Route::post('/s/{slug}/account/login', [StorefrontAuthController::class, 'login'])->name('storefront.account.login');
 Route::post('/s/{slug}/account/logout', [StorefrontAuthController::class, 'logout'])->name('storefront.account.logout');

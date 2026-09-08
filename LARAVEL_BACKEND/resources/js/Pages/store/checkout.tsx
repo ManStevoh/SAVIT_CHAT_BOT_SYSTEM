@@ -111,10 +111,60 @@ export default function StoreCheckoutPage({
   const [submitting, setSubmitting] = useState(false)
   const [quote, setQuote] = useState<Quote | null>(null)
   const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'forgot'>('login')
+  const [authModalEmail, setAuthModalEmail] = useState('')
+  const [existingAccountDetected, setExistingAccountDetected] = useState<{ email: string; name?: string } | null>(null)
+  const [checkingEmail, setCheckingEmail] = useState(false)
   const [showMoreOptions, setShowMoreOptions] = useState(false)
 
   const displayCurrency = company.displayCurrency || company.currency
   const displayRate = company.displayRate || 1.0
+
+  // Check if customer email already has an account with a password
+  useEffect(() => {
+    if (authCustomer) {
+      setExistingAccountDetected(null)
+      return
+    }
+
+    const trimmed = customerEmail.trim().toLowerCase()
+    if (!trimmed || !trimmed.includes('@') || !trimmed.includes('.')) {
+      setExistingAccountDetected(null)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setCheckingEmail(true)
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        const res = await fetch(`/s/${slug}/account/check-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-CSRF-TOKEN': csrf,
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ email: trimmed }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.exists && data.hasPassword) {
+            setExistingAccountDetected({ email: trimmed, name: data.name })
+          } else {
+            setExistingAccountDetected(null)
+          }
+        }
+      } catch {
+        // ignore network error
+      } finally {
+        setCheckingEmail(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [customerEmail, authCustomer, slug])
 
   // Detect WhatsApp traffic via URL phone query or session phone
   const [isWhatsAppVisitor, setIsWhatsAppVisitor] = useState(Boolean(sessionPhone && sessionPhone.trim() !== ''))
@@ -204,12 +254,6 @@ export default function StoreCheckoutPage({
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
-
-    // Non-WhatsApp Web direct visitors MUST be authenticated
-    if (!isWhatsAppVisitor && !authCustomer) {
-      setAuthModalOpen(true)
-      return
-    }
 
     setSubmitting(true)
     router.post(
@@ -321,26 +365,29 @@ export default function StoreCheckoutPage({
                 </button>
               </div>
             ) : (
-              <div className="rounded-3xl border border-amber-200/80 bg-amber-50/90 p-5 shadow-xs dark:border-amber-900/50 dark:bg-amber-950/40">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm">
-                    <Lock className="h-5 w-5" />
+              <div className="flex items-center justify-between rounded-3xl border border-slate-200/80 bg-slate-100/80 p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900/60">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    <User className="h-5 w-5" />
                   </div>
-                  <div className="space-y-1">
-                    <h2 className="text-sm font-bold text-amber-950 dark:text-amber-200">Account Required for Web Checkout</h2>
-                    <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">
-                      Sign in or create an account with Email & Password to track payments, order status, and saved addresses.
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Guest Checkout</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Have an account? Sign in for saved details, or proceed as guest.
                     </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setAuthModalOpen(true)}
-                      className="mt-2.5 gap-2 rounded-xl bg-amber-950 text-white hover:bg-amber-900 dark:bg-amber-600 dark:hover:bg-amber-500"
-                    >
-                      <User className="h-4 w-4" /> Sign In / Create Account
-                    </Button>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthModalMode('login')
+                    setAuthModalEmail(customerEmail)
+                    setAuthModalOpen(true)
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  Sign In
+                </button>
               </div>
             )}
 
@@ -387,6 +434,27 @@ export default function StoreCheckoutPage({
                         className="pl-10 rounded-2xl"
                       />
                     </div>
+                    {existingAccountDetected && !authCustomer && (
+                      <div className="mt-1.5 flex items-center justify-between rounded-xl border border-blue-200/80 bg-blue-50/90 p-2.5 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200">
+                        <div className="flex items-center gap-2">
+                          <Lock className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <span>
+                            Account found for <strong>{existingAccountDetected.email}</strong>.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthModalMode('login')
+                            setAuthModalEmail(existingAccountDetected.email)
+                            setAuthModalOpen(true)
+                          }}
+                          className="font-bold underline hover:text-blue-700 shrink-0 ml-2"
+                        >
+                          Sign In
+                        </button>
+                      </div>
+                    )}
                     {hasDigitalItems ? (
                       <p className="text-[11px] text-slate-500">Required so we can email digital files or license keys after payment.</p>
                     ) : null}
@@ -759,6 +827,8 @@ export default function StoreCheckoutPage({
         slug={slug}
         companyName={company.name}
         termsUrl={company.termsUrl}
+        initialMode={authModalMode}
+        prefillEmail={authModalEmail || customerEmail}
       />
     </div>
   )
