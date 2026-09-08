@@ -1,8 +1,9 @@
-# Push to GitHub and trigger production deploy (GitHub Actions → SSH → essemchat subdomain).
+# Push the current branch. Production deploy is automatic only after merge/push to main.
 # Usage:
-#   .\scripts\deploy-from-local.ps1              # push current branch, deploy if on main
-#   .\scripts\deploy-from-local.ps1 -Branch main  # merge workflow: checkout main, push, deploy
+#   .\scripts\deploy-from-local.ps1              # push current branch (CI on PRs/feature; deploy on main)
+#   .\scripts\deploy-from-local.ps1 -Branch main
 #   .\scripts\deploy-from-local.ps1 -RunTests     # run PHPUnit locally before push
+#   .\scripts\deploy-from-local.ps1 -ManualDeployOnly  # workflow_dispatch production deploy
 
 param(
     [string]$Branch = "",
@@ -31,7 +32,7 @@ $CurrentBranch = git branch --show-current
 $TargetBranch = if ($Branch) { $Branch } else { $CurrentBranch }
 
 if ($ManualDeployOnly) {
-    Write-Host "==> Triggering deploy workflow on GitHub (manual)..."
+    Write-Host "==> Triggering production deploy workflow on GitHub..."
     gh workflow run deploy-production.yml --ref main
     Write-Host "Watch: https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions"
     exit 0
@@ -54,11 +55,10 @@ git push origin $TargetBranch
 
 if ($TargetBranch -eq "main") {
     Write-Host ""
-    Write-Host "Push to main will trigger: CI tests -> rsync -> post-deploy -> health check" -ForegroundColor Green
+    Write-Host "Push to main triggers: CI tests -> /deploy/agent -> /api/health" -ForegroundColor Green
     Write-Host "Actions: https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions"
     Write-Host "Live app: https://relayiq.app"
 } else {
     Write-Host ""
-    Write-Host "Pushed $TargetBranch. CI runs on feature branches; production deploy runs only on main." -ForegroundColor Cyan
-    Write-Host "To deploy: merge to main, or run: .\scripts\deploy-from-local.ps1 -ManualDeployOnly"
+    Write-Host "Pushed $TargetBranch. CI runs on the PR; production deploys only after merge to main." -ForegroundColor Cyan
 }

@@ -180,12 +180,14 @@ After the app is live with HTTPS:
 ## Post-deploy verification
 
 ```bash
+curl https://relayiq.app/api/health
 curl https://relayiq.app/up
 curl https://relayiq.app/api/plans
 ```
 
 | Check | Expected |
 |-------|----------|
+| `/api/health` | JSON `{ "status": "ok", "version": "..." }` |
 | `/up` | 200 OK |
 | `/` | Landing page (Inertia/React) |
 | `/api/plans` | JSON plan list |
@@ -201,13 +203,9 @@ See [GitHub Pages Setup](../GITHUB_PAGES_SETUP.md).
 
 ## Automated deploy (CI/CD)
 
-Production deploy is automated via **GitHub Actions** (not Vercel):
+Push or merge to **`main`** runs GitHub Actions: tests, then `POST /deploy/agent` against the cPanel checkout at `/home/qkbghwib/relayiq.app`. Do not use cPanel Git → Update for normal releases.
 
-```
-Local → git push main → GitHub Actions → SSH/rsync → relayiq.app
-```
-
-See **[CI/CD Pipeline](ci-cd.md)** for one-time SSH + secrets setup and the `scripts/deploy-from-local.ps1` helper.
+See **[CI/CD Pipeline](ci-cd.md)**.
 
 ## Rollback
 

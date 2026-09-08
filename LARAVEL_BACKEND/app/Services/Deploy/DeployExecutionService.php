@@ -286,6 +286,14 @@ class DeployExecutionService
             $emitLine("🔄 [git reset] Resetting to origin/{$branch}...");
             $this->runStreamingCommand('cd ' . escapeshellarg($repoRoot) . ' && git reset --hard origin/' . escapeshellarg($branch) . ' 2>&1', $logs, $statusFile, $branch, $onLine);
 
+            $postDeploy = base_path('scripts/post-deploy.sh');
+            if (is_file($postDeploy)) {
+                $emitLine('⚡ Running scripts/post-deploy.sh');
+                $this->runStreamingCommand('bash ' . escapeshellarg($postDeploy) . ' 2>&1', $logs, $statusFile, $branch, $onLine);
+
+                return;
+            }
+
             // Step 3: Database migrations
             $emitLine("🗄️  [migrate] Running database migrations...");
             try {
@@ -326,6 +334,13 @@ class DeployExecutionService
                 $emitLine('📡 [event:cache]: Events and listeners cached');
             } catch (\Throwable $e) {
                 $emitLine('⚠️  [cache]: ' . $e->getMessage());
+            }
+
+            try {
+                Artisan::call('queue:restart');
+                $emitLine('🔁 [queue:restart]: Workers signaled to restart');
+            } catch (\Throwable $e) {
+                $emitLine('⚠️  [queue:restart]: ' . $e->getMessage());
             }
         }
     }
