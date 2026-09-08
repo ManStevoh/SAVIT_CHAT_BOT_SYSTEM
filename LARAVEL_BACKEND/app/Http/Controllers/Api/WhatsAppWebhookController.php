@@ -348,16 +348,17 @@ class WhatsAppWebhookController extends Controller
         $companyId = $account->company_id;
         $contacts = $value['contacts'] ?? [];
         $customerName = isset($contacts[0]['profile']['name']) ? $contacts[0]['profile']['name'] : null;
+        $contactWaId = isset($contacts[0]['wa_id']) ? (string) $contacts[0]['wa_id'] : null;
 
         foreach ($value['messages'] ?? [] as $msg) {
-            $this->processMessage($msg, $account, $customerName);
+            $this->processMessage($msg, $account, $customerName, $contactWaId);
         }
     }
 
-    protected function processMessage(array $msg, WhatsAppAccount $account, ?string $customerName): void
+    protected function processMessage(array $msg, WhatsAppAccount $account, ?string $customerName, ?string $contactWaId = null): void
     {
         $type = $msg['type'] ?? '';
-        $from = (string) ($msg['from'] ?? '');
+        $from = (string) ($msg['from'] ?? $contactWaId ?? '');
         $waMessageId = $msg['id'] ?? null;
         $companyId = (int) $account->company_id;
         $phoneNumberId = (string) $account->phone_number_id;
@@ -456,6 +457,9 @@ class WhatsAppWebhookController extends Controller
         if (! $chat->wasRecentlyCreated) {
             if ($customerName !== null && $customerName !== '') {
                 $chat->update(['customer_name' => $customerName]);
+            }
+            if ($customerPhone !== '' && (string) $chat->customer_phone === '') {
+                $chat->update(['customer_phone' => $customerPhone]);
             }
             $chat->increment('unread_count');
             $chat->update([

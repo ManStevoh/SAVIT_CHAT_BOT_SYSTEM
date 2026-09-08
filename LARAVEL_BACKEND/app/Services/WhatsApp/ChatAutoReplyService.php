@@ -102,10 +102,26 @@ class ChatAutoReplyService
             return false;
         }
 
+        $customerPhone = trim((string) ($chat->customer_phone ?? ''));
+        if ($customerPhone === '') {
+            $fallback = Chat::query()
+                ->where('company_id', $chat->company_id)
+                ->where('customer_name', $chat->customer_name)
+                ->where('id', '!=', $chat->id)
+                ->whereNotNull('customer_phone')
+                ->where('customer_phone', '!=', '')
+                ->latest('id')
+                ->value('customer_phone');
+            if ($fallback) {
+                $customerPhone = trim((string) $fallback);
+                $chat->update(['customer_phone' => $customerPhone]);
+            }
+        }
+
         ProcessIncomingWhatsAppMessage::dispatchSyncIncoming(
             (int) $chat->company_id,
             (int) $chat->id,
-            (string) $chat->customer_phone,
+            $customerPhone,
             (string) $account->phone_number_id,
             (string) ($lastCustomer->content ?? ''),
             $chat->customer_name,
