@@ -96,4 +96,44 @@ class ProductMultipartBooleanTest extends TestCase
             ->assertJsonPath('product.requiresDeliveryAddress', true)
             ->assertJsonPath('product.stock', 5);
     }
+
+    public function test_store_and_update_respects_requires_delivery_address_flag(): void
+    {
+        $user = $this->actingCompanyOwner();
+
+        // 1. Create product with requiresDeliveryAddress explicitly set to false
+        $res = $this->post('/api/company/products', [
+            'name' => 'Online Masterclass',
+            'price' => 199,
+            'stock' => 100,
+            'category' => 'Courses',
+            'productType' => 'digital',
+            'fulfillmentType' => 'download',
+            'requiresDeliveryAddress' => '0',
+        ])->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('product.requiresDeliveryAddress', false);
+
+        $productId = $res->json('product.id');
+        $product = Product::find($productId);
+        $this->assertFalse((bool) $product->requires_delivery_address);
+
+        // 2. Update product toggling requiresDeliveryAddress to true
+        $this->post("/api/company/products/{$productId}", [
+            'requiresDeliveryAddress' => '1',
+        ])->assertOk()
+            ->assertJsonPath('product.requiresDeliveryAddress', true);
+
+        $product->refresh();
+        $this->assertTrue((bool) $product->requires_delivery_address);
+
+        // 3. Update product using snake_case requires_delivery_address to false
+        $this->post("/api/company/products/{$productId}", [
+            'requires_delivery_address' => '0',
+        ])->assertOk()
+            ->assertJsonPath('product.requiresDeliveryAddress', false);
+
+        $product->refresh();
+        $this->assertFalse((bool) $product->requires_delivery_address);
+    }
 }

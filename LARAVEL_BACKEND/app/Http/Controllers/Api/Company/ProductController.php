@@ -109,6 +109,7 @@ class ProductController extends Controller
             'fulfillmentType' => 'nullable|in:shipping,download,link,booking,manual',
             'trackInventory' => 'sometimes|boolean',
             'requiresDeliveryAddress' => 'sometimes|boolean',
+            'requires_delivery_address' => 'sometimes|boolean',
             'accessUrl' => 'nullable|url|max:2048',
             'serviceBookingUrl' => 'nullable|url|max:2048',
             'fulfillmentInstructions' => 'nullable|string',
@@ -313,6 +314,7 @@ class ProductController extends Controller
             'fulfillmentType' => 'sometimes|in:shipping,download,link,booking,manual',
             'trackInventory' => 'sometimes|boolean',
             'requiresDeliveryAddress' => 'sometimes|boolean',
+            'requires_delivery_address' => 'sometimes|boolean',
             'accessUrl' => 'nullable|url|max:2048',
             'serviceBookingUrl' => 'nullable|url|max:2048',
             'fulfillmentInstructions' => 'nullable|string',
@@ -584,7 +586,7 @@ class ProductController extends Controller
             'fulfillmentType' => $product->fulfillment_type ?? 'shipping',
             'image' => $imageUrl,
             'trackInventory' => (bool) ($product->track_inventory ?? true),
-            'requiresDeliveryAddress' => (bool) ($product->requires_delivery_address ?? true),
+            'requiresDeliveryAddress' => (bool) ($product->requires_delivery_address ?? ($product->product_type === 'physical')),
             'accessUrl' => $product->access_url ?? null,
             'serviceBookingUrl' => $product->service_booking_url ?? null,
             'fulfillmentInstructions' => $product->fulfillment_instructions ?? null,
@@ -656,7 +658,7 @@ class ProductController extends Controller
             'fulfillmentType' => (string) ($product->fulfillment_type ?? 'shipping'),
             'image' => $imageUrl,
             'trackInventory' => (bool) ($product->track_inventory ?? true),
-            'requiresDeliveryAddress' => (bool) ($product->requires_delivery_address ?? true),
+            'requiresDeliveryAddress' => (bool) ($product->requires_delivery_address ?? ($product->product_type === 'physical')),
             'accessUrl' => null,
             'serviceBookingUrl' => null,
             'fulfillmentInstructions' => null,
@@ -851,6 +853,13 @@ class ProductController extends Controller
      */
     private function normalizeMultipartBooleans(Request $request, array $keys): void
     {
+        if ($request->has('requires_delivery_address') && ! $request->has('requiresDeliveryAddress')) {
+            $request->merge(['requiresDeliveryAddress' => $request->input('requires_delivery_address')]);
+        }
+        if ($request->has('requiresDeliveryAddress') && ! $request->has('requires_delivery_address')) {
+            $request->merge(['requires_delivery_address' => $request->input('requiresDeliveryAddress')]);
+        }
+
         $merged = [];
         foreach ($keys as $key) {
             if (! $request->exists($key)) {
@@ -952,7 +961,9 @@ class ProductController extends Controller
             : ($current?->track_inventory ?? ($productType === 'physical'));
         $requiresDelivery = array_key_exists('requiresDeliveryAddress', $validated)
             ? (bool) $validated['requiresDeliveryAddress']
-            : ($current?->requires_delivery_address ?? ($productType === 'physical' && $fulfillmentType === 'shipping'));
+            : (array_key_exists('requires_delivery_address', $validated)
+                ? (bool) $validated['requires_delivery_address']
+                : ($current?->requires_delivery_address ?? ($productType === 'physical' && $fulfillmentType === 'shipping')));
 
         if (! in_array($productType, self::PRODUCT_TYPES, true)) {
             $productType = 'physical';

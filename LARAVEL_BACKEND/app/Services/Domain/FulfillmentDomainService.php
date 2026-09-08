@@ -58,31 +58,26 @@ final class FulfillmentDomainService
         }
 
         foreach ($state->cartItems as $item) {
-            $data = $item['fulfillment_data'] ?? null;
             $productId = $item['product_id'] ?? null;
 
-            if (is_array($data)) {
-                if (($data['requiresDeliveryAddress'] ?? false) === false) {
-                    continue;
-                }
-
-                // If snapshot claims true, check live Product in case it changed or is digital
-                if ($productId) {
-                    $product = Product::find($productId);
-                    if ($product && ! $product->requires_delivery_address) {
-                        continue;
-                    }
-                }
-
-                return true;
-            }
-
-            // Fall back to product in DB if no snapshot
+            // 1. Live product record in DB is the authoritative source of truth
             if ($productId) {
                 $product = Product::find($productId);
-                if ($product && ! $product->requires_delivery_address) {
+                if ($product !== null) {
+                    if ((bool) $product->requires_delivery_address) {
+                        return true;
+                    }
                     continue;
                 }
+            }
+
+            // 2. Fall back to snapshot if live product is not found
+            $data = $item['fulfillment_data'] ?? null;
+            if (is_array($data)) {
+                if (($data['requiresDeliveryAddress'] ?? false) === true) {
+                    return true;
+                }
+                continue;
             }
 
             return true;

@@ -148,6 +148,54 @@ class WorkflowEngineTest extends TestCase
         $this->assertStringContainsString('Confirm & place order', (string) $result->customerReply);
     }
 
+    public function test_workflow_engine_respects_checked_delivery_address_even_for_digital_product(): void
+    {
+        $company = Company::create([
+            'name' => 'Hybrid Digital Store',
+            'email' => 'hybrid@test.local',
+            'status' => 'active',
+        ]);
+
+        // Digital product where merchant explicitly CHECKED "Ask for delivery address" (e.g. to mail a physical gift certificate)
+        $product = Product::create([
+            'company_id' => $company->id,
+            'name' => 'Online Course with Physical Kit',
+            'price' => 1200.00,
+            'stock' => 50,
+            'status' => 'active',
+            'product_type' => 'digital',
+            'requires_delivery_address' => true,
+        ]);
+
+        $engine = app(WorkflowEngine::class);
+
+        $state = new ConversationState(
+            chatId: 1,
+            companyId: $company->id,
+            customerPhone: '254700111222',
+            customerName: 'Ken',
+            step: CheckoutStep::BUILDING_CART,
+            cartItems: [[
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'price' => 1200.00,
+                'quantity' => 1,
+                'fulfillment_data' => $product->fulfillmentSnapshot(),
+            ]]
+        );
+
+        $intent = new IntentResult(
+            intent: CommerceIntent::START_CHECKOUT,
+            confidence: 0.95
+        );
+
+        $result = $engine->handle($state, $intent, $company);
+
+        // Since requires_delivery_address was checked, it MUST prompt for delivery address
+        $this->assertEquals(CheckoutStep::COLLECTING_ADDRESS, $result->nextState->step);
+        $this->assertEquals(ResponseSpec::PROMPT_DELIVERY_ADDRESS->value, $result->responseSpec);
+    }
+
     public function test_workflow_engine_transitions_to_order_review_on_valid_address(): void
     {
         [$company, $product] = $this->seedCompanyAndProduct();

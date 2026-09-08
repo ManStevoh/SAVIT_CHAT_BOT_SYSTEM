@@ -421,7 +421,7 @@ export default function ProductsPage() {
       productType: product.productType ?? 'physical',
       fulfillmentType: product.fulfillmentType ?? 'shipping',
       trackInventory: product.trackInventory ?? true,
-      requiresDeliveryAddress: product.requiresDeliveryAddress ?? true,
+      requiresDeliveryAddress: product.requiresDeliveryAddress ?? ((product.productType ?? 'physical') === 'physical'),
       accessUrl: product.accessUrl ?? '',
       serviceBookingUrl: product.serviceBookingUrl ?? '',
       fulfillmentInstructions: product.fulfillmentInstructions ?? '',
@@ -731,7 +731,16 @@ export default function ProductsPage() {
           label="Item type"
           name="productType"
           value={formData.productType}
-          onChange={(value) => setFormData((prev) => ({ ...prev, productType: value as ProductFormData['productType'] }))}
+          onChange={(value) => {
+            const nextType = value as ProductFormData['productType'];
+            setFormData((prev) => ({
+              ...prev,
+              productType: nextType,
+              fulfillmentType: nextType === 'physical' ? 'shipping' : (nextType === 'service' ? 'booking' : 'download'),
+              requiresDeliveryAddress: nextType === 'physical',
+              trackInventory: nextType === 'physical' ? prev.trackInventory : false,
+            }));
+          }}
           options={[
             { value: 'physical', label: 'Physical product' },
             { value: 'digital', label: 'Digital good' },
@@ -808,21 +817,27 @@ export default function ProductsPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 rounded-md border border-border/70 p-3">
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
           <input
             type="checkbox"
             checked={formData.trackInventory}
             onChange={(e) => setFormData((prev) => ({ ...prev, trackInventory: e.target.checked }))}
           />
-          Track inventory
+          <span>Track inventory</span>
         </label>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-start gap-2 text-sm cursor-pointer select-none">
           <input
             type="checkbox"
+            className="mt-0.5"
             checked={formData.requiresDeliveryAddress}
             onChange={(e) => setFormData((prev) => ({ ...prev, requiresDeliveryAddress: e.target.checked }))}
           />
-          Ask for delivery address
+          <div>
+            <span>Ask for delivery address</span>
+            <span className="block text-xs text-muted-foreground font-normal">
+              {formData.requiresDeliveryAddress ? 'Prompt address at checkout' : 'Skip address at checkout'}
+            </span>
+          </div>
         </label>
       </div>
 

@@ -2288,33 +2288,26 @@ class OrderFlowService
         $items = $draft['items'] ?? [];
 
         foreach ($items as $item) {
-            $data = $item['fulfillment_data'] ?? null;
             $productId = isset($item['product_id']) ? (int) $item['product_id'] : 0;
 
-            if (is_array($data)) {
-                if (($data['requiresDeliveryAddress'] ?? false) === false) {
-                    // Snapshot says no address needed — trust it.
-                    continue;
-                }
-
-                // Snapshot says address needed — but cross-check the live product in case
-                // it was updated (e.g. type changed to digital) after this snapshot was taken.
-                if ($productId > 0) {
-                    $product = Product::find($productId);
-                    if ($product !== null && ! $product->requires_delivery_address) {
-                        continue; // Live product overrides stale snapshot.
-                    }
-                }
-
-                return true;
-            }
-
-            // No snapshot at all — fall back to the live product record.
+            // 1. Live product record in DB is the authoritative source of truth
             if ($productId > 0) {
                 $product = Product::find($productId);
-                if ($product !== null && ! $product->requires_delivery_address) {
+                if ($product !== null) {
+                    if ((bool) $product->requires_delivery_address) {
+                        return true;
+                    }
                     continue;
                 }
+            }
+
+            // 2. Fall back to snapshot if live product is not found
+            $data = $item['fulfillment_data'] ?? null;
+            if (is_array($data)) {
+                if (($data['requiresDeliveryAddress'] ?? false) === true) {
+                    return true;
+                }
+                continue;
             }
 
             // Unknown product or confirmed physical — require address.
@@ -2338,32 +2331,26 @@ class OrderFlowService
         }
 
         foreach ($order->orderProducts as $line) {
-            $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : null;
             $productId = $line->product_id ? (int) $line->product_id : 0;
 
-            if (is_array($data)) {
-                if (($data['requiresDeliveryAddress'] ?? false) === false) {
-                    // Snapshot says no address needed — trust it.
-                    continue;
-                }
-
-                // Snapshot says address needed — cross-check live product in case it was updated.
-                if ($productId > 0) {
-                    $product = Product::find($productId);
-                    if ($product !== null && ! $product->requires_delivery_address) {
-                        continue; // Live product overrides stale snapshot.
-                    }
-                }
-
-                return true;
-            }
-
-            // No snapshot — fall back to the live product record.
+            // 1. Live product record in DB is the authoritative source of truth
             if ($productId > 0) {
                 $product = Product::find($productId);
-                if ($product !== null && ! $product->requires_delivery_address) {
+                if ($product !== null) {
+                    if ((bool) $product->requires_delivery_address) {
+                        return true;
+                    }
                     continue;
                 }
+            }
+
+            // 2. Fall back to snapshot if live product is not found
+            $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : null;
+            if (is_array($data)) {
+                if (($data['requiresDeliveryAddress'] ?? false) === true) {
+                    return true;
+                }
+                continue;
             }
 
             return true;

@@ -515,10 +515,12 @@ class AgentStoreService
             'compare_at_price' => $p->compare_at_price ? (float) $p->compare_at_price : null,
             'stock'            => (int) $p->stock,
             'category'         => $p->category,
-            'status'           => $p->status,
-            'product_type'     => $p->product_type,
-            'image'            => $p->image,
-            'description'      => $p->description,
+            'status'                    => $p->status,
+            'product_type'              => $p->product_type,
+            'requires_delivery_address' => (bool) ($p->requires_delivery_address ?? ($p->product_type === 'physical')),
+            'requiresDeliveryAddress'   => (bool) ($p->requires_delivery_address ?? ($p->product_type === 'physical')),
+            'image'                     => $p->image,
+            'description'               => $p->description,
         ];
     }
 }
