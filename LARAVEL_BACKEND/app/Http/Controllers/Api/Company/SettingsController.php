@@ -183,6 +183,27 @@ class SettingsController extends Controller
             'storefrontTermsBody' => is_array($company->storefront_theme)
                 ? (string) ($company->storefront_theme['terms_body'] ?? '')
                 : '',
+            'storefrontAboutTitle' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['about_title'] ?? '')
+                : '',
+            'storefrontAboutBody' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['about_body'] ?? '')
+                : '',
+            'storefrontInstagramUrl' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['instagram_url'] ?? '')
+                : '',
+            'storefrontFacebookUrl' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['facebook_url'] ?? '')
+                : '',
+            'storefrontTiktokUrl' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['tiktok_url'] ?? '')
+                : '',
+            'storefrontTestimonialQuote' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['testimonial_quote'] ?? '')
+                : '',
+            'storefrontTestimonialAuthor' => is_array($company->storefront_theme)
+                ? (string) ($company->storefront_theme['testimonial_author'] ?? '')
+                : '',
         ]);
     }
 
@@ -354,6 +375,13 @@ class SettingsController extends Controller
             'storefrontBusinessType' => 'sometimes|nullable|string|max:80',
             'storefrontTermsTitle' => 'sometimes|nullable|string|max:160',
             'storefrontTermsBody' => 'sometimes|nullable|string|max:20000',
+            'storefrontAboutTitle' => 'sometimes|nullable|string|max:160',
+            'storefrontAboutBody' => 'sometimes|nullable|string|max:8000',
+            'storefrontInstagramUrl' => 'sometimes|nullable|string|max:255',
+            'storefrontFacebookUrl' => 'sometimes|nullable|string|max:255',
+            'storefrontTiktokUrl' => 'sometimes|nullable|string|max:255',
+            'storefrontTestimonialQuote' => 'sometimes|nullable|string|max:500',
+            'storefrontTestimonialAuthor' => 'sometimes|nullable|string|max:120',
             'storefrontTheme' => 'sometimes|nullable|array',
             'storefrontTheme.primary_color' => 'sometimes|nullable|string|max:32',
             'storefrontTheme.accent_color' => 'sometimes|nullable|string|max:32',
@@ -416,6 +444,13 @@ class SettingsController extends Controller
             || array_key_exists('storefrontBusinessType', $companyValidated)
             || array_key_exists('storefrontTermsTitle', $companyValidated)
             || array_key_exists('storefrontTermsBody', $companyValidated)
+            || array_key_exists('storefrontAboutTitle', $companyValidated)
+            || array_key_exists('storefrontAboutBody', $companyValidated)
+            || array_key_exists('storefrontInstagramUrl', $companyValidated)
+            || array_key_exists('storefrontFacebookUrl', $companyValidated)
+            || array_key_exists('storefrontTiktokUrl', $companyValidated)
+            || array_key_exists('storefrontTestimonialQuote', $companyValidated)
+            || array_key_exists('storefrontTestimonialAuthor', $companyValidated)
         ) {
             $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
             if (array_key_exists('storefrontTheme', $companyValidated) && is_array($companyValidated['storefrontTheme'])) {
@@ -442,6 +477,13 @@ class SettingsController extends Controller
                     'street_address',
                     'city',
                     'country',
+                    'about_title',
+                    'about_body',
+                    'instagram_url',
+                    'facebook_url',
+                    'tiktok_url',
+                    'testimonial_quote',
+                    'testimonial_author',
                 ] as $key) {
                     if (array_key_exists($key, $companyValidated['storefrontTheme'])) {
                         $val = $companyValidated['storefrontTheme'][$key];
@@ -491,6 +533,34 @@ class SettingsController extends Controller
             if (array_key_exists('storefrontTermsBody', $companyValidated)) {
                 $termsBody = $companyValidated['storefrontTermsBody'];
                 $theme['terms_body'] = is_string($termsBody) && trim($termsBody) !== '' ? trim($termsBody) : null;
+            }
+            if (array_key_exists('storefrontAboutTitle', $companyValidated)) {
+                $aboutTitle = $companyValidated['storefrontAboutTitle'];
+                $theme['about_title'] = is_string($aboutTitle) && trim($aboutTitle) !== '' ? trim($aboutTitle) : null;
+            }
+            if (array_key_exists('storefrontAboutBody', $companyValidated)) {
+                $aboutBody = $companyValidated['storefrontAboutBody'];
+                $theme['about_body'] = is_string($aboutBody) && trim($aboutBody) !== '' ? trim($aboutBody) : null;
+            }
+            foreach ([
+                'storefrontInstagramUrl' => 'instagram',
+                'storefrontFacebookUrl' => 'facebook',
+                'storefrontTiktokUrl' => 'tiktok',
+            ] as $inputKey => $platform) {
+                if (array_key_exists($inputKey, $companyValidated)) {
+                    $theme[$platform.'_url'] = $this->normalizeSocialUrl(
+                        is_string($companyValidated[$inputKey] ?? null) ? $companyValidated[$inputKey] : null,
+                        $platform
+                    );
+                }
+            }
+            if (array_key_exists('storefrontTestimonialQuote', $companyValidated)) {
+                $quote = $companyValidated['storefrontTestimonialQuote'];
+                $theme['testimonial_quote'] = is_string($quote) && trim($quote) !== '' ? trim($quote) : null;
+            }
+            if (array_key_exists('storefrontTestimonialAuthor', $companyValidated)) {
+                $author = $companyValidated['storefrontTestimonialAuthor'];
+                $theme['testimonial_author'] = is_string($author) && trim($author) !== '' ? trim($author) : null;
             }
             $company->storefront_theme = array_filter(
                 $theme,
@@ -1252,6 +1322,28 @@ class SettingsController extends Controller
             'success' => true,
             'storefrontOgImage' => '',
         ]);
+    }
+
+    private function normalizeSocialUrl(?string $value, string $platform): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+        if (preg_match('#^https?://#i', $value) === 1) {
+            return $value;
+        }
+        $handle = ltrim($value, '@/');
+        if ($handle === '') {
+            return null;
+        }
+
+        return match ($platform) {
+            'instagram' => 'https://instagram.com/'.$handle,
+            'facebook' => 'https://facebook.com/'.$handle,
+            'tiktok' => 'https://tiktok.com/@'.$handle,
+            default => $value,
+        };
     }
 
     private function publicThemeImageUrl(string $value): string

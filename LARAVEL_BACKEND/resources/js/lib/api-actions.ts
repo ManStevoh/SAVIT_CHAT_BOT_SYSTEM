@@ -1853,6 +1853,8 @@ export interface PlanEntitlements {
   allowService?: boolean
   allowBookings?: boolean
   maxBookingsPerMonth?: number | null
+  maxTables?: number | null
+  maxTablesUnlimited?: boolean
   allowStorefront?: boolean
   allowLinkInBio?: boolean
   allowDineIn?: boolean
@@ -1869,6 +1871,7 @@ export interface CreatePlanData {
   description?: string
   features?: string[]
   popular?: boolean
+  isPublic?: boolean
   cta?: string
   sortOrder?: number
   stripePriceId?: string
@@ -1888,6 +1891,7 @@ export interface UpdatePlanData {
   description?: string
   features?: string[]
   popular?: boolean
+  isPublic?: boolean
   cta?: string
   sortOrder?: number
   stripePriceId?: string

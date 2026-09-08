@@ -7,7 +7,7 @@ return [
     |--------------------------------------------------------------------------
     | Slug of the plan assigned when a company registers. Must exist in plans table.
     */
-    'default_plan_slug' => env('SUBSCRIPTION_DEFAULT_PLAN_SLUG', 'starter'),
+    'default_plan_slug' => env('SUBSCRIPTION_DEFAULT_PLAN_SLUG', 'free'),
 
     /*
     |--------------------------------------------------------------------------

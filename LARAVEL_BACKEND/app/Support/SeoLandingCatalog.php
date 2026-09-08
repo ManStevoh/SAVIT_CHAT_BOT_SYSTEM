@@ -60,6 +60,10 @@ class SeoLandingCatalog
      */
     public static function payload(string $slug): ?array
     {
+        if ($slug === 'features') {
+            return FeaturesPageCopy::payload();
+        }
+
         $landing = self::get($slug);
         if ($landing === null) {
             return null;
@@ -114,7 +118,7 @@ class SeoLandingCatalog
                     'content' => [
                         'title' => $landing['ctaTitle'],
                         'description' => $landing['ctaDescription'],
-                        'ctaText' => 'Start free trial',
+                        'ctaText' => 'Get started free',
                         'ctaHref' => '/register',
                     ],
                 ],
@@ -147,21 +151,13 @@ class SeoLandingCatalog
         return [
             'features' => self::page(
                 '/features',
-                'WhatsApp Sales Automation Features — RelayIQ',
-                'AI sales agent, catalog, M-Pesa payments, bookings, dine-in QR, storefront, and team inbox — one commerce OS for WhatsApp.',
-                'WhatsApp sales automation features',
-                'RelayIQ is an AI WhatsApp sales platform for African businesses: catalog-aware replies, in-chat payments, and a matching web storefront.',
+                FeaturesPageCopy::title(),
+                FeaturesPageCopy::description(),
+                FeaturesPageCopy::h1(),
+                FeaturesPageCopy::lede(),
                 <<<'HTML'
-<p>Most tools give you a chatbot <em>or</em> a shop. RelayIQ connects an <a href="/whatsapp-ai-sales-agent">AI sales agent</a>, <a href="/whatsapp-sales-automation">WhatsApp automation</a>, catalog, payments, and inbox so every conversation can become a sale.</p>
-<h2>What you get</h2>
-<ul>
-<li>Fluent AI on official WhatsApp Business Cloud API</li>
-<li>Live catalog (physical, digital, services, bundles)</li>
-<li>M-Pesa STK, Paystack, and Stripe in the same thread — see <a href="/whatsapp-mpesa">M-Pesa on WhatsApp</a></li>
-<li>Web storefront, bookings, and dine-in QR from the same inventory</li>
-<li>Human takeover from a shared inbox</li>
-</ul>
-<p>Built for operators in Kenya and across Africa who already sell on WhatsApp. Explore <a href="/solutions">solutions</a>, <a href="/ai-sales-agent-kenya">AI sales agent Kenya</a>, or <a href="/pricing">pricing</a>.</p>
+<p>RelayIQ is one catalog with four doors: a <a href="/whatsapp-ai-sales-agent">WhatsApp AI sales agent</a>, a web storefront, bookings, and dine-in QR. Payments, inbox, and follow-up sit behind all of them.</p>
+<p>Start on the <a href="/pricing">free Starter plan</a>. See <a href="/solutions">solutions</a> or the <a href="/ai-sales-agent-kenya">Kenya playbook</a>.</p>
 HTML
             ),
             'whatsapp-ai-sales-agent' => self::page(
@@ -307,7 +303,7 @@ HTML
 <li>Invite inbox agents; AI handles the night shift</li>
 </ol>
 <p>Walk through a typical Nairobi retail day (anonymized playbook, not a named customer): <a href="/case-study/kenya-whatsapp-mpesa">WhatsApp + M-Pesa playbook for Kenyan retailers</a>.</p>
-<p>14-day free trial. See <a href="/pricing">pricing</a>, <a href="/whatsapp-ai-sales-agent">how the agent sells</a>, or <a href="/solutions/retail">retail</a>.</p>
+<p>Starter is free forever. See <a href="/pricing">pricing</a>, <a href="/whatsapp-ai-sales-agent">how the agent sells</a>, or <a href="/solutions/retail">retail</a>.</p>
 HTML
                 ,
                 [
@@ -495,8 +491,8 @@ HTML
         $faqs ??= [
             [
                 'id' => '1',
-                'question' => 'Is there a free trial?',
-                'answer' => 'Yes. Starter and Growth include a 14-day free trial. No credit card required to start.',
+                'question' => 'Is there a free plan?',
+                'answer' => 'Yes. Starter is free forever: storefront, bookings, dine-in (5 tables), and 20 products. No credit card required. Growth is KSh 2,000/month if you need more capacity.',
             ],
             [
                 'id' => '2',
@@ -518,7 +514,7 @@ HTML
             'lede' => $lede,
             'html' => $html,
             'ctaTitle' => 'Put an AI employee on your WhatsApp',
-            'ctaDescription' => '14-day free trial. Connect WhatsApp and start selling.',
+            'ctaDescription' => 'Starter is free forever. Connect WhatsApp and start selling.',
             'faqs' => $faqs,
         ];
     }

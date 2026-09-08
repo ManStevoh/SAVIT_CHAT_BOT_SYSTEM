@@ -37,6 +37,7 @@ class PlanController extends Controller
             'description' => $p->description ?? '',
             'features' => $p->features ?? [],
             'popular' => (bool) $p->popular,
+            'isPublic' => (bool) ($p->is_public ?? true),
             'cta' => $p->cta ?? 'Start Free Trial',
             'sortOrder' => $p->sort_order,
             'stripePriceId' => $p->stripe_price_id,
@@ -99,6 +100,9 @@ class PlanController extends Controller
             'entitlements.allow_bookings' => 'sometimes|boolean',
             'entitlements.maxBookingsPerMonth' => 'nullable|integer|min:0|max:1000000',
             'entitlements.max_bookings_per_month' => 'nullable|integer|min:0|max:1000000',
+            'entitlements.maxTables' => 'nullable|integer|min:0|max:1000000',
+            'entitlements.max_tables' => 'nullable|integer|min:0|max:1000000',
+            'entitlements.maxTablesUnlimited' => 'sometimes|boolean',
             'entitlements.allowStorefront' => 'sometimes|boolean',
             'entitlements.allow_storefront' => 'sometimes|boolean',
             'entitlements.allowLinkInBio' => 'sometimes|boolean',
@@ -147,6 +151,7 @@ class PlanController extends Controller
             'allow_service' => $e['allowService'] ?? $e['allow_service'] ?? null,
             'allow_bookings' => $e['allowBookings'] ?? $e['allow_bookings'] ?? null,
             'max_bookings_per_month' => $e['maxBookingsPerMonth'] ?? $e['max_bookings_per_month'] ?? null,
+            'max_tables' => ! empty($e['maxTablesUnlimited']) ? null : ($e['maxTables'] ?? $e['max_tables'] ?? null),
             'allow_storefront' => $e['allowStorefront'] ?? $e['allow_storefront'] ?? null,
             'allow_link_in_bio' => $e['allowLinkInBio'] ?? $e['allow_link_in_bio'] ?? null,
             'allow_dine_in' => $e['allowDineIn'] ?? $e['allow_dine_in'] ?? null,
@@ -182,6 +187,11 @@ class PlanController extends Controller
         if (array_key_exists('maxBookingsPerMonth', $e) || array_key_exists('max_bookings_per_month', $e)) {
             $input['max_bookings_per_month'] = $snake['max_bookings_per_month'];
         }
+        if (! empty($e['maxTablesUnlimited'])) {
+            $input['max_tables'] = null;
+        } elseif (array_key_exists('maxTables', $e) || array_key_exists('max_tables', $e)) {
+            $input['max_tables'] = $snake['max_tables'];
+        }
 
         return EntitlementService::normalizeAdminEntitlements($input, $slug);
     }
@@ -201,6 +211,7 @@ class PlanController extends Controller
             'features' => 'nullable|array',
             'features.*' => 'string|max:255',
             'popular' => 'boolean',
+            'isPublic' => 'boolean',
             'cta' => 'nullable|string|max:100',
             'sortOrder' => 'nullable|integer|min:0',
             'stripePriceId' => 'nullable|string|max:255',
@@ -229,6 +240,7 @@ class PlanController extends Controller
             'description' => $validated['description'] ?? null,
             'features' => $validated['features'] ?? [],
             'popular' => $validated['popular'] ?? false,
+            'is_public' => $validated['isPublic'] ?? true,
             'cta' => $validated['cta'] ?? 'Start Free Trial',
             'sort_order' => $validated['sortOrder'] ?? 0,
             'stripe_price_id' => $validated['stripePriceId'] ?? null,
@@ -260,6 +272,7 @@ class PlanController extends Controller
             'features' => 'nullable|array',
             'features.*' => 'string|max:255',
             'popular' => 'boolean',
+            'isPublic' => 'boolean',
             'cta' => 'nullable|string|max:100',
             'sortOrder' => 'nullable|integer|min:0',
             'stripePriceId' => 'nullable|string|max:255',
@@ -298,6 +311,9 @@ class PlanController extends Controller
         }
         if (array_key_exists('popular', $validated)) {
             $data['popular'] = (bool) $validated['popular'];
+        }
+        if (array_key_exists('isPublic', $validated)) {
+            $data['is_public'] = (bool) $validated['isPublic'];
         }
         if (array_key_exists('cta', $validated)) {
             $data['cta'] = $validated['cta'];

@@ -30,7 +30,7 @@ class SubscriptionPricingService
     {
         $currency = strtoupper($currency ?: (PaystackService::isEnabled()
             ? app(PaystackService::class)->getCurrency()
-            : (string) config('pricing.default_currency', 'USD')));
+            : (string) config('pricing.default_currency', 'KES')));
 
         $regional = app(RegionalPricingService::class);
         $resolvedAmount = $regional->amountForPlan($plan, $currency);

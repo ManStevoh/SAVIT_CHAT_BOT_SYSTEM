@@ -12,6 +12,12 @@ class BlogSeoTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['cms.public_pages.blog' => true]);
+    }
+
     public function test_blog_index_and_post_include_seo_and_appear_in_sitemap(): void
     {
         BlogPost::create([
@@ -88,5 +94,18 @@ class BlogSeoTest extends TestCase
         $response->assertOk();
         $response->assertSee('rel="icon"', false);
         $response->assertSee('relaysiq-favicon.png', false);
+    }
+
+    public function test_blog_and_solutions_are_off_by_default(): void
+    {
+        config([
+            'cms.public_pages.blog' => false,
+            'cms.public_pages.solutions' => false,
+        ]);
+
+        $this->get('/blog')->assertNotFound();
+        $this->get('/blog/whatsapp-ai-guide')->assertNotFound();
+        $this->getJson('/api/blog/posts')->assertNotFound();
+        $this->get('/solutions')->assertNotFound();
     }
 }

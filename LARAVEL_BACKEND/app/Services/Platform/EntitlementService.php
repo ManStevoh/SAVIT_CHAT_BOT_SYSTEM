@@ -38,12 +38,13 @@ final class EntitlementService
             'agent_commerce' => true,
             'allow_physical' => true,
             'allow_digital' => true,
-            'allow_service' => false,
-            'allow_bookings' => false,
-            'max_bookings_per_month' => 0,
+            'allow_service' => true,
+            'allow_bookings' => true,
+            'max_bookings_per_month' => 30,
+            'max_tables' => 5,
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
-            'allow_dine_in' => false,
+            'allow_dine_in' => true,
             'allow_whatsapp_campaigns' => false,
             'requires_branding' => true,
         ],
@@ -71,6 +72,7 @@ final class EntitlementService
             'allow_service' => true,
             'allow_bookings' => true,
             'max_bookings_per_month' => 50,
+            'max_tables' => 0,
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
             'allow_dine_in' => false,
@@ -78,11 +80,11 @@ final class EntitlementService
             'requires_branding' => false,
         ],
         'growth' => [
-            'messages' => 2000,
-            'max_products' => 1000,
-            'team' => 5,
-            'whatsapp_numbers' => 2,
-            'ai_cost_usd' => 20.0,
+            'messages' => 1000,
+            'max_products' => 50,
+            'team' => 3,
+            'whatsapp_numbers' => 1,
+            'ai_cost_usd' => 10.0,
             'ai_model_modes' => ['auto', 'platform_default'],
             'allow_byok' => true,
             'credential_modes' => ['platform', 'company_preferred'],
@@ -91,16 +93,17 @@ final class EntitlementService
             'analytics_level' => 'standard',
             'crm_level' => 'advanced',
             'attribution' => true,
-            'ai_posts_per_month' => 100,
-            'ai_images_per_month' => 50,
-            'social_platforms' => 3,
+            'ai_posts_per_month' => 40,
+            'ai_images_per_month' => 20,
+            'social_platforms' => 2,
             'growth_enabled' => true,
             'agent_commerce' => true,
             'allow_physical' => true,
             'allow_digital' => true,
             'allow_service' => true,
             'allow_bookings' => true,
-            'max_bookings_per_month' => 200,
+            'max_bookings_per_month' => 150,
+            'max_tables' => 20,
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
             'allow_dine_in' => true,
@@ -108,11 +111,11 @@ final class EntitlementService
             'requires_branding' => false,
         ],
         'professional' => [
-            'messages' => 2000,
-            'max_products' => 1000,
-            'team' => 5,
-            'whatsapp_numbers' => 2,
-            'ai_cost_usd' => 20.0,
+            'messages' => 1000,
+            'max_products' => 50,
+            'team' => 3,
+            'whatsapp_numbers' => 1,
+            'ai_cost_usd' => 10.0,
             'ai_model_modes' => ['auto', 'platform_default'],
             'allow_byok' => true,
             'credential_modes' => ['platform', 'company_preferred'],
@@ -121,16 +124,17 @@ final class EntitlementService
             'analytics_level' => 'standard',
             'crm_level' => 'advanced',
             'attribution' => true,
-            'ai_posts_per_month' => 100,
-            'ai_images_per_month' => 50,
-            'social_platforms' => 3,
+            'ai_posts_per_month' => 40,
+            'ai_images_per_month' => 20,
+            'social_platforms' => 2,
             'growth_enabled' => true,
             'agent_commerce' => true,
             'allow_physical' => true,
             'allow_digital' => true,
             'allow_service' => true,
             'allow_bookings' => true,
-            'max_bookings_per_month' => 200,
+            'max_bookings_per_month' => 150,
+            'max_tables' => 20,
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
             'allow_dine_in' => true,
@@ -161,6 +165,7 @@ final class EntitlementService
             'allow_service' => true,
             'allow_bookings' => true,
             'max_bookings_per_month' => null,
+            'max_tables' => null,
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
             'allow_dine_in' => true,
@@ -191,6 +196,7 @@ final class EntitlementService
             'allow_service' => true,
             'allow_bookings' => true,
             'max_bookings_per_month' => null,
+            'max_tables' => null,
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
             'allow_dine_in' => true,
@@ -230,6 +236,7 @@ final class EntitlementService
             'allow_service' => false,
             'allow_bookings' => false,
             'max_bookings_per_month' => 0,
+            'max_tables' => 0,
             'allow_storefront' => true,
             'allow_link_in_bio' => true,
             'allow_dine_in' => false,
@@ -330,6 +337,12 @@ final class EntitlementService
                 ? null
                 : max(0, (int) $bookings);
         }
+        if (array_key_exists('max_tables', $input)) {
+            $tables = $input['max_tables'];
+            $out['max_tables'] = ($tables === null || $tables === '' || $tables === 'unlimited')
+                ? null
+                : max(0, (int) $tables);
+        }
 
         if (! $out['allow_byok']) {
             $out['credential_modes'] = ['platform'];
@@ -375,6 +388,10 @@ final class EntitlementService
             'maxBookingsPerMonth' => array_key_exists('max_bookings_per_month', $e)
                 ? ($e['max_bookings_per_month'] === null ? null : (int) $e['max_bookings_per_month'])
                 : 0,
+            'maxTables' => array_key_exists('max_tables', $e)
+                ? ($e['max_tables'] === null ? null : (int) $e['max_tables'])
+                : 0,
+            'maxTablesUnlimited' => array_key_exists('max_tables', $e) && $e['max_tables'] === null,
             'allowStorefront' => (bool) ($e['allow_storefront'] ?? true),
             'allowLinkInBio' => (bool) ($e['allow_link_in_bio'] ?? true),
             'allowDineIn' => (bool) ($e['allow_dine_in'] ?? false),
@@ -424,7 +441,7 @@ final class EntitlementService
                 ->first();
         }
 
-        return $subscription?->plan ?? 'starter';
+        return $subscription?->plan ?? 'free';
     }
 
     public function messageLimit(Company $company): ?int
@@ -548,6 +565,32 @@ final class EntitlementService
             : 0;
 
         return $value === null ? null : max(0, (int) $value);
+    }
+
+    public function maxTables(Company $company): ?int
+    {
+        $limits = $this->limitsForCompany($company);
+        $value = array_key_exists('max_tables', $limits)
+            ? $limits['max_tables']
+            : 0;
+
+        return $value === null ? null : max(0, (int) $value);
+    }
+
+    public function canAddDineInTable(Company $company, int $countToAdd = 1): bool
+    {
+        if (! $this->allowsDineIn($company)) {
+            return false;
+        }
+
+        $max = $this->maxTables($company);
+        if ($max === null) {
+            return true;
+        }
+
+        $current = \App\Models\DineInTable::where('company_id', $company->id)->count();
+
+        return ($current + $countToAdd) <= $max;
     }
 
     public function aiCostLimit(Company $company): ?float

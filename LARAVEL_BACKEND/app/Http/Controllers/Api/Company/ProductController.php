@@ -1116,7 +1116,7 @@ class ProductController extends Controller
             return response()->json([
                 'success' => false,
                 'code' => 'product_limit_reached',
-                'message' => "You have reached your limit of {$max} products for your plan. Upgrade your plan to add more products.",
+                'message' => "You have reached your limit of {$max} products for your plan. Upgrade to Growth to add more products.",
                 'maxProducts' => $max,
             ], 403);
         }

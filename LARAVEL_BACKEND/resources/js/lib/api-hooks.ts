@@ -671,11 +671,11 @@ export interface DineInTable {
 
 /** API: GET /api/company/dine-in-tables */
 export function useDineInTables() {
-  return useSWR<{ tables: DineInTable[] }>(
+  return useSWR<{ tables: DineInTable[]; maxTables?: number | null; tablesUsed?: number; allowed?: boolean }>(
     ['dine-in-tables'],
     async () => {
       if (!useMockApi()) {
-        return apiRequest<{ tables: DineInTable[] }>('/api/company/dine-in-tables')
+        return apiRequest<{ tables: DineInTable[]; maxTables?: number | null; tablesUsed?: number; allowed?: boolean }>('/api/company/dine-in-tables')
       }
       await delay(300)
       return { tables: [] }

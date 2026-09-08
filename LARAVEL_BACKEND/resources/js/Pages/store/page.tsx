@@ -1,10 +1,12 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link, router } from '@inertiajs/react'
 import {
   ArrowRight,
   Check,
+  Copy,
+  Eye,
   Heart,
   LogOut,
   MessageCircle,
@@ -12,6 +14,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Share2,
   ShoppingBag,
   SlidersHorizontal,
   Sparkles,
@@ -23,6 +26,8 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { SeoHead, type SeoPayload } from '@/components/seo/SeoHead'
 import { StorefrontAuthModal } from '@/components/store/StorefrontAuthModal'
+import { StorefrontFooter } from '@/components/store/StorefrontFooter'
+import { getRecentlyViewed } from '@/lib/storefront-recent'
 import { resolveStorefrontStyle, type BrandTheme } from '@/lib/theme-utils'
 
 type Variant = { id: string; label: string; price: number; stock: number | null; soldOut?: boolean }
@@ -41,6 +46,7 @@ type StoreProduct = {
   category?: string | null
   image?: string | null
   variants?: Variant[]
+  productType?: string | null
   averageRating?: number | null
   reviewCount?: number
 }
@@ -64,7 +70,11 @@ type Section = {
   cta_href?: string
   text?: string
   html?: string
+  title?: string
+  body?: string
+  category?: string
   products?: StoreProduct[]
+  items?: { quote: string; author: string; rating?: number | null }[]
 }
 
 type AltCurrency = { code: string; label: string; rate: number }
@@ -80,12 +90,17 @@ type Props = {
     altCurrencies?: AltCurrency[]
     supportedLocales?: Record<string, string>
     whatsappUrl?: string | null
+    instagramUrl?: string | null
+    facebookUrl?: string | null
+    tiktokUrl?: string | null
+    aboutUrl?: string
     authCustomer?: { id: number; name: string; email: string } | null
     theme?: BrandTheme
     termsUrl?: string
   }
   products: StoreProduct[]
   filters?: Filters
+  categories?: string[]
   sections?: Section[]
   cartCount: number
   wishlist?: string[]

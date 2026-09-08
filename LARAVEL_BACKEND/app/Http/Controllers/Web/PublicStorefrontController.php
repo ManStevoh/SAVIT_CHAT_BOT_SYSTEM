@@ -51,6 +51,9 @@ class PublicStorefrontController extends Controller
             'type' => $request->query('type'),
         ];
         $products = $this->storefront->catalogFiltered($company, $filters);
+        $catalogForSections = $this->hasActiveCatalogFilters($filters)
+            ? $this->storefront->catalogFiltered($company, [])
+            : $products;
         $token = $this->cartToken($company, $request);
         $session = $this->storefront->getSession($company, $token);
 
@@ -83,7 +86,8 @@ class PublicStorefrontController extends Controller
             'company' => $this->companyPayload($company, $request),
             'products' => $products,
             'filters' => $filters,
-            'sections' => $this->resolveSections($company, $products),
+            'categories' => $this->catalogCategories($catalogForSections),
+            'sections' => $this->resolveSections($company, $catalogForSections, $filters),
             'cartCount' => $this->currentCartCount($company),
             'wishlist' => $this->currentWishlist($company),
             'locale' => $locale,
@@ -456,6 +460,23 @@ class PublicStorefrontController extends Controller
             'body' => $body !== '' ? $body : StorefrontLegalCopy::defaultTerms((string) $company->name),
             'isDefault' => $body === '',
             'seo' => $this->seo->noindex(($title !== '' ? $title : 'Terms').' — '.$company->name),
+        ]);
+    }
+
+    public function about(string $slug, Request $request): Response
+    {
+        $company = $this->storefront->resolveCompanyBySlug($slug);
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        $body = trim((string) ($theme['about_body'] ?? ''));
+        $title = trim((string) ($theme['about_title'] ?? ''));
+
+        return Inertia::render('store/about', [
+            'slug' => $slug,
+            'company' => $this->companyPayload($company, $request),
+            'title' => $title !== '' ? $title : ('About '.$company->name),
+            'body' => $body !== '' ? $body : StorefrontLegalCopy::defaultAbout((string) $company->name),
+            'isDefault' => $body === '',
+            'seo' => $this->seo->noindex(($title !== '' ? $title : 'About').' — '.$company->name, $body !== '' ? $body : StorefrontLegalCopy::defaultAbout((string) $company->name)),
         ]);
     }
 
@@ -887,6 +908,7 @@ class PublicStorefrontController extends Controller
         $prefill = $whatsappPrefill ?: ('Hi, I\'m interested in '.$company->name);
 
         $authCustomer = StorefrontAuthController::getAuthenticatedCustomer($company);
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
 
         return [
             'name' => $company->name,
@@ -898,7 +920,7 @@ class PublicStorefrontController extends Controller
             'altCurrencies' => $altCurrencies,
             'displayCurrency' => $displayCurrency,
             'displayRate' => $displayRate,
-            'theme' => is_array($company->storefront_theme) ? $company->storefront_theme : [],
+            'theme' => $theme,
             'customDomain' => $company->custom_domain,
             'freeDeliveryAbove' => $settings?->free_delivery_above !== null ? (float) $settings->free_delivery_above : null,
             'supportedLocales' => ['en' => 'English', 'sw' => 'Kiswahili'],
@@ -908,7 +930,11 @@ class PublicStorefrontController extends Controller
                 'email' => $authCustomer->email,
             ] : null,
             'termsUrl' => '/s/'.$company->store_slug.'/terms',
-            'hasCustomTerms' => filled(is_array($company->storefront_theme) ? ($company->storefront_theme['terms_body'] ?? '') : ''),
+            'aboutUrl' => '/s/'.$company->store_slug.'/about',
+            'hasCustomTerms' => filled($theme['terms_body'] ?? ''),
+            'instagramUrl' => $this->publicSocialUrl($theme['instagram_url'] ?? null),
+            'facebookUrl' => $this->publicSocialUrl($theme['facebook_url'] ?? null),
+            'tiktokUrl' => $this->publicSocialUrl($theme['tiktok_url'] ?? null),
         ];
     }
 
@@ -954,47 +980,246 @@ class PublicStorefrontController extends Controller
     }
 
     /**
-     * Feature 20: resolve the home page section list, defaulting to a flat catalog grid, and
-     * hydrate `featured_products` sections with matching serialized products.
+     * Feature 20: resolve the home page section list, defaulting to a shop homepage
+     * (hero, featured, about, quotes, category shelves, catalog) when the merchant
+     * has not authored a custom `storefront_sections` list.
      *
      * @param  list<array<string, mixed>>  $catalogProducts
+     * @param  array<string, mixed>  $filters
      * @return list<array<string, mixed>>
      */
-    protected function resolveSections(Company $company, array $catalogProducts): array
+    protected function resolveSections(Company $company, array $catalogProducts, array $filters = []): array
     {
         $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
-        $sections = is_array($company->storefront_sections) && $company->storefront_sections !== []
+        $custom = is_array($company->storefront_sections) && $company->storefront_sections !== []
             ? $company->storefront_sections
             : null;
 
-        if ($sections === null) {
-            $sections = [];
-            if (! empty($theme['hero_enabled'])) {
-                $sections[] = [
-                    'type' => 'hero',
-                    'headline' => ! empty($theme['hero_headline']) ? $theme['hero_headline'] : $company->name,
-                    'subhead' => ! empty($theme['hero_subhead']) ? $theme['hero_subhead'] : null,
-                    'cta_label' => ! empty($theme['hero_cta_label']) ? $theme['hero_cta_label'] : 'Shop Now',
-                    'cta_href' => ! empty($theme['hero_cta_href']) ? $theme['hero_cta_href'] : '#catalog',
-                ];
-            }
-            $sections[] = ['type' => 'catalog'];
+        if ($custom === null) {
+            $sections = $this->hasActiveCatalogFilters($filters)
+                ? [['type' => 'catalog']]
+                : $this->defaultHomepageSections($company, $theme, $catalogProducts);
+        } else {
+            $sections = $custom;
         }
 
-        return array_values(array_map(function ($section) use ($catalogProducts) {
+        $quotes = $this->homepageTestimonials($company, $theme);
+
+        return array_values(array_map(function ($section) use ($catalogProducts, $quotes, $theme, $company) {
             if (! is_array($section)) {
                 return ['type' => 'catalog'];
             }
-            if (($section['type'] ?? null) === 'featured_products') {
+            $type = $section['type'] ?? null;
+            if ($type === 'featured_products') {
                 $ids = array_map('strval', $section['product_ids'] ?? []);
-                $section['products'] = array_values(array_filter(
-                    $catalogProducts,
-                    fn ($p) => in_array((string) $p['id'], $ids, true)
-                ));
+                $section['products'] = $ids !== []
+                    ? array_values(array_filter(
+                        $catalogProducts,
+                        fn ($p) => in_array((string) $p['id'], $ids, true)
+                    ))
+                    : ($section['products'] ?? $this->defaultFeaturedProducts($catalogProducts));
+                if (empty($section['headline'])) {
+                    $section['headline'] = 'Featured';
+                }
+            }
+            if ($type === 'collection_shelf') {
+                $category = (string) ($section['category'] ?? '');
+                $section['products'] = $category !== ''
+                    ? array_values(array_filter(
+                        $catalogProducts,
+                        fn ($p) => strcasecmp((string) ($p['category'] ?? ''), $category) === 0
+                    ))
+                    : ($section['products'] ?? []);
+                if (empty($section['headline'])) {
+                    $section['headline'] = $category !== '' ? $category : 'Collection';
+                }
+            }
+            if ($type === 'about') {
+                if (empty($section['title'])) {
+                    $section['title'] = ! empty($theme['about_title']) ? $theme['about_title'] : ('About '.$company->name);
+                }
+                if (empty($section['body'])) {
+                    $about = trim((string) ($theme['about_body'] ?? ''));
+                    $section['body'] = $about !== '' ? $about : StorefrontLegalCopy::defaultAbout((string) $company->name);
+                }
+                if (empty($section['cta_href'])) {
+                    $section['cta_href'] = '/s/'.$company->store_slug.'/about';
+                }
+                if (empty($section['cta_label'])) {
+                    $section['cta_label'] = 'Read more';
+                }
+            }
+            if ($type === 'testimonials' && empty($section['items'])) {
+                $section['items'] = $quotes;
             }
 
             return $section;
         }, $sections));
+    }
+
+    /**
+     * @param  array<string, mixed>  $theme
+     * @param  list<array<string, mixed>>  $catalogProducts
+     * @return list<array<string, mixed>>
+     */
+    protected function defaultHomepageSections(Company $company, array $theme, array $catalogProducts): array
+    {
+        $sections = [[
+            'type' => 'hero',
+            'headline' => ! empty($theme['hero_headline']) ? $theme['hero_headline'] : $company->name,
+            'subhead' => ! empty($theme['hero_subhead'])
+                ? $theme['hero_subhead']
+                : ('Shop '.$company->name.' — browse the catalog, add to cart, and check out when you are ready.'),
+            'cta_label' => ! empty($theme['hero_cta_label']) ? $theme['hero_cta_label'] : 'Shop the catalog',
+            'cta_href' => ! empty($theme['hero_cta_href']) ? $theme['hero_cta_href'] : '#catalog',
+            'image' => $company->logo ? asset('storage/'.$company->logo) : null,
+        ]];
+
+        $featured = $this->defaultFeaturedProducts($catalogProducts);
+        if (count($catalogProducts) >= 2 && $featured !== []) {
+            $sections[] = [
+                'type' => 'featured_products',
+                'headline' => 'Featured',
+                'products' => $featured,
+            ];
+        }
+
+        $sections[] = [
+            'type' => 'about',
+            'title' => ! empty($theme['about_title']) ? $theme['about_title'] : ('About '.$company->name),
+            'body' => trim((string) ($theme['about_body'] ?? '')) !== ''
+                ? trim((string) $theme['about_body'])
+                : StorefrontLegalCopy::defaultAbout((string) $company->name),
+            'cta_label' => 'Read more',
+            'cta_href' => '/s/'.$company->store_slug.'/about',
+        ];
+
+        $quotes = $this->homepageTestimonials($company, $theme);
+        if ($quotes !== []) {
+            $sections[] = [
+                'type' => 'testimonials',
+                'headline' => 'What shoppers say',
+                'items' => $quotes,
+            ];
+        }
+
+        $categories = $this->catalogCategories($catalogProducts);
+        if (count($categories) >= 2) {
+            foreach (array_slice($categories, 0, 6) as $category) {
+                $shelf = array_values(array_filter(
+                    $catalogProducts,
+                    fn ($p) => strcasecmp((string) ($p['category'] ?? ''), $category) === 0
+                ));
+                if ($shelf === []) {
+                    continue;
+                }
+                $sections[] = [
+                    'type' => 'collection_shelf',
+                    'headline' => $category,
+                    'category' => $category,
+                    'products' => array_slice($shelf, 0, 8),
+                ];
+            }
+        }
+
+        $sections[] = ['type' => 'catalog'];
+
+        return $sections;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $catalogProducts
+     * @return list<array<string, mixed>>
+     */
+    protected function defaultFeaturedProducts(array $catalogProducts): array
+    {
+        $onSale = array_values(array_filter($catalogProducts, fn ($p) => ! empty($p['onSale'])));
+
+        return array_slice($onSale !== [] ? $onSale : $catalogProducts, 0, 8);
+    }
+
+    /**
+     * @param  array<string, mixed>  $theme
+     * @return list<array{quote: string, author: string, rating?: int|null}>
+     */
+    protected function homepageTestimonials(Company $company, array $theme): array
+    {
+        $items = [];
+        $quote = trim((string) ($theme['testimonial_quote'] ?? ''));
+        if ($quote !== '') {
+            $items[] = [
+                'quote' => $quote,
+                'author' => trim((string) ($theme['testimonial_author'] ?? '')) ?: 'Customer',
+                'rating' => null,
+            ];
+        }
+
+        $reviews = ProductReview::query()
+            ->where('company_id', $company->id)
+            ->where('is_approved', true)
+            ->whereNotNull('body')
+            ->where('body', '!=', '')
+            ->latest()
+            ->limit(3)
+            ->get();
+
+        foreach ($reviews as $review) {
+            $items[] = [
+                'quote' => (string) $review->body,
+                'author' => (string) $review->author_name,
+                'rating' => (int) $review->rating,
+            ];
+        }
+
+        return array_slice($items, 0, 4);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $catalogProducts
+     * @return list<string>
+     */
+    protected function catalogCategories(array $catalogProducts): array
+    {
+        $categories = [];
+        foreach ($catalogProducts as $product) {
+            $category = trim((string) ($product['category'] ?? ''));
+            if ($category !== '' && ! in_array($category, $categories, true)) {
+                $categories[] = $category;
+            }
+        }
+
+        return $categories;
+    }
+
+    /** @param  array<string, mixed>  $filters */
+    protected function hasActiveCatalogFilters(array $filters): bool
+    {
+        foreach (['q', 'category', 'min_price', 'max_price', 'type'] as $key) {
+            $value = $filters[$key] ?? null;
+            if (is_string($value) && trim($value) !== '' && strtolower(trim($value)) !== 'all') {
+                return true;
+            }
+            if (is_numeric($value) && (string) $value !== '') {
+                return true;
+            }
+        }
+
+        $inStock = $filters['in_stock'] ?? null;
+        if (filter_var($inStock, FILTER_VALIDATE_BOOLEAN)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function publicSocialUrl(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+        $value = trim($value);
+
+        return $value !== '' ? $value : null;
     }
 
     /** @return list<string> */

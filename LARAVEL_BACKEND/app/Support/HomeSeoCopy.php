@@ -16,7 +16,7 @@ final class HomeSeoCopy
 
     public static function description(): string
     {
-        return 'RelayIQ.app is an AI WhatsApp sales platform for African businesses. Answer customers in English and Kiswahili, take orders, and send M-Pesa STK on the number they already message.';
+        return 'RelayIQ.app is an AI WhatsApp sales platform for African businesses. Start on the free Starter plan: storefront connected to WhatsApp, bookings, and dine-in QR. Answer in English and Kiswahili, and send M-Pesa STK on the number they already message.';
     }
 
     public static function h1(): string

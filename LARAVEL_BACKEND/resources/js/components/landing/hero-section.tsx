@@ -14,7 +14,7 @@ const DEMO_ORDER = {
 const HERO_POINTS = [
   "Official WhatsApp Business API",
   "M-Pesa & Stripe in chat",
-  "14-day free trial",
+  "Free forever Starter plan",
 ]
 
 export function HeroSection() {
@@ -39,7 +39,7 @@ export function HeroSection() {
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
               <Button size="lg" asChild className="h-11 gap-2 rounded-md px-6 wa-cta border-0 shadow-none">
                 <Link href="/register">
-                  Start free trial
+                  Get started free
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>

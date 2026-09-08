@@ -258,6 +258,7 @@ export interface Plan {
   description?: string
   features: string[]
   popular: boolean
+  isPublic?: boolean
   cta?: string
   sortOrder?: number
   stripePriceId?: string | null
@@ -298,8 +299,10 @@ export interface Plan {
     allowPhysical?: boolean
     allowDigital?: boolean
     allowService?: boolean
-    allowBookings?: boolean
+    allowBookings: boolean
     maxBookingsPerMonth?: number | null
+    maxTables?: number | null
+    maxTablesUnlimited?: boolean
     allowStorefront?: boolean
     allowLinkInBio?: boolean
     allowDineIn?: boolean

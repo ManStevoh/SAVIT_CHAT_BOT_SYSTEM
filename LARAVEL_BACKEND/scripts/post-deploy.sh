@@ -28,6 +28,9 @@ composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 echo "==> Running database migrations..."
 php artisan migrate --force
 
+echo "==> Seeding all CMS pages..."
+php artisan db:seed --class=CmsPageSeeder --force
+
 echo "==> Caching config, routes, and views..."
 php artisan config:cache
 php artisan route:cache

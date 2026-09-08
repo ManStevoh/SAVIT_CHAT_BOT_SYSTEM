@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
+use App\Support\PublicMarketingPages;
 use Illuminate\Http\JsonResponse;
 
 class BlogPostController extends Controller
 {
     public function index(): JsonResponse
     {
+        abort_unless(PublicMarketingPages::enabled('blog'), 404);
+
         $posts = BlogPost::published()
             ->orderByDesc('published_at')
             ->orderByDesc('id')
@@ -26,6 +29,8 @@ class BlogPostController extends Controller
 
     public function show(string $slug): JsonResponse
     {
+        abort_unless(PublicMarketingPages::enabled('blog'), 404);
+
         $post = BlogPost::published()->where('slug', $slug)->first();
         if (! $post) {
             return response()->json(['message' => 'Post not found'], 404);

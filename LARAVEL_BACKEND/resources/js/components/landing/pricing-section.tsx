@@ -51,7 +51,7 @@ export function PricingSection() {
           <SectionHeader
             label="Pricing"
             title="Straightforward plans"
-            description="Start free, upgrade as you grow. 14-day free trial on paid plans."
+            description="Starter is free forever. Growth is KSh 2,000/month when you need more."
           />
         </FadeIn>
 
@@ -90,7 +90,7 @@ export function PricingSection() {
             Unable to load pricing. Please try again later.
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {list.map((plan, i) => {
               const showSubscribeActions = !plan.isFree && (plan.price ?? plan.priceDisplay) !== "Custom"
               const canCheckout = plan.checkoutAvailable && isLoggedIn
@@ -140,7 +140,9 @@ export function PricingSection() {
                     {!showSubscribeActions ? (
                       <div className="space-y-2">
                         <Button asChild className="w-full rounded-lg" variant={plan.popular ? "default" : "outline"}>
-                          <Link href={`/register?plan=${plan.id}`}>{plan.cta ?? "Contact Sales"}</Link>
+                          <Link href={/contact|talk to sales/i.test(plan.cta ?? "") ? "/contact" : `/register?plan=${plan.id}`}>
+                            {plan.cta ?? "Get started free"}
+                          </Link>
                         </Button>
                         <p className="text-center text-xs text-muted-foreground">
                           Already have an account?{" "}

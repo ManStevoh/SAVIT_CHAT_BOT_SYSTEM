@@ -21,7 +21,7 @@ return [
     | Cookie used when the visitor manually picks a currency
     |--------------------------------------------------------------------------
     */
-    'cookie' => 'pricing_currency',
+    'cookie' => 'relayiq_pricing_currency',
     'cookie_days' => 30,
 
     /*
@@ -85,24 +85,24 @@ return [
             'NGN' => 18000,
         ],
         'professional' => [
-            'USD' => 29,
-            'KES' => 3999,
-            'NGN' => 45000,
+            'USD' => 15,
+            'KES' => 2000,
+            'NGN' => 24000,
         ],
         'growth' => [
-            'USD' => 29,
-            'KES' => 3999,
-            'NGN' => 45000,
+            'USD' => 15,
+            'KES' => 2000,
+            'NGN' => 24000,
         ],
         'enterprise' => [
-            'USD' => 79,
-            'KES' => 9999,
-            'NGN' => 120000,
+            'USD' => null,
+            'KES' => null,
+            'NGN' => null,
         ],
         'business' => [
-            'USD' => 79,
-            'KES' => 9999,
-            'NGN' => 120000,
+            'USD' => null,
+            'KES' => null,
+            'NGN' => null,
         ],
     ],
 ];

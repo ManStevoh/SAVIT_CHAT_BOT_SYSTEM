@@ -267,6 +267,13 @@ class SeoRoadmapTest extends TestCase
         $this->get('/whatsapp-ai-sales-agent')
             ->assertOk()
             ->assertSee('AI sales agent for WhatsApp', false);
+
+        $this->get('/features')
+            ->assertOk()
+            ->assertSee('See exactly what you can turn on', false)
+            ->assertSee('Web storefront', false)
+            ->assertSee('Dine-in table QR', false)
+            ->assertSee('Four doors. One catalog.', false);
     }
 
     public function test_commerce_os_home_hero_is_replaced_for_public_seo(): void

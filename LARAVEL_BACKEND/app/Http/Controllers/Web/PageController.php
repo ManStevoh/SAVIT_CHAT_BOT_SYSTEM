@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
 use App\Services\Cms\CmsPagePayloadBuilder;
 use App\Services\Cms\CmsSeoService;
+use App\Support\PublicMarketingPages;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,6 +35,8 @@ class PageController extends Controller
 
     public function solutions(): Response
     {
+        abort_unless(PublicMarketingPages::enabled('solutions'), 404);
+
         return $this->marketing('Solutions/page', 'solutions');
     }
 
@@ -80,6 +83,8 @@ class PageController extends Controller
 
     public function blog(): Response
     {
+        abort_unless(PublicMarketingPages::enabled('blog'), 404);
+
         $posts = [];
         try {
             $posts = BlogPost::published()
@@ -101,6 +106,8 @@ class PageController extends Controller
 
     public function blogShow(string $slug): Response|\Symfony\Component\HttpFoundation\Response
     {
+        abort_unless(PublicMarketingPages::enabled('blog'), 404);
+
         $seo = $this->seo->forBlogPost($slug);
         if (! $seo) {
             abort(404);

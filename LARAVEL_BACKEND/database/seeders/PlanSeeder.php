@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Plan;
+use App\Models\PlatformSetting;
 use App\Services\Platform\EntitlementService;
 use Illuminate\Database\Seeder;
 
@@ -12,7 +13,7 @@ class PlanSeeder extends Seeder
     {
         $plans = [
             [
-                'name' => 'Free',
+                'name' => 'Starter',
                 'slug' => 'free',
                 'price_display' => 'KSh 0',
                 'price_amount' => 0,
@@ -21,20 +22,22 @@ class PlanSeeder extends Seeder
                     'KES' => 0,
                     'NGN' => 0,
                 ],
-                'description' => 'Get started selling on WhatsApp with essential commerce tools',
+                'description' => 'Free forever for businesses — storefront, bookings, and dine-in to get you selling',
                 'features' => [
+                    'Storefront, bookings & dine-in',
+                    '20 physical or digital products',
+                    '5 dine-in tables',
+                    '30 bookings / month',
                     '1 WhatsApp connection',
-                    '20 products',
-                    '50 AI conversations/month',
-                    'Basic storefront & link-in-bio',
-                    'Basic customer inbox',
-                    'M-Pesa payment integration',
+                    '50 AI conversations / month',
+                    'M-Pesa payments',
                     'RelayIQ branding',
-                    'Limited automation (5 AI posts/mo)',
+                    'Upgrade anytime to Growth',
                 ],
                 'entitlements' => EntitlementService::DEFAULTS['free'],
                 'popular' => false,
-                'cta' => 'Get Started Free',
+                'is_public' => true,
+                'cta' => 'Get started free',
                 'sort_order' => 0,
                 'stripe_price_id' => null,
                 'is_free' => true,
@@ -43,7 +46,7 @@ class PlanSeeder extends Seeder
                 'trial_elapsed_action' => null,
             ],
             [
-                'name' => 'Starter',
+                'name' => 'Starter (legacy)',
                 'slug' => 'starter',
                 'price_display' => 'KSh 1,499',
                 'price_amount' => 1499,
@@ -52,7 +55,7 @@ class PlanSeeder extends Seeder
                     'KES' => 1499,
                     'NGN' => 18000,
                 ],
-                'description' => 'Essential AI sales agent and commerce automation for solo sellers and small shops',
+                'description' => 'Hidden grandfathered plan for existing paid Starter subscribers',
                 'features' => [
                     '1 WhatsApp connection',
                     '100 products',
@@ -61,15 +64,13 @@ class PlanSeeder extends Seeder
                     'Online storefront & link-in-bio',
                     'M-Pesa, Paystack & Stripe payments',
                     'Bookings & appointments',
-                    'Automated replies',
-                    'Basic customer CRM & analytics',
                     '1 team member',
-                    'Basic AI automations (20 posts/mo)',
                 ],
                 'entitlements' => EntitlementService::DEFAULTS['starter'],
                 'popular' => false,
+                'is_public' => false,
                 'cta' => 'Start Free Trial',
-                'sort_order' => 1,
+                'sort_order' => 99,
                 'stripe_price_id' => null,
                 'is_free' => false,
                 'has_trial' => true,
@@ -79,33 +80,32 @@ class PlanSeeder extends Seeder
             [
                 'name' => 'Growth',
                 'slug' => 'professional',
-                'price_display' => 'KSh 3,999',
-                'price_amount' => 3999,
+                'price_display' => 'KSh 2,000',
+                'price_amount' => 2000,
                 'regional_prices' => [
-                    'USD' => 29,
-                    'KES' => 3999,
-                    'NGN' => 45000,
+                    'USD' => 15,
+                    'KES' => 2000,
+                    'NGN' => 24000,
                 ],
-                'description' => 'For growing businesses needing higher volume, multi-number WhatsApp, and advanced CRM',
+                'description' => 'For growing businesses that need more catalog, bookings, and team capacity',
                 'features' => [
-                    '2 WhatsApp connections',
-                    '1,000 products',
-                    'AI sales agent',
-                    '2,000 AI conversations/month',
-                    'Online storefront + Dine-in QR ordering',
-                    'M-Pesa, Paystack & Stripe payments',
-                    'Bookings & services',
-                    'Automated replies & campaigns',
-                    'Advanced customer CRM',
-                    'Standard analytics dashboard',
-                    '5 team members',
-                    'Advanced AI automations (100 posts/mo, 3 platforms)',
-                    'API access',
+                    'Everything in Starter',
+                    '50 products',
+                    '20 dine-in tables',
+                    '150 bookings / month',
+                    '1,000 AI conversations / month',
+                    '3 team members',
+                    'M-Pesa, Paystack & Stripe',
+                    'WhatsApp campaigns & Growth Engine',
+                    'API access & analytics',
+                    'No RelayIQ branding',
+                    '14-day free trial',
                 ],
-                'entitlements' => EntitlementService::DEFAULTS['growth'],
+                'entitlements' => EntitlementService::DEFAULTS['professional'],
                 'popular' => true,
-                'cta' => 'Start Free Trial',
-                'sort_order' => 2,
+                'is_public' => true,
+                'cta' => 'Start 14-day trial',
+                'sort_order' => 1,
                 'stripe_price_id' => null,
                 'is_free' => false,
                 'has_trial' => true,
@@ -113,40 +113,30 @@ class PlanSeeder extends Seeder
                 'trial_elapsed_action' => 'downgrade',
             ],
             [
-                'name' => 'Business',
+                'name' => 'Custom',
                 'slug' => 'enterprise',
-                'price_display' => 'KSh 9,999',
-                'price_amount' => 9999,
-                'regional_prices' => [
-                    'USD' => 79,
-                    'KES' => 9999,
-                    'NGN' => 120000,
-                ],
-                'description' => 'Maximum power and capacity for established brands and high-volume teams',
+                'price_display' => 'Custom',
+                'price_amount' => null,
+                'regional_prices' => [],
+                'description' => 'For high-volume operations — limits, onboarding, and pricing set with the sales team',
                 'features' => [
-                    '5 WhatsApp connections',
-                    'Unlimited products',
-                    'AI sales agent (custom models & BYOK)',
-                    '10,000 AI conversations/month',
-                    'Online storefront + Dine-in QR ordering',
-                    'M-Pesa, Paystack & Stripe payments',
-                    'Unlimited bookings & services',
-                    'Automated replies & high-volume campaigns',
-                    'Advanced customer CRM',
-                    'Advanced analytics & custom reports',
-                    '15 team members',
-                    'Unlimited AI automations (500 posts/mo, 10 platforms)',
-                    'Priority support & API access',
+                    'Everything in Growth',
+                    'Custom product, table & booking limits',
+                    'Custom AI conversation volume',
+                    'Custom team seats & WhatsApp numbers',
+                    'Priority support & onboarding',
+                    'Talk to sales',
                 ],
-                'entitlements' => EntitlementService::DEFAULTS['business'],
+                'entitlements' => EntitlementService::DEFAULTS['enterprise'],
                 'popular' => false,
-                'cta' => 'Start Free Trial',
-                'sort_order' => 3,
+                'is_public' => true,
+                'cta' => 'Talk to sales',
+                'sort_order' => 2,
                 'stripe_price_id' => null,
                 'is_free' => false,
-                'has_trial' => true,
-                'trial_days' => 14,
-                'trial_elapsed_action' => 'downgrade',
+                'has_trial' => false,
+                'trial_days' => null,
+                'trial_elapsed_action' => null,
             ],
         ];
 
@@ -156,5 +146,27 @@ class PlanSeeder extends Seeder
                 $data
             );
         }
+
+        $this->seedRegistrationDefault();
+    }
+
+    private function seedRegistrationDefault(): void
+    {
+        $settings = PlatformSetting::query()->first();
+        $payload = [
+            'default_registration_plan_slug' => 'free',
+            'force_default_registration_plan' => true,
+        ];
+
+        if ($settings) {
+            $settings->update($payload);
+
+            return;
+        }
+
+        PlatformSetting::create(array_merge([
+            'platform_name' => 'RelayIQ',
+            'allow_new_registrations' => true,
+        ], $payload));
     }
 }

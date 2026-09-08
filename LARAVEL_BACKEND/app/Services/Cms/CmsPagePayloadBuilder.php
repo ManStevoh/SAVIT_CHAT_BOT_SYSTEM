@@ -7,7 +7,9 @@ use App\Models\LandingFaq;
 use App\Models\PlatformSetting;
 use App\Models\Testimonial;
 use App\Support\BrandSocial;
+use App\Support\FeaturesPageCopy;
 use App\Support\HomeSeoCopy;
+use App\Support\PublicMarketingPages;
 use App\Support\SeoLandingCatalog;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -22,24 +24,33 @@ class CmsPagePayloadBuilder
     public function forSlug(string $slug): ?array
     {
         if (! Schema::hasTable('cms_pages')) {
-            return SeoLandingCatalog::payload($slug);
+            return $slug === 'features' ? FeaturesPageCopy::payload() : SeoLandingCatalog::payload($slug);
         }
 
         try {
             $page = CmsPage::where('slug', $slug)->where('is_published', true)->first();
         } catch (\Throwable) {
-            return SeoLandingCatalog::payload($slug);
+            return $slug === 'features' ? FeaturesPageCopy::payload() : SeoLandingCatalog::payload($slug);
         }
 
         if (! $page) {
-            return SeoLandingCatalog::payload($slug);
+            return $slug === 'features' ? FeaturesPageCopy::payload() : SeoLandingCatalog::payload($slug);
         }
 
         $payload = $this->toArray($page);
-
-        return $this->hasRenderableBody($payload)
+        $resolved = $this->hasRenderableBody($payload)
             ? $this->enrichFromCatalog($slug, $payload)
             : (SeoLandingCatalog::payload($slug) ?? $payload);
+
+        if ($slug === 'features' && FeaturesPageCopy::shouldReplace($resolved ?? [])) {
+            return FeaturesPageCopy::apply($resolved);
+        }
+
+        if ($slug === 'features' && is_array($resolved)) {
+            $resolved['faqs'] = FeaturesPageCopy::faqs();
+        }
+
+        return $resolved;
     }
 
     /**
@@ -59,7 +70,8 @@ class CmsPagePayloadBuilder
             if ($key === 'hero' && filled($content['title'] ?? $content['headline'] ?? '')) {
                 return true;
             }
-            if (in_array($key, ['capabilities', 'solution_pillars', 'industries'], true) && ! empty($content['items'])) {
+            if (in_array($key, ['capabilities', 'solution_pillars', 'industries', 'feature_catalog'], true)
+                && ! empty($content['items'] ?? $content['groups'] ?? null)) {
                 return true;
             }
         }
@@ -165,9 +177,56 @@ class CmsPagePayloadBuilder
                 if ($page->slug === 'home' && $s->section_key === 'hero' && is_array($content)) {
                     $content = HomeSeoCopy::applyHero($content);
                 }
+                if ($page->slug === 'home' && $s->section_key === 'cta' && is_array($content)) {
+                    $ctaTitle = mb_strtolower(trim((string) ($content['title'] ?? '')));
+                    if ($ctaTitle === '' || str_contains($ctaTitle, 'ready to sell on whatsapp')) {
+                        $content['title'] = 'Start free this week — shop, bookings, tables, and WhatsApp AI';
+                        $content['description'] = 'One free Starter account: a web storefront, appointment bookings, dine-in QR, and WhatsApp selling when you connect your number. No credit card. Upgrade only when you need more.';
+                        $content['ctaText'] = $content['ctaText'] ?: 'Get started free';
+                        $content['ctaHref'] = $content['ctaHref'] ?: '/register';
+                        $content['secondaryCtaText'] = $content['secondaryCtaText'] ?: 'See pricing';
+                        $content['secondaryCtaHref'] = $content['secondaryCtaHref'] ?: '/pricing';
+                    }
+                    $content['imageUrl'] = '/images/lando/lando-cta.jpg';
+                    $content['imageAlt'] = 'Kenyan shop owner managing WhatsApp orders from her phone';
+                    $content['showImage'] = true;
+                }
+                if ($page->slug === 'global' && $s->section_key === 'auth_shell' && is_array($content)) {
+                    $authImage = (string) ($content['imageUrl'] ?? '');
+                    if ($authImage === '' || str_contains($authImage, 'lando-intro.png') || str_contains($authImage, 'lando-hero.png')) {
+                        $content['imageUrl'] = '/images/lando/lando-auth.jpg';
+                        $content['imageAlt'] = 'Kenyan cafe owner checking WhatsApp orders on his phone';
+                    }
+                }
+                if ($page->slug === 'about' && $s->section_key === 'hero' && is_array($content)) {
+                    $aboutImage = (string) ($content['imageUrl'] ?? '');
+                    if ($aboutImage === '' || str_contains($aboutImage, 'lando-about-team.png')) {
+                        $content['imageUrl'] = '/images/lando/lando-about-team.jpg';
+                        $content['imageAlt'] = 'RelayIQ teammates in Nairobi reviewing the product together';
+                    }
+                }
+                if ($page->slug === 'features' && $s->section_key === 'feature_2' && is_array($content)) {
+                    $content['imageUrl'] = '/images/lando/lando-feature-storefront.jpg?v=man1';
+                    $content['imageAlt'] = 'Customer browsing a shop on his phone outside a Nairobi boutique';
+                }
+                if ($page->slug === 'contact' && $s->section_key === 'hero' && is_array($content)) {
+                    $contactImage = (string) ($content['imageUrl'] ?? '');
+                    if ($contactImage === '' || str_contains($contactImage, 'lando-contact.png')) {
+                        $content['imageUrl'] = '/images/lando/lando-contact.jpg';
+                        $content['imageAlt'] = 'RelayIQ teammate ready to help from Nairobi';
+                    }
+                }
+                if ($s->section_key === 'navbar' && is_array($content)) {
+                    $content['links'] = PublicMarketingPages::filterLinks($content['links'] ?? []);
+                }
                 if ($s->section_key === 'footer' && is_array($content)) {
                     $content['socialLinks'] = $this->publicSocialLinks($content['socialLinks'] ?? []);
-                    $content['navLinks'] = $this->mergeSeoFooterLinks($content['navLinks'] ?? []);
+                    $content['navLinks'] = PublicMarketingPages::filterLinks(
+                        $this->mergeSeoFooterLinks($content['navLinks'] ?? [])
+                    );
+                }
+                if (is_array($content)) {
+                    $content = $this->bustBrandedIllustrationCache($content);
                 }
 
                 return [
@@ -280,5 +339,26 @@ class CmsPagePayloadBuilder
         }
 
         return asset($path);
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, mixed>
+     */
+    private function bustBrandedIllustrationCache(array $content): array
+    {
+        $url = (string) ($content['imageUrl'] ?? '');
+        if ($url === '' || str_contains($url, '?')) {
+            return $content;
+        }
+
+        foreach (['lando-hero.png', 'lando-storefront.png', 'lando-bookings.png', 'lando-dinein.png'] as $file) {
+            if (str_contains($url, $file)) {
+                $content['imageUrl'] = $url.'?v=brand2';
+                break;
+            }
+        }
+
+        return $content;
     }
 }

@@ -77,6 +77,8 @@ const defaultEntitlements: PlanEntitlements = {
   allowService: false,
   allowBookings: false,
   maxBookingsPerMonth: 0,
+  maxTables: 0,
+  maxTablesUnlimited: false,
   allowStorefront: true,
   allowLinkInBio: true,
   allowDineIn: false,
@@ -94,6 +96,7 @@ const defaultForm: CreatePlanData & { featuresText: string; entitlements: PlanEn
   features: [],
   featuresText: "",
   popular: false,
+  isPublic: true,
   cta: "Start Free Trial",
   sortOrder: 0,
   stripePriceId: "",
@@ -140,6 +143,8 @@ function entitlementsFromPlan(plan: Plan): PlanEntitlements {
     allowService: !!e.allowService,
     allowBookings: !!e.allowBookings,
     maxBookingsPerMonth: e.maxBookingsPerMonth ?? 0,
+    maxTables: e.maxTablesUnlimited ? null : (e.maxTables ?? 0),
+    maxTablesUnlimited: !!e.maxTablesUnlimited || e.maxTables == null,
     allowStorefront: e.allowStorefront !== false,
     allowLinkInBio: e.allowLinkInBio !== false,
     allowDineIn: !!e.allowDineIn,
@@ -187,6 +192,7 @@ export default function AdminPlansPage() {
       features: plan.features ?? [],
       featuresText: (plan.features ?? []).join("\n"),
       popular: plan.popular ?? false,
+      isPublic: plan.isPublic ?? true,
       cta: plan.cta ?? "Start Free Trial",
       sortOrder: plan.sortOrder ?? 0,
       stripePriceId: plan.stripePriceId ?? "",
@@ -214,6 +220,10 @@ export default function AdminPlansPage() {
       maxBookingsPerMonth: form.entitlements.maxBookingsPerMonth == null
         ? null
         : Number(form.entitlements.maxBookingsPerMonth),
+      maxTablesUnlimited: !!form.entitlements.maxTablesUnlimited,
+      maxTables: form.entitlements.maxTablesUnlimited || form.entitlements.maxTables == null
+        ? null
+        : Number(form.entitlements.maxTables),
     }
     const payload: CreatePlanData = {
       name: form.name.trim(),
@@ -228,6 +238,7 @@ export default function AdminPlansPage() {
       description: form.description?.trim() || undefined,
       features,
       popular: form.popular,
+      isPublic: form.isPublic ?? true,
       cta: form.cta?.trim() || "Start Free Trial",
       sortOrder: form.sortOrder ?? 0,
       stripePriceId: form.stripePriceId?.trim() || undefined,
@@ -357,6 +368,7 @@ export default function AdminPlansPage() {
                   <TableHead>Price</TableHead>
                   <TableHead>Limits</TableHead>
                   <TableHead>Trial</TableHead>
+                  <TableHead>Public</TableHead>
                   <TableHead>Popular</TableHead>
                   <TableHead>CTA</TableHead>
                   <TableHead>Order</TableHead>
@@ -411,6 +423,13 @@ export default function AdminPlansPage() {
                         </span>
                       ) : (
                         "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {plan.isPublic === false ? (
+                        <Badge variant="outline">Hidden</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Yes</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -846,6 +865,46 @@ export default function AdminPlansPage() {
                 </label>
               </div>
 
+              <div className="grid gap-2">
+                <Label htmlFor="ent-tables">Dine-in tables</Label>
+                <Input
+                  id="ent-tables"
+                  type="number"
+                  min={0}
+                  disabled={!form.entitlements.allowDineIn || !!form.entitlements.maxTablesUnlimited}
+                  value={form.entitlements.maxTablesUnlimited ? "" : (form.entitlements.maxTables ?? "")}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      entitlements: {
+                        ...f.entitlements,
+                        maxTables: e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0,
+                        maxTablesUnlimited: false,
+                      },
+                    }))
+                  }
+                  placeholder="5"
+                />
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-input"
+                    checked={!!form.entitlements.maxTablesUnlimited}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        entitlements: {
+                          ...f.entitlements,
+                          maxTablesUnlimited: e.target.checked,
+                          maxTables: e.target.checked ? null : (f.entitlements.maxTables ?? 0),
+                        },
+                      }))
+                    }
+                  />
+                  Unlimited tables
+                </label>
+              </div>
+
               <div className="space-y-2">
                 <p className="text-sm font-medium">AI model modes allowed</p>
                 {(
@@ -934,6 +993,16 @@ export default function AdminPlansPage() {
                   className="h-4 w-4 rounded border-input"
                 />
                 <Label htmlFor="plan-is-free">This is a free plan (no payment required)</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="plan-is-public"
+                  checked={form.isPublic !== false}
+                  onChange={(e) => setForm((f) => ({ ...f, isPublic: e.target.checked }))}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <Label htmlFor="plan-is-public">Show this plan on the public pricing page</Label>
               </div>
               {!form.isFree && (
                 <>

@@ -99,15 +99,15 @@ class RegistrationTrialAndConsentTest extends TestCase
             'marketingConsent' => false,
             'planId' => (string) $growth->id,
         ])->assertOk()
-            ->assertJsonPath('requiresPayment', true)
-            ->assertJsonPath('trialPlan', 'starter');
+            ->assertJsonPath('requiresPayment', false)
+            ->assertJsonPath('trialPlan', 'free');
 
         $user = User::where('email', 'pay-growth@test.local')->firstOrFail();
         $this->assertFalse($user->marketing_consent);
         $this->assertDatabaseHas('subscriptions', [
             'company_id' => $user->company_id,
-            'plan' => 'starter',
-            'status' => 'trial',
+            'plan' => 'free',
+            'status' => 'active',
         ]);
     }
 

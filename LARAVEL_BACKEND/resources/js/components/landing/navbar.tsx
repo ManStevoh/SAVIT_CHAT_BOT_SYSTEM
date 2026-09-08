@@ -61,7 +61,7 @@ export function LandingNavbar() {
                 <Link href="/login">Sign in</Link>
               </Button>
               <Button size="sm" asChild className="rounded-md wa-cta border-0 shadow-none">
-                <Link href="/register">Start free trial</Link>
+                <Link href="/register">Get started free</Link>
               </Button>
             </div>
 
@@ -102,7 +102,7 @@ export function LandingNavbar() {
                 <Link href="/login">Sign in</Link>
               </Button>
               <Button asChild className="w-full rounded-lg">
-                <Link href="/register">Start free trial</Link>
+                <Link href="/register">Get started free</Link>
               </Button>
             </div>
           </div>

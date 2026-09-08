@@ -357,6 +357,38 @@ function SectionEditor({
       )
     }
 
+    if (key === "payment_logos") {
+      const items = (content.items as Array<{ name: string; logoUrl?: string }>) ?? []
+      return (
+        <div className="space-y-3">
+          <Field label="Eyebrow" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Heading" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          {items.map((item, i) => (
+            <div key={i} className="rounded border p-3 space-y-2">
+              <Field
+                label={`Logo ${i + 1} name`}
+                value={item.name}
+                onChange={(v) => {
+                  const next = [...items]
+                  next[i] = { ...next[i], name: v }
+                  set("items", next)
+                }}
+              />
+              <Field
+                label={`Logo ${i + 1} image URL`}
+                value={item.logoUrl ?? ""}
+                onChange={(v) => {
+                  const next = [...items]
+                  next[i] = { ...next[i], logoUrl: v }
+                  set("items", next)
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )
+    }
+
     if (key === "trusted_companies") {
       return (
         <div className="space-y-3">
@@ -408,6 +440,43 @@ function SectionEditor({
               onAltChange={(v) => set("imageAlt", v)}
             />
           ) : null}
+        </div>
+      )
+    }
+
+    if (key === "feature_catalog") {
+      const groups =
+        (content.groups as Array<{ id?: string; label?: string; title: string; customer?: string }>) ?? []
+      return (
+        <div className="space-y-3">
+          <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
+          <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          <p className="text-xs text-muted-foreground">
+            Feature groups are optional. The public Features page now tells each door once in the visual blocks, then lists payments, inbox, and follow-up under “Also included.”
+          </p>
+          {groups.map((group, i) => (
+            <div key={group.id ?? i} className="rounded border p-3 space-y-2">
+              <Field
+                label={`Group ${i + 1} title`}
+                value={group.title}
+                onChange={(v) => {
+                  const next = [...groups]
+                  next[i] = { ...next[i], title: v }
+                  set("groups", next)
+                }}
+              />
+              <Field
+                label={`Group ${i + 1} customer line`}
+                value={group.customer ?? ""}
+                onChange={(v) => {
+                  const next = [...groups]
+                  next[i] = { ...next[i], customer: v }
+                  set("groups", next)
+                }}
+                multiline
+              />
+            </div>
+          ))}
         </div>
       )
     }
@@ -468,6 +537,17 @@ function SectionEditor({
           <Field label="Label" value={str("label")} onChange={(v) => set("label", v)} />
           <Field label="Title" value={str("title")} onChange={(v) => set("title", v)} />
           <Field label="Description" value={str("description")} onChange={(v) => set("description", v)} multiline />
+          <Field
+            label="Bullet points (one per line)"
+            value={((content.points as string[]) ?? []).join("\n")}
+            onChange={(v) =>
+              set(
+                "points",
+                v.split("\n").map((line) => line.trim()).filter(Boolean)
+              )
+            }
+            multiline
+          />
           <Field label="Button text" value={str("ctaText")} onChange={(v) => set("ctaText", v)} />
           <Field label="Button link" value={str("ctaHref")} onChange={(v) => set("ctaHref", v)} />
           <Field label="Image position (left/right)" value={str("imagePosition")} onChange={(v) => set("imagePosition", v)} />

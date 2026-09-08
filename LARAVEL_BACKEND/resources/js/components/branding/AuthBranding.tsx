@@ -38,12 +38,14 @@ export function AuthBranding({
       />
 
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-16">
-        <div className="flex justify-center lg:justify-center">
-          <img
-            src={imageUrl}
-            alt={imageAlt}
-            className="max-h-48 w-full max-w-xs object-contain sm:max-h-64 lg:max-h-[480px] lg:max-w-md"
-          />
+        <div className="flex justify-center lg:justify-start">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+            <img
+              src={imageUrl}
+              alt={imageAlt}
+              className="h-56 w-full object-cover object-[center_18%] sm:h-72 lg:h-[28rem]"
+            />
+          </div>
         </div>
 
         <div className="w-full max-w-md justify-self-center lg:max-w-lg lg:justify-self-end">

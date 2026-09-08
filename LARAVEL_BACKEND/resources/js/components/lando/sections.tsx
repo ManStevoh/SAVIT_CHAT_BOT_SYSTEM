@@ -112,14 +112,49 @@ export function LandoHeroSection({
   )
 }
 
-export function LandoPageHero({ title, description }: { title: string; description?: string }) {
+export function LandoPageHero({
+  title,
+  description,
+  kicker,
+  primaryCtaText,
+  primaryCtaHref,
+  secondaryCtaText,
+  secondaryCtaHref,
+}: {
+  title: string
+  description?: string
+  kicker?: string
+  primaryCtaText?: string
+  primaryCtaHref?: string
+  secondaryCtaText?: string
+  secondaryCtaHref?: string
+}) {
   return (
-    <section className="bg-muted pt-28 pb-12 text-center lg:pt-32">
+    <section className="bg-muted pt-28 pb-12 text-center lg:pt-32 lg:pb-16">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h1 className="text-4xl font-bold text-foreground sm:text-5xl">{title}</h1>
+          {kicker && (
+            <p className="mb-4 text-xs font-semibold tracking-widest text-primary uppercase">
+              {kicker}
+            </p>
+          )}
+          <h1 className="text-balance text-4xl font-bold text-foreground sm:text-5xl">{title}</h1>
           {description && (
-            <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">{description}</p>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">{description}</p>
+          )}
+          {(primaryCtaText || secondaryCtaText) && (
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              {primaryCtaText && primaryCtaHref && (
+                <Button asChild className="h-11 rounded-lg bg-primary px-6 text-white hover:bg-primary/90">
+                  <Link href={primaryCtaHref}>{primaryCtaText}</Link>
+                </Button>
+              )}
+              {secondaryCtaText && secondaryCtaHref && (
+                <Button asChild variant="outline" className="h-11 rounded-lg border-border bg-card px-6">
+                  <Link href={secondaryCtaHref}>{secondaryCtaText}</Link>
+                </Button>
+              )}
+            </div>
           )}
           <div className="mt-6 flex justify-center">
             <WhatsAppPartnerBadge />
@@ -145,10 +180,12 @@ const CAPABILITY_ICONS: Record<string, LucideIcon> = {
 }
 
 export function LandoCapabilities({
+  id,
   title,
   description,
   items = [],
 }: {
+  id?: string
   title?: string
   description?: string
   items?: Array<{ title: string; description?: string; icon?: string }>
@@ -156,7 +193,7 @@ export function LandoCapabilities({
   if (items.length === 0) return null
 
   return (
-    <section className="bg-muted py-12 lg:py-16">
+    <section id={id} className="scroll-mt-28 bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
@@ -168,12 +205,12 @@ export function LandoCapabilities({
           {items.map((item, i) => {
             const Icon = CAPABILITY_ICONS[item.icon ?? ""] ?? Sparkles
             return (
-              <Reveal key={item.title} delayMs={i * 60}>
-                <div className="h-full rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
-                    <Icon className="h-5 w-5" aria-hidden />
+              <Reveal key={item.title} delayMs={i * 50}>
+                <div className="group h-full rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                    <Icon className="h-6 w-6" aria-hidden />
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold text-card-foreground">{item.title}</h3>
+                  <h3 className="mt-5 text-lg font-semibold text-card-foreground">{item.title}</h3>
                   {item.description && (
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
                   )}
@@ -246,18 +283,22 @@ export function LandoIntroCard({
 }
 
 export function LandoFeatureBlock({
+  id,
   label,
   title,
   description,
+  points = [],
   ctaText,
   ctaHref,
   imageUrl,
   imageAlt = "",
   imagePosition = "left",
 }: {
+  id?: string
   label?: string
   title: string
   description?: string
+  points?: string[]
   ctaText?: string
   ctaHref?: string
   imageUrl?: string
@@ -267,7 +308,7 @@ export function LandoFeatureBlock({
   const imageOnRight = imagePosition === "right"
 
   return (
-    <section className="bg-muted py-12 lg:py-16">
+    <section id={id} className="scroll-mt-28 bg-muted py-12 lg:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <div
@@ -278,26 +319,37 @@ export function LandoFeatureBlock({
           >
             {imageUrl && (
               <div className="w-full shrink-0 lg:w-1/2">
-                <img
-                  src={imageUrl}
-                  alt={imageAlt}
-                  loading="lazy"
-                  decoding="async"
-                  className="mx-auto max-h-80 w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
-                />
+                <div className="overflow-hidden rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
+                  <img
+                    src={imageUrl}
+                    alt={imageAlt}
+                    loading="lazy"
+                    decoding="async"
+                    className="mx-auto max-h-80 w-full object-contain transition-transform duration-500 hover:scale-[1.02] lg:max-h-[28rem]"
+                  />
+                </div>
               </div>
             )}
             <div className="w-full lg:w-1/2">
               {label && (
-                <p className="mb-3 text-xs font-bold tracking-widest text-muted-foreground uppercase">{label}</p>
+                <p className="mb-3 text-xs font-bold tracking-widest text-primary uppercase">{label}</p>
               )}
               <h2 className="text-3xl font-bold text-foreground sm:text-4xl">{title}</h2>
               {description && <p className="mt-4 text-base leading-relaxed text-muted-foreground">{description}</p>}
+              {points.length > 0 && (
+                <ul className="mt-6 space-y-3">
+                  {points.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm text-muted-foreground">
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {ctaText && ctaHref && (
                 <Button
                   asChild
-                  variant="outline"
-                  className="mt-8 h-11 rounded-lg border-border bg-card px-6 text-foreground transition-transform hover:bg-muted hover:text-foreground hover:-translate-y-0.5"
+                  className="mt-8 h-11 rounded-lg bg-primary px-6 text-white transition-transform hover:bg-primary/90 hover:-translate-y-0.5"
                 >
                   <Link href={ctaHref}>{ctaText}</Link>
                 </Button>
@@ -463,6 +515,8 @@ export function LandoCtaSection({
   description,
   ctaText,
   ctaHref,
+  secondaryCtaText,
+  secondaryCtaHref,
   imageUrl,
   imageAlt = "",
   showImage = false,
@@ -471,31 +525,67 @@ export function LandoCtaSection({
   description?: string
   ctaText?: string
   ctaHref?: string
+  secondaryCtaText?: string
+  secondaryCtaHref?: string
   imageUrl?: string
   imageAlt?: string
   showImage?: boolean
 }) {
+  const hasPhoto = showImage && Boolean(imageUrl)
+
   return (
     <section className="bg-muted py-12 lg:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <div className="overflow-hidden rounded-3xl border border-border bg-card px-8 py-12 text-center shadow-sm transition-shadow duration-300 hover:shadow-md lg:px-16">
-            {showImage && imageUrl && (
-              <img
-                src={imageUrl}
-                alt={imageAlt}
-                loading="lazy"
-                decoding="async"
-                className="mx-auto mb-8 max-h-40 object-contain"
-              />
+          <div
+            className={cn(
+              "overflow-hidden rounded-3xl border border-border bg-card shadow-sm",
+              hasPhoto
+                ? "grid items-stretch lg:grid-cols-2"
+                : "px-8 py-12 text-center lg:px-16"
             )}
-            <h2 className="text-3xl font-bold text-card-foreground sm:text-4xl">{title}</h2>
-            {description && <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">{description}</p>}
-            {ctaText && ctaHref && (
-              <Button asChild className="mt-8 h-11 rounded-lg bg-primary px-6 text-white transition-transform hover:bg-primary/90 hover:-translate-y-0.5">
-                <Link href={ctaHref}>{ctaText}</Link>
-              </Button>
+          >
+            {hasPhoto && (
+              <div className="relative min-h-[240px] bg-muted lg:min-h-[360px]">
+                <img
+                  src={imageUrl}
+                  alt={imageAlt}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover object-[center_20%]"
+                />
+              </div>
             )}
+            <div
+              className={cn(
+                hasPhoto
+                  ? "flex flex-col justify-center px-8 py-10 text-left sm:px-10 lg:px-12 lg:py-14"
+                  : ""
+              )}
+            >
+              <h2 className={cn("text-3xl font-bold text-card-foreground sm:text-4xl", !hasPhoto && "text-balance")}>
+                {title}
+              </h2>
+              {description && (
+                <p className={cn("mt-4 text-base leading-relaxed text-muted-foreground", !hasPhoto && "mx-auto max-w-xl")}>
+                  {description}
+                </p>
+              )}
+              {(ctaText || secondaryCtaText) && (
+                <div className={cn("mt-8 flex flex-col gap-3 sm:flex-row", !hasPhoto && "justify-center")}>
+                  {ctaText && ctaHref && (
+                    <Button asChild className="h-11 rounded-lg bg-primary px-6 text-white transition-transform hover:bg-primary/90 hover:-translate-y-0.5">
+                      <Link href={ctaHref}>{ctaText}</Link>
+                    </Button>
+                  )}
+                  {secondaryCtaText && secondaryCtaHref && (
+                    <Button asChild variant="outline" className="h-11 rounded-lg border-border bg-background px-6">
+                      <Link href={secondaryCtaHref}>{secondaryCtaText}</Link>
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </Reveal>
       </div>
