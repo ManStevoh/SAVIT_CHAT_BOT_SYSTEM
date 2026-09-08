@@ -2278,14 +2278,31 @@ class OrderFlowService
     protected function draftRequiresDeliveryAddress(array $draft): bool
     {
         $items = $draft['items'] ?? [];
+
         foreach ($items as $item) {
             $data = $item['fulfillment_data'] ?? null;
-            if (! is_array($data)) {
-                return true;
+
+            if (is_array($data)) {
+                // Snapshot is present — use it directly.
+                // Default to false (no address) when key is missing, which is safe.
+                if (($data['requiresDeliveryAddress'] ?? false) === true) {
+                    return true;
+                }
+                continue;
             }
-            if (($data['requiresDeliveryAddress'] ?? true) === true) {
-                return true;
+
+            // No snapshot: look up the live Product record as a fallback.
+            $productId = isset($item['product_id']) ? (int) $item['product_id'] : 0;
+            if ($productId > 0) {
+                $product = Product::find($productId);
+                if ($product !== null && ! $product->requires_delivery_address) {
+                    // Confirmed non-physical — skip address requirement for this item.
+                    continue;
+                }
             }
+
+            // Unknown product or confirmed physical — require address.
+            return true;
         }
 
         return false;
