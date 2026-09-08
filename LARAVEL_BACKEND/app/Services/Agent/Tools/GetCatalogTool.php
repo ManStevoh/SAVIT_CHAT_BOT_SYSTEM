@@ -2,16 +2,13 @@
 
 namespace App\Services\Agent\Tools;
 
+use App\Enums\CheckoutStep;
 use App\Services\Agent\AgentToolContext;
 use App\Services\Agent\Contracts\AgentTool;
-use App\Services\OrderFlowService;
+use App\Services\Workflow\ResponseSpecRenderer;
 
 final class GetCatalogTool implements AgentTool
 {
-    public function __construct(
-        protected OrderFlowService $orderFlow,
-    ) {}
-
     public function name(): string
     {
         return 'get_catalog';
@@ -32,10 +29,15 @@ final class GetCatalogTool implements AgentTool
 
     public function execute(AgentToolContext $context, array $arguments): array
     {
-        $this->orderFlow->initializeProductStep($context->chat, $context->company);
+        $draft = is_array($context->chat->order_draft) ? $context->chat->order_draft : [];
+        $draft['items'] = $draft['items'] ?? [];
+        $context->chat->update([
+            'conversation_step' => CheckoutStep::BUILDING_CART->toLegacyStep(),
+            'order_draft' => $draft,
+        ]);
 
         return [
-            'catalog' => $this->orderFlow->formatCatalogForDisplay($context->company),
+            'catalog' => ResponseSpecRenderer::renderCatalogPrompt($context->company),
         ];
     }
 }

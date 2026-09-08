@@ -2,11 +2,11 @@
 
 namespace App\Services\Agent;
 
+use App\Enums\CheckoutStep;
 use App\Models\Product;
-use App\Services\OrderFlowService;
 
 /**
- * Turns natural / shorthand customer checkout phrasing into OrderFlowService commands.
+ * Turns natural / shorthand customer checkout phrasing into checkout commands.
  * The agent must synthesize these — never ask the customer to type a magic phrase.
  */
 final class CheckoutMessageComposer
@@ -33,19 +33,19 @@ final class CheckoutMessageComposer
         }
 
         $isPureNumber = (bool) preg_match('/^\d+$/', $lower);
-        if ($isPureNumber && ($step === OrderFlowService::STEP_CONFIRM || $step === 'confirm') && $lower === '1') {
+        if ($isPureNumber && ($step === CheckoutStep::REVIEWING_ORDER->toLegacyStep() || $step === 'confirm') && $lower === '1') {
             $candidates[] = 'confirm';
         }
 
         if (! $isPureNumber && ($this->looksLikeAffirm($lower) || $this->looksLikePayIntent($lower))) {
-            if ($step === OrderFlowService::STEP_CONFIRM || $step === 'confirm') {
+            if ($step === CheckoutStep::REVIEWING_ORDER->toLegacyStep() || $step === 'confirm') {
                 $candidates[] = 'confirm';
-            } elseif ($step === OrderFlowService::STEP_PRODUCT && $hasItems) {
+            } elseif ($step === CheckoutStep::BUILDING_CART->toLegacyStep() && $hasItems) {
                 $candidates[] = 'done';
                 $candidates[] = 'confirm';
-            } elseif ($step === OrderFlowService::STEP_ADDRESS) {
+            } elseif ($step === CheckoutStep::COLLECTING_ADDRESS->toLegacyStep()) {
                 // Keep address step alone — pay wording is not an address.
-            } elseif (! $step || $step === OrderFlowService::STEP_NONE) {
+            } elseif (! $step || $step === CheckoutStep::IDLE->toLegacyStep()) {
                 if ($qtyProduct === null) {
                     $product = $this->resolveProductNameFromThread($context);
                     $qty = $this->resolveQuantityFromThread($context, $raw) ?? 1;
@@ -58,7 +58,7 @@ final class CheckoutMessageComposer
                     $candidates[] = 'done';
                     $candidates[] = 'confirm';
                 }
-            } elseif ($step === OrderFlowService::STEP_PRODUCT_QTY) {
+            } elseif ($step === CheckoutStep::SPECIFYING_QUANTITY->toLegacyStep()) {
                 $qty = $this->extractLeadingQuantity($raw);
                 if ($qty !== null) {
                     $candidates[] = (string) $qty;
@@ -88,7 +88,7 @@ final class CheckoutMessageComposer
         }
 
         // Qty-only shorthand while a product is pending ("10x" / "10 x").
-        if ($step === OrderFlowService::STEP_PRODUCT_QTY) {
+        if ($step === CheckoutStep::SPECIFYING_QUANTITY->toLegacyStep()) {
             $qty = $this->extractLeadingQuantity($raw);
             if ($qty !== null) {
                 $candidates[] = (string) $qty;

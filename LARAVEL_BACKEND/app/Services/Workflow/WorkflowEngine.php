@@ -131,7 +131,7 @@ final class WorkflowEngine
 
         return match ($state->step) {
             CheckoutStep::IDLE, CheckoutStep::BUILDING_CART => $this->handleBuildingCart($state, $intent, $company),
-            CheckoutStep::TRACKING_ACTIONS => $this->handleTrackingActions($state, $intent, $company),
+            CheckoutStep::TRACKING_ACTIONS, CheckoutStep::EXISTING_ORDER_PROMPT => $this->handleTrackingActions($state, $intent, $company),
             CheckoutStep::SELECTING_VARIANT => $this->handleSelectingVariant($state, $intent, $company),
             CheckoutStep::COLLECTING_ADDRESS => $this->handleCollectingAddress($state, $intent, $company),
             CheckoutStep::REVIEWING_ORDER => $this->handleReviewingOrder($state, $intent, $company),
@@ -188,15 +188,18 @@ final class WorkflowEngine
 
         if ($isTrackOrderRequest) {
             $trackingService = app(\App\Services\Domain\OrderTrackingService::class);
-            $orderFlow = app(\App\Services\OrderFlowService::class);
-            $chat = $state->chatId ? \App\Models\Chat::find($state->chatId) : null;
 
             // 1. Check if specific order number requested (e.g. #160, order 160)
             $specificOrder = $trackingService->findOrderByNumber($company, $rawMessage);
             if ($specificOrder) {
                 $reply = $trackingService->formatOrderTrackingCard($company, $specificOrder, $state->customerPhone);
-                if ($chat && in_array($specificOrder->payment_status, ['unpaid', 'pending'], true) && $specificOrder->status !== 'cancelled') {
-                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $specificOrder->id]);
+                if (in_array($specificOrder->payment_status, ['unpaid', 'pending'], true) && $specificOrder->status !== 'cancelled') {
+                    $nextState = $state->with([
+                        'step' => CheckoutStep::TRACKING_ACTIONS,
+                        'pendingOrderId' => $specificOrder->id,
+                        'pendingDraftData' => array_merge($state->pendingDraftData, ['order_id' => $specificOrder->id]),
+                    ]);
+                    return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
                 }
                 return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
             }
@@ -205,10 +208,12 @@ final class WorkflowEngine
             $pendingOrder = $trackingService->getPendingUnpaidOrder($company, $state->customerPhone, $state->chatId);
             if ($pendingOrder) {
                 $reply = $trackingService->formatOrderTrackingCard($company, $pendingOrder, $state->customerPhone);
-                if ($chat) {
-                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $pendingOrder->id]);
-                }
-                return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
+                $nextState = $state->with([
+                    'step' => CheckoutStep::TRACKING_ACTIONS,
+                    'pendingOrderId' => $pendingOrder->id,
+                    'pendingDraftData' => array_merge($state->pendingDraftData, ['order_id' => $pendingOrder->id]),
+                ]);
+                return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
             }
 
             // 3. Otherwise retrieve recent orders for this customer
@@ -221,9 +226,15 @@ final class WorkflowEngine
             }
 
             if ($recentOrders->count() === 1) {
-                $reply = $trackingService->formatOrderTrackingCard($company, $recentOrders->first(), $state->customerPhone);
-                if ($chat && in_array($recentOrders->first()->payment_status, ['unpaid', 'pending'], true) && $recentOrders->first()->status !== 'cancelled') {
-                    $orderFlow->setStep($chat, \App\Services\OrderFlowService::STEP_TRACKING_ACTIONS, ['order_id' => $recentOrders->first()->id]);
+                $singleOrder = $recentOrders->first();
+                $reply = $trackingService->formatOrderTrackingCard($company, $singleOrder, $state->customerPhone);
+                if (in_array($singleOrder->payment_status, ['unpaid', 'pending'], true) && $singleOrder->status !== 'cancelled') {
+                    $nextState = $state->with([
+                        'step' => CheckoutStep::TRACKING_ACTIONS,
+                        'pendingOrderId' => $singleOrder->id,
+                        'pendingDraftData' => array_merge($state->pendingDraftData, ['order_id' => $singleOrder->id]),
+                    ]);
+                    return new WorkflowTransitionResult($nextState, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
                 }
                 return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
             }

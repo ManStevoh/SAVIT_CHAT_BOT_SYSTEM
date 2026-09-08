@@ -15,6 +15,7 @@ enum CheckoutStep: string
     case AWAITING_PAYMENT = 'awaiting_payment';
     case ORDER_COMPLETED = 'order_completed';
     case TRACKING_ACTIONS = 'tracking_actions';
+    case EXISTING_ORDER_PROMPT = 'existing_order_prompt';
 
     public static function fromLegacyStep(?string $step): self
     {
@@ -33,6 +34,7 @@ enum CheckoutStep: string
             'awaiting_payment' => self::AWAITING_PAYMENT,
             'order_completed' => self::ORDER_COMPLETED,
             'tracking_actions' => self::TRACKING_ACTIONS,
+            'existing_order_prompt' => self::EXISTING_ORDER_PROMPT,
             default => self::IDLE,
         };
     }
@@ -51,6 +53,7 @@ enum CheckoutStep: string
             self::AWAITING_PAYMENT => 'awaiting_payment',
             self::ORDER_COMPLETED => 'order_completed',
             self::TRACKING_ACTIONS => 'tracking_actions',
+            self::EXISTING_ORDER_PROMPT => 'existing_order_prompt',
         };
     }
 }

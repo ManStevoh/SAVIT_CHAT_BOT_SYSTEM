@@ -492,7 +492,7 @@ class OrderController extends Controller
                     // Don't lock the chat to agent handling; customer reply should be handled by the bot checkout flow.
                     'agent_handling_at' => null,
                     // Put chat into an explicit "existing order" flow so replies like "1" are not treated as "Prices".
-                    'conversation_step' => \App\Services\OrderFlowService::STEP_EXISTING_ORDER_PROMPT,
+                    'conversation_step' => \App\Enums\CheckoutStep::EXISTING_ORDER_PROMPT->value,
                     'order_draft' => ['order_id' => $order->id],
                 ]);
             }
@@ -601,7 +601,7 @@ class OrderController extends Controller
                         // Ensure customer replies like "1" are interpreted as a payment choice for this order.
                         if (($order->payment_status ?? null) !== 'paid') {
                             $chat->update([
-                                'conversation_step' => \App\Services\OrderFlowService::STEP_EXISTING_ORDER_PROMPT,
+                                'conversation_step' => \App\Enums\CheckoutStep::EXISTING_ORDER_PROMPT->value,
                                 'order_draft' => ['order_id' => $order->id],
                             ]);
                         }

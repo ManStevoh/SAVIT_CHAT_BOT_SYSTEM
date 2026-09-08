@@ -14,7 +14,7 @@ use App\Services\Agent\CommerceAgentReplyService;
 use App\Services\AIReplyService;
 use App\Services\CompanyInAppNotificationService;
 use App\Services\MailService;
-use App\Services\OrderFlowService;
+use App\Services\Conversation\ConversationStateHydrator;
 use App\Services\PlanLimitService;
 use App\Services\Platform\UsageMeterService;
 use App\Services\AI\AiLearningConfig;
@@ -278,7 +278,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         if ($this->wantsHumanEscalation($chat, allowKeywordMatch: ! CommerceAgentReplyService::isEnabledForCompany($company))) {
             \App\Services\WhatsApp\WhatsAppDebugLogger::info('HUMAN_ESCALATION_TRIGGERED', ['chat_id' => $chat->id]);
             $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
-            app(OrderFlowService::class)->resetOrderState($chat);
+            ConversationStateHydrator::resetChatState($chat);
             $chat->refresh();
             $chat->update(['agent_handling_at' => now()]);
             $account = $company->whatsappAccount;
@@ -360,187 +360,30 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Authoritative Cutover Switch (CONVERSATIONAL_OS_ENABLED=true)
-        $conversationalOsEnabled = (bool) config('agent.conversational_os_enabled', env('CONVERSATIONAL_OS_ENABLED', true));
-
-        if ($conversationalOsEnabled) {
-            Log::info('PIPELINE_STARTUP', [
-                'active_pipeline' => 'ConversationalOSPipeline',
-                'workflow_version' => \App\Services\Workflow\WorkflowEngine::WORKFLOW_VERSION,
-                'renderer_version' => \App\Services\Workflow\ResponseSpecRenderer::RENDERER_VERSION,
-                'company_id' => $company->id,
-                'chat_id' => $chat->id,
-            ]);
-            \App\Services\WhatsApp\WhatsAppDebugLogger::info('CONVERSATIONAL_OS_PIPELINE_EXECUTING', [
-                'active_pipeline' => 'ConversationalOSPipeline',
-                'workflow_version' => \App\Services\Workflow\WorkflowEngine::WORKFLOW_VERSION,
-                'renderer_version' => \App\Services\Workflow\ResponseSpecRenderer::RENDERER_VERSION,
-            ]);
-
-            $channelAdapter = new \App\Services\Channels\WhatsAppChannelAdapter($waSender);
-            $envelope = $channelAdapter->normalizeInbound([
-                'customer_phone' => $this->customerPhone,
-                'customer_name' => $this->customerName,
-                'message_text' => $this->messageText,
-                'whatsapp_message_id' => $this->whatsappMessageId,
-            ], (int) $company->id);
-
-            $pipeline = app(\App\Services\Workflow\ConversationalOSPipeline::class);
-            $pipeline->processTurn($company, $chat, $envelope, $channelAdapter);
-
-            return;
-        }
-
-        Log::warning('PIPELINE_ROLLBACK_ACTIVE: Routing to legacy pipeline', [
+        // Authoritative Conversational OS Pipeline
+        Log::info('PIPELINE_STARTUP', [
+            'active_pipeline' => 'ConversationalOSPipeline',
+            'workflow_version' => \App\Services\Workflow\WorkflowEngine::WORKFLOW_VERSION,
+            'renderer_version' => \App\Services\Workflow\ResponseSpecRenderer::RENDERER_VERSION,
             'company_id' => $company->id,
             'chat_id' => $chat->id,
         ]);
-
-        if (CommerceAgentReplyService::isEnabledForCompany($company)) {
-            $agentResult = null;
-            try {
-                $messageText = $this->enrichIncomingMessage($company, $chat);
-
-                \App\Services\WhatsApp\WhatsAppDebugLogger::log('COMMERCE_AGENT_TRY_GENERATE', [
-                    'company_id' => $company->id,
-                    'chat_id' => $chat->id,
-                    'message_text' => mb_substr($messageText, 0, 150),
-                ]);
-
-                $ownerVoice = app(\App\Services\Agent\Voice\OwnerVoiceCommandService::class);
-                if ($ownerVoice->isOwnerPhone($company, $this->customerPhone)) {
-                    $ownerResult = $ownerVoice->handle($company, $chat, $messageText);
-                    if (($ownerResult['handled'] ?? false) && trim((string) ($ownerResult['reply'] ?? '')) !== '') {
-                        \App\Services\WhatsApp\WhatsAppDebugLogger::log('OWNER_VOICE_HANDLED', $ownerResult);
-                        $this->sendReplyAndSave($waSender, $company, $chat, (string) $ownerResult['reply'], 'owner_voice');
-
-                        return;
-                    }
-                }
-
-                $agentResult = app(CommerceAgentReplyService::class)->generate(
-                    $company,
-                    $chat,
-                    $this->customerPhone,
-                    $this->customerName,
-                    $messageText,
-                );
-
-                \App\Services\WhatsApp\WhatsAppDebugLogger::log('COMMERCE_AGENT_RESULT', [
-                    'has_result' => $agentResult !== null,
-                    'reply_length' => strlen($agentResult['reply'] ?? ''),
-                    'reply_preview' => mb_substr($agentResult['reply'] ?? '', 0, 150),
-                    'route' => $agentResult['route'] ?? null,
-                ]);
-            } catch (\Throwable $e) {
-                \App\Services\WhatsApp\WhatsAppDebugLogger::error('COMMERCE_AGENT_EXCEPTION', [
-                    'company_id' => $company->id,
-                    'chat_id' => $chat->id,
-                    'error' => $e->getMessage(),
-                    'file' => basename($e->getFile()),
-                    'line' => $e->getLine(),
-                ], $e);
-            }
-
-            if ($agentResult !== null && trim($agentResult['reply'] ?? '') !== '') {
-                if ($agentResult['handoff']) {
-                    $this->notifyCompanyNewMessage($company, $mailService, 'handoff');
-                }
-                $this->sendReplyAndSave(
-                    $waSender,
-                    $company,
-                    $chat,
-                    $agentResult['reply'],
-                    $agentResult['route'],
-                    $agentResult['log_id'] ?? null,
-                    $agentResult['pay_url'] ?? $agentResult['cta_url'] ?? null,
-                    $agentResult['cta_button_text'] ?? $agentResult['button_text'] ?? null,
-                );
-                $this->maybeSendVisionProductImage($waSender, $company, $chat);
-                $this->schedulePostConversationJobs($company, $chat);
-
-                return;
-            }
-
-            // Agent OS unavailable — prefer legacy AI before keyword order-flow / FAQ shortcuts.
-            $inOrderStep = filled($chat->conversation_step);
-            if (! $inOrderStep) {
-                $replyText = $aiReply->getReplyForMessage(
-                    $company,
-                    $messageText,
-                    $this->customerName,
-                    $this->chatId,
-                    $this->orderFlowContextForAi($chat),
-                );
-                \App\Services\WhatsApp\WhatsAppDebugLogger::log('LEGACY_AI_FALLBACK_RESULT', [
-                    'reply_preview' => mb_substr($replyText, 0, 150),
-                    'route' => $aiReply->getLastReplyRoute(),
-                ]);
-                if (trim($replyText) !== '') {
-                    $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
-
-                    return;
-                }
-            }
-        }
-
-        // Active checkout step: keep state-machine continuity. Otherwise AI already tried above
-        // (agent companies) or runs after order-flow miss (legacy).
-        $orderFlow = app(OrderFlowService::class);
-        $stepBefore = $chat->conversation_step;
-        $orderReply = $orderFlow->processMessage($chat, $company, $this->messageText, $this->customerName ?? '', $this->customerPhone);
-        \App\Services\WhatsApp\WhatsAppDebugLogger::log('ORDER_FLOW_PROCESS_RESULT', [
-            'has_order_reply' => filled($orderReply),
-            'order_reply_preview' => mb_substr((string) $orderReply, 0, 150),
+        \App\Services\WhatsApp\WhatsAppDebugLogger::info('CONVERSATIONAL_OS_PIPELINE_EXECUTING', [
+            'active_pipeline' => 'ConversationalOSPipeline',
+            'workflow_version' => \App\Services\Workflow\WorkflowEngine::WORKFLOW_VERSION,
+            'renderer_version' => \App\Services\Workflow\ResponseSpecRenderer::RENDERER_VERSION,
         ]);
-        if ($orderReply !== null && trim($orderReply) !== '') {
-            $chat->refresh();
-            $this->maybeSendOrderSelectionImage($waSender, $company, $chat, $orderFlow, $stepBefore);
-            $this->sendReplyAndSave($waSender, $company, $chat, $orderReply, 'order_flow');
 
-            return;
-        }
+        $channelAdapter = new \App\Services\Channels\WhatsAppChannelAdapter($waSender);
+        $envelope = $channelAdapter->normalizeInbound([
+            'customer_phone' => $this->customerPhone,
+            'customer_name' => $this->customerName,
+            'message_text' => $this->messageText,
+            'whatsapp_message_id' => $this->whatsappMessageId,
+        ], (int) $company->id);
 
-        if ($this->isFirstCustomerMessageInChat($this->chatId)) {
-            app(OrderFlowService::class)->resetOrderState($chat);
-            $chat->refresh();
-
-            $skipOpening = $aiReply->shouldSkipScriptedOpening($company, $this->messageText);
-            if (! $skipOpening) {
-                $greeting = $aiReply->getGreetingOpening($company, $this->customerName, $chat);
-                \App\Services\WhatsApp\WhatsAppDebugLogger::log('FIRST_MESSAGE_GREETING_SEND', [
-                    'greeting_preview' => mb_substr($greeting, 0, 150),
-                ]);
-                $this->sendReplyAndSave($waSender, $company, $chat, $greeting, $aiReply->getLastReplyRoute());
-                $chat->refresh();
-            }
-
-            if ($skipOpening) {
-                $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
-                \App\Services\WhatsApp\WhatsAppDebugLogger::log('FIRST_MESSAGE_SKIP_OPENING_REPLY', [
-                    'reply_preview' => mb_substr($replyText, 0, 150),
-                ]);
-                if (trim($replyText) !== '') {
-                    $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
-                }
-
-                return;
-            }
-
-            $followUp = $aiReply->getReplyAfterOpeningGreeting($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
-            if ($followUp !== null && trim($followUp) !== '') {
-                $this->sendReplyAndSave($waSender, $company, $chat, $followUp, $aiReply->getLastReplyRoute());
-            }
-
-            return;
-        }
-
-        $replyText = $aiReply->getReplyForMessage($company, $this->messageText, $this->customerName, $this->chatId, $this->orderFlowContextForAi($chat));
-        \App\Services\WhatsApp\WhatsAppDebugLogger::log('DEFAULT_AI_FALLBACK_REPLY', [
-            'reply_preview' => mb_substr($replyText, 0, 150),
-            'route' => $aiReply->getLastReplyRoute(),
-        ]);
-        $this->sendReplyAndSave($waSender, $company, $chat, $replyText, $aiReply->getLastReplyRoute());
+        $pipeline = app(\App\Services\Workflow\ConversationalOSPipeline::class);
+        $pipeline->processTurn($company, $chat, $envelope, $channelAdapter);
     }
 
     /**
@@ -858,50 +701,6 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         return true;
     }
 
-    protected function maybeSendOrderSelectionImage(
-        WhatsAppMessageSenderService $waSender,
-        Company $company,
-        Chat $chat,
-        OrderFlowService $orderFlow,
-        ?string $stepBefore
-    ): void {
-        $stepNow = $chat->conversation_step;
-        $shouldSend =
-            ($stepBefore === OrderFlowService::STEP_PRODUCT && in_array($stepNow, [OrderFlowService::STEP_VARIANT, OrderFlowService::STEP_PRODUCT_QTY], true))
-            || ($stepBefore === OrderFlowService::STEP_VARIANT && $stepNow === OrderFlowService::STEP_PRODUCT_QTY);
-
-        if (! $shouldSend) {
-            return;
-        }
-
-        $preview = $orderFlow->resolveCurrentSelectionImage($chat, $company);
-        if (! $preview || empty($preview['url'])) {
-            return;
-        }
-
-        $account = $company->whatsappAccount;
-        if (! $account || ! $account->isActive()) {
-            return;
-        }
-
-        $result = $waSender->sendImage($account, $this->customerPhone, $preview['url'], $preview['caption'] ?? null);
-        Message::create([
-            'chat_id' => $chat->id,
-            'content' => $preview['caption'] ?? '',
-            'message_type' => 'image',
-            'attachment_url' => $preview['url'],
-            'attachment_name' => null,
-            'attachment_mime' => 'image/jpeg',
-            'attachment_size' => null,
-            'sender' => 'bot',
-            'status' => $result['success'] ? 'sent' : 'failed',
-            'whatsapp_message_id' => $result['message_id'] ?? null,
-        ]);
-
-        if (! $result['success']) {
-            Log::warning('ProcessIncomingWhatsAppMessage: selection image send failed', ['error' => $result['error'] ?? 'unknown']);
-        }
-    }
 
     protected function maybeSendVisionProductImage(
         WhatsAppMessageSenderService $waSender,
@@ -950,38 +749,6 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    /**
-     * Gives OpenAI enough context to sound like the owner without contradicting the WhatsApp order wizard.
-     */
-    protected function orderFlowContextForAi(Chat $chat): ?string
-    {
-        $step = $chat->conversation_step;
-        if ($step === null || $step === '') {
-            return null;
-        }
-
-        $lines = [
-            OrderFlowService::STEP_PRODUCT => 'The customer is building an order: they are selecting products and quantities.',
-            OrderFlowService::STEP_VARIANT => 'The customer is choosing a product option (variant) before quantity.',
-            OrderFlowService::STEP_PRODUCT_QTY => 'The customer is entering quantity for a product line.',
-            OrderFlowService::STEP_ADDRESS => 'The customer is being asked for a delivery address for their order.',
-            OrderFlowService::STEP_CONFIRM => 'The customer is at order confirmation (review totals before placing).',
-            OrderFlowService::STEP_PAYMENT_METHOD => 'The customer is choosing how to pay for an order.',
-            OrderFlowService::STEP_MPESA_PHONE => 'The customer is confirming or entering a phone number for M-Pesa payment.',
-            OrderFlowService::STEP_EXISTING_ORDER_ADDRESS => 'The customer is completing delivery details for an order that already exists.',
-            OrderFlowService::STEP_EXISTING_ORDER_PAYMENT_METHOD => 'The customer is choosing payment for an existing order.',
-            OrderFlowService::STEP_EXISTING_ORDER_PROMPT => 'The customer is deciding whether to continue with an existing order.',
-        ];
-
-        $line = $lines[$step] ?? "The customer is in an active checkout step ({$step}).";
-        $draft = $chat->order_draft;
-        $extra = [];
-        if (is_array($draft) && isset($draft['items']) && is_array($draft['items']) && $draft['items'] !== []) {
-            $extra[] = 'They already have items in the draft order; be brief and do not restart the catalog unless they ask.';
-        }
-
-        return $line.(empty($extra) ? '' : ' '.implode(' ', $extra));
-    }
 
     /**
      * @param  'handoff'|'agent_active'|'message'  $kind

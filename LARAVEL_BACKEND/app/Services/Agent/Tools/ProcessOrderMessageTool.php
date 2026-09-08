@@ -2,15 +2,17 @@
 
 namespace App\Services\Agent\Tools;
 
+use App\DTOs\InboundEnvelope;
 use App\Services\Agent\AgentToolContext;
 use App\Services\Agent\CheckoutMessageComposer;
 use App\Services\Agent\Contracts\AgentTool;
-use App\Services\OrderFlowService;
+use App\Services\Channels\InternalBufferChannelAdapter;
+use App\Services\Workflow\ConversationalOSPipeline;
 
 final class ProcessOrderMessageTool implements AgentTool
 {
     public function __construct(
-        protected OrderFlowService $orderFlow,
+        protected ConversationalOSPipeline $pipeline,
         protected CheckoutMessageComposer $composer,
     ) {}
 
@@ -106,13 +108,18 @@ final class ProcessOrderMessageTool implements AgentTool
         $tried[] = $message;
         $chat = $context->chat->fresh();
 
-        return $this->orderFlow->processMessage(
-            $chat,
-            $context->company,
-            $message,
-            $context->customerName ?? '',
-            $context->customerPhone,
+        $adapter = new InternalBufferChannelAdapter();
+        $envelope = new InboundEnvelope(
+            channelType: 'internal',
+            externalSenderId: (string) $context->customerPhone,
+            companyId: (int) $context->company->id,
+            messageText: $message,
+            senderName: $context->customerName,
         );
+
+        $result = $this->pipeline->processTurn($context->company, $chat, $envelope, $adapter);
+
+        return $result->customerReply ?? $adapter->getLastMessageContent();
     }
 
     /**
@@ -126,7 +133,7 @@ final class ProcessOrderMessageTool implements AgentTool
             $draft = is_array($context->chat->order_draft) ? $context->chat->order_draft : [];
             $hasItems = ! empty($draft['items']);
 
-            if ($step === OrderFlowService::STEP_PRODUCT && $hasItems) {
+            if ($step === \App\Enums\CheckoutStep::BUILDING_CART->toLegacyStep() && $hasItems) {
                 $reply = $this->runOrderFlow($context, 'done', $tried);
                 if ($reply !== null && trim($reply) !== '') {
                     $lastReply = $reply;
@@ -134,7 +141,7 @@ final class ProcessOrderMessageTool implements AgentTool
                 continue;
             }
 
-            if ($step === OrderFlowService::STEP_CONFIRM) {
+            if ($step === \App\Enums\CheckoutStep::REVIEWING_ORDER->toLegacyStep()) {
                 $reply = $this->runOrderFlow($context, 'confirm', $tried);
                 if ($reply !== null && trim($reply) !== '') {
                     $lastReply = $reply;

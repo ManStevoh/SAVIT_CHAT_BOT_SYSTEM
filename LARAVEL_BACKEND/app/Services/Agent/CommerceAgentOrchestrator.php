@@ -126,9 +126,14 @@ final class CommerceAgentOrchestrator
 
             if ($isEnabled && ! $isShadowMode) {
                 if ($intentResult->isHighConfidence($minConfidence) && $intentResult->intent->isPhase1Eligible()) {
-                    $orderFlow = app(\App\Services\OrderFlowService::class);
-                    $cartResult = $orderFlow->handleStructuredCartIntent($intentResult, $chat, $company);
-                    if ($cartResult !== null && ! empty($cartResult['message'])) {
+                    $hydrator = app(\App\Services\Conversation\ConversationStateHydrator::class);
+                    $workflowEngine = app(\App\Services\Workflow\WorkflowEngine::class);
+
+                    $currentState = $hydrator->hydrateFromChat($chat);
+                    $transitionResult = $workflowEngine->handle($currentState, $intentResult, $company);
+                    $hydrator->dehydrateToChat($transitionResult->nextState, $chat);
+
+                    if ($transitionResult->customerReply !== null && trim($transitionResult->customerReply) !== '') {
                         \Illuminate\Support\Facades\DB::table('ai_intent_logs')
                             ->where('id', $intentLogId)
                             ->update([
@@ -137,13 +142,13 @@ final class CommerceAgentOrchestrator
                                 'updated_at' => now(),
                             ]);
 
-                        $reply = $this->finalizeReply($company, trim($cartResult['message']), $cognitiveContext, true);
+                        $reply = $this->finalizeReply($company, trim($transitionResult->customerReply), $cognitiveContext, true);
 
                         return [
                             'reply' => $reply,
                             'route' => 'intent_fast_path_' . $intentResult->intent->value,
                             'handoff' => false,
-                            'order_flow_reply' => $cartResult['message'],
+                            'order_flow_reply' => $transitionResult->customerReply,
                             'log_id' => null,
                         ];
                     }
@@ -469,12 +474,12 @@ final class CommerceAgentOrchestrator
 
         // Active single-input data collection steps (quantity, address, confirm, payment choice) expect user input
         $activeDataStep = $chat && in_array($chat->conversation_step, [
-            \App\Services\OrderFlowService::STEP_VARIANT,
-            \App\Services\OrderFlowService::STEP_PRODUCT_QTY,
-            \App\Services\OrderFlowService::STEP_ADDRESS,
-            \App\Services\OrderFlowService::STEP_CONFIRM,
-            \App\Services\OrderFlowService::STEP_PAYMENT_METHOD,
-            \App\Services\OrderFlowService::STEP_MPESA_PHONE,
+            \App\Enums\CheckoutStep::SELECTING_VARIANT->toLegacyStep(),
+            \App\Enums\CheckoutStep::SPECIFYING_QUANTITY->toLegacyStep(),
+            \App\Enums\CheckoutStep::COLLECTING_ADDRESS->toLegacyStep(),
+            \App\Enums\CheckoutStep::REVIEWING_ORDER->toLegacyStep(),
+            \App\Enums\CheckoutStep::SELECTING_PAYMENT_METHOD->toLegacyStep(),
+            \App\Enums\CheckoutStep::PROVIDING_PHONE->toLegacyStep(),
         ], true);
 
         $lowerMsg = mb_strtolower(trim($incomingMessage ?? ''));

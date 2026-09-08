@@ -68,4 +68,12 @@ final class ConversationStateHydrator
             'order_draft' => $draft,
         ]);
     }
+
+    public static function resetChatState(Chat $chat): void
+    {
+        $chat->update([
+            'conversation_step' => null,
+            'order_draft' => null,
+        ]);
+    }
 }
