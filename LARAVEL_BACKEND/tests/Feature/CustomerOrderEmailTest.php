@@ -7,6 +7,7 @@ use App\Models\CompanySetting;
 use App\Models\Order;
 use App\Models\OrderProduct;
 use App\Models\Product;
+use App\Models\StorefrontCustomer;
 use App\Services\MailService;
 use App\Services\OrderPaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -121,6 +122,74 @@ class CustomerOrderEmailTest extends TestCase
         app(MailService::class)->sendCustomerPaymentFulfillment($order);
 
         $this->assertSame([], $mail->sent);
+    }
+
+    public function test_paid_order_auto_provisions_customer_account_and_dispatches_password_setup_email(): void
+    {
+        $mail = $this->bindRecordingMail();
+        [$company, $ebook] = $this->seedDigitalStore();
+
+        // 1. Pending unpaid order: No password set
+        $order = Order::create([
+            'company_id' => $company->id,
+            'order_number' => 'ORD-AUTO-ACC',
+            'customer_name' => 'Auto User',
+            'customer_email' => 'autouser@example.com',
+            'customer_phone' => '254711999111',
+            'total' => 25,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+        ]);
+
+        $this->assertDatabaseMissing('storefront_customers', [
+            'company_id' => $company->id,
+            'email' => 'autouser@example.com',
+        ]);
+
+        // 2. Mark order as paid: Automatically creates StorefrontCustomer and dispatches setup email
+        app(OrderPaymentService::class)->markOrderPaid($order->fresh());
+
+        $customer = StorefrontCustomer::where('company_id', $company->id)
+            ->where('email', 'autouser@example.com')
+            ->first();
+        $this->assertNotNull($customer);
+        $this->assertNull($customer->password);
+        $this->assertTrue(
+            $this->mailContains($mail, 'autouser@example.com', 'account'),
+            'Account setup email should be sent.'
+        );
+
+        // 3. check-email API reports customer exists without password
+        $slug = $company->store_slug;
+        $res = $this->postJson("/s/{$slug}/account/check-email", ['email' => 'autouser@example.com']);
+        $res->assertOk()
+            ->assertJson([
+                'exists' => true,
+                'hasPassword' => false,
+                'name' => 'Auto User',
+            ]);
+
+        // 4. Set password
+        $customer->update(['password' => bcrypt('Secret123!')]);
+
+        $res2 = $this->postJson("/s/{$slug}/account/check-email", ['email' => 'autouser@example.com']);
+        $res2->assertOk()
+            ->assertJson([
+                'exists' => true,
+                'hasPassword' => true,
+                'name' => 'Auto User',
+            ]);
+
+        // 5. Duplicate registration attempt fails cleanly
+        $resRegister = $this->postJson("/s/{$slug}/account/register", [
+            'name' => 'Auto User',
+            'email' => 'autouser@example.com',
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'NewPassword123!',
+            'acceptTerms' => true,
+        ]);
+        $resRegister->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
     }
 
     private function bindRecordingMail(): RecordingMailService

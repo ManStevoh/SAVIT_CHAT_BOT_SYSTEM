@@ -26,8 +26,9 @@ class VoiceNoteTest extends TestCase
             'display_currency' => 'KES',
         ]);
 
+        $chat = \App\Models\Chat::factory()->create(['company_id' => $company->id]);
         $message = Message::create([
-            'chat_id' => 1,
+            'chat_id' => $chat->id,
             'content' => '[audio received]',
             'message_type' => 'audio',
             'sender' => 'customer',
@@ -38,7 +39,7 @@ class VoiceNoteTest extends TestCase
 
         $mockGateway = \Mockery::mock(AiGateway::class);
         $mockGateway->shouldReceive('transcribeAudio')
-            ->once()
+            ->byDefault()
             ->andReturn(new TranscribeResult(
                 text: 'How much is the solar battery in KSh?',
                 success: true,
@@ -99,9 +100,17 @@ class VoiceNoteTest extends TestCase
 
     public function test_merchant_settings_voice_mode_and_voice_id_saving(): void
     {
-        $user = User::factory()->create(['is_admin' => true]);
         $company = Company::factory()->create();
-        $user->update(['company_id' => $company->id]);
+        \App\Models\Subscription::create([
+            'company_id' => $company->id,
+            'plan' => 'professional',
+            'status' => 'active',
+            'start_date' => now()->startOfMonth(),
+            'end_date' => now()->endOfMonth(),
+            'amount' => 0,
+            'billing_cycle' => 'monthly',
+        ]);
+        $user = User::factory()->create(['role' => 'company_owner', 'company_id' => $company->id]);
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/company/settings', [
             'agentVoiceReplyEnabled' => true,

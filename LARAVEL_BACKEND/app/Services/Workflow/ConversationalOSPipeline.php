@@ -68,9 +68,9 @@ final class ConversationalOSPipeline
                     $lastWasCatalogListing = str_contains($lastBotContent, 'Our Products & Prices')
                         || str_contains($lastBotContent, '🏷️');
 
-                    // Only hard-route when context is genuinely the quick menu (or unknown context).
-                    // If context is catalog, fall through to token resolution path below.
-                    if (! $lastWasCatalogListing || $lastWasQuickMenu) {
+                    // Only hard-route when context is genuinely the quick menu.
+                    // Otherwise, fall through to token resolution (p1, p2, p3) for product selection.
+                    if ($lastWasQuickMenu) {
                         $quickIntent = match ($trimmedMsg) {
                             '1' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::ASK_PRODUCT_INFO, confidence: 1.0, messageText: '1'),
                             '2' => new \App\DTOs\IntentResult(intent: \App\Enums\CommerceIntent::ASK_ORDER_STATUS, confidence: 1.0, messageText: '2'),

@@ -219,7 +219,9 @@ class CmsSeoTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         Sanctum::actingAs($admin);
 
-        $file = \Illuminate\Http\UploadedFile::fake()->image('hero.jpg', 800, 600);
+        $file = function_exists('imagejpeg')
+            ? \Illuminate\Http\UploadedFile::fake()->image('hero.jpg', 800, 600)
+            : \Illuminate\Http\UploadedFile::fake()->create('hero.jpg', 100, 'image/jpeg');
 
         $response = $this->postJson('/api/admin/cms/upload-image', [
             'image' => $file,
@@ -236,7 +238,9 @@ class CmsSeoTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         Sanctum::actingAs($admin);
 
-        $file = \Illuminate\Http\UploadedFile::fake()->image('huge.jpg')->size(200);
+        $file = function_exists('imagejpeg')
+            ? \Illuminate\Http\UploadedFile::fake()->image('huge.jpg')->size(200)
+            : \Illuminate\Http\UploadedFile::fake()->create('huge.jpg', 200, 'image/jpeg');
 
         $response = $this->postJson('/api/admin/cms/upload-image', [
             'image' => $file,

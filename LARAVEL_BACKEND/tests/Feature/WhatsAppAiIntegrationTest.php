@@ -285,7 +285,9 @@ class WhatsAppAiIntegrationTest extends TestCase
             'segment' => 'all',
         ]);
 
-        $file = UploadedFile::fake()->image('poster.jpg', 400, 400);
+        $file = function_exists('imagejpeg')
+            ? UploadedFile::fake()->image('poster.jpg', 400, 400)
+            : UploadedFile::fake()->create('poster.jpg', 100, 'image/jpeg');
 
         $this->postJson("/api/company/whatsapp/campaigns/{$campaign->id}/poster", [
             'image' => $file,

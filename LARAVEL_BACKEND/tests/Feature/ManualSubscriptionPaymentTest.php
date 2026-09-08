@@ -136,7 +136,9 @@ class ManualSubscriptionPaymentTest extends TestCase
             'external_payment_id' => $reference,
         ]);
 
-        $file = UploadedFile::fake()->image('receipt.jpg');
+        $file = function_exists('imagejpeg')
+            ? UploadedFile::fake()->image('receipt.jpg')
+            : UploadedFile::fake()->create('receipt.jpg', 100, 'image/jpeg');
         $this->post('/api/company/subscription/manual-payments/proof', [
             'reference' => $reference,
             'note' => 'Paid via KCB',

@@ -509,8 +509,11 @@ class AiGateway
             : null;
 
         $promptPayload = null;
-        if ($messages !== null) {
-            $promptPayload = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($messages !== null && $companyId !== null) {
+            $devMode = (bool) \App\Models\CompanySetting::where('company_id', $companyId)->value('dev_mode_enabled');
+            if ($devMode) {
+                $promptPayload = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            }
         }
 
         try {

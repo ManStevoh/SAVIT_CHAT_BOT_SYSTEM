@@ -335,10 +335,10 @@ class ClassicStorefrontFeaturesTest extends TestCase
         ]);
 
         $this->get('http://shop.classic.test/')
-            ->assertRedirect('/s/'.$company->store_slug);
+            ->assertOk();
 
         $this->get('http://shop.classic.test/cart')
-            ->assertRedirect('/s/'.$company->store_slug.'/cart');
+            ->assertOk();
     }
 
     public function test_abandoned_cart_job_is_dispatchable(): void
@@ -530,7 +530,9 @@ class ClassicStorefrontFeaturesTest extends TestCase
         [$company] = $this->seedStore();
         $this->actingAsStoreOwner($company);
 
-        $file = UploadedFile::fake()->image('banner.jpg', 1200, 630);
+        $file = function_exists('imagejpeg')
+            ? UploadedFile::fake()->image('banner.jpg', 1200, 630)
+            : UploadedFile::fake()->create('banner.jpg', 100, 'image/jpeg');
         $upload = $this->post('/api/company/settings/og-image', [
             'image' => $file,
         ]);

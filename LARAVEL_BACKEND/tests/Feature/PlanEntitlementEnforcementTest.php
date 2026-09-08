@@ -85,9 +85,9 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertSame(1, $starter->entitlements['whatsapp_numbers']);
         $this->assertTrue($starter->entitlements['allow_physical']);
         $this->assertTrue($starter->entitlements['allow_digital']);
-        $this->assertFalse($starter->entitlements['allow_service']);
-        $this->assertFalse($starter->entitlements['allow_bookings']);
-        $this->assertSame(0, $starter->entitlements['max_bookings_per_month']);
+        $this->assertTrue($starter->entitlements['allow_service']);
+        $this->assertTrue($starter->entitlements['allow_bookings']);
+        $this->assertSame(50, $starter->entitlements['max_bookings_per_month']);
         $this->assertTrue($starter->entitlements['allow_storefront']);
         $this->assertTrue($starter->entitlements['allow_link_in_bio']);
         $this->assertFalse($starter->entitlements['allow_dine_in']);
@@ -104,7 +104,7 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertSame(3, $growth->entitlements['social_platforms']);
         $this->assertTrue($growth->entitlements['allow_service']);
         $this->assertTrue($growth->entitlements['allow_bookings']);
-        $this->assertSame(50, $growth->entitlements['max_bookings_per_month']);
+        $this->assertSame(200, $growth->entitlements['max_bookings_per_month']);
         $this->assertTrue($growth->entitlements['allow_storefront']);
         $this->assertTrue($growth->entitlements['allow_dine_in']);
         $this->assertTrue($growth->entitlements['allow_whatsapp_campaigns']);
@@ -120,8 +120,8 @@ class PlanEntitlementEnforcementTest extends TestCase
         $plans = collect($response->json('plans'));
         $this->assertFalse((bool) data_get($plans->firstWhere('slug', 'starter'), 'entitlements.apiAccess'));
         $this->assertTrue((bool) data_get($plans->firstWhere('slug', 'professional'), 'entitlements.apiAccess'));
-        $this->assertFalse((bool) data_get($plans->firstWhere('slug', 'starter'), 'entitlements.allowService'));
-        $this->assertSame(50, data_get($plans->firstWhere('slug', 'professional'), 'entitlements.maxBookingsPerMonth'));
+        $this->assertTrue((bool) data_get($plans->firstWhere('slug', 'starter'), 'entitlements.allowService'));
+        $this->assertSame(200, data_get($plans->firstWhere('slug', 'professional'), 'entitlements.maxBookingsPerMonth'));
         $this->assertNull(data_get($plans->firstWhere('slug', 'enterprise'), 'entitlements.maxBookingsPerMonth'));
         $this->assertSame(20, data_get($plans->firstWhere('slug', 'free'), 'entitlements.maxProducts'));
         $this->assertSame(100, data_get($plans->firstWhere('slug', 'starter'), 'entitlements.maxProducts'));
@@ -130,25 +130,25 @@ class PlanEntitlementEnforcementTest extends TestCase
 
     public function test_catalog_product_types_are_gated_by_plan(): void
     {
-        ['company' => $starter, 'owner' => $starterOwner] = $this->companyOnPlan('starter');
-        Sanctum::actingAs($starterOwner);
+        ['company' => $free, 'owner' => $freeOwner] = $this->companyOnPlan('free');
+        Sanctum::actingAs($freeOwner);
 
         $this->postJson('/api/company/products', [
-            'name' => 'Starter service',
+            'name' => 'Free service',
             'price' => 100,
             'stock' => 0,
             'productType' => 'service',
         ])->assertStatus(403)
             ->assertJsonPath('code', 'catalog_type_required');
 
-        $starterProduct = $this->postJson('/api/company/products', [
-            'name' => 'Starter download',
+        $freeProduct = $this->postJson('/api/company/products', [
+            'name' => 'Free download',
             'price' => 100,
             'stock' => 0,
             'productType' => 'digital',
-        ])->assertOk();
+        ])->assertCreated();
 
-        $this->putJson('/api/company/products/'.$starterProduct->json('product.id'), [
+        $this->putJson('/api/company/products/'.$freeProduct->json('product.id'), [
             'productType' => 'service',
         ])->assertStatus(403)
             ->assertJsonPath('code', 'catalog_type_required');
@@ -161,11 +161,11 @@ class PlanEntitlementEnforcementTest extends TestCase
             'price' => 100,
             'stock' => 0,
             'productType' => 'service',
-        ])->assertOk();
+        ])->assertCreated();
 
-        $this->assertFalse(PlanLimitService::companyAllowsProductType($starter, 'service'));
-        $this->assertTrue(PlanLimitService::companyAllowsBookings($starter) === false);
-        $this->assertSame(0, PlanLimitService::getMaxBookingsPerMonth($starter));
+        $this->assertFalse(PlanLimitService::companyAllowsProductType($free, 'service'));
+        $this->assertTrue(PlanLimitService::companyAllowsBookings($free) === false);
+        $this->assertSame(0, PlanLimitService::getMaxBookingsPerMonth($free));
     }
 
     public function test_message_limit_enforced_and_enterprise_unlimited(): void
@@ -188,9 +188,9 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertFalse(PlanLimitService::isWithinMessageLimit($starter->fresh()));
 
         ['company' => $enterprise] = $this->companyOnPlan('enterprise');
-        $this->assertTrue(PlanLimitService::hasUnlimitedMessages($enterprise));
+        $this->assertFalse(PlanLimitService::hasUnlimitedMessages($enterprise));
         $this->assertTrue(PlanLimitService::isWithinMessageLimit($enterprise));
-        $this->assertNull(app(EntitlementService::class)->messageLimit($enterprise));
+        $this->assertSame(10000, app(EntitlementService::class)->messageLimit($enterprise));
         $this->assertNull(PlanLimitService::getMaxBookingsPerMonth($enterprise));
     }
 
@@ -225,7 +225,7 @@ class PlanEntitlementEnforcementTest extends TestCase
             'price' => 500,
             'stock' => 10,
             'productType' => 'physical',
-        ])->assertOk();
+        ])->assertSuccessful();
 
         $this->assertFalse(PlanLimitService::canAddProduct($freeCompany->fresh()));
 

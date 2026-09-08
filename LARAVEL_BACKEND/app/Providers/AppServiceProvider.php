@@ -8,6 +8,7 @@ use App\Services\Agent\AgentToolRegistry;
 use App\Services\Agent\Tools\CheckCalendarAvailabilityTool;
 use App\Services\Agent\Tools\CheckDeliveryStatusTool;
 use App\Services\Agent\Tools\CheckMpesaPaymentTool;
+use App\Services\Agent\Tools\CreateBookingTool;
 use App\Services\Agent\Tools\GetBusinessInfoTool;
 use App\Services\Agent\Tools\GetCatalogTool;
 use App\Services\Agent\Tools\GetCustomerProfileTool;

@@ -52,8 +52,9 @@ class ConversationStateTest extends TestCase
 
     public function test_conversation_state_hydrator_hydrates_and_dehydrates_chat_model(): void
     {
+        $company = \App\Models\Company::factory()->create();
         $chat = Chat::create([
-            'company_id' => 1,
+            'company_id' => $company->id,
             'customer_phone' => '254711999888',
             'customer_name' => 'Bob',
             'status' => 'active',

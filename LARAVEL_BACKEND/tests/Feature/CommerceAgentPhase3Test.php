@@ -86,7 +86,7 @@ class CommerceAgentPhase3Test extends TestCase
 
     public function test_tool_registry_has_eighteen_tools(): void
     {
-        $this->assertCount(22, app(AgentToolRegistry::class)->all());
+        $this->assertCount(23, app(AgentToolRegistry::class)->all());
         $names = array_map(fn ($t) => $t->name(), app(AgentToolRegistry::class)->all());
         $this->assertContains('get_product_relationships', $names);
         $this->assertContains('check_delivery_status', $names);

@@ -165,7 +165,7 @@ class ProductController extends Controller
             'success' => true,
             'product' => $this->productToArray($product),
             'message' => 'Product created successfully',
-        ]);
+        ], 201);
     }
 
     public function storeVariant(Request $request, Product $product): JsonResponse
@@ -860,8 +860,9 @@ class ProductController extends Controller
             $request->merge(['requires_delivery_address' => $request->input('requiresDeliveryAddress')]);
         }
 
+        $allKeys = array_unique(array_merge($keys, ['requires_delivery_address', 'requiresDeliveryAddress']));
         $merged = [];
-        foreach ($keys as $key) {
+        foreach ($allKeys as $key) {
             if (! $request->exists($key)) {
                 continue;
             }
