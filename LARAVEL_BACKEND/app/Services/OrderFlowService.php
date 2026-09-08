@@ -2291,34 +2291,25 @@ class OrderFlowService
             $data = $item['fulfillment_data'] ?? null;
             $productId = isset($item['product_id']) ? (int) $item['product_id'] : 0;
 
-            \Illuminate\Support\Facades\Log::info('[DRDA] item check', [
-                'product_id'    => $productId,
-                'has_snapshot'  => is_array($data),
-                'snapshot_rda'  => is_array($data) ? ($data['requiresDeliveryAddress'] ?? 'missing') : 'no_snapshot',
-            ]);
-
             if (is_array($data)) {
                 if (($data['requiresDeliveryAddress'] ?? false) === false) {
-                    \Illuminate\Support\Facades\Log::info('[DRDA] snapshot=false → continue');
+                    // Snapshot says no address needed — trust it.
                     continue;
                 }
 
+                // Snapshot says address needed — but cross-check the live product in case
+                // it was updated (e.g. type changed to digital) after this snapshot was taken.
                 if ($productId > 0) {
                     $product = Product::find($productId);
-                    \Illuminate\Support\Facades\Log::info('[DRDA] live product check', [
-                        'found'   => $product !== null,
-                        'live_rda' => $product?->requires_delivery_address,
-                    ]);
                     if ($product !== null && ! $product->requires_delivery_address) {
-                        \Illuminate\Support\Facades\Log::info('[DRDA] live=false → continue');
-                        continue;
+                        continue; // Live product overrides stale snapshot.
                     }
                 }
 
-                \Illuminate\Support\Facades\Log::info('[DRDA] → returning TRUE (snapshot+live)');
                 return true;
             }
 
+            // No snapshot at all — fall back to the live product record.
             if ($productId > 0) {
                 $product = Product::find($productId);
                 if ($product !== null && ! $product->requires_delivery_address) {
@@ -2326,11 +2317,10 @@ class OrderFlowService
                 }
             }
 
-            \Illuminate\Support\Facades\Log::info('[DRDA] → returning TRUE (no snapshot)');
+            // Unknown product or confirmed physical — require address.
             return true;
         }
 
-        \Illuminate\Support\Facades\Log::info('[DRDA] → returning FALSE');
         return false;
     }
 

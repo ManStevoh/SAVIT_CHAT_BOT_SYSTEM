@@ -249,6 +249,18 @@ final class WorkflowEngine
                 return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
             }
 
+            if (! $this->domain->requiresDeliveryAddress($state)) {
+                $nextStep = CheckoutStep::REVIEWING_ORDER;
+                $nextState = $state->with([
+                    'step' => $nextStep,
+                    'deliveryAddress' => null,
+                    'fulfillmentType' => 'digital',
+                ]);
+                $reply = $this->renderer->render(ResponseSpec::PROMPT_ORDER_CONFIRMATION, $nextState, $company);
+
+                return new WorkflowTransitionResult($nextState, [], ResponseSpec::PROMPT_ORDER_CONFIRMATION->value, $reply);
+            }
+
             $nextStep = CheckoutStep::COLLECTING_ADDRESS;
             $spec = ResponseSpec::PROMPT_DELIVERY_ADDRESS;
 
@@ -864,6 +876,18 @@ final class WorkflowEngine
 
     private function handleCollectingAddress(ConversationState $state, IntentResult $intent, Company $company): WorkflowTransitionResult
     {
+        // If cart items do not require a delivery address (e.g. digital products), bypass address collection
+        if (! $this->domain->requiresDeliveryAddress($state) && empty($state->pendingDraftData['tracking_order_id'])) {
+            $nextState = $state->with([
+                'step' => CheckoutStep::REVIEWING_ORDER,
+                'deliveryAddress' => null,
+                'fulfillmentType' => 'digital',
+            ]);
+            $reply = $this->renderer->render(ResponseSpec::PROMPT_ORDER_CONFIRMATION, $nextState, $company);
+
+            return new WorkflowTransitionResult($nextState, [], ResponseSpec::PROMPT_ORDER_CONFIRMATION->value, $reply);
+        }
+
         $rawMessage = mb_strtolower(trim((string) ($intent->messageText ?? $intent->rawPayload['incoming_message'] ?? '')));
 
         if ($intent->intent === CommerceIntent::CHOOSE_PICKUP || str_contains($rawMessage, 'pickup')) {

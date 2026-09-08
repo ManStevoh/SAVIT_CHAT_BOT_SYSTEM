@@ -95,4 +95,9 @@ final class DomainServiceDispatcher
     {
         return $this->fulfillmentDomain->isValidAddress($address);
     }
+
+    public function requiresDeliveryAddress(ConversationState $state): bool
+    {
+        return $this->fulfillmentDomain->requiresDeliveryAddress($state);
+    }
 }

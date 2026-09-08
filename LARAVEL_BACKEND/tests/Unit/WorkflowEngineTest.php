@@ -100,6 +100,54 @@ class WorkflowEngineTest extends TestCase
         $this->assertEquals(ResponseSpec::PROMPT_DELIVERY_ADDRESS->value, $result->responseSpec);
     }
 
+    public function test_workflow_engine_skips_address_prompt_for_digital_products_on_checkout(): void
+    {
+        $company = Company::create([
+            'name' => 'Digital Books Store',
+            'email' => 'books@test.local',
+            'status' => 'active',
+        ]);
+
+        $product = Product::create([
+            'company_id' => $company->id,
+            'name' => 'My Web Ebook',
+            'price' => 700.00,
+            'stock' => 50,
+            'status' => 'active',
+            'product_type' => 'digital',
+            'requires_delivery_address' => false,
+        ]);
+
+        $engine = app(WorkflowEngine::class);
+
+        $state = new ConversationState(
+            chatId: 1,
+            companyId: $company->id,
+            customerPhone: '254700111222',
+            customerName: 'Ken',
+            step: CheckoutStep::BUILDING_CART,
+            cartItems: [[
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'price' => 700.00,
+                'quantity' => 1,
+                'fulfillment_data' => $product->fulfillmentSnapshot(),
+            ]]
+        );
+
+        $intent = new IntentResult(
+            intent: CommerceIntent::START_CHECKOUT,
+            confidence: 0.95
+        );
+
+        $result = $engine->handle($state, $intent, $company);
+
+        $this->assertEquals(CheckoutStep::REVIEWING_ORDER, $result->nextState->step);
+        $this->assertEquals(ResponseSpec::PROMPT_ORDER_CONFIRMATION->value, $result->responseSpec);
+        $this->assertStringNotContainsString('delivery address', strtolower((string) $result->customerReply));
+        $this->assertStringContainsString('Confirm & place order', (string) $result->customerReply);
+    }
+
     public function test_workflow_engine_transitions_to_order_review_on_valid_address(): void
     {
         [$company, $product] = $this->seedCompanyAndProduct();

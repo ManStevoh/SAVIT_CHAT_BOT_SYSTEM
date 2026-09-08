@@ -3,6 +3,7 @@
 namespace App\Services\Domain;
 
 use App\DTOs\ConversationState;
+use App\Models\Product;
 
 final class FulfillmentDomainService
 {
@@ -52,13 +53,41 @@ final class FulfillmentDomainService
             return false;
         }
 
-        foreach ($state->cartItems as $item) {
-            $data = $item['fulfillment_data'] ?? null;
-            if (! is_array($data) || ($data['requiresDeliveryAddress'] ?? true) === true) {
-                return true;
-            }
+        if (empty($state->cartItems)) {
+            return false;
         }
 
-        return true;
+        foreach ($state->cartItems as $item) {
+            $data = $item['fulfillment_data'] ?? null;
+            $productId = $item['product_id'] ?? null;
+
+            if (is_array($data)) {
+                if (($data['requiresDeliveryAddress'] ?? false) === false) {
+                    continue;
+                }
+
+                // If snapshot claims true, check live Product in case it changed or is digital
+                if ($productId) {
+                    $product = Product::find($productId);
+                    if ($product && ! $product->requires_delivery_address) {
+                        continue;
+                    }
+                }
+
+                return true;
+            }
+
+            // Fall back to product in DB if no snapshot
+            if ($productId) {
+                $product = Product::find($productId);
+                if ($product && ! $product->requires_delivery_address) {
+                    continue;
+                }
+            }
+
+            return true;
+        }
+
+        return false;
     }
 }
