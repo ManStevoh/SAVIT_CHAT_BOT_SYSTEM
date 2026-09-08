@@ -264,7 +264,7 @@ export interface Plan {
   /** When true, user can start checkout for this plan (Stripe and/or M-Pesa) */
   checkoutAvailable?: boolean
   /** Which payment methods are available */
-  paymentMethods?: { stripe?: boolean; mpesa?: boolean; paystack?: boolean; pesapal?: boolean; flutterwave?: boolean; manual?: boolean }
+  paymentMethods?: { stripe?: boolean; mpesa?: boolean; paystack?: boolean; pesapal?: boolean; flutterwave?: boolean; paypal?: boolean; manual?: boolean }
   /** Plan is free (no payment required) */
   isFree?: boolean
   /** Paid plan offers a trial period */

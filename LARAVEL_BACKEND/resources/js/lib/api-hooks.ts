@@ -919,6 +919,7 @@ export interface CompanySettings {
   ordersAcceptPaystack?: boolean
   ordersAcceptPesapal?: boolean
   ordersAcceptFlutterwave?: boolean
+  ordersAcceptPayPal?: boolean
   ordersAcceptCod?: boolean
   ordersAcceptBankTransfer?: boolean
   bankTransferInstructions?: string
@@ -929,6 +930,7 @@ export interface CompanySettings {
   orderPaymentPaystackConfigured?: boolean
   orderPaymentPesapalConfigured?: boolean
   orderPaymentFlutterwaveConfigured?: boolean
+  orderPaymentPayPalConfigured?: boolean
   /** Masked passkey/consumer_secret from GET /api/company/settings */
   orderPaymentMpesaConfig?: {
     type?: 'paybill' | 'till'
@@ -946,6 +948,8 @@ export interface CompanySettings {
   orderPaymentPesapalConfig?: { consumer_key?: string; consumer_secret?: string; currency?: string; env?: 'sandbox' | 'production' } | null
   /** Masked secret from GET /api/company/settings */
   orderPaymentFlutterwaveConfig?: { secret_key?: string; public_key?: string; secret_hash?: string; currency?: string; env?: 'sandbox' | 'production' } | null
+  /** Masked secret from GET /api/company/settings */
+  orderPaymentPayPalConfig?: { client_id?: string; client_secret?: string; currency?: string; env?: 'sandbox' | 'production' } | null
   /** ISO 4217 — catalog & chat price display (e.g. USD, KES) */
   displayCurrency?: string
   /** Optional override shown before amounts (e.g. KSh, €). Empty uses the ISO code. */

@@ -1290,6 +1290,7 @@ export interface UpdateSettingsData {
   ordersAcceptPaystack?: boolean
   ordersAcceptPesapal?: boolean
   ordersAcceptFlutterwave?: boolean
+  ordersAcceptPayPal?: boolean
   ordersAcceptCod?: boolean
   attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
@@ -1326,6 +1327,12 @@ export interface UpdateSettingsData {
     currency?: string
     env?: 'sandbox' | 'production'
   } | null
+  orderPaymentPayPalConfig?: {
+    client_id?: string
+    client_secret?: string
+    currency?: string
+    env?: 'sandbox' | 'production'
+  } | null
   /** ISO 4217 (3 letters), e.g. USD, KES — shown in dashboard and WhatsApp */
   displayCurrency?: string
   currencySymbol?: string | null
@@ -1333,6 +1340,10 @@ export interface UpdateSettingsData {
   decimalSeparator?: string
   taxEnabled?: boolean
   industry?: 'retail' | 'restaurant' | 'services' | 'other'
+  businessMode?: 'retail' | 'services' | 'restaurant' | 'hybrid'
+  enableProductsCatalog?: boolean
+  enableBookings?: boolean
+  enableDineIn?: boolean
   storeSlug?: string | null
   storefrontEnabled?: boolean
   linkInBioEnabled?: boolean
