@@ -11,7 +11,6 @@ use App\Jobs\Agent\ExtractCustomerMemoriesJob;
 use App\Jobs\Agent\RunBackgroundThinkingJob;
 use App\Jobs\Agent\ReflectOnConversationJob;
 use App\Services\Agent\CommerceAgentReplyService;
-use App\Services\AIReplyService;
 use App\Services\CompanyInAppNotificationService;
 use App\Services\MailService;
 use App\Services\Conversation\ConversationStateHydrator;
@@ -156,7 +155,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         $this->uniqueFor = 120;
     }
 
-    public function handle(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
+    public function handle(WhatsAppMessageSenderService $waSender, MailService $mailService): void
     {
         @set_time_limit(120);
         @ini_set('max_execution_time', '120');
@@ -183,7 +182,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
 
         try {
-            $this->handleLocked($aiReply, $waSender, $mailService);
+            $this->handleLocked($waSender, $mailService);
         } catch (\Throwable $e) {
             \App\Services\WhatsApp\WhatsAppDebugLogger::error('PIPELINE_CRITICAL_UNHANDLED_EXCEPTION', [
                 'company_id' => $this->companyId,
@@ -203,7 +202,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    protected function handleLocked(AIReplyService $aiReply, WhatsAppMessageSenderService $waSender, MailService $mailService): void
+    protected function handleLocked(WhatsAppMessageSenderService $waSender, MailService $mailService): void
     {
         \App\Services\WhatsApp\WhatsAppDebugLogger::info('JOB_EXECUTION_START', [
             'company_id' => $this->companyId,
@@ -413,7 +412,7 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
     {
         return "You've been handed over to our team. A human agent will assist you and we'll contact you soon.\n\n"
             .'Thank you for your patience.'
-            .AIReplyService::QUICK_MENU_SUFFIX;
+            .\App\Services\Conversation\ConversationGreetingService::QUICK_MENU_SUFFIX;
     }
 
     protected function companyHasActiveSubscription(Company $company): bool
@@ -425,13 +424,6 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
                 $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
             })
             ->exists();
-    }
-
-    protected function isFirstCustomerMessageInChat(int $chatId): bool
-    {
-        return Message::where('chat_id', $chatId)
-            ->where('sender', 'customer')
-            ->count() === 1;
     }
 
     protected function alreadyRepliedToThisMessage(): bool
