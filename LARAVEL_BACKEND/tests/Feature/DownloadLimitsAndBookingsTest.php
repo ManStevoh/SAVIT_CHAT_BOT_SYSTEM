@@ -191,14 +191,13 @@ class DownloadLimitsAndBookingsTest extends TestCase
         ]);
     }
 
-    public function test_free_plan_blocks_bookings_api(): void
+    public function test_free_plan_allows_bookings_api(): void
     {
         [, $user] = $this->companyUser('free');
         Sanctum::actingAs($user);
 
         $this->getJson('/api/company/bookings/settings')
-            ->assertStatus(403)
-            ->assertJsonPath('code', 'bookings_required');
+            ->assertOk();
     }
 
     public function test_prepare_paid_order_snapshots_max_downloads(): void

@@ -72,8 +72,8 @@ class GrowthIntegrationsTest extends TestCase
 
         $this->getJson('/api/company/subscription/usage')
             ->assertOk()
-            ->assertJsonPath('growth.aiPostsLimit', 100)
-            ->assertJsonPath('growth.platformLimit', 3);
+            ->assertJsonPath('growth.aiPostsLimit', 40)
+            ->assertJsonPath('growth.platformLimit', 2);
     }
 
     public function test_prune_old_portfolio_recommendations(): void

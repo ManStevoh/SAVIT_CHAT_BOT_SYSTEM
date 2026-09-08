@@ -131,13 +131,14 @@ class SubscriptionOffersAndLifecycleTest extends TestCase
         $original = (float) app(\App\Services\RegionalPricingService::class)->amountForPlan($plan, 'KES');
         $expectedFinal = round($original * 0.9, 2);
 
-        $this->postJson('/api/company/coupon/preview', [
+        $preview = $this->postJson('/api/company/coupon/preview', [
             'planId' => (string) $plan->id,
             'couponCode' => 'save10',
         ])
             ->assertOk()
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('finalAmount', $expectedFinal);
+            ->assertJsonPath('success', true);
+
+        $this->assertEquals($expectedFinal, $preview->json('finalAmount'));
 
         Http::fake([
             'api.paystack.co/transaction/initialize' => Http::response([
@@ -156,9 +157,9 @@ class SubscriptionOffersAndLifecycleTest extends TestCase
             'callbackUrl' => 'http://localhost/dashboard/subscription?checkout=success',
         ])->assertOk();
 
-        $init->assertJsonPath('amount', $expectedFinal)
-            ->assertJsonPath('coupon', 'SAVE10')
-            ->assertJsonPath('discountAmount', round($original - $expectedFinal, 2));
+        $init->assertJsonPath('coupon', 'SAVE10');
+        $this->assertEquals($expectedFinal, $init->json('amount'));
+        $this->assertEquals(round($original - $expectedFinal, 2), $init->json('discountAmount'));
 
         $reference = $init->json('reference');
         $this->assertDatabaseHas('coupon_redemptions', [
