@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\Order;
 use App\Models\PlatformSetting;
 use App\Models\User;
+use App\Support\MoneyFormatter;
 use App\Support\PlatformSmtpConfig;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
@@ -274,6 +277,189 @@ class MailService
         $html .= '<p><a href="' . e($ordersUrl) . '" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View in dashboard</a></p>';
         $html = self::wrapEmailBody($html);
         $this->send($to, $subject, $html, strip_tags($html));
+    }
+
+    public function sendCustomerOrderConfirmationSafely(Order $order): void
+    {
+        try {
+            $this->sendCustomerOrderConfirmation($order->fresh(['company.settings', 'orderProducts']) ?? $order);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send customer order confirmation email', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function sendCustomerPaymentFulfillmentSafely(Order $order): void
+    {
+        try {
+            $this->sendCustomerPaymentFulfillment($order->fresh(['company.settings', 'orderProducts']) ?? $order);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send customer payment / download email', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Confirmation email to the shopper after any purchase (storefront, WhatsApp, or dashboard).
+     */
+    public function sendCustomerOrderConfirmation(Order $order): void
+    {
+        $to = $this->customerEmail($order);
+        if ($to === null) {
+            return;
+        }
+
+        $order->loadMissing(['company.settings', 'orderProducts']);
+        $store = trim((string) ($order->company?->name ?? '')) ?: 'the store';
+        $name = trim((string) ($order->customer_name ?? '')) ?: 'there';
+        $total = MoneyFormatter::formatFromSettings((float) $order->total, $order->company?->settings);
+        $subject = 'Your order '.$order->order_number.' from '.$store;
+        $html = $this->customerOrderConfirmationHtml($order, $store, $name, $total);
+        $this->send($to, $subject, self::wrapEmailBody($html), strip_tags($html));
+    }
+
+    /**
+     * Payment-received email. Includes signed download / license details for digital items.
+     */
+    public function sendCustomerPaymentFulfillment(Order $order): void
+    {
+        $to = $this->customerEmail($order);
+        if ($to === null) {
+            return;
+        }
+
+        $order->loadMissing(['company.settings', 'orderProducts']);
+        $store = trim((string) ($order->company?->name ?? '')) ?: 'the store';
+        $name = trim((string) ($order->customer_name ?? '')) ?: 'there';
+        $total = MoneyFormatter::formatFromSettings((float) $order->total, $order->company?->settings);
+        $subject = 'Payment received — order '.$order->order_number.' from '.$store;
+        $html = $this->customerPaymentFulfillmentHtml($order, $store, $name, $total);
+        $this->send($to, $subject, self::wrapEmailBody($html), strip_tags($html));
+    }
+
+    private function customerEmail(Order $order): ?string
+    {
+        $to = strtolower(trim((string) ($order->customer_email ?? '')));
+        if ($to === '' || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return null;
+        }
+
+        return $to;
+    }
+
+    private function customerOrderConfirmationHtml(Order $order, string $store, string $name, string $total): string
+    {
+        $html = '<p>Hi '.e($name).',</p>';
+        $html .= '<p>Thank you for your order from <strong>'.e($store).'</strong>.</p>';
+        $html .= '<p><strong>Order:</strong> '.e((string) $order->order_number).'<br><strong>Total:</strong> '.e($total).'</p>';
+        $html .= $this->orderItemsHtml($order);
+
+        $paid = strtolower((string) $order->payment_status) === 'paid';
+        if (! $paid) {
+            $html .= '<p>Complete payment here:</p>';
+            $html .= $this->emailButton($order->publicPayUrl(), 'Pay now');
+        }
+
+        $html .= '<p><a href="'.e($order->publicInvoiceUrl()).'">View invoice</a>';
+        if ($order->company?->store_slug) {
+            $track = rtrim((string) config('app.url'), '/').'/s/'.$order->company->store_slug.'/track';
+            $html .= ' · <a href="'.e($track).'">Track order</a>';
+        }
+        $html .= '</p>';
+
+        if ($this->orderHasDigitalItems($order) && ! $paid) {
+            $html .= '<p>Digital files or license keys will be emailed to this address after payment is confirmed.</p>';
+        }
+
+        $html .= '<p>Reply to the store if you need help with this order.</p>';
+
+        return $html;
+    }
+
+    private function customerPaymentFulfillmentHtml(Order $order, string $store, string $name, string $total): string
+    {
+        $html = '<p>Hi '.e($name).',</p>';
+        $html .= '<p>Payment received for your order from <strong>'.e($store).'</strong>.</p>';
+        $html .= '<p><strong>Order:</strong> '.e((string) $order->order_number).'<br><strong>Total:</strong> '.e($total).'</p>';
+        $html .= $this->orderItemsHtml($order);
+        $html .= $this->digitalAccessHtml($order);
+        $html .= '<p>'.$this->emailButton($order->publicReceiptUrl(), 'View receipt').'</p>';
+        $html .= '<p>Keep this email for your records.</p>';
+
+        return $html;
+    }
+
+    private function orderItemsHtml(Order $order): string
+    {
+        if ($order->orderProducts->isEmpty()) {
+            return '';
+        }
+
+        $rows = '';
+        foreach ($order->orderProducts as $line) {
+            $rows .= '<li>'.e((string) $line->quantity).' × '.e((string) $line->name).'</li>';
+        }
+
+        return '<p><strong>Items</strong></p><ul>'.$rows.'</ul>';
+    }
+
+    private function orderHasDigitalItems(Order $order): bool
+    {
+        foreach ($order->orderProducts as $line) {
+            $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
+            $type = strtolower((string) ($data['productType'] ?? ''));
+            $fulfillment = strtolower((string) ($data['fulfillmentType'] ?? ''));
+            if ($type === 'digital' || in_array($fulfillment, ['download', 'link'], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function digitalAccessHtml(Order $order): string
+    {
+        $items = $order->receiptFulfillmentItems();
+        if ($items === []) {
+            return '';
+        }
+
+        $html = '<p><strong>Your digital downloads</strong></p>';
+        foreach ($items as $item) {
+            $html .= '<p>'.e((string) ($item['name'] ?? 'Digital item')).'</p>';
+            if (! empty($item['instructions'])) {
+                $html .= '<p>'.nl2br(e((string) $item['instructions'])).'</p>';
+            }
+            if (! empty($item['fileUrl'])) {
+                $label = ! empty($item['fileName']) ? 'Download '.((string) $item['fileName']) : 'Download file';
+                $html .= $this->emailButton((string) $item['fileUrl'], $label);
+            }
+            if (! empty($item['accessUrl'])) {
+                $html .= $this->emailButton((string) $item['accessUrl'], 'Open access link');
+            }
+            if (! empty($item['bookingUrl'])) {
+                $html .= $this->emailButton((string) $item['bookingUrl'], 'Book now');
+            }
+            $keys = is_array($item['licenseKeys'] ?? null) ? $item['licenseKeys'] : [];
+            if ($keys !== []) {
+                $html .= '<p>License key(s): <strong>'.e(implode(', ', array_map('strval', $keys))).'</strong></p>';
+            }
+        }
+
+        $portal = app(DigitalAccessService::class)->signedAccessPortalUrl($order);
+        $html .= '<p>You can also open your access portal anytime:</p>';
+        $html .= $this->emailButton($portal, 'Open access portal');
+
+        return $html;
+    }
+
+    private function emailButton(string $url, string $label): string
+    {
+        return '<p><a href="'.e($url).'" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">'.e($label).'</a></p>';
     }
 
     private function sendViaPlatformSmtp(PlatformSetting $settings, string $to, string $subject, string $htmlBody, ?string $textBody): void

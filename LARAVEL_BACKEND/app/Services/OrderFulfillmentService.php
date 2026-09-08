@@ -22,6 +22,10 @@ class OrderFulfillmentService
         $order->loadMissing('chat', 'company.whatsappAccount', 'orderProducts');
 
         $chat = $order->chat;
+        if (! $chat && $order->customer_phone) {
+            $chat = app(\App\Services\Storefront\StorefrontWhatsAppBridgeService::class)->attachOrderToChat($order);
+            $order->setRelation('chat', $chat);
+        }
         $account = $order->company?->whatsappAccount;
         $to = $order->customer_phone ?: $chat?->customer_phone;
         if (! $chat || ! $account || ! $account->isActive() || ! $to) {

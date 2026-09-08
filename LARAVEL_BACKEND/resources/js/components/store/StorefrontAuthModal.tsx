@@ -13,15 +13,19 @@ interface Props {
   onOpenChange: (open: boolean) => void
   slug: string
   companyName: string
+  termsUrl?: string
 }
 
-export function StorefrontAuthModal({ open, onOpenChange, slug, companyName }: Props) {
+export function StorefrontAuthModal({ open, onOpenChange, slug, companyName, termsUrl }: Props) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const legalUrl = termsUrl || `/s/${slug}/terms`
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -29,7 +33,10 @@ export function StorefrontAuthModal({ open, onOpenChange, slug, companyName }: P
     setSubmitting(true)
 
     const endpoint = mode === 'register' ? `/s/${slug}/account/register` : `/s/${slug}/account/login`
-    const payload = mode === 'register' ? { name, email, password } : { email, password }
+    const payload =
+      mode === 'register'
+        ? { name, email, password, acceptTerms, marketingConsent }
+        : { email, password }
 
     router.post(endpoint, payload, {
       onSuccess: () => {
@@ -37,6 +44,8 @@ export function StorefrontAuthModal({ open, onOpenChange, slug, companyName }: P
         setName('')
         setEmail('')
         setPassword('')
+        setAcceptTerms(false)
+        setMarketingConsent(false)
       },
       onError: (errs) => {
         const firstError = Object.values(errs)[0]
@@ -156,6 +165,36 @@ export function StorefrontAuthModal({ open, onOpenChange, slug, companyName }: P
               />
             </div>
           </div>
+
+          {mode === 'register' && (
+            <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
+              <label className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  required
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
+                />
+                <span>
+                  I agree to {companyName}&apos;s{' '}
+                  <a href={legalUrl} target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2">
+                    Terms and Conditions
+                  </a>
+                  .
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
+                />
+                <span>Send me offers and updates from {companyName} (optional — you can say no)</span>
+              </label>
+            </div>
+          )}
 
           <Button
             type="submit"

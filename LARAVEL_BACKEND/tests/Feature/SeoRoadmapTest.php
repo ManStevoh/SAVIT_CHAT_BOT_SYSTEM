@@ -242,6 +242,89 @@ class SeoRoadmapTest extends TestCase
         $this->get('/sitemap.xml')->assertOk()->assertSee('/whatsapp-ai-sales-agent', false);
     }
 
+    public function test_seo_landings_render_catalog_body_without_cms_rows(): void
+    {
+        $kenya = $this->get('/ai-sales-agent-kenya');
+        $kenya->assertOk();
+        $kenya->assertSee('An AI sales agent for Kenyan businesses', false);
+        $kenya->assertSee('M-Pesa', false);
+        $kenya->assertSee('index, follow', false);
+        $kenya->assertSee('<h1>An AI sales agent for Kenyan businesses</h1>', false);
+        $kenya->assertSee('id="seo-crawler-fallback"', false);
+
+        $this->get('/whatsapp-mpesa')
+            ->assertOk()
+            ->assertSee('M-Pesa checkout on WhatsApp', false);
+
+        $this->get('/solutions/restaurants')
+            ->assertOk()
+            ->assertSee('WhatsApp ordering for restaurants', false);
+
+        $this->get('/whatsapp-chatbot-vs-ai-sales-agent')
+            ->assertOk()
+            ->assertSee('WhatsApp chatbot vs AI sales agent', false);
+
+        $this->get('/whatsapp-ai-sales-agent')
+            ->assertOk()
+            ->assertSee('AI sales agent for WhatsApp', false);
+    }
+
+    public function test_commerce_os_home_hero_is_replaced_for_public_seo(): void
+    {
+        $page = CmsPage::create([
+            'slug' => 'home',
+            'title' => 'Home',
+            'meta_title' => 'RelayIQ - AI-Powered Commerce & WhatsApp Sales',
+            'meta_description' => 'Your AI commerce OS for WhatsApp.',
+            'is_published' => true,
+        ]);
+        CmsSection::create([
+            'cms_page_id' => $page->id,
+            'section_key' => 'hero',
+            'label' => 'Hero',
+            'is_enabled' => true,
+            'sort_order' => 1,
+            'content' => [
+                'title' => 'Your AI commerce OS for WhatsApp — and beyond.',
+                'description' => 'The commerce OS for WhatsApp.',
+            ],
+        ]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+        $this->assertStringContainsString('<h1>AI sales agent on WhatsApp for Kenyan businesses</h1>', $html);
+        $this->assertStringContainsString('AI Sales Agent on WhatsApp for Kenyan Businesses', $html);
+        $this->assertStringNotContainsString('Your AI commerce OS for WhatsApp', $html);
+        $this->assertStringContainsString('Kenyan businesses', $html);
+    }
+
+    public function test_kenya_playbook_is_labeled_not_a_named_customer(): void
+    {
+        $this->get('/case-study/kenya-whatsapp-mpesa')
+            ->assertOk()
+            ->assertSee('How a Kenyan retailer closes WhatsApp sales with M-Pesa', false)
+            ->assertSee('does not invent named customers', false)
+            ->assertSee('typical-operator playbook', false)
+            ->assertSee('<h1>How a Kenyan retailer closes WhatsApp sales with M-Pesa</h1>', false);
+    }
+
+    public function test_login_html_does_not_include_crawler_h1(): void
+    {
+        $html = $this->get('/login')->assertOk()->getContent();
+        $this->assertStringNotContainsString('id="seo-crawler-fallback"', $html);
+        $this->assertStringContainsString('noindex', $html);
+    }
+
+    public function test_sitemap_lists_catalog_urls_without_cms(): void
+    {
+        $xml = $this->get('/sitemap.xml')->assertOk()->getContent();
+        $this->assertStringContainsString('/ai-sales-agent-kenya', $xml);
+        $this->assertStringContainsString('/whatsapp-mpesa', $xml);
+        $this->assertStringContainsString('/solutions/restaurants', $xml);
+        $this->assertStringContainsString('/use-cases/order-taking', $xml);
+        $this->assertStringContainsString('/case-study/kenya-whatsapp-mpesa', $xml);
+        $this->assertStringContainsString('application/xml', (string) $this->get('/sitemap.xml')->headers->get('Content-Type'));
+    }
+
     public function test_software_application_schema_only_on_home_and_pricing(): void
     {
         CmsPage::create([

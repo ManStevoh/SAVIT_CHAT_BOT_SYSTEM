@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PlatformSetting;
 use App\Services\AI\AiLearningConfig;
 use App\Services\AI\OpenAiConnectionTester;
+use App\Services\WhatsApp\MetaConnectionTester;
 use App\Services\MailService;
 use App\Support\PlatformSmtpConfig;
 use App\Services\Platform\AuditService;
@@ -66,6 +67,8 @@ class PlatformSettingsController extends Controller
             'defaultTimezone' => $data['default_timezone'] ?? 'UTC',
             'maintenanceMessage' => $data['maintenance_message'] ?? null,
             'allowNewRegistrations' => (bool) ($data['allow_new_registrations'] ?? true),
+            'defaultRegistrationPlanSlug' => $data['default_registration_plan_slug'] ?? null,
+            'forceDefaultRegistrationPlan' => (bool) ($data['force_default_registration_plan'] ?? false),
             'requireEmailVerification' => (bool) ($data['require_email_verification'] ?? false),
             'aiModel' => $data['ai_model'] ?? null,
             'maxTokensPerRequest' => isset($data['max_tokens_per_request']) ? (int) $data['max_tokens_per_request'] : null,
@@ -172,6 +175,8 @@ class PlatformSettingsController extends Controller
             'defaultTimezone' => 'nullable|string|max:50',
             'maintenanceMessage' => 'nullable|string|max:2000',
             'allowNewRegistrations' => 'sometimes|boolean',
+            'defaultRegistrationPlanSlug' => 'nullable|string|max:50|exists:plans,slug',
+            'forceDefaultRegistrationPlan' => 'sometimes|boolean',
             'requireEmailVerification' => 'sometimes|boolean',
             'aiModel' => 'nullable|string|max:255',
             'maxTokensPerRequest' => 'nullable|integer|min:1',
@@ -253,6 +258,8 @@ class PlatformSettingsController extends Controller
             'defaultTimezone' => 'default_timezone',
             'maintenanceMessage' => 'maintenance_message',
             'allowNewRegistrations' => 'allow_new_registrations',
+            'defaultRegistrationPlanSlug' => 'default_registration_plan_slug',
+            'forceDefaultRegistrationPlan' => 'force_default_registration_plan',
             'requireEmailVerification' => 'require_email_verification',
             'aiModel' => 'ai_model',
             'maxTokensPerRequest' => 'max_tokens_per_request',
@@ -447,5 +454,20 @@ class PlatformSettingsController extends Controller
             $validated['openaiModel'] ?? null,
             isset($validated['openaiMaxTokens']) ? (int) $validated['openaiMaxTokens'] : null,
         ));
+    }
+
+    public function testMeta(Request $request, MetaConnectionTester $tester): JsonResponse
+    {
+        $validated = $request->validate([
+            'whatsappWebhookVerifyToken' => 'nullable|string|max:500',
+            'metaAppSecret' => 'nullable|string|max:500',
+            'whatsappEmbeddedAppId' => 'nullable|string|max:80',
+            'whatsappEmbeddedConfigId' => 'nullable|string|max:80',
+            'whatsappEmbeddedAppSecret' => 'nullable|string|max:500',
+            'whatsappEmbeddedRedirectUri' => 'nullable|string|max:500',
+            'whatsappCreditSharingSystemToken' => 'nullable|string|max:2000',
+        ]);
+
+        return response()->json($tester->test($validated));
     }
 }

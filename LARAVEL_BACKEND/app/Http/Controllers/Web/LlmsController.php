@@ -9,7 +9,7 @@ class LlmsController extends Controller
 {
     public function summary(): Response
     {
-        $base = rtrim((string) config('app.url', 'https://relayiq.com'), '/');
+        $base = rtrim((string) config('app.url', 'https://relayiq.app'), '/');
 
         $content = implode("\n", [
             '# RelayIQ',
@@ -30,6 +30,10 @@ class LlmsController extends Controller
             '## Key Resources',
             "- Main Website: {$base}/",
             "- Solutions: {$base}/solutions",
+            "- Kenya: {$base}/ai-sales-agent-kenya",
+            "- Kenya WhatsApp + M-Pesa playbook: {$base}/case-study/kenya-whatsapp-mpesa",
+            "- M-Pesa: {$base}/whatsapp-mpesa",
+            "- AI sales agent: {$base}/whatsapp-ai-sales-agent",
             "- Pricing: {$base}/pricing",
             "- Blog & Guides: {$base}/blog",
             "- Full Knowledge Standard: {$base}/llms-full.txt",
@@ -41,7 +45,7 @@ class LlmsController extends Controller
 
     public function full(): Response
     {
-        $base = rtrim((string) config('app.url', 'https://relayiq.com'), '/');
+        $base = rtrim((string) config('app.url', 'https://relayiq.app'), '/');
 
         $content = implode("\n", [
             '# RelayIQ Complete Knowledge Specification',
@@ -66,6 +70,11 @@ class LlmsController extends Controller
             '## Public Navigation',
             "- Home: {$base}/",
             "- Solutions: {$base}/solutions",
+            "- Kenya: {$base}/ai-sales-agent-kenya",
+            "- Kenya WhatsApp + M-Pesa playbook: {$base}/case-study/kenya-whatsapp-mpesa",
+            "- M-Pesa: {$base}/whatsapp-mpesa",
+            "- AI sales agent: {$base}/whatsapp-ai-sales-agent",
+            "- Chatbot vs agent: {$base}/whatsapp-chatbot-vs-ai-sales-agent",
             "- Pricing: {$base}/pricing",
             "- About: {$base}/about",
             "- Contact: {$base}/contact",

@@ -649,6 +649,8 @@ class StorefrontService
                 'price' => $price,
                 'quantity' => $qty,
                 'image' => $this->firstImageUrl($product),
+                'productType' => $product->product_type ?: 'physical',
+                'isDigital' => $this->productIsDigital($product),
             ];
 
             $calcItems[] = [
@@ -672,6 +674,8 @@ class StorefrontService
         }
         unset($item);
 
+        $profile = $this->cartFulfillmentProfileFromItems($items);
+
         return [
             'items' => $items,
             'calcLines' => $calc['lines'],
@@ -680,7 +684,41 @@ class StorefrontService
             'total' => (float) $calc['total'],
             'taxBreakdown' => $calc['tax_breakdown'],
             'itemCount' => array_sum(array_column($items, 'quantity')),
+            'digitalOnly' => $profile['digitalOnly'],
+            'hasDigitalItems' => $profile['hasDigitalItems'],
+            'hasPhysicalItems' => $profile['hasPhysicalItems'],
         ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     * @return array{digitalOnly: bool, hasDigitalItems: bool, hasPhysicalItems: bool}
+     */
+    public function cartFulfillmentProfileFromItems(array $items): array
+    {
+        $digital = 0;
+        $physical = 0;
+        foreach ($items as $item) {
+            if (! empty($item['isDigital'])) {
+                $digital++;
+            } else {
+                $physical++;
+            }
+        }
+
+        return [
+            'digitalOnly' => $digital > 0 && $physical === 0,
+            'hasDigitalItems' => $digital > 0,
+            'hasPhysicalItems' => $physical > 0,
+        ];
+    }
+
+    public function productIsDigital(Product $product): bool
+    {
+        $type = strtolower((string) ($product->product_type ?? 'physical'));
+        $fulfillment = strtolower((string) ($product->fulfillment_type ?? ''));
+
+        return $type === 'digital' || in_array($fulfillment, ['download', 'link'], true);
     }
 
     protected function firstImageUrl(Product $product): ?string
@@ -779,7 +817,7 @@ class StorefrontService
     }
 
     /**
-     * @param  array{customerName?: ?string, customerPhone?: ?string, customerEmail?: ?string, deliveryAddress?: ?string, fulfillmentType?: ?string, dineInTableCode?: ?string, orderNotes?: ?string, giftMessage?: ?string, tipAmount?: float|string|null, couponCode?: ?string}  $checkout
+     * @param  array{customerName?: ?string, customerPhone?: ?string, customerEmail?: ?string, deliveryAddress?: ?string, fulfillmentType?: ?string, dineInTableCode?: ?string, orderNotes?: ?string, giftMessage?: ?string, tipAmount?: float|string|null, couponCode?: ?string, acceptTerms?: bool, marketingConsent?: bool}  $checkout
      */
     public function placeOrder(Company $company, StorefrontSession $session, array $checkout): Order
     {
@@ -788,8 +826,11 @@ class StorefrontService
             throw new \RuntimeException('Your cart is empty.');
         }
 
+        $profile = $this->cartFulfillmentProfileFromItems($summary['items']);
         $fulfillmentType = $checkout['fulfillmentType'] ?? $session->fulfillment_type ?? 'delivery';
-        if (! in_array($fulfillmentType, ['delivery', 'pickup', 'dine_in'], true)) {
+        if ($profile['digitalOnly']) {
+            $fulfillmentType = 'digital';
+        } elseif (! in_array($fulfillmentType, ['delivery', 'pickup', 'dine_in'], true)) {
             $fulfillmentType = 'delivery';
         }
 
@@ -840,6 +881,9 @@ class StorefrontService
         $deliveryAddress = $fulfillmentType === 'delivery' ? ($checkout['deliveryAddress'] ?? null) : null;
         if ($fulfillmentType === 'delivery' && (! $deliveryAddress || trim($deliveryAddress) === '')) {
             throw new \RuntimeException('Please provide a delivery address.');
+        }
+        if ($profile['hasDigitalItems'] && $customerEmail === null) {
+            throw new \RuntimeException('An email address is required so we can deliver digital products after payment.');
         }
 
         $deliveryFee = $this->deliveryFeeForCompany($company, (float) $summary['subtotal'], $fulfillmentType, $deliveryAddress);
@@ -972,16 +1016,51 @@ class StorefrontService
             }
         }
 
-        if ($customerPhone !== '') {
-            try {
-                $customer = $this->findOrCreateCustomer($company, $customerPhone, $customerName, $customerEmail ?: null);
-                if ($customer && $deliveryAddress) {
+        try {
+            app(\App\Services\MailService::class)->sendCustomerOrderConfirmationSafely($order);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to queue customer order confirmation email', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $marketingConsent = array_key_exists('marketingConsent', $checkout)
+            ? (bool) $checkout['marketingConsent']
+            : null;
+        $acceptedTerms = ! empty($checkout['acceptTerms']);
+
+        try {
+            $customer = null;
+            if ($customerPhone !== '' || $customerEmail) {
+                $customer = $this->findOrCreateCustomer(
+                    $company,
+                    $customerPhone !== '' ? $customerPhone : null,
+                    $customerName,
+                    $customerEmail
+                );
+            }
+            if ($customer) {
+                $consent = [];
+                if ($acceptedTerms && ! $customer->terms_accepted_at) {
+                    $consent['terms_accepted_at'] = now();
+                }
+                if ($marketingConsent !== null) {
+                    $consent['marketing_consent'] = $marketingConsent;
+                    $consent['marketing_consent_at'] = $marketingConsent ? now() : null;
+                }
+                if ($consent !== []) {
+                    $customer->update($consent);
+                }
+                if ($deliveryAddress) {
                     $this->saveDefaultAddress($customer, $deliveryAddress);
                 }
-                $this->whatsappBridge->notifyOrderPlaced($order->fresh(['company.settings', 'orderProducts', 'chat']));
-            } catch (\Throwable $e) {
-                Log::warning('Failed post-checkout notification/CRM update', ['order_id' => $order->id, 'error' => $e->getMessage()]);
             }
+            if ($customerPhone !== '') {
+                $this->whatsappBridge->notifyOrderPlaced($order->fresh(['company.settings', 'orderProducts', 'chat']));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed post-checkout notification/CRM update', ['order_id' => $order->id, 'error' => $e->getMessage()]);
         }
 
         return $order;
@@ -1024,8 +1103,11 @@ class StorefrontService
     public function quoteCheckout(Company $company, StorefrontSession $session, array $input = []): array
     {
         $summary = $this->cartSummary($company, $session);
+        $profile = $this->cartFulfillmentProfileFromItems($summary['items']);
         $fulfillmentType = $input['fulfillmentType'] ?? $session->fulfillment_type ?? 'delivery';
-        if (! in_array($fulfillmentType, ['delivery', 'pickup', 'dine_in'], true)) {
+        if ($profile['digitalOnly']) {
+            $fulfillmentType = 'digital';
+        } elseif (! in_array($fulfillmentType, ['delivery', 'pickup', 'dine_in'], true)) {
             $fulfillmentType = 'delivery';
         }
         $deliveryAddress = $fulfillmentType === 'delivery' ? ($input['deliveryAddress'] ?? null) : null;

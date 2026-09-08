@@ -116,12 +116,28 @@
     @inertiaHead
 </head>
 <body class="font-sans antialiased">
-    @inertia
+@php
+    $crawlerH1 = is_array($seo) ? trim((string) ($seo['h1'] ?? '')) : '';
+    $crawlerLede = is_array($seo) ? trim((string) ($seo['lede'] ?? $seo['description'] ?? '')) : '';
+    $robots = is_array($seo) ? strtolower((string) ($seo['robots'] ?? '')) : '';
+    $showCrawlerH1 = $crawlerH1 !== '' && ! str_contains($robots, 'noindex');
+@endphp
+    <div id="app" data-page="{{ json_encode($page) }}">
+        @if ($showCrawlerH1)
+            <div id="seo-crawler-fallback">
+                <h1>{{ $crawlerH1 }}</h1>
+                @if ($crawlerLede !== '')
+                    <p>{{ $crawlerLede }}</p>
+                @endif
+            </div>
+        @endif
+    </div>
     <script>
         (function () {
             function showBootFailure(message) {
                 var app = document.getElementById('app');
                 if (!app || app.dataset.bootFailed === '1') return;
+                if (document.getElementById('seo-crawler-fallback')) return;
                 if (app.childElementCount > 0 && (app.innerText || '').trim().length > 0) return;
                 app.dataset.bootFailed = '1';
                 app.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;font-family:system-ui,sans-serif;color:#111">' +
@@ -139,6 +155,7 @@
             setTimeout(function () {
                 var app = document.getElementById('app');
                 if (!app) return;
+                if (document.getElementById('seo-crawler-fallback')) return;
                 if (app.childElementCount === 0 || !(app.innerText || '').trim()) {
                     showBootFailure('The dashboard did not start. Press Ctrl+Shift+R to load the latest assets.');
                 }

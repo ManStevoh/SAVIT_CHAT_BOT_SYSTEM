@@ -441,6 +441,8 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
+        app(\App\Services\MailService::class)->sendCustomerOrderConfirmationSafely($order);
+
         $whatsappSent = false;
         $whatsappError = null;
         $invoiceMessage = null;

@@ -10,6 +10,8 @@ use App\Models\LandingFaq;
 use App\Models\Plan;
 use App\Models\PlatformSetting;
 use App\Models\Product;
+use App\Support\HomeSeoCopy;
+use App\Support\SeoLandingCatalog;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -55,6 +57,34 @@ class CmsSeoService
         $ogDescription = trim((string) ($page->og_description ?: $description));
         $ogImage = $this->absoluteUrl($page->og_image) ?: $this->defaultOgImage();
         $siteName = (string) config('app.name', 'RelayIQ');
+
+        $h1 = $title;
+        $lede = $description;
+        if ($page->slug === 'home') {
+            $heroTitle = $this->firstHeroTitle($page);
+            $heroLede = $this->firstHeroLede($page);
+            if (HomeSeoCopy::shouldReplaceHero($heroTitle)) {
+                $h1 = HomeSeoCopy::h1();
+                $lede = HomeSeoCopy::lede();
+            } elseif ($heroTitle !== '') {
+                $h1 = $heroTitle;
+                $lede = $heroLede !== '' ? $heroLede : $description;
+            }
+            if (HomeSeoCopy::shouldReplaceMeta($title, $description)) {
+                $title = HomeSeoCopy::title();
+                $description = HomeSeoCopy::description();
+            }
+            if (HomeSeoCopy::shouldReplaceMeta($ogTitle, $ogDescription)) {
+                $ogTitle = HomeSeoCopy::title();
+                $ogDescription = HomeSeoCopy::description();
+            }
+        }
+
+        $catalog = SeoLandingCatalog::get($page->slug);
+        if (is_array($catalog)) {
+            $h1 = $catalog['h1'];
+            $lede = $catalog['lede'];
+        }
 
         $breadcrumbs = [
             ['name' => 'Home', 'url' => $base.'/'],
@@ -129,6 +159,8 @@ class CmsSeoService
         return $this->decoratePayload([
             'title' => $title,
             'description' => $description,
+            'h1' => $h1,
+            'lede' => $lede,
             'canonical' => $canonical,
             'robots' => $page->robots ?: 'index, follow',
             'ogTitle' => $ogTitle,
@@ -526,7 +558,15 @@ class CmsSeoService
 
     public function shouldUseSitemapIndex(): bool
     {
-        return count($this->sitemapEntries()) > 400;
+        try {
+            if (! Schema::hasTable('products')) {
+                return false;
+            }
+
+            return Product::query()->where('status', 'active')->count() > 350;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -535,7 +575,30 @@ class CmsSeoService
     private function sitemapMarketingEntries(): array
     {
         $base = $this->appBaseUrl();
+        $seen = [];
         $entries = [];
+
+        $add = function (string $path, string $changefreq = 'monthly', string $priority = '0.8') use ($base, &$seen, &$entries): void {
+            $loc = $base.($path === '/' ? '/' : $path);
+            if (isset($seen[$loc])) {
+                return;
+            }
+            $seen[$loc] = true;
+            $entries[] = [
+                'loc' => $loc,
+                'lastmod' => now()->toAtomString(),
+                'changefreq' => $changefreq,
+                'priority' => $priority,
+            ];
+        };
+
+        $add('/', 'weekly', '1.0');
+        foreach (['/solutions', '/pricing', '/about', '/contact', '/blog'] as $core) {
+            $add($core, $core === '/blog' ? 'weekly' : 'monthly', $core === '/pricing' ? '0.9' : '0.8');
+        }
+        foreach (SeoLandingCatalog::all() as $landing) {
+            $add($landing['path'], 'monthly', '0.85');
+        }
 
         if (Schema::hasTable('cms_pages')) {
             try {
@@ -547,8 +610,13 @@ class CmsSeoService
 
                 foreach ($pages as $page) {
                     $path = $this->pathForSlug($page->slug);
+                    $loc = $base.$path;
+                    if (isset($seen[$loc])) {
+                        continue;
+                    }
+                    $seen[$loc] = true;
                     $entries[] = [
-                        'loc' => $base.$path,
+                        'loc' => $loc,
                         'lastmod' => optional($page->updated_at)?->toAtomString(),
                         'changefreq' => $page->slug === 'home' ? 'weekly' : 'monthly',
                         'priority' => $page->slug === 'home' ? '1.0' : '0.8',
@@ -642,6 +710,7 @@ class CmsSeoService
                     ->where('company_id', $store->id)
                     ->where('status', 'active')
                     ->orderBy('id')
+                    ->limit(80)
                     ->get(['id', 'slug', 'name', 'image', 'updated_at']);
 
                 foreach ($products as $product) {
@@ -788,6 +857,11 @@ class CmsSeoService
 
     public function pathForSlug(string $slug): string
     {
+        $fromCatalog = SeoLandingCatalog::path($slug);
+        if (is_string($fromCatalog) && $fromCatalog !== '') {
+            return $fromCatalog;
+        }
+
         return match ($slug) {
             'home', 'global' => '/',
             default => '/'.$slug,
@@ -810,8 +884,47 @@ class CmsSeoService
         if ((! is_string($ogImage) || $ogImage === '') && $this->defaultOgImage()) {
             $payload['ogImage'] = $this->defaultOgImage();
         }
+        if (empty($payload['h1']) && ! empty($payload['title'])) {
+            $payload['h1'] = $payload['title'];
+        }
+        if (empty($payload['lede']) && ! empty($payload['description'])) {
+            $payload['lede'] = $payload['description'];
+        }
 
         return $payload;
+    }
+
+    private function firstHeroTitle(CmsPage $page): string
+    {
+        $content = $this->firstHeroContent($page);
+
+        return trim((string) ($content['title'] ?? $content['headline'] ?? ''));
+    }
+
+    private function firstHeroLede(CmsPage $page): string
+    {
+        $content = $this->firstHeroContent($page);
+
+        return trim((string) ($content['description'] ?? $content['subhead'] ?? ''));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function firstHeroContent(CmsPage $page): array
+    {
+        try {
+            $page->loadMissing('sections');
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $hero = $page->sections->first(
+            fn ($s) => $s->section_key === 'hero' && $s->is_enabled
+        );
+        $content = $hero?->content;
+
+        return is_array($content) ? $content : [];
     }
 
     private function twitterSiteHandle(): ?string
@@ -831,46 +944,15 @@ class CmsSeoService
      */
     private function fallback(string $slug): ?array
     {
+        $catalog = SeoLandingCatalog::get($slug);
         $defaults = [
             'home' => [
-                'title' => 'RelayIQ | AI Sales Agent for WhatsApp',
-                'description' => 'Turn WhatsApp conversations into sales with RelayIQ. AI-powered sales automation that answers customers, recommends products, follows up with leads and helps businesses close more sales.',
+                'title' => HomeSeoCopy::title(),
+                'description' => HomeSeoCopy::description(),
             ],
             'pricing' => [
                 'title' => 'WhatsApp AI Sales Automation Pricing — RelayIQ',
                 'description' => 'RelayIQ pricing for WhatsApp AI sales automation. Compare Starter, Growth, and Enterprise plans. 14-day free trial.',
-            ],
-            'features' => [
-                'title' => 'WhatsApp Sales Automation Features — RelayIQ',
-                'description' => 'AI sales agent, product recommendations, lead capture, follow-ups, team inbox, payments, and WhatsApp commerce features.',
-            ],
-            'whatsapp-ai-sales-agent' => [
-                'title' => 'AI Sales Agent for WhatsApp — RelayIQ',
-                'description' => 'Engage customers, recommend products, qualify leads, follow up, and close sales on WhatsApp with RelayIQ.',
-            ],
-            'whatsapp-sales-automation' => [
-                'title' => 'WhatsApp Sales Automation — RelayIQ',
-                'description' => 'Automate WhatsApp sales with AI replies, recommendations, follow-ups, and in-chat payments.',
-            ],
-            'whatsapp-chatbot' => [
-                'title' => 'WhatsApp Chatbot for Sales — RelayIQ',
-                'description' => 'A WhatsApp chatbot built for sales — catalog-aware AI, orders, and payments.',
-            ],
-            'whatsapp-commerce' => [
-                'title' => 'WhatsApp Commerce Platform — RelayIQ',
-                'description' => 'Run WhatsApp commerce with catalog, payments, orders, and AI that helps customers buy in chat.',
-            ],
-            'whatsapp-lead-generation' => [
-                'title' => 'WhatsApp Lead Generation — RelayIQ',
-                'description' => 'Generate and qualify WhatsApp leads with AI, then route hot leads to your team.',
-            ],
-            'ai-customer-service' => [
-                'title' => 'WhatsApp Customer Service Automation — RelayIQ',
-                'description' => 'Automate WhatsApp customer service with AI grounded in FAQs, orders, and catalog.',
-            ],
-            'whatsapp-for-ecommerce' => [
-                'title' => 'WhatsApp for Ecommerce — RelayIQ',
-                'description' => 'Use WhatsApp for ecommerce sales with AI advice, checkout, and a matching web storefront.',
             ],
             'about' => [
                 'title' => 'About us — RelayIQ',
@@ -894,7 +976,20 @@ class CmsSeoService
             ],
         ];
 
-        if (! isset($defaults[$slug])) {
+        if ($catalog) {
+            $meta = [
+                'title' => $catalog['title'],
+                'description' => $catalog['description'],
+                'h1' => $catalog['h1'],
+                'lede' => $catalog['lede'],
+            ];
+        } elseif (isset($defaults[$slug])) {
+            $meta = $defaults[$slug];
+            if ($slug === 'home') {
+                $meta['h1'] = HomeSeoCopy::h1();
+                $meta['lede'] = HomeSeoCopy::lede();
+            }
+        } else {
             return null;
         }
 
@@ -904,19 +999,46 @@ class CmsSeoService
         $siteName = (string) config('app.name', 'RelayIQ');
 
         return $this->decoratePayload([
-            'title' => $defaults[$slug]['title'],
-            'description' => $defaults[$slug]['description'],
+            'title' => $meta['title'],
+            'description' => $meta['description'],
+            'h1' => $meta['h1'] ?? $meta['title'],
+            'lede' => $meta['lede'] ?? $meta['description'],
             'canonical' => $canonical,
             'robots' => 'index, follow',
-            'ogTitle' => $defaults[$slug]['title'],
-            'ogDescription' => $defaults[$slug]['description'],
+            'ogTitle' => $meta['title'],
+            'ogDescription' => $meta['description'],
             'ogImage' => $this->defaultOgImage(),
             'ogType' => 'website',
             'ogUrl' => $canonical,
             'siteName' => $siteName,
             'twitterCard' => 'summary_large_image',
-            'jsonLd' => null,
+            'jsonLd' => $this->catalogFaqJsonLd($catalog),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $catalog
+     * @return array<string, mixed>|null
+     */
+    private function catalogFaqJsonLd(?array $catalog): ?array
+    {
+        $faqs = is_array($catalog) && is_array($catalog['faqs'] ?? null) ? $catalog['faqs'] : [];
+        if ($faqs === []) {
+            return null;
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => array_values(array_map(fn (array $faq) => [
+                '@type' => 'Question',
+                'name' => $faq['question'],
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text' => $faq['answer'],
+                ],
+            ], $faqs)),
+        ];
     }
 
     /**

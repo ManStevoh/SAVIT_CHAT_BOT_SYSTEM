@@ -21,7 +21,13 @@ class StorefrontAuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:6'],
+            'acceptTerms' => ['accepted'],
+            'marketingConsent' => ['sometimes', 'boolean'],
+        ], [
+            'acceptTerms.accepted' => 'Please agree to this store\'s terms and conditions.',
         ]);
+
+        $marketingConsent = $request->boolean('marketingConsent');
 
         $email = strtolower(trim($validated['email']));
 
@@ -36,19 +42,25 @@ class StorefrontAuthController extends Controller
             ]);
         }
 
+        $consent = [
+            'terms_accepted_at' => now(),
+            'marketing_consent' => $marketingConsent,
+            'marketing_consent_at' => $marketingConsent ? now() : null,
+        ];
+
         if ($existing) {
-            $existing->update([
+            $existing->update(array_merge([
                 'name' => trim($validated['name']),
                 'password' => Hash::make($validated['password']),
-            ]);
+            ], $consent));
             $customer = $existing;
         } else {
-            $customer = StorefrontCustomer::create([
+            $customer = StorefrontCustomer::create(array_merge([
                 'company_id' => $company->id,
                 'email' => $email,
                 'name' => trim($validated['name']),
                 'password' => Hash::make($validated['password']),
-            ]);
+            ], $consent));
         }
 
         // Store customer session for this store

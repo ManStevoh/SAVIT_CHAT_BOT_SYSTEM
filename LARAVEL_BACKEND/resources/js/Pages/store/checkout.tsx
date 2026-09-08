@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  Download,
   ChevronDown,
   ChevronUp,
   Gift,
@@ -32,8 +33,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { StorefrontAuthModal } from '@/components/store/StorefrontAuthModal'
 import { resolveStorefrontStyle, type BrandTheme } from '@/lib/theme-utils'
 
-type CartItem = { key: string; name: string; price: number; quantity: number; lineTotal: number }
-type CartSummary = { items: CartItem[]; subtotal: number; taxTotal: number; total: number }
+type CartItem = { key: string; name: string; price: number; quantity: number; lineTotal: number; isDigital?: boolean }
+type CartSummary = { items: CartItem[]; subtotal: number; taxTotal: number; total: number; digitalOnly?: boolean; hasDigitalItems?: boolean }
 
 type SuggestedAddress = { line: string; city?: string | null; label?: string | null; customerName?: string | null } | null
 
@@ -58,12 +59,15 @@ type Props = {
     whatsappUrl?: string | null
     authCustomer?: { id: number; name: string; email: string } | null
     theme?: BrandTheme
+    termsUrl?: string
   }
   cart: CartSummary
   dineInEnabled: boolean
   deliveryFeesEnabled: boolean
   presetDineInTableCode?: string | null
   suggestedAddress?: SuggestedAddress
+  digitalOnly?: boolean
+  hasDigitalItems?: boolean
   errors?: Record<string, string>
 }
 
@@ -84,6 +88,8 @@ export default function StoreCheckoutPage({
   dineInEnabled,
   presetDineInTableCode,
   suggestedAddress = null,
+  digitalOnly = false,
+  hasDigitalItems = false,
   errors = {},
 }: Props) {
   const authCustomer = company.authCustomer
@@ -95,9 +101,11 @@ export default function StoreCheckoutPage({
   const [tipAmount, setTipAmount] = useState('')
   const [couponCode, setCouponCode] = useState('')
   const [selectedTipPercent, setSelectedTipPercent] = useState<number | null>(null)
-  const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup' | 'dine_in'>(
-    dineInEnabled && presetDineInTableCode ? 'dine_in' : 'delivery'
+  const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup' | 'dine_in' | 'digital'>(
+    digitalOnly ? 'digital' : dineInEnabled && presetDineInTableCode ? 'dine_in' : 'delivery'
   )
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [deliveryAddress, setDeliveryAddress] = useState(suggestedAddress?.line || '')
   const [dineInTableCode, setDineInTableCode] = useState(presetDineInTableCode ?? '')
   const [submitting, setSubmitting] = useState(false)
@@ -124,11 +132,15 @@ export default function StoreCheckoutPage({
   }, [sessionPhone])
 
   useEffect(() => {
+    if (digitalOnly) {
+      setFulfillmentType('digital')
+      return
+    }
     if (dineInEnabled && presetDineInTableCode) {
       setFulfillmentType('dine_in')
       setDineInTableCode(presetDineInTableCode)
     }
-  }, [dineInEnabled, presetDineInTableCode])
+  }, [digitalOnly, dineInEnabled, presetDineInTableCode])
 
   useEffect(() => {
     if (suggestedAddress?.line && !deliveryAddress) {
@@ -213,6 +225,8 @@ export default function StoreCheckoutPage({
         giftMessage: giftMessage || null,
         tipAmount: tipAmount ? Number(tipAmount) : 0,
         couponCode: couponCode || null,
+        acceptTerms,
+        marketingConsent,
       },
       { onFinish: () => setSubmitting(false) }
     )
@@ -360,7 +374,7 @@ export default function StoreCheckoutPage({
 
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Email Address {isWhatsAppVisitor ? '(Optional)' : ''}
+                      Email Address {hasDigitalItems || !isWhatsAppVisitor ? '' : '(Optional)'}
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
@@ -368,11 +382,14 @@ export default function StoreCheckoutPage({
                         type="email"
                         value={customerEmail}
                         onChange={(e) => setCustomerEmail(e.target.value)}
-                        required={!isWhatsAppVisitor}
+                        required={!isWhatsAppVisitor || hasDigitalItems}
                         placeholder="you@example.com"
                         className="pl-10 rounded-2xl"
                       />
                     </div>
+                    {hasDigitalItems ? (
+                      <p className="text-[11px] text-slate-500">Required so we can email digital files or license keys after payment.</p>
+                    ) : null}
                   </div>
 
                   <div className="space-y-1.5">
@@ -398,7 +415,23 @@ export default function StoreCheckoutPage({
               {/* Fulfillment Method Selector */}
               <div className="space-y-3 border-t border-slate-100 pt-5 dark:border-slate-800">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">2. Fulfillment Method</h3>
-                
+
+                {digitalOnly ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white dark:bg-emerald-600">
+                        <Download className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Digital delivery</p>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                          This cart is digital only — no delivery address needed. After payment, files or license keys are sent to the email above.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
@@ -479,6 +512,13 @@ export default function StoreCheckoutPage({
                       className="rounded-2xl"
                     />
                   </div>
+                )}
+                {hasDigitalItems ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Digital items in this order will still be emailed after payment, even if you choose delivery or pickup for physical goods.
+                  </p>
+                ) : null}
+                  </>
                 )}
               </div>
 
@@ -565,6 +605,35 @@ export default function StoreCheckoutPage({
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                <label className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
+                  />
+                  <span>
+                    I agree to {company.name}&apos;s{' '}
+                    <Link href={company.termsUrl || `/s/${slug}/terms`} target="_blank" className="font-semibold underline underline-offset-2">
+                      Terms and Conditions
+                    </Link>
+                    .
+                  </span>
+                </label>
+                {errors.acceptTerms ? <p className="text-xs font-medium text-red-600">{errors.acceptTerms}</p> : null}
+                <label className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={marketingConsent}
+                    onChange={(e) => setMarketingConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
+                  />
+                  <span>Send me offers and updates from {company.name} (optional — you can say no)</span>
+                </label>
               </div>
 
               {/* Submit Button */}
@@ -681,6 +750,7 @@ export default function StoreCheckoutPage({
         onOpenChange={setAuthModalOpen}
         slug={slug}
         companyName={company.name}
+        termsUrl={company.termsUrl}
       />
     </div>
   )

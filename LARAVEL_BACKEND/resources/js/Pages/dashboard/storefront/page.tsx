@@ -1,13 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { apiRequest } from '@/lib/api-client'
-import { Copy, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
+import { apiRequest, resolveBackendMediaUrl } from '@/lib/api-client'
+import { removeStorefrontOgImage, uploadStorefrontOgImage } from '@/lib/api-actions'
+import { Copy, ExternalLink, Loader2, Plus, Trash2, Upload } from 'lucide-react'
 import { Link } from '@inertiajs/react'
 import { StorefrontCouponsCard } from '@/components/dashboard/StorefrontCouponsCard'
 import { BrandCustomizationCard } from '@/components/dashboard/BrandCustomizationCard'
@@ -47,6 +48,8 @@ type SettingsResponse = {
   storefrontOgImage?: string
   storefrontGoogleSiteVerification?: string
   storefrontBusinessType?: string
+  storefrontTermsTitle?: string
+  storefrontTermsBody?: string
   storefrontTheme?: BrandTheme
 }
 
@@ -87,8 +90,11 @@ export default function DashboardStorefrontPage() {
   const [storefrontSeoTitle, setStorefrontSeoTitle] = useState('')
   const [storefrontSeoDescription, setStorefrontSeoDescription] = useState('')
   const [storefrontOgImage, setStorefrontOgImage] = useState('')
+  const [uploadingOg, setUploadingOg] = useState(false)
   const [storefrontGoogleSiteVerification, setStorefrontGoogleSiteVerification] = useState('')
   const [storefrontBusinessType, setStorefrontBusinessType] = useState('OnlineStore')
+  const [storefrontTermsTitle, setStorefrontTermsTitle] = useState('')
+  const [storefrontTermsBody, setStorefrontTermsBody] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -127,6 +133,8 @@ export default function DashboardStorefrontPage() {
       setStorefrontOgImage(data.storefrontOgImage || '')
       setStorefrontGoogleSiteVerification(data.storefrontGoogleSiteVerification || '')
       setStorefrontBusinessType(data.storefrontBusinessType || 'OnlineStore')
+      setStorefrontTermsTitle(data.storefrontTermsTitle || '')
+      setStorefrontTermsBody(data.storefrontTermsBody || '')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load settings')
     } finally {
@@ -173,6 +181,8 @@ export default function DashboardStorefrontPage() {
           storefrontOgImage: storefrontOgImage || null,
           storefrontGoogleSiteVerification: storefrontGoogleSiteVerification || null,
           storefrontBusinessType: storefrontBusinessType || 'OnlineStore',
+          storefrontTermsTitle: storefrontTermsTitle || null,
+          storefrontTermsBody: storefrontTermsBody || null,
         },
       })
       if (data.success) {
@@ -183,6 +193,44 @@ export default function DashboardStorefrontPage() {
       setError(e instanceof Error ? e.message : 'Failed to save')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const ogPreviewSrc = resolveBackendMediaUrl(storefrontOgImage) || companyLogo || ''
+
+  const handleOgUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Share banner must be 10 MB or smaller. Use a JPEG or PNG around 1200×630.')
+      event.target.value = ''
+      return
+    }
+    setUploadingOg(true)
+    setError(null)
+    setSaved(false)
+    const res = await uploadStorefrontOgImage(file)
+    setUploadingOg(false)
+    event.target.value = ''
+    if (res.success && res.url) {
+      setStorefrontOgImage(res.url)
+      setSaved(true)
+    } else {
+      setError(res.message ?? 'Failed to upload share banner')
+    }
+  }
+
+  const handleOgRemove = async () => {
+    setUploadingOg(true)
+    setError(null)
+    setSaved(false)
+    const res = await removeStorefrontOgImage()
+    setUploadingOg(false)
+    if (res.success) {
+      setStorefrontOgImage('')
+      setSaved(true)
+    } else {
+      setError(res.message ?? 'Failed to remove share banner')
     }
   }
 
@@ -325,14 +373,37 @@ export default function DashboardStorefrontPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label>Social Share Image Banner (OG Image URL)</Label>
-              <Input
-                value={storefrontOgImage}
-                onChange={(e) => setStorefrontOgImage(e.target.value)}
-                placeholder="https://.../banner-1200x630.jpg"
-                className="mt-1"
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">Custom 1200x630 sharing banner when your link is shared on WhatsApp/Facebook.</p>
+              <Label>Social share banner</Label>
+              <div className="mt-1 overflow-hidden rounded-lg border border-border bg-muted/40">
+                {ogPreviewSrc ? (
+                  <img
+                    src={ogPreviewSrc}
+                    alt="Social share banner preview"
+                    className="h-28 w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-28 w-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
+                    No banner yet. Upload a 1200×630 image for WhatsApp and social previews.
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={uploadingOg} asChild>
+                  <label className="cursor-pointer">
+                    {uploadingOg ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Upload className="mr-1.5 h-4 w-4" />}
+                    {storefrontOgImage ? 'Replace image' : 'Upload image'}
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(e) => void handleOgUpload(e)} />
+                  </label>
+                </Button>
+                {storefrontOgImage ? (
+                  <Button type="button" variant="ghost" size="sm" disabled={uploadingOg} onClick={() => void handleOgRemove()}>
+                    Remove
+                  </Button>
+                ) : null}
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                JPEG, PNG, or WebP. 1200×630 works best when the store link is shared on WhatsApp or socials.
+              </p>
             </div>
 
             <div>
@@ -379,9 +450,9 @@ export default function DashboardStorefrontPage() {
                   <span className="font-semibold text-emerald-700 dark:text-emerald-400">WhatsApp Link Preview Card</span>
                 </div>
                 <div className="overflow-hidden rounded-lg border border-slate-300/80 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-950">
-                  {storefrontOgImage || companyLogo ? (
+                  {ogPreviewSrc ? (
                     <img
-                      src={storefrontOgImage || companyLogo || ''}
+                      src={ogPreviewSrc}
                       alt="Preview"
                       className="h-28 w-full object-cover bg-slate-100"
                     />
@@ -417,6 +488,49 @@ export default function DashboardStorefrontPage() {
         storeSlug={storeSlug}
         onSaved={load}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Store terms and conditions</CardTitle>
+          <CardDescription>
+            Shoppers must agree to these terms when they create an account or place an order. Marketing messages stay optional and off unless they opt in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Terms title</Label>
+            <Input
+              value={storefrontTermsTitle}
+              onChange={(e) => setStorefrontTermsTitle(e.target.value)}
+              maxLength={160}
+              placeholder={`${companyName} — Terms and conditions`}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label>Your terms</Label>
+            <Textarea
+              value={storefrontTermsBody}
+              onChange={(e) => setStorefrontTermsBody(e.target.value)}
+              rows={10}
+              maxLength={20000}
+              placeholder="Write the rules shoppers agree to: refunds, digital delivery, returns, and support. Leave blank to use a short default purchase agreement."
+              className="mt-1 text-sm"
+            />
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              These are your store&apos;s terms, not RelayIQ&apos;s platform terms. Digital products should mention email delivery after payment.
+            </p>
+          </div>
+          {storeSlug ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href={`/s/${storeSlug}/terms`} target="_blank" rel="noreferrer">
+                <ExternalLink className="mr-1.5 h-4 w-4" />
+                Preview public terms page
+              </a>
+            </Button>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

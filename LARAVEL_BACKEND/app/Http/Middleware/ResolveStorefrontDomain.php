@@ -84,8 +84,9 @@ class ResolveStorefrontDomain
         foreach ([
             's/', 'pay/', 'invoice/', 'b/', 'api/', 'build/', 'storage/', 'sanctum/',
             'dashboard', 'admin', 'login', 'register', 'blog', 'pricing', 'about', 'contact',
-            'solutions', 'sitemap.xml', 'sitemap-pages.xml', 'sitemap-blog.xml', 'sitemap-stores.xml',
-            'robots.txt',
+            'solutions', 'features', 'whatsapp-', 'ai-', 'use-cases', 'case-study',
+            'sitemap.xml', 'sitemap-pages.xml', 'sitemap-blog.xml', 'sitemap-stores.xml',
+            'robots.txt', 'llms.txt', 'llms-full.txt',
         ] as $prefix) {
             if ($path === rtrim($prefix, '/') || str_starts_with($path, $prefix)) {
                 return true;

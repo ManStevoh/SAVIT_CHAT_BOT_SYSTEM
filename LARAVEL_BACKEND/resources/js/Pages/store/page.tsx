@@ -82,6 +82,7 @@ type Props = {
     whatsappUrl?: string | null
     authCustomer?: { id: number; name: string; email: string } | null
     theme?: BrandTheme
+    termsUrl?: string
   }
   products: StoreProduct[]
   filters?: Filters
@@ -326,7 +327,7 @@ function ProductCard({
       </Link>
 
       {/* Card Content */}
-      <div className="flex flex-1 flex-col justify-between p-4">
+      <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
         <div>
           <div className="flex items-center justify-between gap-1">
             {product.category && (
@@ -346,9 +347,9 @@ function ProductCard({
           </Link>
         </div>
 
-        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-          <div className="flex flex-col">
-            <span className="text-sm font-extrabold text-slate-900 dark:text-white">
+        <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
+          <div className="min-w-0">
+            <span className="block text-sm font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums dark:text-white">
               {formatPrice(product.price, currency, rate)}
             </span>
             {product.onSale && product.compareAtPrice != null && (
@@ -366,9 +367,10 @@ function ProductCard({
               e.preventDefault()
               onQuickAdd(product)
             }}
-            className="h-8 rounded-xl bg-slate-900 px-3 text-[11px] font-bold text-white shadow-xs transition-all hover:scale-105 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+            className="h-9 w-full shrink-0 rounded-xl bg-slate-900 px-3 text-[11px] font-bold text-white shadow-xs transition-all hover:bg-slate-800 active:scale-[0.98] sm:h-8 sm:w-auto dark:bg-emerald-600 dark:hover:bg-emerald-500"
           >
-            <Plus className="h-3 w-3 mr-1" /> Add
+            <Plus className="mr-1 h-3.5 w-3.5 shrink-0" />
+            {product.soldOut ? 'Sold out' : 'Add to cart'}
           </Button>
         </div>
       </div>
@@ -802,7 +804,7 @@ export default function StorePage({
                     <Sparkles className="h-4 w-4 text-amber-500" /> Featured Products
                   </h2>
                 </div>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                   {featured.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -844,7 +846,7 @@ export default function StorePage({
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                   {products.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -900,6 +902,11 @@ export default function StorePage({
       )}
 
       <footer className="border-t border-slate-200/80 py-8 text-center text-xs font-medium text-slate-400 dark:border-slate-800">
+        <div className="mb-2">
+          <Link href={`/s/${slug}/terms`} className="underline underline-offset-2 hover:text-slate-600 dark:hover:text-slate-200">
+            Terms and conditions
+          </Link>
+        </div>
         {theme.footer_text || 'Powered by RelayIQ'}
       </footer>
 
@@ -918,6 +925,7 @@ export default function StorePage({
         onOpenChange={setAuthModalOpen}
         slug={slug}
         companyName={company.name}
+        termsUrl={company.termsUrl}
       />
     </div>
   )

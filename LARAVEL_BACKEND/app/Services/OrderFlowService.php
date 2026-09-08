@@ -2260,7 +2260,10 @@ class OrderFlowService
             ]);
         }
 
-        return $order->fresh(['orderProducts']);
+        $order = $order->fresh(['orderProducts']);
+        app(MailService::class)->sendCustomerOrderConfirmationSafely($order);
+
+        return $order;
     }
 
     protected function numberedOrderInstructions(): string

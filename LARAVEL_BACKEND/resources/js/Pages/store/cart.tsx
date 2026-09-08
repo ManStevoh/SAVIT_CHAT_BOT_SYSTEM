@@ -61,6 +61,7 @@ type Props = {
     whatsappUrl?: string | null
     authCustomer?: { id: number; name: string; email: string } | null
     theme?: BrandTheme
+    termsUrl?: string
   }
   cart: CartSummary
   related?: RelatedProduct[]
@@ -399,6 +400,7 @@ export default function StoreCartPage({ slug, company, cart, related = [] }: Pro
         onOpenChange={setAuthModalOpen}
         slug={slug}
         companyName={company.name}
+        termsUrl={company.termsUrl}
       />
     </div>
   )

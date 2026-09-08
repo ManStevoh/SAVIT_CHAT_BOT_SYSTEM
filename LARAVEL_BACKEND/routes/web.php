@@ -91,13 +91,14 @@ Route::get('/blog', [PageController::class, 'blog'])->name('blog');
 Route::get('/blog/{slug}', [PageController::class, 'blogShow'])->name('blog.show');
 Route::get('/privacy', [PageController::class, 'privacy'])->name('privacy');
 Route::get('/terms', [PageController::class, 'terms'])->name('terms');
-Route::get('/whatsapp-ai-sales-agent', [PageController::class, 'whatsappAiSalesAgent'])->name('seo.whatsapp-ai-sales-agent');
-Route::get('/whatsapp-sales-automation', [PageController::class, 'whatsappSalesAutomation'])->name('seo.whatsapp-sales-automation');
-Route::get('/whatsapp-chatbot', [PageController::class, 'whatsappChatbot'])->name('seo.whatsapp-chatbot');
-Route::get('/whatsapp-commerce', [PageController::class, 'whatsappCommerce'])->name('seo.whatsapp-commerce');
-Route::get('/whatsapp-lead-generation', [PageController::class, 'whatsappLeadGeneration'])->name('seo.whatsapp-lead-generation');
-Route::get('/ai-customer-service', [PageController::class, 'aiCustomerService'])->name('seo.ai-customer-service');
-Route::get('/whatsapp-for-ecommerce', [PageController::class, 'whatsappForEcommerce'])->name('seo.whatsapp-for-ecommerce');
+foreach (\App\Support\SeoLandingCatalog::all() as $seoSlug => $seoLanding) {
+    if ($seoSlug === 'features') {
+        continue;
+    }
+    Route::get(ltrim($seoLanding['path'], '/'), [PageController::class, 'seoLanding'])
+        ->defaults('slug', $seoSlug)
+        ->name('seo.'.$seoSlug);
+}
 Route::get('/order-paid', [PageController::class, 'orderPaid'])->name('order-paid');
 
 // Auth pages
@@ -245,6 +246,7 @@ Route::get('/s/{slug}/cart', [PublicStorefrontController::class, 'cart'])->name(
 Route::post('/s/{slug}/cart', [PublicStorefrontController::class, 'cartAdd'])->name('storefront.cart.add');
 Route::post('/s/{slug}/cart/update', [PublicStorefrontController::class, 'cartUpdate'])->name('storefront.cart.update');
 Route::post('/s/{slug}/cart/clear', [PublicStorefrontController::class, 'cartClear'])->name('storefront.cart.clear');
+Route::get('/s/{slug}/terms', [PublicStorefrontController::class, 'terms'])->name('storefront.terms');
 Route::get('/s/{slug}/checkout', [PublicStorefrontController::class, 'checkout'])->name('storefront.checkout');
 Route::get('/s/{slug}/checkout/suggest', [PublicStorefrontController::class, 'checkoutSuggest'])->name('storefront.checkout.suggest');
 Route::post('/s/{slug}/checkout/quote', [PublicStorefrontController::class, 'checkoutQuote'])->name('storefront.checkout.quote');

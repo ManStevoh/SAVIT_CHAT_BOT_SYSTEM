@@ -9,8 +9,11 @@ use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\StorefrontCoupon;
 use App\Models\StorefrontEvent;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -152,7 +155,7 @@ class ClassicStorefrontFeaturesTest extends TestCase
 
         $this->assertEquals(1.0, (float) $quote['discountTotal']);
 
-        $this->post("/s/{$slug}/checkout", [
+        $this->post("/s/{$slug}/checkout?phone=254711000111", [
             'customerName' => 'Ada Lovelace',
             'customerPhone' => '254711000111',
             'customerEmail' => 'ada@example.com',
@@ -161,6 +164,7 @@ class ClassicStorefrontFeaturesTest extends TestCase
             'giftMessage' => 'Happy birthday!',
             'tipAmount' => 1,
             'couponCode' => 'SAVE10',
+            'acceptTerms' => true,
         ])->assertRedirect();
 
         $order = Order::where('company_id', $company->id)->first();
@@ -180,10 +184,11 @@ class ClassicStorefrontFeaturesTest extends TestCase
         $slug = $company->store_slug;
 
         $this->post("/s/{$slug}/cart", ['productId' => $latte->id, 'quantity' => 1]);
-        $this->post("/s/{$slug}/checkout", [
+        $this->post("/s/{$slug}/checkout?phone=254722333444", [
             'customerName' => 'Tracker',
             'customerPhone' => '254722333444',
             'fulfillmentType' => 'pickup',
+            'acceptTerms' => true,
         ]);
 
         $order = Order::firstOrFail();
@@ -372,11 +377,12 @@ class ClassicStorefrontFeaturesTest extends TestCase
             'quantity' => 1,
         ])->assertRedirect("/s/{$slug}/cart");
 
-        $response = $this->post("/s/{$slug}/checkout", [
+        $response = $this->post("/s/{$slug}/checkout?phone=%2B254700111222", [
             'customerName' => 'Amina',
             'customerPhone' => '+254700111222',
             'customerEmail' => 'amina@test.local',
             'fulfillmentType' => 'pickup',
+            'acceptTerms' => true,
         ]);
 
         $order = Order::where('company_id', $company->id)->latest('id')->first();
@@ -495,5 +501,71 @@ class ClassicStorefrontFeaturesTest extends TestCase
         $decoded = urldecode($wa);
         $this->assertStringContainsString($latte->name, $decoded);
         $this->assertStringContainsString('/s/'.$slug.'/p/', $decoded);
+    }
+
+    private function actingAsStoreOwner(Company $company): User
+    {
+        Subscription::create([
+            'company_id' => $company->id,
+            'plan' => 'professional',
+            'status' => 'active',
+            'start_date' => now()->startOfMonth(),
+            'end_date' => now()->endOfMonth(),
+            'amount' => 0,
+            'billing_cycle' => 'monthly',
+        ]);
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 'company_owner',
+            'email_verified_at' => now(),
+        ]);
+        Sanctum::actingAs($user);
+
+        return $user;
+    }
+
+    public function test_merchant_can_upload_and_remove_storefront_og_image(): void
+    {
+        Storage::fake('public');
+        [$company] = $this->seedStore();
+        $this->actingAsStoreOwner($company);
+
+        $file = UploadedFile::fake()->image('banner.jpg', 1200, 630);
+        $upload = $this->post('/api/company/settings/og-image', [
+            'image' => $file,
+        ]);
+        $upload->assertOk()->assertJsonPath('success', true);
+        $this->assertNotEmpty($upload->json('url'));
+
+        $company->refresh();
+        $path = $company->storefront_theme['og_image'] ?? null;
+        $this->assertIsString($path);
+        $this->assertTrue(Storage::disk('public')->exists($path));
+
+        $this->getJson('/api/company/settings')
+            ->assertOk()
+            ->assertJsonPath('storefrontOgImage', asset('storage/'.$path));
+
+        $this->deleteJson('/api/company/settings/og-image')
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $company->refresh();
+        $this->assertArrayNotHasKey('og_image', $company->storefront_theme ?? []);
+        $this->assertFalse(Storage::disk('public')->exists($path));
+    }
+
+    public function test_merchant_can_save_storefront_og_image_url(): void
+    {
+        [$company] = $this->seedStore();
+        $this->actingAsStoreOwner($company);
+
+        $this->putJson('/api/company/settings', [
+            'storefrontOgImage' => 'https://cdn.example.com/og-banner.jpg',
+        ])->assertOk();
+
+        $this->getJson('/api/company/settings')
+            ->assertOk()
+            ->assertJsonPath('storefrontOgImage', 'https://cdn.example.com/og-banner.jpg');
     }
 }

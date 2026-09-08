@@ -39,42 +39,18 @@ class PageController extends Controller
 
     public function features(): Response
     {
-        return $this->marketingPage('features', 'Features — RelayIQ');
+        $landing = \App\Support\SeoLandingCatalog::get('features');
+
+        return $this->marketingPage('features', $landing['title'] ?? 'Features — RelayIQ');
     }
 
-    public function whatsappAiSalesAgent(): Response
+    public function seoLanding(): Response
     {
-        return $this->marketingPage('whatsapp-ai-sales-agent', 'AI Sales Agent for WhatsApp — RelayIQ');
-    }
+        $slug = (string) request()->route('slug');
+        $landing = \App\Support\SeoLandingCatalog::get($slug);
+        abort_unless($landing, 404);
 
-    public function whatsappSalesAutomation(): Response
-    {
-        return $this->marketingPage('whatsapp-sales-automation', 'WhatsApp Sales Automation — RelayIQ');
-    }
-
-    public function whatsappChatbot(): Response
-    {
-        return $this->marketingPage('whatsapp-chatbot', 'WhatsApp Chatbot for Sales — RelayIQ');
-    }
-
-    public function whatsappCommerce(): Response
-    {
-        return $this->marketingPage('whatsapp-commerce', 'WhatsApp Commerce — RelayIQ');
-    }
-
-    public function whatsappLeadGeneration(): Response
-    {
-        return $this->marketingPage('whatsapp-lead-generation', 'WhatsApp Lead Generation — RelayIQ');
-    }
-
-    public function aiCustomerService(): Response
-    {
-        return $this->marketingPage('ai-customer-service', 'WhatsApp Customer Service Automation — RelayIQ');
-    }
-
-    public function whatsappForEcommerce(): Response
-    {
-        return $this->marketingPage('whatsapp-for-ecommerce', 'WhatsApp for Ecommerce — RelayIQ');
+        return $this->marketingPage($slug, $landing['title']);
     }
 
     public function contact(): Response

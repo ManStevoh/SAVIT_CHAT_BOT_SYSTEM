@@ -210,6 +210,86 @@ class RegistrationTrialAndConsentTest extends TestCase
             ]);
     }
 
+    public function test_register_without_plan_uses_configured_free_default(): void
+    {
+        PlatformSetting::query()->update([
+            'default_registration_plan_slug' => 'free',
+            'force_default_registration_plan' => false,
+        ]);
+
+        $this->postJson('/api/auth/register', [
+            'companyName' => 'Free Default Co',
+            'name' => 'Owner',
+            'email' => 'free-default@test.local',
+            'phone' => '254700000020',
+            'password' => 'Password1!',
+            'password_confirmation' => 'Password1!',
+            'acceptTerms' => true,
+        ])->assertOk()
+            ->assertJsonPath('trialPlan', 'free')
+            ->assertJsonPath('requiresPayment', false);
+
+        $user = User::where('email', 'free-default@test.local')->firstOrFail();
+        $this->assertDatabaseHas('subscriptions', [
+            'company_id' => $user->company_id,
+            'plan' => 'free',
+            'status' => 'active',
+        ]);
+        $this->assertSame('free', $user->company?->plan);
+    }
+
+    public function test_force_default_plan_overrides_selected_paid_trial(): void
+    {
+        PlatformSetting::query()->update([
+            'default_registration_plan_slug' => 'free',
+            'force_default_registration_plan' => true,
+        ]);
+
+        $growth = Plan::where('slug', 'professional')->firstOrFail();
+
+        $this->postJson('/api/auth/register', [
+            'companyName' => 'Forced Free Co',
+            'name' => 'Owner',
+            'email' => 'forced-free@test.local',
+            'phone' => '254700000021',
+            'password' => 'Password1!',
+            'password_confirmation' => 'Password1!',
+            'acceptTerms' => true,
+            'planId' => (string) $growth->id,
+            'intent' => 'subscribe',
+        ])->assertOk()
+            ->assertJsonPath('trialPlan', 'free')
+            ->assertJsonPath('requiresPayment', false)
+            ->assertJsonPath('postLoginPath', '/dashboard?trial_started=1');
+
+        $user = User::where('email', 'forced-free@test.local')->firstOrFail();
+        $this->assertFalse($user->wants_immediate_payment);
+        $this->assertDatabaseHas('subscriptions', [
+            'company_id' => $user->company_id,
+            'plan' => 'free',
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_admin_can_set_default_registration_plan(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->putJson('/api/admin/settings', [
+            'defaultRegistrationPlanSlug' => 'free',
+            'forceDefaultRegistrationPlan' => true,
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $this->getJson('/api/admin/settings')
+            ->assertOk()
+            ->assertJsonPath('defaultRegistrationPlanSlug', 'free')
+            ->assertJsonPath('forceDefaultRegistrationPlan', true);
+    }
+
     public function test_public_plans_expose_has_trial(): void
     {
         $this->getJson('/api/plans')

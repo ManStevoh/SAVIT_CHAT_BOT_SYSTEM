@@ -168,6 +168,16 @@ export type IndustryCard = {
   ctaHref?: string
 }
 
+function industryPlaybook(title: string): { href: string; label: string } | null {
+  const map: Record<string, { href: string; label: string }> = {
+    "Restaurants & cafés": { href: "/solutions/restaurants", label: "Restaurant playbook" },
+    "Retail & e-commerce": { href: "/solutions/retail", label: "Retail playbook" },
+    "Services & appointments": { href: "/solutions/services", label: "Services playbook" },
+    "Digital creators & educators": { href: "/whatsapp-for-ecommerce", label: "Digital commerce playbook" },
+  }
+  return map[title] ?? null
+}
+
 export function LandoIndustries({
   title,
   description,
@@ -193,6 +203,11 @@ export function LandoIndustries({
 
         <div className="mt-12 grid gap-5 md:grid-cols-2">
           {items.map((item, i) => {
+            const playbook = industryPlaybook(item.title)
+            const href = playbook?.href ?? item.ctaHref
+            const ctaText = playbook && (!item.ctaHref || item.ctaHref === "/register")
+              ? playbook.label
+              : item.ctaText
             const Icon = PILLAR_ICONS[item.icon ?? ""] ?? Sparkles
             return (
               <Reveal key={item.title} delayMs={i * 60}>
@@ -214,12 +229,12 @@ export function LandoIndustries({
                       ))}
                     </ul>
                   )}
-                  {item.ctaText && item.ctaHref && (
+                  {ctaText && href && (
                     <Link
-                      href={item.ctaHref}
+                      href={href}
                       className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80 hover:underline"
                     >
-                      {item.ctaText}
+                      {ctaText}
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   )}
