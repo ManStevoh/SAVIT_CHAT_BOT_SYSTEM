@@ -70,12 +70,12 @@ class EnterprisePlatformPhase2Test extends TestCase
     {
         $plan = Plan::where('slug', 'professional')->first();
         $this->assertNotNull($plan?->entitlements);
-        $this->assertSame(50000, $plan->entitlements['messages']);
+        $this->assertSame(2000, $plan->entitlements['messages']);
 
         ['company' => $company] = $this->platformCompany();
         $limits = app(EntitlementService::class)->limitsForCompany($company);
-        $this->assertSame(50000, $limits['messages']);
-        $this->assertSame(50000, PlanLimitService::getMessageLimitForPlan('professional'));
+        $this->assertSame(2000, $limits['messages']);
+        $this->assertSame(2000, PlanLimitService::getMessageLimitForPlan('professional'));
     }
 
     public function test_usage_meter_increments(): void

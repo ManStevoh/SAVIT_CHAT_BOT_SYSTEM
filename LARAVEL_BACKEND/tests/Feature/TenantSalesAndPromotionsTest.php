@@ -65,7 +65,7 @@ class TenantSalesAndPromotionsTest extends TestCase
             'productType' => 'physical',
         ]);
 
-        $create->assertOk();
+        $create->assertSuccessful();
         $this->assertSame(100.0, (float) $create->json('product.compareAtPrice'));
         $this->assertTrue((bool) $create->json('product.onSale'));
 

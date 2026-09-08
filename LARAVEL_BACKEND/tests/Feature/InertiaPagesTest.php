@@ -83,8 +83,8 @@ class InertiaPagesTest extends TestCase
         $initial = $this->get('/dashboard');
         $initial->assertOk();
 
-        $content = $initial->getContent();
-        preg_match('/"version":"([^"]+)"/', (string) $content, $matches);
+        $content = html_entity_decode((string) $initial->getContent());
+        preg_match('/"version":"([^"]+)"/', $content, $matches);
         $version = $matches[1] ?? '';
 
         $response = $this->withHeaders([
