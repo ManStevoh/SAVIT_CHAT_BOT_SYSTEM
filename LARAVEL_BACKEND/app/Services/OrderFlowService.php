@@ -2289,22 +2289,30 @@ class OrderFlowService
 
         foreach ($items as $item) {
             $data = $item['fulfillment_data'] ?? null;
+            $productId = isset($item['product_id']) ? (int) $item['product_id'] : 0;
 
             if (is_array($data)) {
-                // Snapshot is present — use it directly.
-                // Default to false (no address) when key is missing, which is safe.
-                if (($data['requiresDeliveryAddress'] ?? false) === true) {
-                    return true;
+                if (($data['requiresDeliveryAddress'] ?? false) === false) {
+                    // Snapshot says no address needed — trust it.
+                    continue;
                 }
-                continue;
+
+                // Snapshot says address needed — but cross-check the live product in case
+                // it was updated (e.g. type changed to digital) after this snapshot was taken.
+                if ($productId > 0) {
+                    $product = Product::find($productId);
+                    if ($product !== null && ! $product->requires_delivery_address) {
+                        continue; // Live product overrides stale snapshot.
+                    }
+                }
+
+                return true;
             }
 
-            // No snapshot: look up the live Product record as a fallback.
-            $productId = isset($item['product_id']) ? (int) $item['product_id'] : 0;
+            // No snapshot at all — fall back to the live product record.
             if ($productId > 0) {
                 $product = Product::find($productId);
                 if ($product !== null && ! $product->requires_delivery_address) {
-                    // Confirmed non-physical — skip address requirement for this item.
                     continue;
                 }
             }
@@ -2331,16 +2339,26 @@ class OrderFlowService
 
         foreach ($order->orderProducts as $line) {
             $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : null;
+            $productId = $line->product_id ? (int) $line->product_id : 0;
 
             if (is_array($data)) {
-                if (($data['requiresDeliveryAddress'] ?? false) === true) {
-                    return true;
+                if (($data['requiresDeliveryAddress'] ?? false) === false) {
+                    // Snapshot says no address needed — trust it.
+                    continue;
                 }
-                continue;
+
+                // Snapshot says address needed — cross-check live product in case it was updated.
+                if ($productId > 0) {
+                    $product = Product::find($productId);
+                    if ($product !== null && ! $product->requires_delivery_address) {
+                        continue; // Live product overrides stale snapshot.
+                    }
+                }
+
+                return true;
             }
 
             // No snapshot — fall back to the live product record.
-            $productId = $line->product_id ? (int) $line->product_id : 0;
             if ($productId > 0) {
                 $product = Product::find($productId);
                 if ($product !== null && ! $product->requires_delivery_address) {
