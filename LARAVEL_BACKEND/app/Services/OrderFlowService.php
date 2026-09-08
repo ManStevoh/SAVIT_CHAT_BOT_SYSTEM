@@ -455,6 +455,13 @@ class OrderFlowService
                 return 'Order cancelled. If you change your mind, reply "order" or "2" to start a new order.';
             }
             if (in_array($lower, ['1', 'continue', 'pay', 'yes', 'proceed'], true)) {
+                // Skip delivery address entirely for digital / non-physical orders.
+                if (! $this->orderRequiresDeliveryAddress($order)) {
+                    $this->setStep($chat, self::STEP_EXISTING_ORDER_PAYMENT_METHOD, ['order_id' => $order->id]);
+
+                    return $this->formatPaymentMethodPrompt($order);
+                }
+
                 $remembered = $this->getRememberedCustomerAddress($chat, $company);
                 $draftData = ['order_id' => $order->id];
                 if ($remembered) {
@@ -470,6 +477,7 @@ class OrderFlowService
 
             return "Reply with:\n1 - Continue and pay\n2 - Cancel";
         }
+
 
         if ($this->wantsCancel($lower)) {
             $this->clearState($chat);
@@ -2302,6 +2310,44 @@ class OrderFlowService
             }
 
             // Unknown product or confirmed physical — require address.
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check whether a persisted Order requires a delivery address,
+     * based on the fulfillment_data snapshot stored on each OrderProduct.
+     * Falls back to the live Product record if the snapshot is missing.
+     */
+    protected function orderRequiresDeliveryAddress(Order $order): bool
+    {
+        $order->loadMissing('orderProducts');
+
+        if ($order->orderProducts->isEmpty()) {
+            return false;
+        }
+
+        foreach ($order->orderProducts as $line) {
+            $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : null;
+
+            if (is_array($data)) {
+                if (($data['requiresDeliveryAddress'] ?? false) === true) {
+                    return true;
+                }
+                continue;
+            }
+
+            // No snapshot — fall back to the live product record.
+            $productId = $line->product_id ? (int) $line->product_id : 0;
+            if ($productId > 0) {
+                $product = Product::find($productId);
+                if ($product !== null && ! $product->requires_delivery_address) {
+                    continue;
+                }
+            }
+
             return true;
         }
 
