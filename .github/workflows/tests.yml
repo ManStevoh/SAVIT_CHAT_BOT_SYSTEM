@@ -1,0 +1,68 @@
+name: Tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    name: Lint, test, and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: LARAVEL_BACKEND
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_sqlite, bcmath, xml, ctype, json, tokenizer, openssl, gd
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: LARAVEL_BACKEND/package-lock.json
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare Laravel environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Lint PHP
+        continue-on-error: true
+        run: vendor/bin/pint --test
+
+      - name: Composer security audit
+        continue-on-error: true
+        run: composer audit --locked
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: npm security audit
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
+      - name: Typecheck frontend
+        run: npm run typecheck
+
+      - name: Run PHPUnit
+        run: php artisan test
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Upload Vite build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vite-build
+          path: LARAVEL_BACKEND/public/build
+          retention-days: 7

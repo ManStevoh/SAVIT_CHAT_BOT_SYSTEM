@@ -36,6 +36,8 @@ php artisan view:cache
 echo "==> Signaling queue workers to restart..."
 php artisan queue:restart || true
 
+bash scripts/write-release-version.sh || true
+
 echo "==> Syncing missing AI embeddings..."
 php artisan learning:sync-embeddings --missing-only --no-interaction || true
 php artisan faqs:sync-embeddings --no-interaction || true

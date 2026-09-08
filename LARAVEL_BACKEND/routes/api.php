@@ -89,6 +89,7 @@ use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\CmsPageController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\FlutterwaveWebhookController;
+use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\LandingController;
 use App\Http\Controllers\Api\MpesaCallbackController;
 use App\Http\Controllers\Api\PayPalWebhookController;
@@ -100,6 +101,7 @@ use App\Http\Controllers\Api\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // Public (no auth)
+Route::get('health', HealthController::class);
 Route::get('plans', [PlanController::class, 'index']);
 Route::get('app-branding', [AppBrandingController::class, 'show']);
 Route::get('cms/pages/{slug}', [CmsPageController::class, 'show']);

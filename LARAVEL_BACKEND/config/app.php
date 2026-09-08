@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'RelayIQ'),
 
+    'version' => env('APP_VERSION', 'dev'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

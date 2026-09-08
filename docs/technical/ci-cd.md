@@ -2,225 +2,157 @@
 title: CI/CD Pipeline
 parent: Technical Documentation
 nav_order: 12
-description: Automate deploy from local machine to production server via GitHub Actions.
+description: Automated tests and production deploy from GitHub to the RelayIQ cPanel server.
 ---
 
 # CI/CD Pipeline
 
-Essem Chat Bot is a **Laravel + PHP** application. It **cannot run on Vercel** (Vercel is for static sites and serverless Node). Production lives on your **cPanel/VPS** at `https://relayiq.app`.
+RelayIQ is a **Laravel + Inertia** app on cPanel. It cannot run on Vercel. Production is:
 
-This guide replaces the old **local → Vercel → API** flow with:
+| Item | Value |
+|------|--------|
+| Live URL | https://relayiq.app |
+| Git branch | `main` |
+| cPanel git path | `/home/qkbghwib/relayiq.app` |
+| Deploy trigger | `POST https://relayiq.app/deploy/agent` |
+
+Do **not** use cPanel Git → Update for routine releases. That bypasses tests. GitHub Actions is the release gate.
 
 ```
-Local (Windows)  →  GitHub  →  GitHub Actions  →  SSH/rsync  →  Production server
+feature branch  →  pull request  →  CI (lint, tests, build)
+        ↓ merge
+      main
+        ↓ push (automatic)
+  GitHub Actions
+        ↓ tests must pass
+  POST /deploy/agent
+        ↓
+  cPanel git fetch + reset origin/main
+        ↓
+  composer / migrate / caches / queue restart
+        ↓
+  GET /api/health  →  live
 ```
 
-**Docs** still deploy separately to GitHub Pages (unchanged).
+## What runs automatically
 
----
+| Event | Workflow | Result |
+|-------|----------|--------|
+| Pull request or push to a feature branch | `CI` | Lint, PHPUnit, typecheck, Vite build. **No deploy.** |
+| Push / merge to `main` (Laravel or deploy files) | `Deploy to production` | Same tests, then deploy `main` to https://relayiq.app, health check, rollback tag. |
+| Manual **Run workflow** | `Deploy to production` | Same as production deploy, optional branch override. |
+| Push to `develop` | `Deploy to staging` | Runs only after you set `STAGING_ENABLED=true`. Off by default. |
 
-## Why not Vercel?
+Broken tests **block** production. A developer cannot ship by pushing straight to GitHub without CI passing.
 
-| Requirement | Vercel | Your server |
-|-------------|--------|-------------|
-| PHP 8.2 + Laravel | No | Yes |
-| MySQL database | No | Yes |
-| Queue worker (`queue:work`) | No | Yes (Supervisor) |
-| Cron (`schedule:run`) | No | Yes |
-| WhatsApp/Stripe webhooks | Awkward | Same domain HTTPS |
+## One-time GitHub setup
 
-The old Next.js frontend on Vercel was **removed**. `vercel.json` keeps auto-deploy **disabled**. You can delete the legacy Vercel project when ready.
+Repo → **Settings → Secrets and variables → Actions**:
 
----
+| Secret | Required | Value |
+|--------|----------|--------|
+| `DEPLOY_AGENT_KEY` | **Yes** | Same as server `DEPLOY_AGENT_KEY` or `DEPLOY_SECRET` in `LARAVEL_BACKEND/.env` |
+| `DEPLOY_REMOTE_URL` | No | Defaults to `https://relayiq.app` |
 
-## Pipeline overview
+Without `DEPLOY_AGENT_KEY`, the production workflow fails after tests on purpose.
 
-```mermaid
-flowchart LR
-    A[Local dev] -->|git push| B[GitHub]
-    B -->|feature branch| C[CI: tests + build]
-    B -->|main branch| D[Deploy workflow]
-    D --> C2[CI tests]
-    C2 --> E[Build production bundle]
-    E --> F[rsync over SSH]
-    F --> G[post-deploy.sh on server]
-    G --> H[Health check /up]
-```
+Optional: **Settings → Environments → production**. Leave **required reviewers** off if you want merge-to-main to deploy with no extra click. Turn reviewers on only if you want a human approval gate.
 
-| Trigger | What runs |
-|---------|-----------|
-| Push to `feature/inertia-unified` | CI only (PHPUnit + typecheck + Vite build) |
-| Pull request | CI only |
-| Push to `main` (app changes) | CI + deploy to production |
-| Manual **Run workflow** | Deploy to production |
+Leave cPanel Git auto-deploy **disabled**. GitHub Actions already pulls `main` on the server after tests pass.
 
----
-
-## One-time setup
-
-### 1. Production server
-
-On `relayiq.app` (cPanel or VPS):
-
-1. Upload or clone the app so Laravel lives at a known path, e.g.  
-   `/home/username/essemchat/LARAVEL_BACKEND`
-2. Document root must point to **`.../LARAVEL_BACKEND/public`**
-3. Create production `.env` on the server (never committed, never overwritten by deploy)
-4. First-time only:
-   ```bash
-   cd /path/to/LARAVEL_BACKEND
-   composer install --no-dev
-   php artisan key:generate   # if new install
-   php artisan migrate --force
-   php artisan storage:link
-   chmod -R 775 storage bootstrap/cache
-   ```
-5. Enable **SSH** in cPanel (or use VPS SSH key login)
-6. Queue worker + cron (see [Deployment](deployment.md))
-
-### 2. Deploy SSH key
-
-On your **local machine**:
+## Day-to-day
 
 ```powershell
-ssh-keygen -t ed25519 -C "github-actions-Essem-deploy" -f $env:USERPROFILE\.ssh\ESSEM_deploy
+git checkout -b feature/my-change
+# ... commit ...
+git push -u origin feature/my-change
+# open PR → wait for CI
+# merge to main → production deploys automatically
 ```
 
-Add the **public** key (`ESSEM_deploy.pub`) to the server:
+Watch: [github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions)
 
-- cPanel → **SSH Access** → **Manage SSH Keys** → Import → Authorize  
-- Or append to `~/.ssh/authorized_keys` on VPS
-
-Test:
-
-```powershell
-ssh -i $env:USERPROFILE\.ssh\ESSEM_deploy -p 22 USER@YOUR_SERVER_HOST "echo ok"
-```
-
-### 3. GitHub secrets
-
-Repo → **Settings → Secrets and variables → Actions** → **New repository secret**
-
-| Secret | Example | Description |
-|--------|---------|-------------|
-| `PROD_SSH_HOST` | `relayiq.app` or server IP | SSH hostname |
-| `PROD_SSH_USER` | `essemuser` | cPanel/VPS username |
-| `PROD_SSH_KEY` | Full private key file contents | From `ESSEM_deploy` (no passphrase recommended for CI) |
-| `PROD_SSH_PORT` | `22` | Optional; omit if default |
-| `PROD_DEPLOY_PATH` | `/home/essemuser/essemchat/LARAVEL_BACKEND` | Absolute path to app root on server |
-
-### 4. GitHub environment (optional but recommended)
-
-Repo → **Settings → Environments** → **New environment** → name: `production`
-
-Add the same secrets there for approval gates (optional: require manual approval before deploy).
-
-The deploy workflow uses `environment: production`.
-
----
-
-## Day-to-day deploy from local
-
-### Option A — Push to `main` (automatic)
-
-```powershell
-cd c:\SAVIT_CHAT_BOT
-
-# develop on feature branch, merge to main when ready
-git checkout main
-git merge feature/inertia-unified
-git push origin main
-```
-
-GitHub Actions runs tests, syncs files, migrates, caches, health-checks.
-
-### Option B — Helper script
-
-```powershell
-# Push current branch
-.\scripts\deploy-from-local.ps1
-
-# Run tests locally first, then push
-.\scripts\deploy-from-local.ps1 -RunTests
-
-# Trigger deploy without a new commit (main must already be up to date)
-.\scripts\deploy-from-local.ps1 -ManualDeployOnly
-```
-
-Requires [GitHub CLI](https://cli.github.com/) logged in for `-ManualDeployOnly`.
-
-### Option C — Manual deploy on server
-
-If CI is unavailable, SSH in and run:
+Health:
 
 ```bash
-cd /path/to/LARAVEL_BACKEND
-git pull origin main
-./deploy.sh
-# or after rsync-only updates:
-bash scripts/post-deploy.sh
+curl -fsS https://relayiq.app/api/health
 ```
 
----
+Expected:
 
-## What gets synced (and what does not)
+```json
+{
+  "status": "ok",
+  "app": "RelayIQ",
+  "version": "2026.09.08.abc1234",
+  "checked_at": "...",
+  "checks": { "app": "ok", "database": "ok" }
+}
+```
 
-**Synced:** application code, `vendor/` (built in CI), `public/build/` (Vite assets)
-
-**Never overwritten:**
-
-- `.env` (production secrets stay on server)
-- `storage/logs/*` (log history preserved)
-- Server session/cache files (excluded)
-
-**Always run on server after sync:** `scripts/post-deploy.sh` (migrate, cache, queue restart)
-
----
-
-## Workflows in this repo
+## Workflows
 
 | File | Purpose |
 |------|---------|
-| `.github/workflows/ci.yml` | PHPUnit, typecheck, Vite build |
-| `.github/workflows/deploy-production.yml` | Production rsync + post-deploy + `/up` check |
+| `.github/workflows/tests.yml` | Reusable job: Pint, Composer/npm audit, PHPUnit, typecheck, Vite build |
+| `.github/workflows/ci.yml` | Runs tests on PRs and feature branches |
+| `.github/workflows/deploy-production.yml` | Tests + `/deploy/agent` + `/api/health` + `deploy-*` git tag |
+| `.github/workflows/deploy-staging.yml` | Same pattern for `develop` when staging exists |
 | `.github/workflows/docs-pages.yml` | Docs → GitHub Pages |
 
----
+Server-side scripts (already in the repo):
 
-## Monitoring deploys
+| File | Purpose |
+|------|---------|
+| `LARAVEL_BACKEND/scripts/post-deploy.sh` | composer, migrate, caches, queue restart, VERSION stamp |
+| `LARAVEL_BACKEND/deploy.sh` | Full install + Vite build + migrate (use if Node is on the server) |
+| `LARAVEL_BACKEND/scripts/rollback.sh` | Check out previous `deploy-*` tag and re-run post-deploy |
 
-- **Actions:** [github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions](https://github.com/ManStevoh/SAVIT_CHAT_BOT_SYSTEM/actions)
-- **Health:** `curl https://relayiq.app/up`
-- **Logs on server:** `storage/logs/laravel.log`, queue worker log
+## Rollback
 
----
+After a successful production deploy, Actions creates a tag like `deploy-20260908-2015-1624a08`.
+
+On the server:
+
+```bash
+cd /home/qkbghwib/relayiq.app/LARAVEL_BACKEND
+bash scripts/rollback.sh
+# or: bash scripts/rollback.sh deploy-YYYYMMDD-HHMM-sha
+```
+
+Then confirm `curl -fsS https://relayiq.app/api/health`.
+
+## Staging (later)
+
+Production stays on `main` → https://relayiq.app.
+
+When you add a staging site:
+
+1. Create branch `develop`
+2. Point `staging.relayiq.app` at a second cPanel git checkout
+3. GitHub variable `STAGING_ENABLED=true`
+4. Secrets `STAGING_DEPLOY_AGENT_KEY` and `STAGING_DEPLOY_URL`
+
+Until those exist, the staging workflow's deploy job is skipped.
+
+## Cursor / AI agents
+
+GitHub Actions on `main` is automatic. Cursor agents must still **ask which branch to deploy** before calling `/deploy/agent` directly. See [Agent Deployment Guide](AGENT_DEPLOYMENT_GUIDE.md).
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| SSH permission denied | Check `PROD_SSH_KEY`, authorized_keys, `PROD_SSH_USER` |
-| rsync: command not found | Use Ubuntu runner (included) — error would be on server side |
-| 500 after deploy | SSH in; run `php artisan config:clear`; check `.env` exists |
-| Missing CSS/JS | Ensure `public/build/` exists; CI runs `npm run build` before rsync |
-| Migrations fail | Fix DB credentials in server `.env`; backup DB before deploy |
-| Health check fails | App still starting, wrong docroot, or PHP error — check server logs |
-| Deploy runs but old code shows | Wrong `PROD_DEPLOY_PATH` or opcode cache — restart PHP-FPM |
-
----
-
-## Staging (optional)
-
-To add a staging subdomain (e.g. `staging.essemchat...`):
-
-1. Duplicate `deploy-production.yml` → `deploy-staging.yml`
-2. Use secrets prefixed `STAGING_*`
-3. Trigger on push to `staging` branch
-
----
+| Deploy job: `DEPLOY_AGENT_KEY is required` | Add the Actions secret; it must match the server `.env` |
+| HTTP 401 from `/deploy/agent` | Key mismatch between GitHub and server |
+| HTTP 409 | Another deploy is running; Actions retries |
+| Health check fails | Server log `storage/logs/laravel.log`; confirm document root is `.../LARAVEL_BACKEND/public` |
+| cPanel still on an old commit | Do not click Update in cPanel; inspect Actions logs, then `git -C /home/qkbghwib/relayiq.app log -1` |
+| CSS/JS missing | `public/build/manifest.json` missing; build in CI and commit, or run `npm run build` on the server |
+| Tests pass locally but CI fails | PHP 8.2 + Node 20; SQLite in-memory matches `phpunit.xml` |
 
 ## Related
 
-- [Deployment Guide](deployment.md) — server requirements, cron, queue, webhooks
+- [Deployment Guide](deployment.md)
+- [Agent Deployment Guide](AGENT_DEPLOYMENT_GUIDE.md)
 - [Environment Variables](environment-variables.md)
-- [Git Reconnect Guide](../GIT_RECONNECT.md)

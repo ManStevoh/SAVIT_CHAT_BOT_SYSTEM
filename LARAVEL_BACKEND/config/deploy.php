@@ -34,6 +34,8 @@ return [
     | Absolute path to the server-side deploy shell script.
     | When this file exists and is executable it takes priority over the
     | built-in git + artisan fallback pipeline.
+    |
+    | Production git checkout: /home/qkbghwib/relayiq.app (cPanel Git, branch main)
     */
     'script_path' => env('DEPLOY_SCRIPT_PATH', '/home/qkbghwib/deploy'),
 
