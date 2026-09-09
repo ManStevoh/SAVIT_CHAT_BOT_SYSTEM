@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Company;
 use App\Models\CompanySetting;
 
 /**
@@ -69,6 +70,17 @@ final class MoneyFormatter
             'thousands' => $settings->thousands_separator,
             'decimal' => $settings->decimal_separator,
         ]);
+    }
+
+    public static function formatForCompany(float $amount, ?Company $company): string
+    {
+        if (! $company) {
+            return self::format($amount, 'KES');
+        }
+
+        $company->loadMissing('settings');
+
+        return self::formatFromSettings($amount, $company->settings);
     }
 
     /**

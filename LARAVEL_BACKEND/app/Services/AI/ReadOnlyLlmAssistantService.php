@@ -88,7 +88,7 @@ final class ReadOnlyLlmAssistantService
             $imgTags = [];
             foreach ($batch as $item) {
                 $p = $item['product'];
-                $formattedPrice = \App\Support\MoneyFormatter::format((float) $p->price, $company->currency ?? 'USD');
+                $formattedPrice = \App\Support\MoneyFormatter::formatForCompany((float) $p->price, $company);
                 $imgTags[] = "[IMAGE_URL: {$item['url']} CAPTION: 📸 *{$p->name}* — {$formattedPrice}]";
             }
 
@@ -130,7 +130,7 @@ final class ReadOnlyLlmAssistantService
             }
 
             if ($product) {
-                $formattedPrice = \App\Support\MoneyFormatter::format((float) $product->price, $company->currency ?? 'USD');
+                $formattedPrice = \App\Support\MoneyFormatter::formatForCompany((float) $product->price, $company);
                 $primaryImg = $product->primaryImage();
                 $imgPath = $primaryImg?->path ?? $product->image;
                 $imgUrl = null;

@@ -3,6 +3,7 @@
 namespace App\Services\Store;
 
 use App\Models\Company;
+use App\Models\CustomerMemory;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Services\AI\KnowledgeChunkService;
@@ -521,6 +522,68 @@ class AgentStoreService
             'requiresDeliveryAddress'   => (bool) ($p->requires_delivery_address ?? ($p->product_type === 'physical')),
             'image'                     => $p->image,
             'description'               => $p->description,
+        ];
+    }
+
+    /**
+     * List customer memories for a store, optionally filtered by customer phone.
+     */
+    public function listMemories(Company $company, ?string $phone = null): array
+    {
+        $query = CustomerMemory::query()->where('company_id', $company->id);
+        if (! empty($phone)) {
+            $normalized = preg_replace('/\D+/', '', $phone) ?? $phone;
+            $query->where('customer_phone', $normalized);
+        }
+
+        $records = $query->orderByDesc('updated_at')->limit(100)->get();
+
+        return [
+            'success'      => true,
+            'company_id'   => $company->id,
+            'company_name' => $company->name,
+            'count'        => $records->count(),
+            'memories'     => $records->map(fn (CustomerMemory $m) => [
+                'id'             => $m->id,
+                'customer_phone' => $m->customer_phone,
+                'memory_key'     => $m->memory_key,
+                'memory_value'   => $m->memory_value,
+                'category'       => $m->category,
+                'source'         => $m->source,
+                'confidence'     => $m->confidence,
+                'updated_at'     => $m->updated_at?->toIso8601String(),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * Clear customer memories for a store, optionally filtered by customer phone or key.
+     */
+    public function clearMemories(Company $company, ?string $phone = null, ?string $key = null): array
+    {
+        $query = CustomerMemory::query()->where('company_id', $company->id);
+        if (! empty($phone)) {
+            $normalized = preg_replace('/\D+/', '', $phone) ?? $phone;
+            $query->where('customer_phone', $normalized);
+        }
+        if (! empty($key)) {
+            $query->where('memory_key', trim($key));
+        }
+
+        $deleted = $query->delete();
+
+        $this->recordAudit('agent_customer_memories_cleared', $company->id, [
+            'phone'         => $phone,
+            'key'           => $key,
+            'deleted_count' => $deleted,
+        ]);
+
+        return [
+            'success'       => true,
+            'company_id'    => $company->id,
+            'company_name'  => $company->name,
+            'deleted_count' => $deleted,
+            'message'       => "Successfully cleared {$deleted} customer memories.",
         ];
     }
 }

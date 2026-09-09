@@ -4,6 +4,7 @@ namespace App\Services\Agent;
 
 use App\Models\Company;
 use App\Models\Order;
+use App\Models\Product;
 use App\Services\AI\AiGateway;
 use Illuminate\Support\Facades\Log;
 
@@ -35,7 +36,16 @@ final class AgentProactiveMessageService
         }
 
         $company->loadMissing('settings');
+        $order->loadMissing('orderProducts');
+
         $currency = $company->settings?->displayCurrencyCode() ?? 'KES';
+
+        $items = $order->orderProducts->map(fn ($p) => [
+            'name' => $p->name,
+            'quantity' => (int) $p->quantity,
+            'price' => (float) $p->price,
+        ])->values()->all();
+
         $context = [
             'event' => 'payment_received',
             'order_number' => $order->order_number,
@@ -43,6 +53,7 @@ final class AgentProactiveMessageService
             'currency' => $currency,
             'customer_name' => $order->customer_name,
             'receipt_url' => $order->publicReceiptUrl(),
+            'items_purchased' => $items,
         ];
 
         return $this->generate($company, $order->customer_phone, $context, $this->fallbackPaymentMessage($order));
@@ -56,11 +67,23 @@ final class AgentProactiveMessageService
         }
 
         $company->loadMissing('settings');
+        $order->loadMissing('orderProducts');
+
+        $currency = $company->settings?->displayCurrencyCode() ?? 'KES';
+
+        $items = $order->orderProducts->map(fn ($p) => [
+            'name' => $p->name,
+            'quantity' => (int) $p->quantity,
+            'price' => (float) $p->price,
+        ])->values()->all();
+
         $context = [
             'event' => 'abandoned_cart',
             'order_number' => $order->order_number,
             'total' => $order->total,
+            'currency' => $currency,
             'customer_name' => $order->customer_name,
+            'items_in_cart' => $items,
         ];
 
         return $this->generate($company, $order->customer_phone, $context, $this->fallbackAbandonedCartMessage($order));
@@ -76,10 +99,38 @@ final class AgentProactiveMessageService
             : '';
         $goals = $this->businessGoals->getForPrompt($company);
 
+        // Fetch active catalog for grounding
+        $catalogProducts = Product::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'active')
+            ->limit(10)
+            ->get(['id', 'name', 'price', 'description']);
+
+        $catalogLines = ["Active store catalog for {$company->name}:"];
+        if ($catalogProducts->isEmpty()) {
+            $catalogLines[] = '(No products in catalog)';
+        } else {
+            foreach ($catalogProducts as $prod) {
+                $desc = trim((string) $prod->description);
+                $catalogLines[] = "- {$prod->name} ({$prod->price})" . ($desc !== '' ? ": {$desc}" : '');
+            }
+        }
+        $catalogPrompt = implode("\n", $catalogLines);
+
+        $groundingRules = <<<'TEXT'
+CRITICAL GROUNDING RULES:
+1. Exact Purchased Items: The customer purchased ONLY the items in `items_purchased` (or has `items_in_cart`). You MUST acknowledge or reference ONLY these items. NEVER state, imply, or assume that the customer ordered anything else.
+2. Catalog Restrictions: If you make a recommendation or upsell, you MUST ONLY recommend products explicitly listed in the "Active store catalog" above. NEVER recommend, mention, or invent products outside of this catalog.
+3. No Hallucinations: If the catalog does not have other relevant products to recommend, DO NOT recommend anything. Simply thank the customer warmly, confirm the order/payment, and share the receipt link.
+4. Historical Memory vs Current Order: Customer memory reflects historical conversations. NEVER confuse past chat discussions or preferences with what was purchased in this specific order. Do NOT mention remembered items unless they are relevant and actually in the active catalog.
+TEXT;
+
         $system = implode("\n\n", array_filter([
-            "You are the business's digital employee on WhatsApp. Write ONE proactive outbound message.",
+            "You are the business's digital employee on WhatsApp for '{$company->name}'. Write ONE proactive outbound message.",
             'Be warm, concise, and natural. Do not mention AI, tools, or internal systems.',
             $goals,
+            $catalogPrompt,
+            $groundingRules,
             $memory,
         ]));
 
@@ -100,7 +151,16 @@ final class AgentProactiveMessageService
             );
 
             if ($result->success && trim((string) $result->content) !== '') {
-                return trim((string) $result->content);
+                $content = trim((string) $result->content);
+                if ($this->validateGeneratedMessage($content, $company, $eventContext, $catalogProducts->pluck('name')->all())) {
+                    return $content;
+                }
+
+                Log::warning('Agent proactive message failed validation (hallucinated item detected), reverting to fallback', [
+                    'company_id' => $company->id,
+                    'event' => $eventContext['event'] ?? 'unknown',
+                    'generated_content' => $content,
+                ]);
             }
         } catch (\Throwable $e) {
             Log::warning('Agent proactive message generation failed', [
@@ -111,6 +171,55 @@ final class AgentProactiveMessageService
         }
 
         return $fallback;
+    }
+
+    /**
+     * Verify that the generated message does not claim an incorrect purchase or recommend uncatalogued items.
+     *
+     * @param  list<string>  $catalogProductNames
+     */
+    private function validateGeneratedMessage(string $content, Company $company, array $eventContext, array $catalogProductNames): bool
+    {
+        $lowerContent = mb_strtolower($content);
+        $itemsPurchased = $eventContext['items_purchased'] ?? $eventContext['items_in_cart'] ?? [];
+        $purchasedNames = array_map(fn ($it) => mb_strtolower(trim($it['name'] ?? '')), $itemsPurchased);
+
+        // 1. Check if the message claims "order (...) of <item>" where <item> is NOT in purchased items
+        if (preg_match('/order\s*(?:\([^\)]+\)\s*)?of\s+([A-Za-z0-9\s]+?)(?:!|\.|\?|,|and|for)/iu', $content, $m)) {
+            $claimedItem = mb_strtolower(trim($m[1]));
+            $matched = false;
+            foreach ($purchasedNames as $name) {
+                if ($claimedItem !== '' && (str_contains($claimedItem, $name) || str_contains($name, $claimedItem))) {
+                    $matched = true;
+                    break;
+                }
+            }
+            if (! $matched && $claimedItem !== '') {
+                return false;
+            }
+        }
+
+        // 2. Check for known hallucinated product triggers when they do NOT exist in the catalog
+        $hallucinationTriggers = ['headphone', 'headphones', 'earphone', 'earphones', 'sneaker', 'sneakers'];
+        $catalogLower = array_map('mb_strtolower', $catalogProductNames);
+
+        foreach ($hallucinationTriggers as $trigger) {
+            if (str_contains($lowerContent, $trigger)) {
+                // Check if this trigger actually exists in either purchased items or catalog products
+                $catalogHasIt = false;
+                foreach (array_merge($purchasedNames, $catalogLower) as $validName) {
+                    if (str_contains($validName, $trigger)) {
+                        $catalogHasIt = true;
+                        break;
+                    }
+                }
+                if (! $catalogHasIt) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private function fallbackPaymentMessage(Order $order): string

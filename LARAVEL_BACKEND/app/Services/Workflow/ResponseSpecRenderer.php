@@ -50,7 +50,7 @@ final class ResponseSpecRenderer
         $lines = ["🏷️ *Our Products & Prices:*", ""];
         foreach ($products as $idx => $prod) {
             $num = $idx + 1;
-            $formattedPrice = MoneyFormatter::format((float) $prod->price, $company->currency ?? 'USD');
+            $formattedPrice = MoneyFormatter::formatForCompany((float) $prod->price, $company);
             $lines[] = "{$num}. *{$prod->name}* — {$formattedPrice}";
             if (! empty($prod->description)) {
                 $shortDesc = mb_substr(strip_tags($prod->description), 0, 80);
@@ -78,7 +78,7 @@ final class ResponseSpecRenderer
         $lines = ["🛒 *Which product would you like to order?*", "Reply with the *product name or number* (e.g. '1') to order:", ""];
         foreach ($products as $idx => $prod) {
             $num = $idx + 1;
-            $formattedPrice = MoneyFormatter::format((float) $prod->price, $company->currency ?? 'USD');
+            $formattedPrice = MoneyFormatter::formatForCompany((float) $prod->price, $company);
             $lines[] = "{$num}. *{$prod->name}* — {$formattedPrice}";
         }
 
@@ -162,16 +162,16 @@ final class ResponseSpecRenderer
             $price = (float) ($item['price'] ?? 0.0);
             $lineTotal = $price * $qty;
             $total += $lineTotal;
-            $formattedPrice = MoneyFormatter::format($price, $company->currency ?? 'USD');
+            $formattedPrice = MoneyFormatter::formatForCompany($price, $company);
             if ($qty > 1) {
-                $formattedLineTotal = MoneyFormatter::format($lineTotal, $company->currency ?? 'USD');
+                $formattedLineTotal = MoneyFormatter::formatForCompany($lineTotal, $company);
                 $lines[] = "• *{$name}* — {$qty} x {$formattedPrice} ({$formattedLineTotal})";
             } else {
                 $lines[] = "• *{$name}* — 1 x {$formattedPrice}";
             }
         }
 
-        $formattedTotal = MoneyFormatter::format($total, $company->currency ?? 'USD');
+        $formattedTotal = MoneyFormatter::formatForCompany($total, $company);
         $lines[] = "\n*Total:* {$formattedTotal}";
         $lines[] = "\n📋 *Next steps:*";
         $lines[] = "• Reply with a *product name/number* to add more items";
@@ -198,16 +198,16 @@ final class ResponseSpecRenderer
             $price = (float) ($item['price'] ?? 0.0);
             $lineTotal = $price * $qty;
             $total += $lineTotal;
-            $formattedPrice = MoneyFormatter::format($price, $company->currency ?? 'USD');
+            $formattedPrice = MoneyFormatter::formatForCompany($price, $company);
             if ($qty > 1) {
-                $formattedLineTotal = MoneyFormatter::format($lineTotal, $company->currency ?? 'USD');
+                $formattedLineTotal = MoneyFormatter::formatForCompany($lineTotal, $company);
                 $lines[] = "• *{$name}* — {$qty} x {$formattedPrice} ({$formattedLineTotal})";
             } else {
                 $lines[] = "• *{$name}* — 1 x {$formattedPrice}";
             }
         }
 
-        $formattedTotal = MoneyFormatter::format($total, $company->currency ?? 'USD');
+        $formattedTotal = MoneyFormatter::formatForCompany($total, $company);
         $lines[] = "\n*Total:* {$formattedTotal}";
         $lines[] = "\nWhat would you like to do next?";
         $lines[] = "1 - Confirm & place order";

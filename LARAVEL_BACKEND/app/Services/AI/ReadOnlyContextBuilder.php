@@ -32,10 +32,10 @@ final class ReadOnlyContextBuilder
             foreach ($state->cartItems as $item) {
                 $name = $item['name'] ?? 'Item';
                 $qty = (int) ($item['quantity'] ?? 1);
-                $price = MoneyFormatter::format((float) ($item['price'] ?? 0), $company->currency ?? 'USD');
+                $price = MoneyFormatter::formatForCompany((float) ($item['price'] ?? 0), $company);
                 $itemsList[] = "{$qty}x {$name} ({$price})";
             }
-            $cartSummary = implode(', ', $itemsList) . " (Total: " . MoneyFormatter::format((float) $state->calculateCartTotal(), $company->currency ?? 'USD') . ")";
+            $cartSummary = implode(', ', $itemsList) . " (Total: " . MoneyFormatter::formatForCompany((float) $state->calculateCartTotal(), $company) . ")";
         }
 
         // Candidate products snippet (top candidates or top active products)
@@ -63,7 +63,7 @@ final class ReadOnlyContextBuilder
             foreach ($prods as $p) {
                 $candidates[] = [
                     'name' => $p->name,
-                    'price' => MoneyFormatter::format((float) $p->price, $company->currency ?? 'USD'),
+                    'price' => MoneyFormatter::formatForCompany((float) $p->price, $company),
                     'desc' => mb_substr(strip_tags((string) ($p->description ?? '')), 0, 100),
                 ];
             }
