@@ -43,9 +43,11 @@ class AgentStoreController extends Controller
                 'update_store', 'store_settings', 'settings' => $this->handleUpdateStore($request),
                 'remove_product', 'delete', 'archive' => $this->handleDeleteProduct($request),
                 'bulk_import', 'bulk' => $this->handleBulkImport($request),
+                'list_memories', 'memories' => $this->handleListMemories($request),
+                'clear_memories', 'delete_memories', 'purge_memories' => $this->handleClearMemories($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import, list_memories, clear_memories.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -206,6 +208,47 @@ class AgentStoreController extends Controller
         $settings = (array) ($request->input('settings') ?: $request->all());
 
         $result = $this->storeService->updateStoreSettings($company, $settings);
+
+        return response()->json($result);
+    }
+
+    private function handleListMemories(Request $request): JsonResponse
+    {
+        $storeId = $request->input('company_id') ?: $request->input('store') ?: $request->query('store');
+        $company = $this->storeService->resolveCompany($storeId);
+
+        if (! $company) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store '{$storeId}' not found. Specify a valid company_id or store_slug.",
+            ], 404);
+        }
+
+        $phone = $request->input('phone') ?: $request->query('phone') ?: $request->input('customer_phone');
+        $result = $this->storeService->listMemories($company, $phone ? (string) $phone : null);
+
+        return response()->json($result);
+    }
+
+    private function handleClearMemories(Request $request): JsonResponse
+    {
+        $storeId = $request->input('company_id') ?: $request->input('store') ?: $request->query('store');
+        $company = $this->storeService->resolveCompany($storeId);
+
+        if (! $company) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store '{$storeId}' not found. Specify a valid company_id or store_slug.",
+            ], 404);
+        }
+
+        $phone = $request->input('phone') ?: $request->query('phone') ?: $request->input('customer_phone');
+        $key = $request->input('key') ?: $request->query('key') ?: $request->input('memory_key');
+        $result = $this->storeService->clearMemories(
+            $company,
+            $phone ? (string) $phone : null,
+            $key ? (string) $key : null
+        );
 
         return response()->json($result);
     }
