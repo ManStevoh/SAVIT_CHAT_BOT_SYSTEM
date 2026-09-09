@@ -85,22 +85,51 @@ class AgentStoreService
             $settings->update($fields);
         }
 
+        $companyFields = [];
         if (! empty($data['store_name']) || ! empty($data['name'])) {
-            $company->update(['name' => trim((string) ($data['store_name'] ?? $data['name']))]);
+            $companyFields['name'] = trim((string) ($data['store_name'] ?? $data['name']));
+        }
+        if (array_key_exists('billing_model', $data) || array_key_exists('billingModel', $data)) {
+            $companyFields['billing_model'] = $data['billing_model'] ?? $data['billingModel'];
+        }
+        if (array_key_exists('commission_rate', $data) || array_key_exists('commissionRate', $data)) {
+            $val = $data['commission_rate'] ?? $data['commissionRate'];
+            $companyFields['commission_rate'] = ($val !== null && $val !== '') ? (float) $val : null;
+        }
+        if (array_key_exists('commission_basis', $data) || array_key_exists('commissionBasis', $data)) {
+            $companyFields['commission_basis'] = $data['commission_basis'] ?? $data['commissionBasis'];
+        }
+        if (array_key_exists('waive_subscription_fee', $data) || array_key_exists('waiveSubscriptionFee', $data)) {
+            $companyFields['waive_subscription_fee'] = (bool) ($data['waive_subscription_fee'] ?? $data['waiveSubscriptionFee']);
+        }
+        if (array_key_exists('commission_invoice_threshold', $data) || array_key_exists('commissionInvoiceThreshold', $data)) {
+            $val = $data['commission_invoice_threshold'] ?? $data['commissionInvoiceThreshold'];
+            $companyFields['commission_invoice_threshold'] = ($val !== null && $val !== '') ? (float) $val : null;
         }
 
+        if (! empty($companyFields)) {
+            $company->update($companyFields);
+        }
+
+        $freshCompany = $company->fresh();
+
         $this->recordAudit('agent_store_settings_updated', $company->id, [
-            'updates' => array_keys($fields),
+            'settings_updates' => array_keys($fields),
+            'company_updates'  => array_keys($companyFields),
         ]);
 
         return [
-            'success'         => true,
-            'company_id'      => $company->id,
-            'company_name'    => $company->fresh()->name,
-            'store_slug'      => $company->store_slug,
-            'currency'        => $settings->fresh()->displayCurrencyCode(),
-            'currency_symbol' => $settings->fresh()->currency_symbol,
-            'message'         => "Store '{$company->name}' settings updated successfully.",
+            'success'                    => true,
+            'company_id'                 => $company->id,
+            'company_name'               => $freshCompany->name,
+            'store_slug'                 => $freshCompany->store_slug,
+            'billing_model'              => $freshCompany->billing_model,
+            'commission_rate'            => $freshCompany->commission_rate !== null ? (float) $freshCompany->commission_rate : null,
+            'commission_basis'           => $freshCompany->commission_basis,
+            'waive_subscription_fee'     => (bool) ($freshCompany->waive_subscription_fee ?? true),
+            'currency'                   => $settings->fresh()->displayCurrencyCode(),
+            'currency_symbol'            => $settings->fresh()->currency_symbol,
+            'message'                    => "Store '{$freshCompany->name}' settings updated successfully.",
         ];
     }
 

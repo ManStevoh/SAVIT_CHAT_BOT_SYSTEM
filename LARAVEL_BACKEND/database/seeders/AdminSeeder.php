@@ -25,7 +25,10 @@ class AdminSeeder extends Seeder
         );
         if ($user->role !== 'admin') {
             $user->role = 'admin';
-            $user->save();
         }
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+        }
+        $user->save();
     }
 }

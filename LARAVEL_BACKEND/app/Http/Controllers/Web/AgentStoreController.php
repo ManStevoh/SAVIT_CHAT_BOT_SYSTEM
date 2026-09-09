@@ -46,9 +46,10 @@ class AgentStoreController extends Controller
                 'clone_store', 'seed_account', 'clone' => $this->handleCloneStore($request),
                 'list_memories', 'memories' => $this->handleListMemories($request),
                 'clear_memories', 'delete_memories', 'purge_memories' => $this->handleClearMemories($request),
+                'verify_email', 'verify_user' => $this->handleVerifyEmail($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import, clone_store, list_memories, clear_memories.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import, clone_store, list_memories, clear_memories, verify_email.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -260,5 +261,34 @@ class AgentStoreController extends Controller
         $result = $this->storeService->cloneStore($data);
 
         return response()->json($result, 201);
+    }
+
+    private function handleVerifyEmail(Request $request): JsonResponse
+    {
+        $email = trim((string) ($request->input('email') ?: 'admin@essem.local'));
+        $user = \App\Models\User::where('email', $email)->first();
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => "User '{$email}' not found.",
+            ], 404);
+        }
+
+        $user->markEmailAsVerified();
+        if ($request->boolean('make_admin')) {
+            $user->role = 'admin';
+        }
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'role' => $user->role,
+                'email_verified_at' => $user->email_verified_at?->toIso8601String(),
+            ],
+            'message' => "User '{$email}' email marked as verified.",
+        ]);
     }
 }
