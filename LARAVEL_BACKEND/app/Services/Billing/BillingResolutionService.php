@@ -54,13 +54,28 @@ class BillingResolutionService
         $isCommissionActive = in_array(strtolower($model), ['commission', 'hybrid'], true);
 
         return [
-            'model'                => strtolower($model),
-            'is_commission_active' => $isCommissionActive,
-            'rate'                 => max(0.0, round($rate, 2)),
-            'basis'                => $basis,
-            'waive_subscription'   => $waiveSubscription,
-            'threshold'            => max(0.0, round($threshold, 2)),
-            'grace_period_days'    => max(1, $graceDays),
+            'model'                  => strtolower($model),
+            'billing_model'          => strtolower($model),
+            'is_commission_active'   => $isCommissionActive,
+            'rate'                   => max(0.0, round($rate, 2)),
+            'commission_rate'        => max(0.0, round($rate, 2)),
+            'basis'                  => $basis,
+            'commission_basis'       => $basis,
+            'waive_subscription'     => $waiveSubscription,
+            'waive_subscription_fee' => $waiveSubscription,
+            'threshold'              => max(0.0, round($threshold, 2)),
+            'commission_threshold'   => max(0.0, round($threshold, 2)),
+            'grace_period_days'      => max(1, $graceDays),
         ];
+    }
+
+    /**
+     * Alias for resolve($company).
+     *
+     * @return array<string, mixed>
+     */
+    public function resolveForCompany(Company $company): array
+    {
+        return $this->resolve($company);
     }
 }
