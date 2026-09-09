@@ -15,7 +15,7 @@ class ManualGatewayDriver implements PaymentGatewayDriverInterface
 
     public function getDisplayName(): string
     {
-        return 'Custom Manual Payment';
+        return 'Manual / M-Pesa Payment';
     }
 
     public function getCategory(): string

@@ -75,7 +75,13 @@ export default function DineInPage({ company, table, products, slug, seo }: Prop
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
             {company.logo ? (
-              <img src={company.logo} alt={company.name} className="h-9 w-9 rounded-2xl object-cover shadow-xs" />
+              <div className="flex h-9 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+                <img
+                  src={company.logo}
+                  alt={company.name}
+                  className="h-9 w-auto max-w-[140px] sm:max-w-[180px] object-contain"
+                />
+              </div>
             ) : (
               <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-sm font-extrabold text-white dark:bg-white dark:text-slate-900">
                 {company.name.charAt(0).toUpperCase()}

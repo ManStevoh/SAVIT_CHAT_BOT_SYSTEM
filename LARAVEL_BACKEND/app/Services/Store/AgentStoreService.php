@@ -81,6 +81,23 @@ class AgentStoreService
                 : null;
         }
 
+        if (array_key_exists('order_payment_manual_instructions', $data) || array_key_exists('manual_instructions', $data) || array_key_exists('payment_instructions', $data)) {
+            $instr = $data['order_payment_manual_instructions'] ?? $data['manual_instructions'] ?? $data['payment_instructions'];
+            $fields['order_payment_manual_instructions'] = is_string($instr) && trim($instr) !== '' ? trim($instr) : null;
+        }
+
+        if (array_key_exists('orders_collect_payment_enabled', $data) || array_key_exists('collect_payment', $data)) {
+            $fields['orders_collect_payment_enabled'] = (bool) ($data['orders_collect_payment_enabled'] ?? $data['collect_payment']);
+        }
+
+        if (array_key_exists('orders_accept_mpesa', $data)) {
+            $fields['orders_accept_mpesa'] = (bool) $data['orders_accept_mpesa'];
+        }
+
+        if (array_key_exists('orders_accept_cod', $data)) {
+            $fields['orders_accept_cod'] = (bool) $data['orders_accept_cod'];
+        }
+
         if (! empty($fields)) {
             $settings->update($fields);
         }

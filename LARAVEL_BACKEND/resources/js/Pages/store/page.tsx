@@ -560,7 +560,13 @@ export default function StorePage({
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3.5">
           <Link href={`/s/${slug}`} className="flex items-center gap-3">
             {company.logo ? (
-              <img src={company.logo} alt={company.name} className="h-9 w-9 rounded-2xl object-cover shadow-xs" />
+              <div className="flex h-9 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+                <img
+                  src={company.logo}
+                  alt={company.name}
+                  className="h-9 w-auto max-w-[140px] sm:max-w-[180px] object-contain"
+                />
+              </div>
             ) : (
               <div
                 className="flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-extrabold text-white shadow-xs"
@@ -831,7 +837,17 @@ export default function StorePage({
                       </a>
                     )}
                   </div>
-                  {section.image && <img src={section.image} alt="" className="h-48 w-full rounded-2xl object-cover md:h-64" />}
+                  {section.image && (
+                    <div className="flex items-center justify-center md:justify-end">
+                      <div className="inline-flex max-w-full items-center justify-center overflow-hidden rounded-2xl shadow-md">
+                        <img
+                          src={section.image}
+                          alt={section.headline || company.name}
+                          className="h-auto max-h-52 w-auto max-w-full object-contain md:max-h-64"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
             )

@@ -825,12 +825,14 @@ export function BrandCustomizationCard({
                   <div className="flex items-center justify-between border-b pb-3 pt-1">
                     <div className="flex items-center gap-2">
                       {logoUrl ? (
-                        <img
-                          src={logoUrl}
-                          alt="Logo"
-                          className="h-7 w-7 object-contain"
-                          style={{ borderRadius: activeRadius }}
-                        />
+                        <div className="flex h-7 shrink-0 items-center justify-center overflow-hidden">
+                          <img
+                            src={logoUrl}
+                            alt="Logo"
+                            className="h-7 w-auto max-w-[100px] object-contain"
+                            style={{ borderRadius: activeRadius }}
+                          />
+                        </div>
                       ) : (
                         <div
                           className="flex h-7 w-7 items-center justify-center font-bold text-xs text-white"

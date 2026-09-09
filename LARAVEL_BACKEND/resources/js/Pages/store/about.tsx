@@ -45,7 +45,13 @@ export default function StoreAboutPage({ slug, company, title, body, isDefault =
       <main className="mx-auto max-w-3xl px-4 py-10">
         <div className="flex items-center gap-3">
           {company.logo ? (
-            <img src={company.logo} alt={company.name} className="h-12 w-12 rounded-2xl object-cover" />
+            <div className="flex h-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+              <img
+                src={company.logo}
+                alt={company.name}
+                className="h-12 w-auto max-w-[180px] object-contain"
+              />
+            </div>
           ) : null}
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{title}</h1>
         </div>
