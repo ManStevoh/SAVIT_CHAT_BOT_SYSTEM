@@ -11,6 +11,7 @@ import {
 } from "./sections"
 import {
   LandoTrustedCompanies,
+  LandoPaymentLogos,
   LandoTestimonials,
   LandoPricingPlans,
   LandoCompareFeatures,
@@ -27,6 +28,7 @@ import {
   LandoDemoGallery,
   LandoOutcomes,
 } from "./solution-sections"
+import { LandoFeatureCatalog } from "./feature-catalog"
 
 type Content = Record<string, unknown>
 
@@ -77,7 +79,17 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
         )
       }
       if (pageSlug === "pricing" || pageSlug === "solutions" || pageSlug === "features" || content.usePageHero === true) {
-        return <LandoPageHero title={str(content.title)} description={str(content.description)} />
+        return (
+          <LandoPageHero
+            title={str(content.title)}
+            description={str(content.description)}
+            kicker={str(content.kicker)}
+            primaryCtaText={str(content.primaryCtaText)}
+            primaryCtaHref={str(content.primaryCtaHref)}
+            secondaryCtaText={str(content.secondaryCtaText)}
+            secondaryCtaHref={str(content.secondaryCtaHref)}
+          />
+        )
       }
       return (
         <LandoHeroSection
@@ -97,6 +109,7 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
     case "capabilities":
       return (
         <LandoCapabilities
+          id={str(content.anchor) || undefined}
           title={str(content.title)}
           description={str(content.description)}
           items={arr(content.items)}
@@ -137,9 +150,11 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
       const imagePosition = featureNum % 2 === 0 ? "right" : "left"
       return (
         <LandoFeatureBlock
+          id={str(content.anchor) || undefined}
           label={str(content.label)}
           title={str(content.title)}
           description={str(content.description)}
+          points={arr<string>(content.points)}
           ctaText={str(content.ctaText)}
           ctaHref={str(content.ctaHref)}
           imageUrl={str(content.imageUrl)}
@@ -208,6 +223,24 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
     case "outcomes":
       return (
         <LandoOutcomes
+          title={str(content.title)}
+          description={str(content.description)}
+          items={arr(content.items)}
+        />
+      )
+
+    case "feature_catalog":
+      return (
+        <LandoFeatureCatalog
+          title={str(content.title)}
+          description={str(content.description)}
+          groups={arr(content.groups)}
+        />
+      )
+
+    case "payment_logos":
+      return (
+        <LandoPaymentLogos
           title={str(content.title)}
           description={str(content.description)}
           items={arr(content.items)}
@@ -285,9 +318,11 @@ export function LandoSectionRenderer({ pageSlug, sectionKey, content, pageData }
           description={str(content.description)}
           ctaText={str(content.ctaText)}
           ctaHref={str(content.ctaHref)}
+          secondaryCtaText={str(content.secondaryCtaText)}
+          secondaryCtaHref={str(content.secondaryCtaHref)}
           imageUrl={str(content.imageUrl)}
           imageAlt={str(content.imageAlt)}
-          showImage={pageSlug === "home"}
+          showImage={pageSlug === "home" || content.showImage === true}
         />
       )
 

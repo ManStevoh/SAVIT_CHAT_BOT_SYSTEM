@@ -103,7 +103,7 @@ function RegisterPageContent() {
         description={
           intent === "subscribe" && planId
             ? "Create your account, then complete payment for the plan you selected."
-            : "Start your free trial — pick a plan on Pricing, or begin with our starter trial."
+            : "Starter is free forever — WhatsApp storefront, bookings, and dine-in included. No credit card."
         }
       />
 

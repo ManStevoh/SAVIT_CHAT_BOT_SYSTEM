@@ -16,6 +16,13 @@ export type BrandTheme = {
   hero_cta_href?: string | null
   seo_title?: string | null
   seo_description?: string | null
+  about_title?: string | null
+  about_body?: string | null
+  instagram_url?: string | null
+  facebook_url?: string | null
+  tiktok_url?: string | null
+  testimonial_quote?: string | null
+  testimonial_author?: string | null
 }
 
 export type FontOption = {

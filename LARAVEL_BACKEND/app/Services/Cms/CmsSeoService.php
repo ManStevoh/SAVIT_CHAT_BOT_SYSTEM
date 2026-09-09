@@ -11,6 +11,7 @@ use App\Models\Plan;
 use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Support\HomeSeoCopy;
+use App\Support\PublicMarketingPages;
 use App\Support\SeoLandingCatalog;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -99,12 +100,14 @@ class CmsSeoService
             'name' => $siteName,
             'url' => $base,
             'publisher' => ['@id' => $base.'/#organization'],
-            'potentialAction' => [
+        ];
+        if (PublicMarketingPages::enabled('blog')) {
+            $websiteNode['potentialAction'] = [
                 '@type' => 'SearchAction',
                 'target' => $base.'/blog?q={search_term_string}',
                 'query-input' => 'required name=search_term_string',
-            ],
-        ];
+            ];
+        }
 
         $pageSpecificNode = null;
         if ($page->slug === 'contact') {
@@ -594,6 +597,12 @@ class CmsSeoService
 
         $add('/', 'weekly', '1.0');
         foreach (['/solutions', '/pricing', '/about', '/contact', '/blog'] as $core) {
+            if ($core === '/solutions' && ! PublicMarketingPages::enabled('solutions')) {
+                continue;
+            }
+            if ($core === '/blog' && ! PublicMarketingPages::enabled('blog')) {
+                continue;
+            }
             $add($core, $core === '/blog' ? 'weekly' : 'monthly', $core === '/pricing' ? '0.9' : '0.8');
         }
         foreach (SeoLandingCatalog::all() as $landing) {
@@ -609,6 +618,9 @@ class CmsSeoService
                     ->get();
 
                 foreach ($pages as $page) {
+                    if ($page->slug === 'solutions' && ! PublicMarketingPages::enabled('solutions')) {
+                        continue;
+                    }
                     $path = $this->pathForSlug($page->slug);
                     $loc = $base.$path;
                     if (isset($seen[$loc])) {
@@ -635,6 +647,10 @@ class CmsSeoService
      */
     private function sitemapBlogEntries(): array
     {
+        if (! PublicMarketingPages::enabled('blog')) {
+            return [];
+        }
+
         $base = $this->appBaseUrl();
         $entries = [[
             'loc' => $base.'/blog',
@@ -952,7 +968,7 @@ class CmsSeoService
             ],
             'pricing' => [
                 'title' => 'WhatsApp AI Sales Automation Pricing — RelayIQ',
-                'description' => 'RelayIQ pricing for WhatsApp AI sales automation. Compare Starter, Growth, and Enterprise plans. 14-day free trial.',
+                'description' => 'RelayIQ pricing: free forever Starter (storefront, bookings, dine-in), Growth at KSh 2,000/month, and Custom via sales.',
             ],
             'about' => [
                 'title' => 'About us — RelayIQ',

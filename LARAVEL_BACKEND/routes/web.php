@@ -201,6 +201,7 @@ Route::post('/s/{slug}/cart', [PublicStorefrontController::class, 'cartAdd'])->n
 Route::post('/s/{slug}/cart/update', [PublicStorefrontController::class, 'cartUpdate'])->name('storefront.cart.update');
 Route::post('/s/{slug}/cart/clear', [PublicStorefrontController::class, 'cartClear'])->name('storefront.cart.clear');
 Route::get('/s/{slug}/terms', [PublicStorefrontController::class, 'terms'])->name('storefront.terms');
+Route::get('/s/{slug}/about', [PublicStorefrontController::class, 'about'])->name('storefront.about');
 Route::get('/s/{slug}/checkout', [PublicStorefrontController::class, 'checkout'])->name('storefront.checkout');
 Route::get('/s/{slug}/checkout/suggest', [PublicStorefrontController::class, 'checkoutSuggest'])->name('storefront.checkout.suggest');
 Route::post('/s/{slug}/checkout/quote', [PublicStorefrontController::class, 'checkoutQuote'])->name('storefront.checkout.quote');

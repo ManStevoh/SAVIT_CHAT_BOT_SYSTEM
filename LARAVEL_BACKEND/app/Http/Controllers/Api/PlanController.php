@@ -40,7 +40,13 @@ class PlanController extends Controller
             ? strtoupper((string) (PaymentGateway::getConfig('paystack')['currency'] ?? 'NGN'))
             : null;
 
-        $plans = Plan::orderBy('sort_order')->orderBy('id')->get();
+        $plans = Plan::query()
+            ->where(function ($q) {
+                $q->where('is_public', true)->orWhereNull('is_public');
+            })
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
         $offerPricing = app(SubscriptionPricingService::class);
         $publicOffers = SubscriptionOffer::query()->orderByDesc('id')->get();
         $data = $plans->map(function (Plan $p) use ($availableDrivers, $paystackCurrency, $pricing, $currency, $offerPricing, $publicOffers) {
@@ -113,6 +119,9 @@ class PlanController extends Controller
                     'allowBookings' => (bool) ($limits['allow_bookings'] ?? false),
                     'maxBookingsPerMonth' => array_key_exists('max_bookings_per_month', $limits)
                         ? ($limits['max_bookings_per_month'] === null ? null : (int) $limits['max_bookings_per_month'])
+                        : 0,
+                    'maxTables' => array_key_exists('max_tables', $limits)
+                        ? ($limits['max_tables'] === null ? null : (int) $limits['max_tables'])
                         : 0,
                     'allowStorefront' => (bool) ($limits['allow_storefront'] ?? true),
                     'allowLinkInBio' => (bool) ($limits['allow_link_in_bio'] ?? true),

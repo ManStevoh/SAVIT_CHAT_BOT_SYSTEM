@@ -19,6 +19,13 @@ class AgentProactiveMessageGroundingTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['deploy.secret' => 'test-secret-12345']);
+        config(['deploy.agent_key' => 'test-agent-key-xyz']);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();
@@ -103,7 +110,7 @@ class AgentProactiveMessageGroundingTest extends TestCase
         $userPrompt = $capturedMessages[1]['content'];
 
         $this->assertStringContainsString('Active store catalog for Jostina Bookshop', $systemPrompt);
-        $this->assertStringContainsString('My Web (700)', $systemPrompt);
+        $this->assertStringContainsString('My Web (KSh 700.00)', $systemPrompt);
         $this->assertStringContainsString('CRITICAL GROUNDING RULES', $systemPrompt);
 
         $this->assertStringContainsString('items_purchased', $userPrompt);
@@ -156,7 +163,7 @@ class AgentProactiveMessageGroundingTest extends TestCase
         ]);
 
         // List memories
-        $response = $this->withHeaders(['X-Deploy-Agent-Key' => config('deploy.agent_key')])
+        $response = $this->withHeaders(['X-Deploy-Agent-Key' => 'test-agent-key-xyz'])
             ->postJson('/api/agent/store', [
                 'action' => 'list_memories',
                 'store' => $company->id,
@@ -168,7 +175,7 @@ class AgentProactiveMessageGroundingTest extends TestCase
         $this->assertEquals('red headphones', $response->json('memories.0.memory_value'));
 
         // Clear memories
-        $clearResponse = $this->withHeaders(['X-Deploy-Agent-Key' => config('deploy.agent_key')])
+        $clearResponse = $this->withHeaders(['X-Deploy-Agent-Key' => 'test-agent-key-xyz'])
             ->postJson('/api/agent/store', [
                 'action' => 'clear_memories',
                 'store' => $company->id,

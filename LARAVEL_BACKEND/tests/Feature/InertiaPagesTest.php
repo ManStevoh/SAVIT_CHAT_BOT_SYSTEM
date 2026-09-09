@@ -20,7 +20,6 @@ class InertiaPagesTest extends TestCase
             'pricing' => ['/pricing'],
             'about' => ['/about'],
             'contact' => ['/contact'],
-            'blog' => ['/blog'],
             'privacy' => ['/privacy'],
             'terms' => ['/terms'],
             'login' => ['/login'],

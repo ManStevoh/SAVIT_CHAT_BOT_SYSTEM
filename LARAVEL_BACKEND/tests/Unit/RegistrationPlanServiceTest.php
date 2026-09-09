@@ -25,8 +25,8 @@ class RegistrationPlanServiceTest extends TestCase
     {
         $service = app(RegistrationPlanService::class);
 
-        $this->assertSame('starter', $service->configuredDefaultSlug());
-        $this->assertSame('starter', $service->configuredDefault()?->slug);
+        $this->assertSame('free', $service->configuredDefaultSlug());
+        $this->assertSame('free', $service->configuredDefault()?->slug);
         $this->assertFalse($service->shouldForceDefault());
     }
 

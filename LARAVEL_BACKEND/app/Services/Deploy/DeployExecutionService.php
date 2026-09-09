@@ -343,6 +343,16 @@ class DeployExecutionService
                 $emitLine('⚠️  [queue:restart]: ' . $e->getMessage());
             }
         }
+
+        $phpBin = DeployAuthService::findPhpBinary();
+        $emitLine('🧩 [cms] Seeding all CMS pages...');
+        $this->runStreamingCommand(
+            escapeshellarg($phpBin).' '.escapeshellarg(base_path('artisan')).' db:seed --class=CmsPageSeeder --force 2>&1',
+            $logs,
+            $statusFile,
+            $branch,
+            $onLine
+        );
     }
 
     /**

@@ -15,4 +15,12 @@ final class StorefrontLegalCopy
             ."4. Refunds, replacements, and support are handled by {$name}.\n\n"
             ."The store owner can replace this text with their own terms in Storefront settings.";
     }
+
+    public static function defaultAbout(string $storeName): string
+    {
+        $name = trim($storeName) !== '' ? trim($storeName) : 'this store';
+
+        return "Welcome to {$name}. Browse the catalog, add items to your cart, and check out when you are ready. "
+            ."Questions about an order or a product? Use WhatsApp or the track-order page and {$name} will help you directly.";
+    }
 }

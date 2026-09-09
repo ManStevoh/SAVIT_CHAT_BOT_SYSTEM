@@ -28,7 +28,12 @@ class DineInTableController extends Controller
             ->get()
             ->map(fn (DineInTable $t) => $this->serialize($t));
 
-        return response()->json(['tables' => $tables, 'allowed' => true]);
+        return response()->json([
+            'tables' => $tables,
+            'allowed' => true,
+            'maxTables' => PlanLimitService::getMaxTables($company),
+            'tablesUsed' => count($tables),
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -38,7 +43,20 @@ class DineInTableController extends Controller
             return response()->json([
                 'success' => false,
                 'code' => 'dine_in_required',
-                'message' => 'Dine-in table QR is not available on your current plan. Upgrade to Growth or Enterprise.',
+                'message' => 'Dine-in table QR is not available on your current plan. Upgrade to Growth for more tables and dine-in.',
+            ], 403);
+        }
+
+        if (! PlanLimitService::canAddDineInTable($company)) {
+            $max = PlanLimitService::getMaxTables($company);
+
+            return response()->json([
+                'success' => false,
+                'code' => 'table_limit_reached',
+                'message' => $max === null
+                    ? 'You have reached your dine-in table limit. Upgrade to Growth to add more tables.'
+                    : "You have reached your limit of {$max} dine-in tables. Upgrade to Growth to add more tables.",
+                'maxTables' => $max,
             ], 403);
         }
 

@@ -37,10 +37,13 @@ class RegionalPricingTest extends TestCase
                 ],
             ]);
 
-        $starter = collect($response->json('plans'))->firstWhere('slug', 'starter');
-        $this->assertSame('$12', $starter['price']);
-        $this->assertSame(12.0, (float) $starter['priceAmount']);
-        $this->assertSame('USD', $starter['currency']);
+        $free = collect($response->json('plans'))->firstWhere('slug', 'free');
+        $growth = collect($response->json('plans'))->firstWhere('slug', 'professional');
+        $this->assertNull(collect($response->json('plans'))->firstWhere('slug', 'starter'));
+        $this->assertSame('$0', $free['price']);
+        $this->assertSame('$15', $growth['price']);
+        $this->assertSame(15.0, (float) $growth['priceAmount']);
+        $this->assertSame('USD', $growth['currency']);
     }
 
     public function test_cloudflare_country_header_switches_to_kes(): void
@@ -56,16 +59,15 @@ class RegionalPricingTest extends TestCase
         $free = collect($response->json('plans'))->firstWhere('slug', 'free');
         $starter = collect($response->json('plans'))->firstWhere('slug', 'starter');
         $growth = collect($response->json('plans'))->firstWhere('slug', 'professional');
-        $business = collect($response->json('plans'))->firstWhere('slug', 'enterprise');
+        $custom = collect($response->json('plans'))->firstWhere('slug', 'enterprise');
 
+        $this->assertNull($starter);
         $this->assertSame(0.0, (float) $free['priceAmount']);
         $this->assertSame('KSh 0', $free['price']);
-        $this->assertSame(1499.0, (float) $starter['priceAmount']);
-        $this->assertSame('KSh 1,499', $starter['price']);
-        $this->assertSame(3999.0, (float) $growth['priceAmount']);
-        $this->assertSame('KSh 3,999', $growth['price']);
-        $this->assertSame(9999.0, (float) $business['priceAmount']);
-        $this->assertSame('KSh 9,999', $business['price']);
+        $this->assertSame(2000.0, (float) $growth['priceAmount']);
+        $this->assertSame('KSh 2,000', $growth['price']);
+        $this->assertNull($custom['priceAmount']);
+        $this->assertSame('Custom', $custom['price']);
     }
 
     public function test_query_currency_overrides_geo_and_sets_cookie(): void
@@ -81,8 +83,8 @@ class RegionalPricingTest extends TestCase
         $cookieName = (string) config('pricing.cookie', 'pricing_currency');
         $response->assertPlainCookie($cookieName, 'USD');
 
-        $starter = collect($response->json('plans'))->firstWhere('slug', 'starter');
-        $this->assertSame(12.0, (float) $starter['priceAmount']);
+        $growth = collect($response->json('plans'))->firstWhere('slug', 'professional');
+        $this->assertSame(15.0, (float) $growth['priceAmount']);
     }
 
     public function test_nigeria_maps_to_ngn(): void
@@ -94,9 +96,9 @@ class RegionalPricingTest extends TestCase
         $response->assertJsonPath('currency', 'NGN')
             ->assertJsonPath('source', 'cloudflare');
 
-        $starter = collect($response->json('plans'))->firstWhere('slug', 'starter');
-        $this->assertSame(18000.0, (float) $starter['priceAmount']);
-        $this->assertStringContainsString('18,000', $starter['price']);
+        $growth = collect($response->json('plans'))->firstWhere('slug', 'professional');
+        $this->assertSame(24000.0, (float) $growth['priceAmount']);
+        $this->assertStringContainsString('24,000', $growth['price']);
     }
 
     public function test_force_country_env_works_for_local_dev(): void
@@ -132,7 +134,7 @@ class RegionalPricingTest extends TestCase
             ->quote($plan, $company, null, 'KES');
 
         $this->assertTrue($quote['success']);
-        $this->assertSame(3999.0, (float) $quote['final_amount']);
+        $this->assertSame(2000.0, (float) $quote['final_amount']);
         $this->assertSame('KES', $quote['currency']);
     }
 }

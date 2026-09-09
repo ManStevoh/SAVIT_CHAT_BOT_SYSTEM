@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Services\Domain\CartDomainService;
 use App\Services\Domain\FulfillmentDomainService;
 use App\Services\Domain\OrderDomainService;
+use Illuminate\Support\Facades\DB;
 
 final class DomainServiceDispatcher
 {
@@ -53,8 +54,11 @@ final class DomainServiceDispatcher
                 $q->where('company_id', $company->id)->where('status', 'active');
             })
             ->where(function ($q) use ($lowerInput) {
+                $containsLabel = DB::connection()->getDriverName() === 'sqlite'
+                    ? '\'%\' || LOWER(label) || \'%\''
+                    : 'CONCAT(\'%\', LOWER(label), \'%\')';
                 $q->where('label', 'like', '%'.$lowerInput.'%')
-                  ->orWhereRaw('LOWER(?) LIKE CONCAT("%", LOWER(label), "%")', [$lowerInput]);
+                  ->orWhereRaw("LOWER(?) LIKE {$containsLabel}", [$lowerInput]);
             })
             ->with('product')
             ->first();

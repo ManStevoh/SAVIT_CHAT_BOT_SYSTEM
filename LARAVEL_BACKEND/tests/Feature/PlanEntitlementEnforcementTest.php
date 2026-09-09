@@ -75,6 +75,12 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertSame(20, $free->entitlements['max_products']);
         $this->assertSame(1, $free->entitlements['team']);
         $this->assertTrue($free->entitlements['requires_branding']);
+        $this->assertTrue($free->entitlements['allow_storefront']);
+        $this->assertTrue($free->entitlements['allow_bookings']);
+        $this->assertTrue($free->entitlements['allow_dine_in']);
+        $this->assertTrue($free->entitlements['allow_service']);
+        $this->assertSame(30, $free->entitlements['max_bookings_per_month']);
+        $this->assertSame(5, $free->entitlements['max_tables']);
 
         $this->assertSame(500, $starter->entitlements['messages']);
         $this->assertSame(100, $starter->entitlements['max_products']);
@@ -93,18 +99,20 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertFalse($starter->entitlements['allow_dine_in']);
         $this->assertTrue($starter->entitlements['allow_whatsapp_campaigns']);
         $this->assertFalse($starter->entitlements['requires_branding']);
+        $this->assertFalse((bool) $starter->is_public);
 
-        $this->assertSame(2000, $growth->entitlements['messages']);
-        $this->assertSame(1000, $growth->entitlements['max_products']);
-        $this->assertSame(5, $growth->entitlements['team']);
-        $this->assertSame(2, $growth->entitlements['whatsapp_numbers']);
+        $this->assertSame(1000, $growth->entitlements['messages']);
+        $this->assertSame(50, $growth->entitlements['max_products']);
+        $this->assertSame(3, $growth->entitlements['team']);
+        $this->assertSame(1, $growth->entitlements['whatsapp_numbers']);
         $this->assertTrue($growth->entitlements['api_access']);
         $this->assertTrue($growth->entitlements['analytics']);
-        $this->assertSame(100, $growth->entitlements['ai_posts_per_month']);
-        $this->assertSame(3, $growth->entitlements['social_platforms']);
+        $this->assertSame(40, $growth->entitlements['ai_posts_per_month']);
+        $this->assertSame(2, $growth->entitlements['social_platforms']);
         $this->assertTrue($growth->entitlements['allow_service']);
         $this->assertTrue($growth->entitlements['allow_bookings']);
-        $this->assertSame(200, $growth->entitlements['max_bookings_per_month']);
+        $this->assertSame(150, $growth->entitlements['max_bookings_per_month']);
+        $this->assertSame(20, $growth->entitlements['max_tables']);
         $this->assertTrue($growth->entitlements['allow_storefront']);
         $this->assertTrue($growth->entitlements['allow_dine_in']);
         $this->assertTrue($growth->entitlements['allow_whatsapp_campaigns']);
@@ -115,17 +123,22 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertSame(5, $enterprise->entitlements['whatsapp_numbers']);
         $this->assertSame(500, $enterprise->entitlements['ai_posts_per_month']);
         $this->assertNull($enterprise->entitlements['max_bookings_per_month']);
+        $this->assertNull($enterprise->entitlements['max_tables']);
 
         $response = $this->getJson('/api/plans')->assertOk();
         $plans = collect($response->json('plans'));
-        $this->assertFalse((bool) data_get($plans->firstWhere('slug', 'starter'), 'entitlements.apiAccess'));
+        $this->assertNull($plans->firstWhere('slug', 'starter'));
         $this->assertTrue((bool) data_get($plans->firstWhere('slug', 'professional'), 'entitlements.apiAccess'));
-        $this->assertTrue((bool) data_get($plans->firstWhere('slug', 'starter'), 'entitlements.allowService'));
-        $this->assertSame(200, data_get($plans->firstWhere('slug', 'professional'), 'entitlements.maxBookingsPerMonth'));
+        $this->assertTrue((bool) data_get($plans->firstWhere('slug', 'free'), 'entitlements.allowService'));
+        $this->assertTrue((bool) data_get($plans->firstWhere('slug', 'free'), 'entitlements.allowDineIn'));
+        $this->assertSame(150, data_get($plans->firstWhere('slug', 'professional'), 'entitlements.maxBookingsPerMonth'));
+        $this->assertSame(20, data_get($plans->firstWhere('slug', 'professional'), 'entitlements.maxTables'));
         $this->assertNull(data_get($plans->firstWhere('slug', 'enterprise'), 'entitlements.maxBookingsPerMonth'));
         $this->assertSame(20, data_get($plans->firstWhere('slug', 'free'), 'entitlements.maxProducts'));
-        $this->assertSame(100, data_get($plans->firstWhere('slug', 'starter'), 'entitlements.maxProducts'));
+        $this->assertSame(50, data_get($plans->firstWhere('slug', 'professional'), 'entitlements.maxProducts'));
         $this->assertNull(data_get($plans->firstWhere('slug', 'enterprise'), 'entitlements.maxProducts'));
+        $this->assertSame('Starter', data_get($plans->firstWhere('slug', 'free'), 'name'));
+        $this->assertSame('Custom', data_get($plans->firstWhere('slug', 'enterprise'), 'name'));
     }
 
     public function test_catalog_product_types_are_gated_by_plan(): void
@@ -138,8 +151,7 @@ class PlanEntitlementEnforcementTest extends TestCase
             'price' => 100,
             'stock' => 0,
             'productType' => 'service',
-        ])->assertStatus(403)
-            ->assertJsonPath('code', 'catalog_type_required');
+        ])->assertCreated();
 
         $freeProduct = $this->postJson('/api/company/products', [
             'name' => 'Free download',
@@ -148,24 +160,14 @@ class PlanEntitlementEnforcementTest extends TestCase
             'productType' => 'digital',
         ])->assertCreated();
 
-        $this->putJson('/api/company/products/'.$freeProduct->json('product.id'), [
-            'productType' => 'service',
-        ])->assertStatus(403)
-            ->assertJsonPath('code', 'catalog_type_required');
+        ['owner' => $legacyOwner] = $this->companyOnPlan('starter');
+        Sanctum::actingAs($legacyOwner);
+        CompanyEntitlementOverride::query()->where('company_id', $legacyOwner->company_id)->delete();
 
-        ['owner' => $professionalOwner] = $this->companyOnPlan('professional');
-        Sanctum::actingAs($professionalOwner);
-
-        $this->postJson('/api/company/products', [
-            'name' => 'Professional service',
-            'price' => 100,
-            'stock' => 0,
-            'productType' => 'service',
-        ])->assertCreated();
-
-        $this->assertFalse(PlanLimitService::companyAllowsProductType($free, 'service'));
-        $this->assertTrue(PlanLimitService::companyAllowsBookings($free) === false);
-        $this->assertSame(0, PlanLimitService::getMaxBookingsPerMonth($free));
+        $this->assertTrue(PlanLimitService::companyAllowsProductType($free, 'service'));
+        $this->assertTrue(PlanLimitService::companyAllowsBookings($free));
+        $this->assertSame(30, PlanLimitService::getMaxBookingsPerMonth($free));
+        $this->assertSame(5, PlanLimitService::getMaxTables($free));
     }
 
     public function test_message_limit_enforced_and_enterprise_unlimited(): void
@@ -286,8 +288,8 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertSame(20, GrowthLimitService::getAiPostsLimit($starter));
         $this->assertSame(1, GrowthLimitService::getPlatformLimit($starter));
 
-        $this->assertSame(100, GrowthLimitService::getAiPostsLimit($growth));
-        $this->assertSame(3, GrowthLimitService::getPlatformLimit($growth));
+        $this->assertSame(40, GrowthLimitService::getAiPostsLimit($growth));
+        $this->assertSame(2, GrowthLimitService::getPlatformLimit($growth));
 
         $this->assertSame(500, GrowthLimitService::getAiPostsLimit($enterprise));
         $this->assertSame(10, GrowthLimitService::getPlatformLimit($enterprise));
@@ -300,15 +302,14 @@ class PlanEntitlementEnforcementTest extends TestCase
 
         $this->assertStringNotContainsString('gpt-4', $blob);
         $this->assertStringNotContainsString('3 whatsapp', $blob);
-        $this->assertStringContainsString('api access', $blob);
-        $this->assertStringContainsString('analytics', $blob);
+        $this->assertStringContainsString('50 products', $blob);
         $this->assertStringContainsString('dine-in', $blob);
         $this->assertStringContainsString('bookings', $blob);
 
-        $starter = Plan::where('slug', 'starter')->firstOrFail();
+        $starter = Plan::where('slug', 'free')->firstOrFail();
         $starterBlob = strtolower(implode(' ', $starter->features));
         $this->assertStringContainsString('storefront', $starterBlob);
-        $this->assertStringNotContainsString('dine-in', $starterBlob);
+        $this->assertStringContainsString('dine-in', $starterBlob);
     }
 
     public function test_dine_in_gated_by_plan(): void
@@ -326,13 +327,23 @@ class PlanEntitlementEnforcementTest extends TestCase
         ])->assertStatus(403)
             ->assertJsonPath('code', 'dine_in_required');
 
-        ['owner' => $growthOwner] = $this->companyOnPlan('professional');
-        Sanctum::actingAs($growthOwner);
+        ['owner' => $freeOwner] = $this->companyOnPlan('free');
+        Sanctum::actingAs($freeOwner);
 
         $this->postJson('/api/company/dine-in-tables', [
-            'name' => 'Table 7',
+            'name' => 'Table 1',
         ])->assertCreated()
             ->assertJsonPath('success', true);
+
+        CompanyEntitlementOverride::create([
+            'company_id' => $freeOwner->company_id,
+            'overrides' => ['max_tables' => 1],
+        ]);
+
+        $this->postJson('/api/company/dine-in-tables', [
+            'name' => 'Table 2',
+        ])->assertStatus(403)
+            ->assertJsonPath('code', 'table_limit_reached');
     }
 
     public function test_storefront_entitlement_allows_starter_enable(): void

@@ -78,10 +78,14 @@ class SitemapController extends Controller
         $base = rtrim((string) config('app.url'), '/') ?: 'https://relayiq.app';
         $entries = [
             ['loc' => $base.'/', 'changefreq' => 'weekly', 'priority' => '1.0'],
-            ['loc' => $base.'/solutions', 'changefreq' => 'monthly', 'priority' => '0.8'],
             ['loc' => $base.'/pricing', 'changefreq' => 'monthly', 'priority' => '0.9'],
-            ['loc' => $base.'/blog', 'changefreq' => 'weekly', 'priority' => '0.7'],
         ];
+        if (\App\Support\PublicMarketingPages::enabled('solutions')) {
+            $entries[] = ['loc' => $base.'/solutions', 'changefreq' => 'monthly', 'priority' => '0.8'];
+        }
+        if (\App\Support\PublicMarketingPages::enabled('blog')) {
+            $entries[] = ['loc' => $base.'/blog', 'changefreq' => 'weekly', 'priority' => '0.7'];
+        }
         foreach (SeoLandingCatalog::all() as $landing) {
             $entries[] = [
                 'loc' => $base.$landing['path'],

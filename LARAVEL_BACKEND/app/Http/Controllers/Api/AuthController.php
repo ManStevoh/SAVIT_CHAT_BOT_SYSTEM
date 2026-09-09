@@ -275,10 +275,10 @@ class AuthController extends Controller
         app(\App\Services\Agent\AgentCommerceProvisioningService::class)->syncForCompany($company);
 
         $requiresPayment = $subscribeIntent || (
-            $selectedPlan
-            && ! $selectedPlan->is_free
-            && ! (bool) $selectedPlan->has_trial
-            && (float) ($selectedPlan->price_amount ?? 0) > 0
+            $trial
+            && ! ($trial['is_free'] ?? false)
+            && ! ($trial['has_trial'] ?? false)
+            && (float) ($trial['price_amount'] ?? 0) > 0
         );
 
         $requireVerification = PlatformSetting::requiresEmailVerification();

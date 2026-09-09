@@ -64,6 +64,57 @@ export function LandoTrustedCompanies({
   )
 }
 
+export function LandoPaymentLogos({
+  title,
+  description,
+  items = [],
+}: {
+  title?: string
+  description?: string
+  items?: Array<{ name: string; logoUrl?: string }>
+}) {
+  if (items.length === 0) return null
+
+  return (
+    <section className="bg-muted py-12 lg:py-16">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <Reveal>
+          <div className="overflow-hidden rounded-3xl border border-border bg-card px-6 py-10 shadow-sm sm:px-10 lg:px-12">
+            <div className="mx-auto max-w-2xl text-center">
+              {title && (
+                <p className="text-xs font-semibold tracking-widest text-primary uppercase">{title}</p>
+              )}
+              {description && (
+                <h2 className="mt-3 text-2xl font-bold text-card-foreground sm:text-3xl">{description}</h2>
+              )}
+            </div>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-5">
+              {items.map((item) => (
+                <div
+                  key={item.name}
+                  className="flex h-16 w-[10.5rem] items-center justify-center rounded-2xl border border-border/70 bg-white px-4 py-2 shadow-sm transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-md sm:h-[4.25rem] sm:w-44"
+                >
+                  {item.logoUrl ? (
+                    <img
+                      src={item.logoUrl}
+                      alt={`${item.name} official logo`}
+                      loading="lazy"
+                      decoding="async"
+                      className="max-h-10 w-full object-contain sm:max-h-11"
+                    />
+                  ) : (
+                    <span className="text-sm font-semibold text-foreground">{item.name}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
 export function LandoTestimonials({
   title,
   description,
@@ -270,7 +321,9 @@ export function LandoPricingPlans({ popularBadge = "Most Popular" }: { popularBa
                   variant={plan.popular ? "default" : "outline"}
                   disabled={busy !== null}
                   onClick={() => {
-                    window.location.href = `/register?plan=${encodeURIComponent(plan.id)}`
+                    window.location.href = /contact|talk to sales/i.test(plan.cta ?? "")
+                      ? "/contact"
+                      : `/register?plan=${encodeURIComponent(plan.id)}`
                   }}
                 >
                   {plan.cta ?? "Contact Sales"}
@@ -404,7 +457,7 @@ export function LandoAboutHero({
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
-                className="h-full w-full object-cover object-center transition-transform duration-500 hover:scale-[1.01] lg:absolute lg:inset-0 lg:rounded-tl-[2rem]"
+                className="h-full w-full object-cover object-[center_18%] transition-transform duration-500 hover:scale-[1.01] lg:absolute lg:inset-0 lg:rounded-tl-[2rem]"
               />
             </div>
           </Reveal>
@@ -601,13 +654,15 @@ export function LandoContactSection({
       <div className="mx-auto grid max-w-6xl items-start gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         {imageUrl && (
           <Reveal>
-            <img
-              src={imageUrl}
-              alt={imageAlt}
-              loading="eager"
-              decoding="async"
-              className="max-h-[400px] w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
-            />
+            <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+              <img
+                src={imageUrl}
+                alt={imageAlt}
+                loading="eager"
+                decoding="async"
+                className="h-[280px] w-full object-cover object-[center_20%] sm:h-[340px] lg:h-[420px]"
+              />
+            </div>
           </Reveal>
         )}
         <Reveal delayMs={100}>

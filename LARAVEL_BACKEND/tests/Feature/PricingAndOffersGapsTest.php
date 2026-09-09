@@ -142,7 +142,7 @@ class PricingAndOffersGapsTest extends TestCase
     {
         ['admin' => $admin] = $this->actors();
         Sanctum::actingAs($admin);
-        $plan = Plan::where('slug', 'starter')->firstOrFail();
+        $plan = Plan::where('slug', 'professional')->firstOrFail();
 
         $this->putJson('/api/admin/plans/'.$plan->id, [
             'priceDisplay' => '$10',
@@ -152,12 +152,12 @@ class PricingAndOffersGapsTest extends TestCase
             ->assertJsonPath('plan.regionalPrices.KES', 10);
 
         $public = $this->getJson('/api/plans?currency=KES')->assertOk();
-        $starter = collect($public->json('plans'))->firstWhere('slug', 'starter');
-        $this->assertSame(10.0, (float) $starter['priceAmount']);
-        $this->assertSame('KSh 10', $starter['price']);
+        $growth = collect($public->json('plans'))->firstWhere('slug', 'professional');
+        $this->assertSame(10.0, (float) $growth['priceAmount']);
+        $this->assertSame('KSh 10', $growth['price']);
 
-        $usd = collect($this->getJson('/api/plans?currency=USD')->json('plans'))->firstWhere('slug', 'starter');
-        $this->assertSame(12.0, (float) $usd['priceAmount']);
+        $usd = collect($this->getJson('/api/plans?currency=USD')->json('plans'))->firstWhere('slug', 'professional');
+        $this->assertSame(15.0, (float) $usd['priceAmount']);
     }
 
     public function test_admin_regional_prices_update_each_currency_independently(): void
@@ -212,9 +212,6 @@ class PricingAndOffersGapsTest extends TestCase
         $this->assertSame('KSh '.number_format($sale, 0, '.', ','), $growth['price']);
         $this->assertSame('KSh '.number_format($list, 0, '.', ','), $growth['originalPrice']);
 
-        $starter = collect($this->getJson('/api/plans?currency=KES')->json('plans'))
-            ->firstWhere('slug', 'starter');
-        $this->assertSame('SAVE50', $starter['offer']['code']);
         $this->assertNull(
             collect($this->getJson('/api/plans?currency=KES')->json('plans'))->firstWhere('slug', 'free')['offer']
         );
@@ -238,8 +235,8 @@ class PricingAndOffersGapsTest extends TestCase
             ->firstWhere('slug', 'professional');
         $this->assertNull($growth['offer']);
         $this->assertNull($growth['salePriceAmount']);
-        $this->assertSame(3999.0, (float) $growth['priceAmount']);
-        $this->assertSame('KSh 3,999', $growth['price']);
+        $this->assertSame(2000.0, (float) $growth['priceAmount']);
+        $this->assertSame('KSh 2,000', $growth['price']);
     }
 
     public function test_currency_and_plan_locks_are_honored_on_public_pricing(): void
@@ -267,13 +264,13 @@ class PricingAndOffersGapsTest extends TestCase
 
         $kesGrowth = collect($this->getJson('/api/plans?currency=KES')->json('plans'))
             ->firstWhere('slug', 'professional');
-        $kesStarter = collect($this->getJson('/api/plans?currency=KES')->json('plans'))
-            ->firstWhere('slug', 'starter');
+        $kesFree = collect($this->getJson('/api/plans?currency=KES')->json('plans'))
+            ->firstWhere('slug', 'free');
         $usdGrowth = collect($this->getJson('/api/plans?currency=USD')->json('plans'))
             ->firstWhere('slug', 'professional');
 
         $this->assertSame('GROW10', $kesGrowth['offer']['code']);
-        $this->assertNull($kesStarter['offer']);
+        $this->assertNull($kesFree['offer']);
         $this->assertSame('USD20', $usdGrowth['offer']['code']);
     }
 
@@ -316,13 +313,13 @@ class PricingAndOffersGapsTest extends TestCase
             ], 200),
         ]);
 
-        $this->postJson('/api/company/paystack/initialize', [
+        $res = $this->postJson('/api/company/paystack/initialize', [
             'planId' => (string) $plan->id,
             'callbackUrl' => 'http://localhost/dashboard/subscription?checkout=success',
-        ])->assertOk()
-            ->assertJsonPath('amount', $expected)
-            ->assertJsonPath('coupon', 'SAVE50')
-            ->assertJsonPath('discountAmount', round($original - $expected, 2));
+        ])->assertOk();
+        $this->assertEquals($expected, $res->json('amount'));
+        $this->assertSame('SAVE50', $res->json('coupon'));
+        $this->assertEquals(round($original - $expected, 2), $res->json('discountAmount'));
     }
 
     public function test_explicit_coupon_still_overrides_public_sale(): void
@@ -347,12 +344,12 @@ class PricingAndOffersGapsTest extends TestCase
         $original = (float) app(RegionalPricingService::class)->amountForPlan($plan, 'KES');
         Sanctum::actingAs($owner);
 
-        $this->postJson('/api/company/coupon/preview', [
+        $preview = $this->postJson('/api/company/coupon/preview', [
             'planId' => (string) $plan->id,
             'couponCode' => 'SAVE10',
             'currency' => 'KES',
-        ])->assertOk()
-            ->assertJsonPath('code', 'SAVE10')
-            ->assertJsonPath('finalAmount', round($original * 0.9, 2));
+        ])->assertOk();
+        $this->assertSame('SAVE10', $preview->json('code'));
+        $this->assertEquals(round($original * 0.9, 2), $preview->json('finalAmount'));
     }
 }

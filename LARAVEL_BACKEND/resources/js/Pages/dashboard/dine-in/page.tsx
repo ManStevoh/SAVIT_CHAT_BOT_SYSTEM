@@ -225,6 +225,7 @@ export default function DineInPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Dine-in tables</h1>
           <p className="text-sm text-muted-foreground">
             Create tables, print QR codes, and let guests order straight from their seats via Web or WhatsApp.
+            {data?.maxTables != null ? ` ${tables.length} of ${data.maxTables} tables used on your plan.` : ''}
           </p>
         </div>
         <Button onClick={openCreate}>

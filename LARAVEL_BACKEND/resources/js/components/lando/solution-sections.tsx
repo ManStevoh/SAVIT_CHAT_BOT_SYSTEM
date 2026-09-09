@@ -330,6 +330,7 @@ export type OutcomeItem = {
   value: string
   label: string
   detail?: string
+  href?: string
 }
 
 export function LandoOutcomes({
@@ -353,13 +354,28 @@ export function LandoOutcomes({
               {description && <p className="mt-3 text-sm text-muted-foreground sm:text-base">{description}</p>}
             </div>
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {items.map((item) => (
-                <div key={item.label} className="text-center transition-transform duration-300 hover:-translate-y-0.5">
-                  <p className="text-3xl font-bold tracking-tight text-primary sm:text-4xl">{item.value}</p>
-                  <p className="mt-2 text-sm font-semibold text-card-foreground">{item.label}</p>
-                  {item.detail && <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>}
-                </div>
-              ))}
+              {items.map((item) => {
+                const inner = (
+                  <>
+                    <p className="text-3xl font-bold tracking-tight text-primary sm:text-4xl">{item.value}</p>
+                    <p className="mt-2 text-sm font-semibold text-card-foreground">{item.label}</p>
+                    {item.detail && <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>}
+                  </>
+                )
+                return item.href ? (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className="block rounded-2xl px-2 py-3 text-center outline-none transition-all duration-300 hover:-translate-y-0.5 hover:bg-muted/70 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <div key={item.label} className="text-center transition-transform duration-300 hover:-translate-y-0.5">
+                    {inner}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </Reveal>

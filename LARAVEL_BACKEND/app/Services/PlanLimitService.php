@@ -129,6 +129,16 @@ final class PlanLimitService
         return self::entitlements()->maxBookingsPerMonth($company);
     }
 
+    public static function getMaxTables(Company $company): ?int
+    {
+        return self::entitlements()->maxTables($company);
+    }
+
+    public static function canAddDineInTable(Company $company, int $countToAdd = 1): bool
+    {
+        return self::entitlements()->canAddDineInTable($company, $countToAdd);
+    }
+
     public static function canConnectWhatsApp(Company $company, ?string $phoneNumberId = null): bool
     {
         return self::entitlements()->canConnectWhatsAppNumber($company, $phoneNumberId);

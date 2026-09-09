@@ -148,7 +148,7 @@ class BookingService
                 ->where('starts_at', '<=', now()->endOfMonth())
                 ->count();
             if ($used >= $limit) {
-                throw new \RuntimeException('Monthly booking limit reached for this plan.');
+                throw new \RuntimeException('Monthly booking limit reached for this plan. Upgrade to Growth for more bookings.');
             }
         }
 

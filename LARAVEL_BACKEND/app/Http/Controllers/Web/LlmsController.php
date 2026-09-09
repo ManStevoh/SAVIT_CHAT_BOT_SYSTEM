@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Support\PublicMarketingPages;
 use Illuminate\Http\Response;
 
 class LlmsController extends Controller
@@ -10,6 +11,24 @@ class LlmsController extends Controller
     public function summary(): Response
     {
         $base = rtrim((string) config('app.url', 'https://relayiq.app'), '/');
+
+        $resources = [
+            "- Main Website: {$base}/",
+        ];
+        if (PublicMarketingPages::enabled('solutions')) {
+            $resources[] = "- Solutions: {$base}/solutions";
+        }
+        $resources = array_merge($resources, [
+            "- Kenya: {$base}/ai-sales-agent-kenya",
+            "- Kenya WhatsApp + M-Pesa playbook: {$base}/case-study/kenya-whatsapp-mpesa",
+            "- M-Pesa: {$base}/whatsapp-mpesa",
+            "- AI sales agent: {$base}/whatsapp-ai-sales-agent",
+            "- Pricing: {$base}/pricing",
+        ]);
+        if (PublicMarketingPages::enabled('blog')) {
+            $resources[] = "- Blog & Guides: {$base}/blog";
+        }
+        $resources[] = "- Full Knowledge Standard: {$base}/llms-full.txt";
 
         $content = implode("\n", [
             '# RelayIQ',
@@ -28,15 +47,7 @@ class LlmsController extends Controller
             '- **Growth Pilot**: Automated abandoned cart recovery, customer winback, and Meta/Google ad attribution.',
             '',
             '## Key Resources',
-            "- Main Website: {$base}/",
-            "- Solutions: {$base}/solutions",
-            "- Kenya: {$base}/ai-sales-agent-kenya",
-            "- Kenya WhatsApp + M-Pesa playbook: {$base}/case-study/kenya-whatsapp-mpesa",
-            "- M-Pesa: {$base}/whatsapp-mpesa",
-            "- AI sales agent: {$base}/whatsapp-ai-sales-agent",
-            "- Pricing: {$base}/pricing",
-            "- Blog & Guides: {$base}/blog",
-            "- Full Knowledge Standard: {$base}/llms-full.txt",
+            ...$resources,
             '',
         ]);
 
@@ -46,6 +57,30 @@ class LlmsController extends Controller
     public function full(): Response
     {
         $base = rtrim((string) config('app.url', 'https://relayiq.app'), '/');
+
+        $nav = [
+            "- Home: {$base}/",
+        ];
+        if (PublicMarketingPages::enabled('solutions')) {
+            $nav[] = "- Solutions: {$base}/solutions";
+        }
+        $nav = array_merge($nav, [
+            "- Kenya: {$base}/ai-sales-agent-kenya",
+            "- Kenya WhatsApp + M-Pesa playbook: {$base}/case-study/kenya-whatsapp-mpesa",
+            "- M-Pesa: {$base}/whatsapp-mpesa",
+            "- AI sales agent: {$base}/whatsapp-ai-sales-agent",
+            "- Chatbot vs agent: {$base}/whatsapp-chatbot-vs-ai-sales-agent",
+            "- Pricing: {$base}/pricing",
+            "- About: {$base}/about",
+            "- Contact: {$base}/contact",
+        ]);
+        if (PublicMarketingPages::enabled('blog')) {
+            $nav[] = "- Blog: {$base}/blog";
+        }
+        $nav = array_merge($nav, [
+            "- Privacy: {$base}/privacy",
+            "- Terms: {$base}/terms",
+        ]);
 
         $content = implode("\n", [
             '# RelayIQ Complete Knowledge Specification',
@@ -68,19 +103,7 @@ class LlmsController extends Controller
             'Every merchant tenant operates with isolated catalog management, delivery zones, tax rules, and custom domain hosting (`https://shop.merchant.com`).',
             '',
             '## Public Navigation',
-            "- Home: {$base}/",
-            "- Solutions: {$base}/solutions",
-            "- Kenya: {$base}/ai-sales-agent-kenya",
-            "- Kenya WhatsApp + M-Pesa playbook: {$base}/case-study/kenya-whatsapp-mpesa",
-            "- M-Pesa: {$base}/whatsapp-mpesa",
-            "- AI sales agent: {$base}/whatsapp-ai-sales-agent",
-            "- Chatbot vs agent: {$base}/whatsapp-chatbot-vs-ai-sales-agent",
-            "- Pricing: {$base}/pricing",
-            "- About: {$base}/about",
-            "- Contact: {$base}/contact",
-            "- Blog: {$base}/blog",
-            "- Privacy: {$base}/privacy",
-            "- Terms: {$base}/terms",
+            ...$nav,
             '',
         ]);
 

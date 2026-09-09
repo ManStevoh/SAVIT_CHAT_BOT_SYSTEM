@@ -193,8 +193,8 @@ function LoginPageContent() {
             : forcePay
               ? 'Account created. Sign in to complete payment for your plan.'
               : trialParam
-                ? 'Account created — your free trial has started. Sign in to open your dashboard.'
-                : 'Account created successfully. You can sign in below.'}
+                ? 'Account created — your Growth trial has started. Sign in to open your dashboard.'
+                : 'Account created — you are on the free Starter plan. Sign in to open your dashboard.'}
         </LandoAuthSuccess>
       )}
 

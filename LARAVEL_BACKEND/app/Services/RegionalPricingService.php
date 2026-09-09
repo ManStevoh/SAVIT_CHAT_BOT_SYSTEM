@@ -63,9 +63,9 @@ class RegionalPricingService
             return $this->context($currency, $cfCountry, self::SOURCE_CLOUDFLARE, $available);
         }
 
-        $default = $this->normalizeCurrency(config('pricing.default_currency')) ?: 'USD';
+        $default = $this->normalizeCurrency(config('pricing.default_currency')) ?: 'KES';
         if (! in_array($default, $codes, true)) {
-            $default = $codes[0] ?? 'USD';
+            $default = $codes[0] ?? 'KES';
         }
 
         return $this->context($default, $country, self::SOURCE_DEFAULT, $available);
@@ -75,7 +75,7 @@ class RegionalPricingService
     {
         $country = $this->normalizeCountry($country);
         $map = config('pricing.country_currency', []);
-        $default = $this->normalizeCurrency(config('pricing.default_currency')) ?: 'USD';
+        $default = $this->normalizeCurrency(config('pricing.default_currency')) ?: 'KES';
 
         if ($country && isset($map[$country])) {
             $mapped = $this->normalizeCurrency($map[$country]);
@@ -160,7 +160,7 @@ class RegionalPricingService
 
     public function amountForPlan(Plan $plan, string $currency): ?float
     {
-        $currency = $this->normalizeCurrency($currency) ?: 'USD';
+        $currency = $this->normalizeCurrency($currency) ?: 'KES';
 
         $overrides = is_array($plan->regional_prices) ? $plan->regional_prices : [];
         if (array_key_exists($currency, $overrides) && $overrides[$currency] !== null && $overrides[$currency] !== '') {
@@ -174,7 +174,7 @@ class RegionalPricingService
         }
 
         // Fall back to canonical price_amount for the default/base currency.
-        $default = $this->normalizeCurrency(config('pricing.default_currency')) ?: 'USD';
+        $default = $this->normalizeCurrency(config('pricing.default_currency')) ?: 'KES';
         if ($currency === $default && $plan->price_amount !== null) {
             return round((float) $plan->price_amount, 2);
         }
@@ -189,7 +189,7 @@ class RegionalPricingService
 
     public function formatAmount(?float $amount, string $currency): string
     {
-        $currency = $this->normalizeCurrency($currency) ?: 'USD';
+        $currency = $this->normalizeCurrency($currency) ?: 'KES';
         if ($amount === null) {
             return 'Custom';
         }
@@ -212,7 +212,7 @@ class RegionalPricingService
     public function displayForPlan(Plan $plan, string $currency): string
     {
         if ($plan->is_free) {
-            return $plan->price_display ?: 'Free';
+            return $this->formatAmount(0.0, $currency);
         }
 
         $amount = $this->amountForPlan($plan, $currency);

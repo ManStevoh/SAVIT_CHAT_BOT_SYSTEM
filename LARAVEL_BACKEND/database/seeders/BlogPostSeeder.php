@@ -9,8 +9,16 @@ class BlogPostSeeder extends Seeder
 {
     public function run(): void
     {
-        $whatsappCover = '/images/blog/whatsapp-ai-sales.jpg';
-        $catalogCover = '/images/blog/catalog-storefront.jpg';
+        // Unique Freepik free-photo covers (one image per post).
+        $coverSellAi = '/images/blog/whatsapp-ai-sell.jpg';
+        $coverCatalog = '/images/blog/catalog-channels.jpg';
+        $coverMpesa = '/images/blog/mpesa-whatsapp.jpg';
+        $coverOrders = '/images/blog/order-automation.jpg';
+        $coverCommerceVs = '/images/blog/commerce-vs-store.jpg';
+        $coverAgent = '/images/blog/sales-agent.jpg';
+        $coverAutomate = '/images/blog/automate-sales.jpg';
+        $coverChatbot = '/images/blog/chatbot-vs-agent.jpg';
+        $coverEcommerce = '/images/blog/whatsapp-ecommerce.jpg';
 
         BlogPost::updateOrCreate(
             ['slug' => 'sell-more-on-whatsapp-with-ai'],
@@ -27,10 +35,10 @@ class BlogPostSeeder extends Seeder
 <p>The best systems are hybrid: AI for speed, people for trust. RelayIQ is built for that balance.</p>
 <p><a href="/pricing">See RelayIQ pricing</a> to start automating WhatsApp sales.</p>
 HTML,
-                'cover_image' => $whatsappCover,
+                'cover_image' => $coverSellAi,
                 'meta_title' => 'How to sell more on WhatsApp with AI — RelayIQ',
                 'meta_description' => 'Practical tips to automate WhatsApp sales with AI while keeping human agents in control. Orders, payments, and team inbox in one flow.',
-                'og_image' => $whatsappCover,
+                'og_image' => $coverSellAi,
                 'is_published' => true,
                 'published_at' => now()->subDays(17),
             ]
@@ -55,10 +63,10 @@ HTML,
 <h2>Start simple, unlock more on Growth</h2>
 <p>Starter covers AI chat, physical &amp; digital catalog, and storefront. Growth adds bookings and dine-in when you are ready. <a href="/pricing">Compare plans</a>.</p>
 HTML,
-                'cover_image' => $catalogCover,
+                'cover_image' => $coverCatalog,
                 'meta_title' => 'WhatsApp + storefront + bookings + dine-in — RelayIQ',
                 'meta_description' => 'Run WhatsApp sales, a web storefront, service bookings, and dine-in QR from one RelayIQ catalog.',
-                'og_image' => $catalogCover,
+                'og_image' => $coverCatalog,
                 'is_published' => true,
                 'published_at' => now()->subDays(5),
             ]
@@ -82,10 +90,10 @@ HTML,
 <h2>Measure recovery, not just sales</h2>
 <p>Combine M-Pesa checkout with abandoned-cart reminders to recover nearly-converted buyers. <a href="/solutions">Explore RelayIQ solutions</a>.</p>
 HTML,
-                'cover_image' => $whatsappCover,
+                'cover_image' => $coverMpesa,
                 'meta_title' => 'M-Pesa checkout on WhatsApp — RelayIQ',
                 'meta_description' => 'Accept M-Pesa payments inside WhatsApp chats. Reduce drop-off with STK push checkout and automated order confirmation.',
-                'og_image' => $whatsappCover,
+                'og_image' => $coverMpesa,
                 'is_published' => true,
                 'published_at' => now()->subDays(12),
             ]
@@ -105,10 +113,10 @@ HTML,
 <h2>Human takeover when it matters</h2>
 <p>Escalate VIP or complex deals to your inbox while AI handles FAQs and routine reorders. <a href="/register">Start free on RelayIQ</a>.</p>
 HTML,
-                'cover_image' => $catalogCover,
+                'cover_image' => $coverOrders,
                 'meta_title' => 'AI WhatsApp order automation — RelayIQ',
                 'meta_description' => 'Automate WhatsApp product Q&A, carts, and checkout with an AI agent connected to your real catalog and payments.',
-                'og_image' => $catalogCover,
+                'og_image' => $coverOrders,
                 'is_published' => true,
                 'published_at' => now()->subDays(3),
             ]
@@ -135,10 +143,10 @@ HTML,
 </ul>
 <p>RelayIQ keeps one catalog for both channels so prices and stock never drift. <a href="/pricing">Pick a plan</a>.</p>
 HTML,
-                'cover_image' => $whatsappCover,
+                'cover_image' => $coverCommerceVs,
                 'meta_title' => 'WhatsApp commerce vs online store — RelayIQ',
                 'meta_description' => 'Learn when WhatsApp commerce outperforms a web store — and how to run both from one RelayIQ catalog.',
-                'og_image' => $whatsappCover,
+                'og_image' => $coverCommerceVs,
                 'is_published' => true,
                 'published_at' => now()->subDay(),
             ]
@@ -162,10 +170,10 @@ HTML,
 </ul>
 <p>Read the product page: <a href="/whatsapp-ai-sales-agent">AI sales agent for WhatsApp</a>, or <a href="/register">start free</a>.</p>
 HTML,
-                'cover_image' => $whatsappCover,
+                'cover_image' => $coverAgent,
                 'meta_title' => 'What Is a WhatsApp AI Sales Agent? — RelayIQ',
                 'meta_description' => 'Learn what a WhatsApp AI sales agent is, how it differs from a chatbot, and how RelayIQ turns conversations into sales.',
-                'og_image' => $whatsappCover,
+                'og_image' => $coverAgent,
                 'is_published' => true,
                 'published_at' => now()->subHours(12),
             ]
@@ -187,10 +195,10 @@ HTML,
 </ol>
 <p>Deep dive: <a href="/whatsapp-sales-automation">WhatsApp sales automation</a>. Compare <a href="/pricing">pricing</a>.</p>
 HTML,
-                'cover_image' => $catalogCover,
+                'cover_image' => $coverAutomate,
                 'meta_title' => 'How to Automate WhatsApp Sales With AI — RelayIQ',
                 'meta_description' => 'Step-by-step guide to automate WhatsApp sales with AI: catalog, payments, follow-ups, and human handoff.',
-                'og_image' => $catalogCover,
+                'og_image' => $coverAutomate,
                 'is_published' => true,
                 'published_at' => now()->subHours(10),
             ]
@@ -209,10 +217,10 @@ HTML,
 <p>Product recommendations, lead qualification, checkout, follow-ups, and analytics tied to revenue.</p>
 <p>RelayIQ is built as an AI sales agent. See <a href="/whatsapp-chatbot">WhatsApp chatbot for sales</a> and <a href="/whatsapp-ai-sales-agent">AI sales agent</a>.</p>
 HTML,
-                'cover_image' => $whatsappCover,
+                'cover_image' => $coverChatbot,
                 'meta_title' => 'AI Chatbot vs AI Sales Agent — RelayIQ',
                 'meta_description' => 'Understand the difference between a WhatsApp chatbot and an AI sales agent — and which drives more sales.',
-                'og_image' => $whatsappCover,
+                'og_image' => $coverChatbot,
                 'is_published' => true,
                 'published_at' => now()->subHours(8),
             ]
@@ -234,10 +242,10 @@ HTML,
 </ul>
 <p>More: <a href="/whatsapp-for-ecommerce">WhatsApp for ecommerce</a> · <a href="/whatsapp-commerce">WhatsApp commerce</a>.</p>
 HTML,
-                'cover_image' => $catalogCover,
+                'cover_image' => $coverEcommerce,
                 'meta_title' => 'How to Use WhatsApp for Ecommerce Sales — RelayIQ',
                 'meta_description' => 'Practical guide to ecommerce on WhatsApp: AI advice, in-chat checkout, and a matching storefront.',
-                'og_image' => $catalogCover,
+                'og_image' => $coverEcommerce,
                 'is_published' => true,
                 'published_at' => now()->subHours(6),
             ]

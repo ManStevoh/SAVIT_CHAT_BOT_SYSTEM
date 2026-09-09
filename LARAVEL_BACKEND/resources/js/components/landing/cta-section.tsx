@@ -18,7 +18,7 @@ export function CtaSection() {
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild className="h-11 gap-2 rounded-md px-6 wa-cta border-0 shadow-none">
               <Link href="/register">
-                Start free trial
+                Get started free
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -33,7 +33,7 @@ export function CtaSection() {
           </div>
 
           <p className="mt-4 text-xs text-background/60">
-            14-day trial · No credit card · Cancel anytime
+            Free forever Starter plan — no credit card
           </p>
         </div>
       </div>
