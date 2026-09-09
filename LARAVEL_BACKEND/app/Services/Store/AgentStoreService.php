@@ -703,19 +703,19 @@ class AgentStoreService
                     'role'              => 'company_owner',
                     'company_id'        => $targetCompany->id,
                     'status'            => 'active',
-                    'email_verified_at' => now(),
                     'terms_accepted_at' => now(),
                 ]);
             } else {
                 $user->update([
-                    'name'              => $userName,
-                    'company_id'        => $targetCompany->id,
-                    'role'              => 'company_owner',
-                    'status'            => 'active',
-                    'password'          => Hash::make($password),
-                    'email_verified_at' => $user->email_verified_at ?? now(),
+                    'name'       => $userName,
+                    'company_id' => $targetCompany->id,
+                    'role'       => 'company_owner',
+                    'status'     => 'active',
+                    'password'   => Hash::make($password),
                 ]);
             }
+            $user->markEmailAsVerified();
+            $user->save();
 
             // Set Starter plan if available and sync entitlements
             try {
