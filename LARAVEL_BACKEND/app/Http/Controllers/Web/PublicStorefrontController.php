@@ -1079,9 +1079,13 @@ class PublicStorefrontController extends Controller
         // Only show a separate featured products shelf if it is a curated subset (e.g. items on sale or catalog > featured)
         // to avoid duplicating the entire catalog immediately above the main catalog grid
         if (count($catalogProducts) > count($featured) && $featured !== []) {
+            $isAllBooks = ! empty($catalogProducts) && collect($catalogProducts)->every(
+                fn ($p) => strcasecmp((string) ($p['category'] ?? ''), 'Books') === 0
+            );
+
             $sections[] = [
                 'type' => 'featured_products',
-                'headline' => 'Featured',
+                'headline' => $isAllBooks ? 'Featured Books' : 'Featured Products',
                 'products' => $featured,
             ];
         }
@@ -1136,8 +1140,14 @@ class PublicStorefrontController extends Controller
     protected function defaultFeaturedProducts(array $catalogProducts): array
     {
         $onSale = array_values(array_filter($catalogProducts, fn ($p) => ! empty($p['onSale'])));
+        if ($onSale !== []) {
+            return array_slice($onSale, 0, 8);
+        }
 
-        return array_slice($onSale !== [] ? $onSale : $catalogProducts, 0, 8);
+        // When not on sale, select a curated subset (e.g. 2 items for small catalogs <= 4)
+        $limit = count($catalogProducts) <= 4 ? 2 : 4;
+
+        return array_slice($catalogProducts, 0, $limit);
     }
 
     /**

@@ -106,6 +106,12 @@ class AgentStoreService
             $val = $data['commission_invoice_threshold'] ?? $data['commissionInvoiceThreshold'];
             $companyFields['commission_invoice_threshold'] = ($val !== null && $val !== '') ? (float) $val : null;
         }
+        if (array_key_exists('storefront_sections', $data)) {
+            $companyFields['storefront_sections'] = $data['storefront_sections'];
+        }
+        if (array_key_exists('storefront_theme', $data)) {
+            $companyFields['storefront_theme'] = $data['storefront_theme'];
+        }
 
         if (! empty($companyFields)) {
             $company->update($companyFields);
