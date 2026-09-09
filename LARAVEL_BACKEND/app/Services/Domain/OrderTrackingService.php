@@ -133,7 +133,7 @@ final class OrderTrackingService
             $paymentText .= ' (' . strtoupper($order->payment_method) . ')';
         }
 
-        $formattedTotal = MoneyFormatter::format((float) $order->total, $company->currency ?? 'USD');
+        $formattedTotal = MoneyFormatter::formatForCompany((float) $order->total, $company);
 
         $lines = [
             "📦 *Order Tracker — Order #{$order->order_number}*",
@@ -160,7 +160,7 @@ final class OrderTrackingService
 
         foreach ($groupedItems as $g) {
             $qty = $g['quantity'];
-            $unitPrice = MoneyFormatter::format($g['price'], $company->currency ?? 'USD');
+            $unitPrice = MoneyFormatter::formatForCompany($g['price'], $company);
             $lines[] = "• {$qty}x *{$g['name']}* ({$unitPrice})";
         }
 
@@ -219,7 +219,7 @@ final class OrderTrackingService
 
         foreach ($orders as $idx => $order) {
             $num = $idx + 1;
-            $total = MoneyFormatter::format((float) $order->total, $company->currency ?? 'USD');
+            $total = MoneyFormatter::formatForCompany((float) $order->total, $company);
             $status = ucfirst($order->status);
             $payStatus = ucfirst($order->payment_status);
             $lines[] = "{$num}. *Order #{$order->order_number}* — {$total} ({$status} | {$payStatus})";
@@ -257,7 +257,7 @@ final class OrderTrackingService
         $order->loadMissing('orderProducts');
         $items = [];
         foreach ($order->orderProducts as $item) {
-            $items[] = "{$item->quantity}x {$item->name} (" . MoneyFormatter::format((float) $item->price, $company->currency ?? 'USD') . ")";
+            $items[] = "{$item->quantity}x {$item->name} (" . MoneyFormatter::formatForCompany((float) $item->price, $company) . ")";
         }
 
         return [
@@ -265,7 +265,7 @@ final class OrderTrackingService
             'status' => (string) $order->status,
             'payment_status' => (string) $order->payment_status,
             'payment_method' => (string) ($order->payment_method ?? 'N/A'),
-            'total' => MoneyFormatter::format((float) $order->total, $company->currency ?? 'USD'),
+            'total' => MoneyFormatter::formatForCompany((float) $order->total, $company),
             'items' => $items,
             'delivery_address' => (string) ($order->delivery_address ?? 'N/A'),
             'created_at' => $order->created_at?->toIso8601String() ?? '',

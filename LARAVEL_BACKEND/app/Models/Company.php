@@ -141,4 +141,14 @@ class Company extends Model
     {
         return $this->hasMany(PortfolioRecommendation::class);
     }
+
+    /**
+     * Get the currency code configured for this company (falls back to KES).
+     */
+    public function getCurrencyAttribute(): string
+    {
+        $this->loadMissing('settings');
+
+        return $this->settings?->displayCurrencyCode() ?? 'KES';
+    }
 }

@@ -183,4 +183,50 @@ class AgentProactiveMessageGroundingTest extends TestCase
             'customer_phone' => '254728210962',
         ]);
     }
+
+    public function test_whatsapp_catalog_and_cart_render_with_company_currency_symbol_ksh(): void
+    {
+        [$company, $product] = $this->createCompanyAndOrder();
+
+        // 1. Catalog prompt
+        $catalogOutput = \App\Services\Workflow\ResponseSpecRenderer::renderCatalogPrompt($company);
+        $this->assertStringContainsString('KSh 700.00', $catalogOutput);
+        $this->assertStringNotContainsString('$700.00', $catalogOutput);
+
+        // 2. Order prompt
+        $orderOutput = \App\Services\Workflow\ResponseSpecRenderer::renderOrderPrompt($company);
+        $this->assertStringContainsString('KSh 700.00', $orderOutput);
+        $this->assertStringNotContainsString('$700.00', $orderOutput);
+
+        // 3. Cart Summary
+        $renderer = new \App\Services\Workflow\ResponseSpecRenderer();
+        $state = new \App\DTOs\ConversationState(
+            chatId: 1,
+            companyId: $company->id,
+            customerPhone: '254728210962',
+            customerName: 'Wekesa',
+            step: \App\Enums\CheckoutStep::BUILDING_CART,
+            cartItems: [[
+                'product_id' => $product->id,
+                'name' => 'My Web',
+                'price' => 700.00,
+                'quantity' => 1,
+            ]]
+        );
+
+        $cartSummary = $renderer->render(\App\Enums\ResponseSpec::CART_SUMMARY, $state, $company, [
+            'added_product_name' => 'My Web',
+            'added_product_qty' => 1,
+        ]);
+
+        $this->assertStringContainsString('1 x KSh 700.00', $cartSummary);
+        $this->assertStringContainsString('*Total:* KSh 700.00', $cartSummary);
+        $this->assertStringNotContainsString('$', $cartSummary);
+
+        // 4. Order Confirmation Review
+        $review = $renderer->render(\App\Enums\ResponseSpec::PROMPT_ORDER_CONFIRMATION, $state, $company);
+        $this->assertStringContainsString('1 x KSh 700.00', $review);
+        $this->assertStringContainsString('*Total:* KSh 700.00', $review);
+        $this->assertStringNotContainsString('$', $review);
+    }
 }

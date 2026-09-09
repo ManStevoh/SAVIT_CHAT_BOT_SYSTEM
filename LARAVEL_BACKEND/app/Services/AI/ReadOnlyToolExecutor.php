@@ -139,7 +139,7 @@ final class ReadOnlyToolExecutor
             $variants = $p->activeVariants()->get()->map(fn ($v) => [
                 'id' => $v->id,
                 'name' => $v->label ?? $v->name,
-                'price' => MoneyFormatter::format((float) ($v->price ?? $p->price), $company->currency ?? 'USD'),
+                'price' => MoneyFormatter::formatForCompany((float) ($v->price ?? $p->price), $company),
             ])->toArray();
 
             $imgUrl = $p->image ? (filter_var($p->image, FILTER_VALIDATE_URL) ? $p->image : url($p->image)) : null;
@@ -147,7 +147,7 @@ final class ReadOnlyToolExecutor
             $results[] = [
                 'id' => $p->id,
                 'name' => $p->name,
-                'price' => MoneyFormatter::format((float) $p->price, $company->currency ?? 'USD'),
+                'price' => MoneyFormatter::formatForCompany((float) $p->price, $company),
                 'description' => mb_substr(strip_tags((string) ($p->description ?? '')), 0, 150),
                 'image_url' => $imgUrl,
                 'has_photo' => ! empty($imgUrl),
@@ -167,7 +167,7 @@ final class ReadOnlyToolExecutor
             'store_name' => $company->name ?? 'Store',
             'business_address' => $settings?->business_address ?? $settings?->address ?? 'Online Store',
             'opening_hours' => $settings?->opening_hours ?? 'Mon-Sat 8:00 AM - 6:00 PM',
-            'currency' => $company->currency ?? 'USD',
+            'currency' => $company->currency,
             'online_shop_url' => $storeUrl,
         ];
     }
@@ -192,7 +192,7 @@ final class ReadOnlyToolExecutor
     private function getCurrentCart(Company $company, ConversationState $state): array
     {
         if (! $state->hasItems()) {
-            return ['status' => 'empty', 'items' => [], 'total' => '$0.00'];
+            return ['status' => 'empty', 'items' => [], 'total' => MoneyFormatter::formatForCompany(0.0, $company)];
         }
 
         $items = [];
@@ -200,14 +200,14 @@ final class ReadOnlyToolExecutor
             $items[] = [
                 'name' => $item['name'] ?? 'Item',
                 'quantity' => (int) ($item['quantity'] ?? 1),
-                'price' => MoneyFormatter::format((float) ($item['price'] ?? 0), $company->currency ?? 'USD'),
+                'price' => MoneyFormatter::formatForCompany((float) ($item['price'] ?? 0), $company),
             ];
         }
 
         return [
             'status' => 'has_items',
             'items' => $items,
-            'total' => MoneyFormatter::format((float) $state->calculateCartTotal(), $company->currency ?? 'USD'),
+            'total' => MoneyFormatter::formatForCompany((float) $state->calculateCartTotal(), $company),
             'current_step' => $state->step->value,
         ];
     }

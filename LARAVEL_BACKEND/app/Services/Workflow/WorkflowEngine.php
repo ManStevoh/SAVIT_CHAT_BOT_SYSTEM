@@ -293,10 +293,10 @@ final class WorkflowEngine
             if ($product) {
                 $imgUrl = $product->image_url;
                 if ($imgUrl) {
-                    $reply = "📷 Here is *{$product->name}*:\nPrice: " . \App\Support\MoneyFormatter::format((float) $product->price, $company->currency ?? 'USD') . "\n\nReply with '{$product->name}' to add it to your cart!\n\n[IMAGE_URL: {$imgUrl}]";
+                    $reply = "📷 Here is *{$product->name}*:\nPrice: " . \App\Support\MoneyFormatter::formatForCompany((float) $product->price, $company) . "\n\nReply with '{$product->name}' to add it to your cart!\n\n[IMAGE_URL: {$imgUrl}]";
                     return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply, null, ['image_url' => $imgUrl]);
                 }
-                $reply = "Details for *{$product->name}*:\nPrice: " . \App\Support\MoneyFormatter::format((float) $product->price, $company->currency ?? 'USD') . "\n(No photo is currently uploaded for this product).";
+                $reply = "Details for *{$product->name}*:\nPrice: " . \App\Support\MoneyFormatter::formatForCompany((float) $product->price, $company) . "\n(No photo is currently uploaded for this product).";
                 return new WorkflowTransitionResult($state, [], ResponseSpec::GENERAL_ASSIST->value, $reply);
             }
         }
