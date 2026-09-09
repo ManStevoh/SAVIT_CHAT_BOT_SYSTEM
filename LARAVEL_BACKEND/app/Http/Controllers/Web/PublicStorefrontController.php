@@ -1076,7 +1076,9 @@ class PublicStorefrontController extends Controller
         ]];
 
         $featured = $this->defaultFeaturedProducts($catalogProducts);
-        if (count($catalogProducts) >= 2 && $featured !== []) {
+        // Only show a separate featured products shelf if it is a curated subset (e.g. items on sale or catalog > featured)
+        // to avoid duplicating the entire catalog immediately above the main catalog grid
+        if (count($catalogProducts) > count($featured) && $featured !== []) {
             $sections[] = [
                 'type' => 'featured_products',
                 'headline' => 'Featured',

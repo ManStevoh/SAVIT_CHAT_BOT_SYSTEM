@@ -431,7 +431,20 @@ export default function StorePage({
     [products]
   )
 
-  const resolvedSections = sections && sections.length > 0 ? sections : [{ type: 'catalog' }]
+  const resolvedSections = useMemo(() => {
+    const list = sections && sections.length > 0 ? [...sections] : [{ type: 'catalog' }]
+    if (!list.some((s) => s.type === 'catalog')) {
+      list.push({ type: 'catalog' })
+    }
+    let foundCatalog = false
+    return list.filter((s) => {
+      if (s.type === 'catalog') {
+        if (foundCatalog) return false
+        foundCatalog = true
+      }
+      return true
+    })
+  }, [sections])
   const displayCurrency = company.displayCurrency || company.currency
   const displayRate = company.displayRate || 1.0
   const altCurrencies = company.altCurrencies || []
@@ -862,33 +875,18 @@ export default function StorePage({
               </section>
             )
           }
-          // Catalog (Default)
-          return (
-            <section key={idx} id="catalog" className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  {products.length} {products.length === 1 ? 'Product' : 'Products'} Available
-                </p>
-              </div>
-
-              {products.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-200/80 bg-white p-12 text-center text-xs text-slate-500 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
-                  <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">No products match your search keyword or filter.</p>
-                  {hasActiveFilters && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={resetAllFilters}
-                      className="mt-2 rounded-xl text-xs"
-                    >
-                      Clear All Filters
-                    </Button>
-                  )}
+          if (section.type === 'collection_shelf') {
+            const shelfProducts = section.products || []
+            if (shelfProducts.length === 0) return null
+            return (
+              <section key={idx} className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                    {section.headline || section.category || 'Collection'}
+                  </h2>
                 </div>
-              ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-                  {products.map((product) => (
+                  {shelfProducts.map((product) => (
                     <ProductCard
                       key={product.id}
                       slug={slug}
@@ -901,9 +899,93 @@ export default function StorePage({
                     />
                   ))}
                 </div>
-              )}
-            </section>
-          )
+              </section>
+            )
+          }
+          if (section.type === 'about') {
+            if (!section.body && !section.title) return null
+            return (
+              <section key={idx} className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-8">
+                <div className="max-w-2xl space-y-3">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">{section.title || `About ${company.name}`}</h3>
+                  {section.body && <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">{section.body}</p>}
+                  {section.cta_href && (
+                    <Link
+                      href={section.cta_href}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                    >
+                      {section.cta_label || 'Read more'} <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
+                </div>
+              </section>
+            )
+          }
+          if (section.type === 'testimonials') {
+            const items = section.items || []
+            if (items.length === 0) return null
+            return (
+              <section key={idx} className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                    {section.headline || 'What Shoppers Say'}
+                  </h2>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  {items.map((item, qIdx) => (
+                    <div key={qIdx} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                      <p className="text-xs italic text-slate-600 dark:text-slate-300">"{item.quote}"</p>
+                      <p className="mt-2 text-[11px] font-semibold text-slate-900 dark:text-white">— {item.author}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )
+          }
+          if (section.type === 'catalog') {
+            return (
+              <section key={idx} id="catalog" className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    {products.length} {products.length === 1 ? 'Product' : 'Products'} Available
+                  </p>
+                </div>
+
+                {products.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-slate-200/80 bg-white p-12 text-center text-xs text-slate-500 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+                    <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">No products match your search keyword or filter.</p>
+                    {hasActiveFilters && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={resetAllFilters}
+                        className="mt-2 rounded-xl text-xs"
+                      >
+                        Clear All Filters
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                    {products.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        slug={slug}
+                        product={product}
+                        currency={displayCurrency}
+                        rate={displayRate}
+                        isWished={wishlistIds.includes(product.id)}
+                        onWishlistToggle={toggleWishlist}
+                        onQuickAdd={handleQuickAdd}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )
+          }
+          return null
         })}
       </main>
 
