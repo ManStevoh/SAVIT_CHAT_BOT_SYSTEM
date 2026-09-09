@@ -76,11 +76,14 @@ function SubscriptionPageContent() {
   const planSlug = subscription?.plan ?? "starter"
   const status = subscription?.status ?? "active"
   const daysRemaining = subscription?.daysRemaining
-  const expiredBanner = searchParams.get("expired") === "1"
+  const isCommissionMerchant =
+    subscription?.billingModel === "commission" || subscription?.plan === "commission"
+  const expiredBanner = !isCommissionMerchant && searchParams.get("expired") === "1"
   const needsPaidActivation =
-    expiredBanner ||
-    ["trial", "expired", "cancelled"].includes(status) ||
-    (typeof daysRemaining === "number" && daysRemaining <= 0)
+    !isCommissionMerchant &&
+    (expiredBanner ||
+      ["trial", "expired", "cancelled"].includes(status) ||
+      (typeof daysRemaining === "number" && daysRemaining <= 0))
 
   const plans = plansData.map((p) => ({
     id: p.id,
@@ -233,10 +236,12 @@ function SubscriptionPageContent() {
   const accessLabel = subscription?.accessEndsLabel ?? "Renews on"
   const isStripeManaged = subscription?.paymentMethod === "stripe"
   const canCancelLocal =
+    !isCommissionMerchant &&
     !!subscription &&
     ["active", "trial"].includes(status) &&
     !isStripeManaged &&
-    subscription.id !== "0"
+    subscription.id !== "0" &&
+    !subscription.id.startsWith("comm-")
 
   const applyCoupon = async (planId: string) => {
     const code = couponCode.trim()
@@ -564,6 +569,11 @@ function SubscriptionPageContent() {
         <p className="text-muted-foreground">Manage your subscription and billing</p>
       </div>
 
+      {isCommissionMerchant && (
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-300">
+          <span className="font-semibold">Commission-on-Sales Model Active:</span> Your store is enrolled in the commission billing plan ({subscription?.commissionRate ?? 5}% per completed order). Fixed monthly subscription fees are waived, and your account remains active with full access.
+        </div>
+      )}
       {expiredBanner && (
         <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
           Your subscription has expired or was cancelled. Choose a plan below to renew or upgrade.
@@ -575,7 +585,7 @@ function SubscriptionPageContent() {
           payment starts immediately and replaces the trial.
         </div>
       )}
-      {!anyCheckoutAvailable && (
+      {!isCommissionMerchant && !anyCheckoutAvailable && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           No payment methods are ready on this platform, so Subscribe / Renew buttons stay unavailable. An admin must
           enable a gateway under Admin → Payment Gateways and save credentials (or bank details for Bank Transfer).
@@ -661,6 +671,11 @@ function SubscriptionPageContent() {
                 <div className="flex items-center gap-2">
                   <h3 className="text-2xl font-bold text-foreground">{planName}</h3>
                   <Badge>{status}</Badge>
+                  {isCommissionMerchant && (
+                    <Badge variant="outline" className="border-emerald-500 text-emerald-600 dark:text-emerald-400">
+                      Commission on Sales
+                    </Badge>
+                  )}
                   {subscription?.isExpiringSoon && (
                     <Badge variant="outline" className="border-amber-500 text-amber-700">
                       Expiring soon
@@ -668,10 +683,18 @@ function SubscriptionPageContent() {
                   )}
                 </div>
                 <p className="text-muted-foreground">
-                  {planPrice}/month • {accessLabel} {renewalDate}
-                  {typeof daysRemaining === "number" && status !== "expired" ? (
-                    <span> ({daysRemaining} day{daysRemaining === 1 ? "" : "s"} left)</span>
-                  ) : null}
+                  {isCommissionMerchant ? (
+                    <span>
+                      {subscription?.commissionRate ?? 5}% commission per sale • Monthly subscription fee waived
+                    </span>
+                  ) : (
+                    <>
+                      {planPrice}/month • {accessLabel} {renewalDate}
+                      {typeof daysRemaining === "number" && status !== "expired" ? (
+                        <span> ({daysRemaining} day{daysRemaining === 1 ? "" : "s"} left)</span>
+                      ) : null}
+                    </>
+                  )}
                 </p>
               </div>
             </div>

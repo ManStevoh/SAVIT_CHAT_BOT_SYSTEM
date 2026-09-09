@@ -31,8 +31,36 @@ class SubscriptionController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
 
-        $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
         $company = $request->user()->company;
+        if ($company) {
+            $resolution = app(\App\Services\Billing\BillingResolutionService::class)->resolveForCompany($company);
+            if ($resolution['is_commission_active'] && $resolution['waive_subscription_fee']) {
+                return response()->json([
+                    'id' => 'comm-' . $company->id,
+                    'companyId' => (string) $company->id,
+                    'companyName' => $company->name ?? '',
+                    'plan' => 'commission',
+                    'planName' => 'Commission-on-Sales',
+                    'status' => 'active',
+                    'startDate' => $company->created_at?->format('Y-m-d') ?? now()->format('Y-m-d'),
+                    'endDate' => now()->addYears(10)->format('Y-m-d'),
+                    'amount' => 0,
+                    'billingCycle' => 'per_sale',
+                    'paymentMethod' => 'commission',
+                    'currency' => $company->settings?->displayCurrencyCode() ?? 'KES',
+                    'daysRemaining' => 9999,
+                    'isExpiringSoon' => false,
+                    'accessEndsLabel' => 'Active',
+                    'billingModel' => 'commission',
+                    'commissionRate' => (float) $resolution['commission_rate'],
+                    'commissionBasis' => $resolution['commission_basis'],
+                    'commissionBalanceDue' => (float) ($company->commission_balance_due ?? 0),
+                    'commissionInvoiceThreshold' => $company->commission_invoice_threshold !== null ? (float) $company->commission_invoice_threshold : null,
+                ]);
+            }
+        }
+
+        $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
 
         if (! $subscription) {
             $starter = Plan::where('slug', 'starter')->first();

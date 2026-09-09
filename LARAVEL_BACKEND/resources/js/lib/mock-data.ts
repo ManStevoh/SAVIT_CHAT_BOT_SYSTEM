@@ -204,18 +204,23 @@ export interface Subscription {
   id: string
   companyId: string
   companyName: string
-  plan: 'starter' | 'professional' | 'enterprise'
+  plan: 'starter' | 'professional' | 'enterprise' | 'commission' | string
   planName?: string
-  status: 'active' | 'cancelled' | 'expired' | 'trial'
+  status: 'active' | 'cancelled' | 'expired' | 'trial' | string
   startDate: string
   endDate: string
   amount: number
-  billingCycle: 'monthly' | 'yearly'
+  billingCycle: 'monthly' | 'yearly' | 'per_sale' | string
   paymentMethod?: string | null
   currency?: string | null
   daysRemaining?: number
   isExpiringSoon?: boolean
   accessEndsLabel?: string
+  billingModel?: 'subscription' | 'commission' | string
+  commissionRate?: number
+  commissionBasis?: string
+  commissionBalanceDue?: number
+  commissionInvoiceThreshold?: number | null
 }
 
 /** What happens to the customer account when trial ends */

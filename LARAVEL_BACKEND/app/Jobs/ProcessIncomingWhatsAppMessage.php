@@ -577,6 +577,11 @@ class ProcessIncomingWhatsAppMessage implements ShouldBeUnique, ShouldQueue
 
     protected function companyHasActiveSubscription(Company $company): bool
     {
+        $resolution = app(\App\Services\Billing\BillingResolutionService::class)->resolveForCompany($company);
+        if ($resolution['is_commission_active'] && $resolution['waive_subscription_fee']) {
+            return true;
+        }
+
         // Match EnsureSubscriptionActive / EntitlementService: trial companies must get AI replies.
         return Subscription::where('company_id', $company->id)
             ->whereIn('status', ['active', 'trial'])

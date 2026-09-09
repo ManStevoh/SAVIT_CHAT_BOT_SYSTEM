@@ -126,27 +126,41 @@ class DashboardSummaryController extends Controller
             ])->values()->all();
 
         // ── Subscription ──────────────────────────────────────────────────────
-        $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
-        $planModel    = $subscription
-            ? Plan::where('slug', $subscription->plan)->first()
-            : Plan::where('slug', 'starter')->first();
-
-        if (! $subscription) {
+        $resolution = app(\App\Services\Billing\BillingResolutionService::class)->resolveForCompany($company);
+        if ($resolution['is_commission_active'] && $resolution['waive_subscription_fee']) {
             $subscriptionData = [
-                'id' => '0', 'plan' => 'starter',
-                'planName' => $planModel?->name ?? 'Starter',
-                'status' => 'trial', 'daysRemaining' => 14, 'isExpiringSoon' => false,
+                'id' => 'comm-' . $company->id,
+                'plan' => 'commission',
+                'planName' => 'Commission-on-Sales',
+                'status' => 'active',
+                'daysRemaining' => 9999,
+                'isExpiringSoon' => false,
+                'billingModel' => 'commission',
+                'commissionRate' => (float) $resolution['commission_rate'],
             ];
         } else {
-            $daysRemaining = (int) now()->startOfDay()->diffInDays($subscription->end_date->copy()->startOfDay(), false);
-            $subscriptionData = [
-                'id' => (string) $subscription->id,
-                'plan' => $subscription->plan,
-                'planName' => $planModel?->name ?? ucfirst((string) $subscription->plan),
-                'status' => $subscription->status,
-                'daysRemaining' => $daysRemaining,
-                'isExpiringSoon' => $daysRemaining <= 7 && $daysRemaining >= 0,
-            ];
+            $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
+            $planModel    = $subscription
+                ? Plan::where('slug', $subscription->plan)->first()
+                : Plan::where('slug', 'starter')->first();
+
+            if (! $subscription) {
+                $subscriptionData = [
+                    'id' => '0', 'plan' => 'starter',
+                    'planName' => $planModel?->name ?? 'Starter',
+                    'status' => 'trial', 'daysRemaining' => 14, 'isExpiringSoon' => false,
+                ];
+            } else {
+                $daysRemaining = (int) now()->startOfDay()->diffInDays($subscription->end_date->copy()->startOfDay(), false);
+                $subscriptionData = [
+                    'id' => (string) $subscription->id,
+                    'plan' => $subscription->plan,
+                    'planName' => $planModel?->name ?? ucfirst((string) $subscription->plan),
+                    'status' => $subscription->status,
+                    'daysRemaining' => $daysRemaining,
+                    'isExpiringSoon' => $daysRemaining <= 7 && $daysRemaining >= 0,
+                ];
+            }
         }
 
         // ── Settings (currency only, lightweight) ─────────────────────────────

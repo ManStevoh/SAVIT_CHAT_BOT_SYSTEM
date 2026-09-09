@@ -54,6 +54,14 @@ class EnsureSubscriptionActive
             return $next($request);
         }
 
+        $company = $user->company;
+        if ($company) {
+            $resolution = app(\App\Services\Billing\BillingResolutionService::class)->resolveForCompany($company);
+            if ($resolution['is_commission_active'] && $resolution['waive_subscription_fee']) {
+                return $next($request);
+            }
+        }
+
         $hasActiveSubscription = Subscription::where('company_id', $user->company_id)
             ->whereIn('status', ['active', 'trial'])
             ->where('end_date', '>=', now()->toDateString())
