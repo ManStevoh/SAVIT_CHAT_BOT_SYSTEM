@@ -480,6 +480,60 @@ class CmsSeoService
     }
 
     /**
+     * Public storefront About / Terms (indexable, linked from the shop footer).
+     *
+     * @return array<string, mixed>
+     */
+    public function forStorefrontContentPage(Company $company, string $path, string $title, ?string $description = null): array
+    {
+        $path = trim($path, '/');
+        $canonical = $this->storefrontBaseUrl($company).'/'.$path;
+        $plain = $this->plainMetaDescription($description);
+        $ogImage = $company->logo ? asset('storage/'.$company->logo) : $this->defaultOgImage();
+        $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
+        $googleVerification = ! empty($theme['google_site_verification']) ? trim((string) $theme['google_site_verification']) : null;
+        $shopUrl = $this->storefrontBaseUrl($company);
+        $crumbLabel = $path === 'about' ? 'About' : 'Terms';
+        $pageType = $path === 'about' ? 'AboutPage' : 'WebPage';
+
+        $jsonLd = [
+            '@context' => 'https://schema.org',
+            '@graph' => array_values(array_filter([
+                [
+                    '@type' => $pageType,
+                    '@id' => $canonical.'#webpage',
+                    'url' => $canonical,
+                    'name' => $title,
+                    'description' => $plain ?: null,
+                ],
+                $this->breadcrumbNode([
+                    ['name' => $company->name, 'url' => $shopUrl],
+                    ['name' => $crumbLabel, 'url' => $canonical],
+                ]),
+            ])),
+        ];
+
+        return $this->decoratePayload([
+            'title' => $title,
+            'description' => $plain ?: null,
+            'h1' => $title,
+            'lede' => $plain,
+            'canonical' => $canonical,
+            'robots' => 'index, follow',
+            'ogTitle' => $title,
+            'ogDescription' => $plain,
+            'ogImage' => $ogImage,
+            'ogType' => 'website',
+            'ogUrl' => $canonical,
+            'siteName' => $company->name,
+            'twitterCard' => 'summary_large_image',
+            'jsonLd' => $jsonLd,
+            'googleSiteVerification' => $googleVerification,
+            'skipAppTitleSuffix' => true,
+        ]);
+    }
+
+    /**
      * Dedicated isolated sitemap for a custom domain tenant.
      *
      * @return list<array{loc: string, lastmod?: string, changefreq: string, priority: string, image?: array{loc: string, title?: string}}>
@@ -496,6 +550,7 @@ class CmsSeoService
             'changefreq' => 'daily',
             'priority' => '1.0',
         ];
+        $this->appendStorefrontContentSitemapEntries($entries, $storeBase, optional($company->updated_at)?->toAtomString());
 
         if (Schema::hasTable('products')) {
             try {
@@ -621,6 +676,12 @@ class CmsSeoService
                     if ($page->slug === 'solutions' && ! PublicMarketingPages::enabled('solutions')) {
                         continue;
                     }
+                    if ($page->slug === 'blog' && ! PublicMarketingPages::enabled('blog')) {
+                        continue;
+                    }
+                    if ($this->cmsPageIsNoindex($page)) {
+                        continue;
+                    }
                     $path = $this->pathForSlug($page->slug);
                     $loc = $base.$path;
                     if (isset($seen[$loc])) {
@@ -711,15 +772,18 @@ class CmsSeoService
                         'changefreq' => 'daily',
                         'priority' => '0.8',
                     ];
+                    $this->appendStorefrontContentSitemapEntries($entries, $storeBase, optional($store->updated_at)?->toAtomString());
                     $productLocPrefix = $storeBase.'/p/';
                 } else {
+                    $storeBase = $base.'/s/'.$store->store_slug;
                     $entries[] = [
-                        'loc' => $base.'/s/'.$store->store_slug,
+                        'loc' => $storeBase,
                         'lastmod' => optional($store->updated_at)?->toAtomString(),
                         'changefreq' => 'daily',
                         'priority' => '0.8',
                     ];
-                    $productLocPrefix = $base.'/s/'.$store->store_slug.'/p/';
+                    $this->appendStorefrontContentSitemapEntries($entries, $storeBase, optional($store->updated_at)?->toAtomString());
+                    $productLocPrefix = $storeBase.'/p/';
                 }
 
                 $products = Product::query()
@@ -882,6 +946,37 @@ class CmsSeoService
             'home', 'global' => '/',
             default => '/'.$slug,
         };
+    }
+
+    /**
+     * @param  list<array{loc: string, lastmod?: string, changefreq: string, priority: string, image?: array{loc: string, title?: string}}>  $entries
+     */
+    private function appendStorefrontContentSitemapEntries(array &$entries, string $storeBase, ?string $lastmod): void
+    {
+        $storeBase = rtrim($storeBase, '/');
+        foreach ([
+            ['path' => '/about', 'changefreq' => 'monthly', 'priority' => '0.5'],
+            ['path' => '/terms', 'changefreq' => 'yearly', 'priority' => '0.3'],
+        ] as $page) {
+            $entries[] = [
+                'loc' => $storeBase.$page['path'],
+                'lastmod' => $lastmod,
+                'changefreq' => $page['changefreq'],
+                'priority' => $page['priority'],
+            ];
+        }
+    }
+
+    private function cmsPageIsNoindex(CmsPage $page): bool
+    {
+        return str_contains(strtolower((string) $page->robots), 'noindex');
+    }
+
+    private function plainMetaDescription(?string $text): string
+    {
+        $plain = trim(preg_replace('/\s+/', ' ', strip_tags((string) $text)) ?: '');
+
+        return Str::limit($plain, 160);
     }
 
     /**

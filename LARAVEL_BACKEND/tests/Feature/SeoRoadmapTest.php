@@ -64,6 +64,7 @@ class SeoRoadmapTest extends TestCase
         $robots->assertSee('Disallow: /login', false);
         $robots->assertSee('Disallow: /pay/', false);
         $robots->assertSee('Disallow: /admin', false);
+        $robots->assertSee('Disallow: /t/', false);
     }
 
     public function test_storefront_product_includes_product_json_ld_and_og_image(): void
@@ -360,5 +361,49 @@ class SeoRoadmapTest extends TestCase
         $this->get('/s/filter-shop?q=mug')
             ->assertOk()
             ->assertSee('noindex', false);
+    }
+
+    public function test_storefront_about_and_terms_are_indexable(): void
+    {
+        $this->makeCompany(['store_slug' => 'acme-legal']);
+
+        $about = $this->get('/s/acme-legal/about')->assertOk();
+        $about->assertSee('index, follow', false);
+        $about->assertDontSee('noindex', false);
+        $about->assertSee('AboutPage', false);
+
+        $terms = $this->get('/s/acme-legal/terms')->assertOk();
+        $terms->assertSee('index, follow', false);
+        $terms->assertDontSee('noindex', false);
+
+        $xml = $this->get('/sitemap.xml')->assertOk()->getContent();
+        $this->assertStringContainsString('/s/acme-legal/about', $xml);
+        $this->assertStringContainsString('/s/acme-legal/terms', $xml);
+    }
+
+    public function test_sitemap_omits_noindex_cms_pages(): void
+    {
+        CmsPage::create([
+            'slug' => 'hidden-landing',
+            'title' => 'Hidden',
+            'meta_title' => 'Hidden landing',
+            'meta_description' => 'Should not be in the sitemap',
+            'robots' => 'noindex, follow',
+            'is_published' => true,
+        ]);
+        CmsPage::create([
+            'slug' => 'about',
+            'title' => 'About',
+            'meta_title' => 'About',
+            'meta_description' => 'About us',
+            'robots' => 'index, follow',
+            'is_published' => true,
+        ]);
+
+        $xml = $this->get('/sitemap.xml')->assertOk()->getContent();
+        $this->assertStringNotContainsString('/hidden-landing', $xml);
+        $this->assertStringContainsString('/about', $xml);
+        $this->assertStringNotContainsString('/blog</loc>', $xml);
+        $this->assertStringNotContainsString('/solutions</loc>', $xml);
     }
 }

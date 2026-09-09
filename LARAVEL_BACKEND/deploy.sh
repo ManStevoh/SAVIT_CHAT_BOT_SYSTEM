@@ -13,6 +13,11 @@ if [ -f public/hot ]; then
   rm -f public/hot
 fi
 
+if [ -f public/sitemap.xml ] || [ -f public/robots.txt ]; then
+  echo "==> Removing stale public/sitemap.xml and public/robots.txt..."
+  rm -f public/sitemap.xml public/robots.txt
+fi
+
 echo "==> Installing PHP dependencies (production)..."
 composer install --no-dev --optimize-autoloader --no-interaction
 

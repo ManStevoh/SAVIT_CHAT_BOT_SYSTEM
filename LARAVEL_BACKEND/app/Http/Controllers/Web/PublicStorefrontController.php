@@ -459,7 +459,12 @@ class PublicStorefrontController extends Controller
             'title' => $title !== '' ? $title : ($company->name.' — Terms and conditions'),
             'body' => $body !== '' ? $body : StorefrontLegalCopy::defaultTerms((string) $company->name),
             'isDefault' => $body === '',
-            'seo' => $this->seo->noindex(($title !== '' ? $title : 'Terms').' — '.$company->name),
+            'seo' => $this->seo->forStorefrontContentPage(
+                $company,
+                'terms',
+                $title !== '' ? $title : ($company->name.' — Terms and conditions'),
+                $body !== '' ? $body : StorefrontLegalCopy::defaultTerms((string) $company->name),
+            ),
         ]);
     }
 
@@ -469,14 +474,16 @@ class PublicStorefrontController extends Controller
         $theme = is_array($company->storefront_theme) ? $company->storefront_theme : [];
         $body = trim((string) ($theme['about_body'] ?? ''));
         $title = trim((string) ($theme['about_title'] ?? ''));
+        $resolvedTitle = $title !== '' ? $title : ('About '.$company->name);
+        $resolvedBody = $body !== '' ? $body : StorefrontLegalCopy::defaultAbout((string) $company->name);
 
         return Inertia::render('store/about', [
             'slug' => $slug,
             'company' => $this->companyPayload($company, $request),
-            'title' => $title !== '' ? $title : ('About '.$company->name),
-            'body' => $body !== '' ? $body : StorefrontLegalCopy::defaultAbout((string) $company->name),
+            'title' => $resolvedTitle,
+            'body' => $resolvedBody,
             'isDefault' => $body === '',
-            'seo' => $this->seo->noindex(($title !== '' ? $title : 'About').' — '.$company->name, $body !== '' ? $body : StorefrontLegalCopy::defaultAbout((string) $company->name)),
+            'seo' => $this->seo->forStorefrontContentPage($company, 'about', $resolvedTitle, $resolvedBody),
         ]);
     }
 

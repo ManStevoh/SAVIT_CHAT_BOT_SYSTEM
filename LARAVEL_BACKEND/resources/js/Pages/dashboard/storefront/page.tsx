@@ -334,12 +334,12 @@ export default function DashboardStorefrontPage() {
   }
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-6 pb-28">
       {/* Top Header & Command Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-5">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Storefront &amp; Commerce</h1>
+      <div className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-white">Storefront &amp; Commerce</h1>
             <Badge
               variant={storefrontEnabled ? 'default' : 'secondary'}
               className={`font-semibold ${storefrontEnabled ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}
@@ -352,16 +352,16 @@ export default function DashboardStorefrontPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2.5">
           {storefrontUrl && storefrontEnabled && (
-            <Button variant="outline" size="sm" asChild className="gap-1.5 shadow-xs">
+            <Button variant="outline" size="sm" asChild className="w-full gap-1.5 shadow-xs sm:w-auto">
               <a href={storefrontUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-3.5 w-3.5" /> Visit Store
               </a>
             </Button>
           )}
 
-          <Button onClick={() => void save()} disabled={saving} className="gap-1.5 shadow-xs">
+          <Button onClick={() => void save()} disabled={saving} className="w-full gap-1.5 shadow-xs sm:w-auto">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Save Changes
           </Button>
@@ -449,24 +449,24 @@ export default function DashboardStorefrontPage() {
 
       {/* Main Tabbed Navigation Center */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid h-11 w-full grid-cols-2 md:grid-cols-5 p-1 bg-muted/70 rounded-xl">
-          <TabsTrigger value="brand" className="gap-2 rounded-lg text-xs font-semibold">
+        <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl bg-muted/70 p-1 md:grid md:h-11 md:grid-cols-5 md:overflow-visible">
+          <TabsTrigger value="brand" className="shrink-0 gap-2 rounded-lg px-3 text-xs font-semibold">
             <Palette className="h-3.5 w-3.5" />
             <span>Brand &amp; Design</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2 rounded-lg text-xs font-semibold">
+          <TabsTrigger value="settings" className="shrink-0 gap-2 rounded-lg px-3 text-xs font-semibold">
             <Search className="h-3.5 w-3.5" />
             <span>Slug &amp; SEO</span>
           </TabsTrigger>
-          <TabsTrigger value="automations" className="gap-2 rounded-lg text-xs font-semibold">
+          <TabsTrigger value="automations" className="shrink-0 gap-2 rounded-lg px-3 text-xs font-semibold">
             <Bot className="h-3.5 w-3.5" />
             <span>Automations</span>
           </TabsTrigger>
-          <TabsTrigger value="bio" className="gap-2 rounded-lg text-xs font-semibold">
+          <TabsTrigger value="bio" className="shrink-0 gap-2 rounded-lg px-3 text-xs font-semibold">
             <Share2 className="h-3.5 w-3.5" />
             <span>Link-in-Bio</span>
           </TabsTrigger>
-          <TabsTrigger value="checkout" className="gap-2 rounded-lg text-xs font-semibold">
+          <TabsTrigger value="checkout" className="shrink-0 gap-2 rounded-lg px-3 text-xs font-semibold">
             <CreditCard className="h-3.5 w-3.5" />
             <span>Payments &amp; Coupons</span>
           </TabsTrigger>
@@ -1062,45 +1062,44 @@ export default function DashboardStorefrontPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Floating Sticky Unsaved Changes Action Bar (Shopify / Stripe UX Pattern) */}
-      <div
-        className={`fixed bottom-6 inset-x-0 mx-auto max-w-2xl px-4 z-40 transition-all duration-300 pointer-events-none ${
-          isDirty ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/95 p-3.5 text-white shadow-2xl backdrop-blur-md pointer-events-auto dark:border-slate-700/80 dark:bg-slate-950/95">
-          <div className="flex items-center gap-2.5 pl-1.5">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-            </span>
-            <span className="text-xs font-semibold text-slate-200">You have unsaved storefront changes</span>
-          </div>
+      {isDirty && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:bottom-6 sm:px-4 sm:pb-0">
+          <div className="pointer-events-auto mx-auto flex max-w-2xl flex-col gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/95 p-3 text-white shadow-2xl backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:p-3.5 dark:border-slate-700/80 dark:bg-slate-950/95">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500"></span>
+              </span>
+              <span className="text-xs font-semibold leading-snug text-slate-200">
+                You have unsaved storefront changes
+              </span>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={discardChanges}
-              disabled={saving}
-              className="h-8 rounded-xl px-3 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
-            >
-              Discard
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => void save()}
-              disabled={saving}
-              className="h-8 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-md transition-all hover:opacity-95"
-            >
-              {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
-              Save Changes
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={discardChanges}
+                disabled={saving}
+                className="h-9 flex-1 rounded-xl px-3 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white sm:h-8 sm:flex-none"
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void save()}
+                disabled={saving}
+                className="h-9 flex-1 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-md transition-all hover:opacity-95 sm:h-8 sm:flex-none"
+              >
+                {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
+                Save Changes
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
