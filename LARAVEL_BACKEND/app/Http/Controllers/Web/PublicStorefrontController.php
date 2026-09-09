@@ -1318,7 +1318,9 @@ class PublicStorefrontController extends Controller
         return [
             'options' => array_map(fn ($driver) => [
                 'id' => $driver->getId(),
-                'label' => $driver->getDisplayName(),
+                'label' => ($driver->getId() === 'manual' && preg_match('/(pochi|pichi|mpesa|m-pesa|till)/i', (string) ($company->settings?->order_payment_manual_instructions ?? '')))
+                    ? 'M-Pesa (Pochi la Biashara)'
+                    : $driver->getDisplayName(),
                 'category' => $driver->getCategory(),
                 'instructions' => $driver->getInstructions($company, $order),
                 'requiresPhone' => $driver->getId() === 'mpesa',

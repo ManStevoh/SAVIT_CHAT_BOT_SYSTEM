@@ -181,7 +181,7 @@ export default function PublicPayPage({ token, order, company, paymentOptions, i
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          {m.id === 'mpesa' ? (
+                          {m.id === 'mpesa' || (m.id === 'manual' && /pochi|mpesa|till/i.test(m.label)) ? (
                             <Smartphone className="h-5 w-5 shrink-0" />
                           ) : m.id === 'stripe' || m.id === 'paystack' || m.id === 'flutterwave' || m.id === 'paypal' ? (
                             <CreditCard className="h-5 w-5 shrink-0" />

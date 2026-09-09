@@ -66,6 +66,6 @@ class ManualGatewayDriver implements PaymentGatewayDriverInterface
             return true;
         }
 
-        return (bool) preg_match('/\b(manual|custom|instructions|offline|till|bank|deposit|reference)\b/i', $lower);
+        return (bool) preg_match('/\b(manual|custom|instructions|offline|till|bank|deposit|reference|pochi|pichi|biashara|mpesa|m-pesa)\b/i', $lower);
     }
 }
