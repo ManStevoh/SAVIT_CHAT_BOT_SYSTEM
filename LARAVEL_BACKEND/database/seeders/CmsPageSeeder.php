@@ -1318,7 +1318,9 @@ class CmsPageSeeder extends Seeder
                 $pageData
             );
 
+            $keepKeys = [];
             foreach ($sections as $sectionData) {
+                $keepKeys[] = $sectionData['section_key'];
                 CmsSection::updateOrCreate(
                     [
                         'cms_page_id' => $page->id,
@@ -1332,6 +1334,11 @@ class CmsPageSeeder extends Seeder
                     ]
                 );
             }
+
+            CmsSection::query()
+                ->where('cms_page_id', $page->id)
+                ->whereNotIn('section_key', $keepKeys)
+                ->delete();
         }
 
         if (Testimonial::count() === 0) {
@@ -1373,5 +1380,10 @@ class CmsPageSeeder extends Seeder
                 'is_active' => true,
             ]);
         }
+
+        // Production deploy currently shells out to this seeder after git reset.
+        // Seed plans here so the first deploy of a pricing change still lands
+        // even if the already-booted PHP pipeline has not picked up PlanSeeder yet.
+        $this->call(PlanSeeder::class);
     }
 }

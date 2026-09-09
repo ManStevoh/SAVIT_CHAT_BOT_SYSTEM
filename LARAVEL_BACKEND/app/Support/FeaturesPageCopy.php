@@ -37,6 +37,7 @@ final class FeaturesPageCopy
         $hero = '';
         $hasVisualFeatures = false;
         $hasDuplicateCatalog = false;
+        $hasStaleFeaturePhoto = false;
 
         foreach ($payload['sections'] ?? [] as $section) {
             if (! is_array($section)) {
@@ -49,6 +50,13 @@ final class FeaturesPageCopy
             }
             if ($key === 'feature_1') {
                 $hasVisualFeatures = true;
+            }
+            if (in_array($key, ['feature_1', 'feature_3', 'feature_4'], true)) {
+                $image = mb_strtolower((string) ($content['imageUrl'] ?? ''));
+                $path = explode('?', $image)[0];
+                if ($image === '' || str_ends_with($path, '.png') || str_contains($image, 'lando-hero.png') || str_contains($image, 'lando-bookings.png') || str_contains($image, 'lando-dinein.png')) {
+                    $hasStaleFeaturePhoto = true;
+                }
             }
             if ($key === 'feature_catalog') {
                 $title = mb_strtolower((string) ($content['title'] ?? ''));
@@ -75,7 +83,7 @@ final class FeaturesPageCopy
         $staleHero = str_contains($hero, 'whatsapp sales automation features')
             || str_contains($hero, 'every feature to sell on whatsapp');
 
-        return $staleHero || $hasDuplicateCatalog || ! $hasVisualFeatures;
+        return $staleHero || $hasDuplicateCatalog || ! $hasVisualFeatures || $hasStaleFeaturePhoto;
     }
 
     /**
@@ -183,8 +191,8 @@ final class FeaturesPageCopy
                     ],
                     'ctaText' => 'See the AI sales agent',
                     'ctaHref' => '/whatsapp-ai-sales-agent',
-                    'imageUrl' => '/images/lando/lando-hero.png?v=brand2',
-                    'imageAlt' => 'WhatsApp chat with a live product catalog and order confirmation',
+                    'imageUrl' => '/images/lando/lando-feature-whatsapp.jpg?v=photo1',
+                    'imageAlt' => 'Shop owner checking WhatsApp orders on her phone in a Nairobi boutique',
                 ],
             ],
             [
@@ -225,8 +233,8 @@ final class FeaturesPageCopy
                     ],
                     'ctaText' => 'Start booking for free',
                     'ctaHref' => '/register',
-                    'imageUrl' => '/images/lando/lando-bookings.png?v=brand2',
-                    'imageAlt' => 'WhatsApp booking confirmation with calendar and clock',
+                    'imageUrl' => '/images/lando/lando-feature-bookings.jpg?v=photo1',
+                    'imageAlt' => 'Salon stylist confirming a booking calendar on her phone while with a client',
                 ],
             ],
             [
@@ -246,8 +254,8 @@ final class FeaturesPageCopy
                     ],
                     'ctaText' => 'Add tables for free',
                     'ctaHref' => '/register',
-                    'imageUrl' => '/images/lando/lando-dinein.png?v=brand2',
-                    'imageAlt' => 'Table QR stand branded with RelayIQ next to a phone menu',
+                    'imageUrl' => '/images/lando/lando-feature-dinein.jpg?v=photo1',
+                    'imageAlt' => 'Guests scanning a table QR code to order and pay at a restaurant',
                 ],
             ],
             [

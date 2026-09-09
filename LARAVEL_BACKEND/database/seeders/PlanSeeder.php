@@ -4,8 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Plan;
 use App\Models\PlatformSetting;
+use App\Models\SubscriptionOffer;
 use App\Services\Platform\EntitlementService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class PlanSeeder extends Seeder
 {
@@ -147,7 +149,21 @@ class PlanSeeder extends Seeder
             );
         }
 
+        Plan::query()
+            ->whereNotIn('slug', ['free', 'professional', 'enterprise'])
+            ->update(['is_public' => false]);
+
+        $this->deactivateLaunchCoupons();
         $this->seedRegistrationDefault();
+    }
+
+    private function deactivateLaunchCoupons(): void
+    {
+        if (! Schema::hasTable('subscription_offers')) {
+            return;
+        }
+
+        SubscriptionOffer::query()->where('is_active', true)->update(['is_active' => false]);
     }
 
     private function seedRegistrationDefault(): void
