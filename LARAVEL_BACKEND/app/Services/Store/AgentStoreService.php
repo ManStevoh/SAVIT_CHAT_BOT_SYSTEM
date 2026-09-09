@@ -4,11 +4,15 @@ namespace App\Services\Store;
 
 use App\Models\Company;
 use App\Models\CustomerMemory;
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\User;
+use App\Services\Agent\AgentCommerceProvisioningService;
 use App\Services\AI\KnowledgeChunkService;
 use App\Services\Logs\LogDataScrubber;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -585,5 +589,228 @@ class AgentStoreService
             'deleted_count' => $deleted,
             'message'       => "Successfully cleared {$deleted} customer memories.",
         ];
+    }
+
+    /**
+     * Clone an existing store (catalog, settings, etc.) into a new or existing tenant company,
+     * and seed a pre-verified owner account without requiring email/OTP verification.
+     */
+    public function cloneStore(array $data): array
+    {
+        $sourceId = $data['source_store'] ?? $data['source_company_id'] ?? $data['source'] ?? null;
+        if (empty($sourceId)) {
+            throw new InvalidArgumentException('Source store identifier (source_store) is required.');
+        }
+
+        $sourceCompany = $this->resolveCompany($sourceId);
+        if (! $sourceCompany) {
+            throw new InvalidArgumentException("Source store '{$sourceId}' could not be found.");
+        }
+
+        $userData = (array) ($data['user'] ?? []);
+        $storeData = (array) ($data['store'] ?? $data['company'] ?? []);
+
+        $userEmail = strtolower(trim((string) ($userData['email'] ?? $data['user_email'] ?? $data['email'] ?? '')));
+        if ($userEmail === '' || ! filter_var($userEmail, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidArgumentException('A valid user email address is required.');
+        }
+
+        $userName = trim((string) ($userData['name'] ?? $data['user_name'] ?? $data['name'] ?? 'Store Owner'));
+        $userPhone = trim((string) ($userData['phone'] ?? $data['user_phone'] ?? $data['phone'] ?? '+254700000000'));
+        $password = (string) ($userData['password'] ?? $data['password'] ?? 'Jostinah@2026!');
+
+        $companyName = trim((string) ($storeData['name'] ?? $data['company_name'] ?? $data['store_name'] ?? ($userName . "'s Store")));
+        $storeSlug = trim((string) ($storeData['store_slug'] ?? $storeData['slug'] ?? $data['store_slug'] ?? ''));
+
+        if ($storeSlug === '') {
+            $storeSlug = Str::slug($companyName);
+        } else {
+            $storeSlug = Str::slug($storeSlug);
+        }
+
+        return DB::transaction(function () use (
+            $sourceCompany,
+            $userEmail,
+            $userName,
+            $userPhone,
+            $password,
+            $companyName,
+            $storeSlug,
+            $data
+        ) {
+            // Find existing company by email or create new
+            $targetCompany = Company::where('email', $userEmail)->first();
+            if (! $targetCompany) {
+                // Ensure unique slug
+                $uniqueSlug = $storeSlug;
+                $counter = 1;
+                while (Company::where('store_slug', $uniqueSlug)->exists()) {
+                    $uniqueSlug = "{$storeSlug}-{$counter}";
+                    $counter++;
+                }
+
+                $targetCompany = Company::create([
+                    'name'                => $companyName,
+                    'store_slug'          => $uniqueSlug,
+                    'email'               => $userEmail,
+                    'phone'               => $userPhone,
+                    'status'              => 'active',
+                    'storefront_enabled'  => true,
+                    'link_in_bio_enabled' => false,
+                ]);
+            } else {
+                if (empty($targetCompany->store_slug)) {
+                    $uniqueSlug = $storeSlug;
+                    $counter = 1;
+                    while (Company::where('store_slug', $uniqueSlug)->where('id', '!=', $targetCompany->id)->exists()) {
+                        $uniqueSlug = "{$storeSlug}-{$counter}";
+                        $counter++;
+                    }
+                    $targetCompany->update(['store_slug' => $uniqueSlug, 'storefront_enabled' => true]);
+                }
+            }
+
+            // Sync settings from source store
+            $sourceCompany->loadMissing('settings');
+            $sourceSettings = $sourceCompany->settings;
+            $displayCurrency = $sourceSettings?->displayCurrencyCode() ?? 'KES';
+            $currencySymbol = $sourceSettings?->currency_symbol ?? 'KSh';
+
+            $targetSettings = $targetCompany->settings()->firstOrCreate(
+                ['company_id' => $targetCompany->id],
+                [
+                    'display_currency'       => $displayCurrency,
+                    'currency_symbol'        => $currencySymbol,
+                    'agent_commerce_enabled' => true,
+                    'auto_reply_enabled'     => true,
+                ]
+            );
+            $targetSettings->update([
+                'display_currency'       => $displayCurrency,
+                'currency_symbol'        => $currencySymbol,
+                'agent_commerce_enabled' => true,
+                'auto_reply_enabled'     => true,
+            ]);
+
+            // Create or update User as company owner, pre-verified
+            $user = User::where('email', $userEmail)->first();
+            if (! $user) {
+                $user = User::create([
+                    'name'              => $userName,
+                    'email'             => $userEmail,
+                    'phone'             => $userPhone,
+                    'password'          => Hash::make($password),
+                    'role'              => 'company_owner',
+                    'company_id'        => $targetCompany->id,
+                    'status'            => 'active',
+                    'email_verified_at' => now(),
+                    'terms_accepted_at' => now(),
+                ]);
+            } else {
+                $user->update([
+                    'name'              => $userName,
+                    'company_id'        => $targetCompany->id,
+                    'role'              => 'company_owner',
+                    'status'            => 'active',
+                    'password'          => Hash::make($password),
+                    'email_verified_at' => $user->email_verified_at ?? now(),
+                ]);
+            }
+
+            // Set Starter plan if available and sync entitlements
+            try {
+                if (class_exists(Plan::class)) {
+                    $plan = Plan::where('is_default', true)->first() ?? Plan::first();
+                    if ($plan && empty($targetCompany->plan)) {
+                        $targetCompany->update(['plan' => $plan->slug]);
+                    }
+                }
+                if (class_exists(AgentCommerceProvisioningService::class)) {
+                    app(AgentCommerceProvisioningService::class)->syncForCompany($targetCompany);
+                }
+            } catch (Throwable) {}
+
+            // Clone products from source store
+            $sourceProducts = $sourceCompany->products()
+                ->whereIn('status', ['active', 'inactive', 'draft'])
+                ->get();
+
+            $clonedProducts = [];
+            foreach ($sourceProducts as $sourceProd) {
+                // Check if product with same name already exists in target
+                $existing = $targetCompany->products()->where('name', $sourceProd->name)->first();
+                if ($existing) {
+                    $clonedProducts[] = $this->productToSummary($existing);
+                    continue;
+                }
+
+                $newSlug = $this->generateUniqueSlug($targetCompany->id, $sourceProd->slug ?: $sourceProd->name);
+
+                $product = Product::create([
+                    'company_id'                => $targetCompany->id,
+                    'name'                      => $sourceProd->name,
+                    'slug'                      => $newSlug,
+                    'price'                     => $sourceProd->price,
+                    'compare_at_price'          => $sourceProd->compare_at_price,
+                    'category'                  => $sourceProd->category,
+                    'description'               => $sourceProd->description,
+                    'stock'                     => $sourceProd->stock,
+                    'status'                    => $sourceProd->status,
+                    'product_type'              => $sourceProd->product_type,
+                    'fulfillment_type'          => $sourceProd->fulfillment_type,
+                    'track_inventory'           => $sourceProd->track_inventory,
+                    'requires_delivery_address' => $sourceProd->requires_delivery_address,
+                    'image'                     => $sourceProd->image,
+                    'digital_file_path'         => $sourceProd->digital_file_path,
+                    'digital_file_name'         => $sourceProd->digital_file_name,
+                    'digital_file_mime'         => $sourceProd->digital_file_mime,
+                    'digital_file_size'         => $sourceProd->digital_file_size,
+                    'license_key_mode'          => $sourceProd->license_key_mode,
+                    'access_url'                => $sourceProd->access_url,
+                    'fulfillment_instructions'  => $sourceProd->fulfillment_instructions,
+                ]);
+
+                if (! empty($sourceProd->image)) {
+                    try {
+                        ProductImage::create([
+                            'company_id' => $targetCompany->id,
+                            'product_id' => $product->id,
+                            'path'       => $sourceProd->image,
+                            'is_primary' => true,
+                            'sort_order' => 0,
+                        ]);
+                    } catch (Throwable) {}
+                }
+
+                $this->syncEmbeddings($product);
+                $clonedProducts[] = $this->productToSummary($product);
+            }
+
+            $this->recordAudit('agent_store_cloned', $targetCompany->id, [
+                'source_company_id' => $sourceCompany->id,
+                'cloned_count'      => count($clonedProducts),
+                'user_email'        => $userEmail,
+            ]);
+
+            return [
+                'success'               => true,
+                'message'               => "Store '{$targetCompany->name}' and account for {$userEmail} created successfully.",
+                'company_id'            => $targetCompany->id,
+                'company_name'          => $targetCompany->name,
+                'store_slug'            => $targetCompany->store_slug,
+                'storefront_url'        => rtrim(config('app.url', 'https://relayiq.app'), '/') . '/s/' . $targetCompany->store_slug,
+                'user'                  => [
+                    'id'                 => $user->id,
+                    'name'               => $user->name,
+                    'email'              => $user->email,
+                    'phone'              => $user->phone,
+                    'role'               => $user->role,
+                    'email_verified'     => true,
+                    'temporary_password' => $password,
+                ],
+                'products_cloned_count' => count($clonedProducts),
+                'products'              => $clonedProducts,
+            ];
+        });
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -233,5 +234,61 @@ class AgentStoreGatewayTest extends TestCase
         $response->assertOk();
         $this->assertEquals(3, $response->json('created_count'));
         $this->assertDatabaseCount('products', 3);
+    }
+
+    public function test_clone_store_seeds_account_and_clones_catalog(): void
+    {
+        $sourceCompany = Company::factory()->create([
+            'name'       => 'Jostina Book Shop',
+            'store_slug' => 'jostina',
+            'email'      => 'staticlumen@gmail.com',
+        ]);
+
+        Product::create([
+            'company_id'       => $sourceCompany->id,
+            'name'             => 'The Woman at the Center',
+            'slug'             => 'the-woman-at-the-center',
+            'price'            => 700.00,
+            'stock'            => 200,
+            'status'           => 'active',
+            'category'         => 'Books',
+            'product_type'     => 'digital',
+            'fulfillment_type' => 'manual',
+            'description'      => 'A wonderful book.',
+        ]);
+
+        $response = $this->withHeaders([
+            'X-Deploy-Agent-Key' => 'test-agent-key-xyz',
+        ])->postJson('/api/agent/store', [
+            'action'       => 'clone_store',
+            'source_store' => $sourceCompany->id,
+            'company_name' => "Jostinah's Bookshop",
+            'store_slug'   => 'jostinahs-bookshop',
+            'user_name'    => "Jostinah Mwang'ombe",
+            'user_email'   => 'wjostinah@gmail.com',
+            'user_phone'   => '+254700000000',
+            'password'     => 'Jostinah@2026!',
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJson([
+            'success'               => true,
+            'company_name'          => "Jostinah's Bookshop",
+            'store_slug'            => 'jostinahs-bookshop',
+            'products_cloned_count' => 1,
+        ]);
+
+        $this->assertDatabaseHas('companies', [
+            'name'       => "Jostinah's Bookshop",
+            'store_slug' => 'jostinahs-bookshop',
+            'email'      => 'wjostinah@gmail.com',
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'wjostinah@gmail.com',
+            'role'  => 'company_owner',
+        ]);
+
+        $this->assertDatabaseCount('products', 2);
     }
 }

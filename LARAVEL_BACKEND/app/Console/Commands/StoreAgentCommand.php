@@ -10,8 +10,12 @@ use Throwable;
 class StoreAgentCommand extends Command
 {
     protected $signature = 'store:agent
-                            {action=stores : Action: stores, list, add, update, remove}
+                            {action=stores : Action: stores, list, add, update, remove, clone}
                             {--store= : Store ID or slug}
+                            {--source= : Source store ID or slug (for clone)}
+                            {--email= : Owner email (for clone)}
+                            {--user-name= : Owner name (for clone)}
+                            {--store-name= : Store name (for clone)}
                             {--name= : Product name}
                             {--price= : Product price}
                             {--stock= : Product stock}
@@ -152,8 +156,33 @@ class StoreAgentCommand extends Command
                     $this->info("✅ {$res['message']}");
                     return self::SUCCESS;
 
+                case 'clone':
+                    $source = $this->option('source') ?: $this->option('store') ?: $this->ask('Source Store ID or slug');
+                    $email  = $this->option('email') ?: $this->ask('Owner Email');
+                    $name   = $this->option('user-name') ?: $this->ask('Owner Name');
+                    $storeName = $this->option('store-name') ?: $this->ask('New Store Name');
+
+                    $res = $storeService->cloneStore([
+                        'source_store' => $source,
+                        'user_email'   => $email,
+                        'user_name'    => $name,
+                        'company_name' => $storeName,
+                    ]);
+
+                    if ($this->option('json')) {
+                        $this->line(json_encode($res, JSON_PRETTY_PRINT));
+                        return self::SUCCESS;
+                    }
+
+                    $this->info("✅ {$res['message']}");
+                    $this->line("   Store: {$res['company_name']} ({$res['store_slug']})");
+                    $this->line("   Owner: {$res['user']['email']} | Temporary Password: {$res['user']['temporary_password']}");
+                    $this->line("   Storefront URL: {$res['storefront_url']}");
+                    $this->line("   Cloned Products: {$res['products_cloned_count']}");
+                    return self::SUCCESS;
+
                 default:
-                    $this->error("Unknown action '{$action}'. Valid: stores, list, add, update, remove.");
+                    $this->error("Unknown action '{$action}'. Valid: stores, list, add, update, remove, clone.");
                     return self::FAILURE;
             }
         } catch (Throwable $e) {
@@ -173,15 +202,19 @@ class StoreAgentCommand extends Command
         $endpoint = rtrim($remoteUrl, '/') . '/api/agent/store';
 
         $payload = [
-            'action'      => $action === 'stores' ? 'list_stores' : ($action === 'list' ? 'list_products' : $action),
-            'store'       => $this->option('store'),
-            'name'        => $this->option('name'),
-            'price'       => $this->option('price'),
-            'stock'       => $this->option('stock'),
-            'category'    => $this->option('category'),
-            'description' => $this->option('description'),
-            'status'      => $this->option('status'),
-            'force'       => (bool) $this->option('force'),
+            'action'       => $action === 'stores' ? 'list_stores' : ($action === 'list' ? 'list_products' : $action),
+            'store'        => $this->option('store'),
+            'source_store' => $this->option('source') ?: $this->option('store'),
+            'user_email'   => $this->option('email'),
+            'user_name'    => $this->option('user-name'),
+            'company_name' => $this->option('store-name'),
+            'name'         => $this->option('name'),
+            'price'        => $this->option('price'),
+            'stock'        => $this->option('stock'),
+            'category'     => $this->option('category'),
+            'description'  => $this->option('description'),
+            'status'       => $this->option('status'),
+            'force'        => (bool) $this->option('force'),
         ];
 
         try {

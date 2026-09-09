@@ -43,11 +43,12 @@ class AgentStoreController extends Controller
                 'update_store', 'store_settings', 'settings' => $this->handleUpdateStore($request),
                 'remove_product', 'delete', 'archive' => $this->handleDeleteProduct($request),
                 'bulk_import', 'bulk' => $this->handleBulkImport($request),
+                'clone_store', 'seed_account', 'clone' => $this->handleCloneStore($request),
                 'list_memories', 'memories' => $this->handleListMemories($request),
                 'clear_memories', 'delete_memories', 'purge_memories' => $this->handleClearMemories($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import, list_memories, clear_memories.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import, clone_store, list_memories, clear_memories.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -251,5 +252,13 @@ class AgentStoreController extends Controller
         );
 
         return response()->json($result);
+    }
+
+    private function handleCloneStore(Request $request): JsonResponse
+    {
+        $data = $request->all();
+        $result = $this->storeService->cloneStore($data);
+
+        return response()->json($result, 201);
     }
 }
