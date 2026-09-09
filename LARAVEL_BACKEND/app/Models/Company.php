@@ -36,6 +36,12 @@ class Company extends Model
         'industry',
         'attribution_retention_days',
         'stripe_customer_id',
+        'billing_model',
+        'commission_rate',
+        'commission_basis',
+        'waive_subscription_fee',
+        'commission_invoice_threshold',
+        'commission_balance_due',
     ];
 
     protected $casts = [
@@ -50,6 +56,10 @@ class Company extends Model
         'first_attributed_sale_at' => 'datetime',
         'growth_demo_mode' => 'boolean',
         'attribution_retention_days' => 'integer',
+        'commission_rate' => 'decimal:2',
+        'waive_subscription_fee' => 'boolean',
+        'commission_invoice_threshold' => 'decimal:2',
+        'commission_balance_due' => 'decimal:2',
     ];
 
     public function users(): HasMany
@@ -140,6 +150,16 @@ class Company extends Model
     public function portfolioRecommendations(): HasMany
     {
         return $this->hasMany(PortfolioRecommendation::class);
+    }
+
+    public function orderCommissions(): HasMany
+    {
+        return $this->hasMany(OrderCommission::class);
+    }
+
+    public function commissionInvoices(): HasMany
+    {
+        return $this->hasMany(CommissionInvoice::class);
     }
 
     /**

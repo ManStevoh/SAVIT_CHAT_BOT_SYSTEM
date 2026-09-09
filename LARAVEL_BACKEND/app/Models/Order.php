@@ -8,6 +8,7 @@ use App\Services\MailService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 
@@ -99,6 +100,11 @@ class Order extends Model
     public function paymentRecoveryAttempts(): HasMany
     {
         return $this->hasMany(PaymentRecoveryAttempt::class);
+    }
+
+    public function commission(): HasOne
+    {
+        return $this->hasOne(OrderCommission::class);
     }
 
     /**

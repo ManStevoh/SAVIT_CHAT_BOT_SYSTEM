@@ -36,6 +36,12 @@ class CompanyController extends Controller
             'whatsappConnected' => (bool) $wa,
             'whatsappDisplayPhone' => $wa?->display_phone_number,
             'whatsappOnboardingStatus' => $wa?->onboarding_status,
+            'billingModel' => $c->billing_model,
+            'commissionRate' => $c->commission_rate !== null ? (float) $c->commission_rate : null,
+            'commissionBasis' => $c->commission_basis ?? 'total',
+            'waiveSubscriptionFee' => (bool) ($c->waive_subscription_fee ?? true),
+            'commissionInvoiceThreshold' => $c->commission_invoice_threshold !== null ? (float) $c->commission_invoice_threshold : null,
+            'commissionBalanceDue' => (float) ($c->commission_balance_due ?? 0.0),
         ];
     }
 
@@ -79,6 +85,11 @@ class CompanyController extends Controller
             'industry' => 'sometimes|nullable|string|in:retail,restaurant,services,other',
             'isGrowthPilot' => 'sometimes|boolean',
             'growthDemoMode' => 'sometimes|boolean',
+            'billingModel' => 'sometimes|nullable|string|in:subscription,commission,hybrid',
+            'commissionRate' => 'sometimes|nullable|numeric|min:0|max:100',
+            'commissionBasis' => 'sometimes|nullable|string|in:total,subtotal',
+            'waiveSubscriptionFee' => 'sometimes|boolean',
+            'commissionInvoiceThreshold' => 'sometimes|nullable|numeric|min:0',
         ]);
 
         if (array_key_exists('isGrowthPilot', $validated)) {
@@ -88,6 +99,26 @@ class CompanyController extends Controller
         if (array_key_exists('growthDemoMode', $validated)) {
             $company->growth_demo_mode = (bool) $validated['growthDemoMode'];
             unset($validated['growthDemoMode']);
+        }
+        if (array_key_exists('billingModel', $validated)) {
+            $company->billing_model = $validated['billingModel'] ?: null;
+            unset($validated['billingModel']);
+        }
+        if (array_key_exists('commissionRate', $validated)) {
+            $company->commission_rate = $validated['commissionRate'] !== null ? round((float) $validated['commissionRate'], 2) : null;
+            unset($validated['commissionRate']);
+        }
+        if (array_key_exists('commissionBasis', $validated)) {
+            $company->commission_basis = $validated['commissionBasis'] ?: 'total';
+            unset($validated['commissionBasis']);
+        }
+        if (array_key_exists('waiveSubscriptionFee', $validated)) {
+            $company->waive_subscription_fee = (bool) $validated['waiveSubscriptionFee'];
+            unset($validated['waiveSubscriptionFee']);
+        }
+        if (array_key_exists('commissionInvoiceThreshold', $validated)) {
+            $company->commission_invoice_threshold = $validated['commissionInvoiceThreshold'] !== null ? round((float) $validated['commissionInvoiceThreshold'], 2) : null;
+            unset($validated['commissionInvoiceThreshold']);
         }
 
         $company->update($validated);

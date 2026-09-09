@@ -77,6 +77,11 @@ export default function AdminCompaniesPage() {
     status: "active",
     isGrowthPilot: false,
     growthDemoMode: false,
+    billingModel: null,
+    commissionRate: null,
+    commissionBasis: 'total',
+    waiveSubscriptionFee: true,
+    commissionInvoiceThreshold: null,
   })
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
@@ -97,6 +102,11 @@ export default function AdminCompaniesPage() {
       status: company.status,
       isGrowthPilot: company.isGrowthPilot ?? false,
       growthDemoMode: company.growthDemoMode ?? false,
+      billingModel: company.billingModel ?? null,
+      commissionRate: company.commissionRate ?? null,
+      commissionBasis: company.commissionBasis ?? 'total',
+      waiveSubscriptionFee: company.waiveSubscriptionFee ?? true,
+      commissionInvoiceThreshold: company.commissionInvoiceThreshold ?? null,
     })
     setEditError(null)
     const res = await getAdminCompany(company.id)
@@ -109,6 +119,11 @@ export default function AdminCompaniesPage() {
         status: res.company.status,
         isGrowthPilot: res.company.isGrowthPilot ?? false,
         growthDemoMode: res.company.growthDemoMode ?? false,
+        billingModel: res.company.billingModel ?? null,
+        commissionRate: res.company.commissionRate ?? null,
+        commissionBasis: res.company.commissionBasis ?? 'total',
+        waiveSubscriptionFee: res.company.waiveSubscriptionFee ?? true,
+        commissionInvoiceThreshold: res.company.commissionInvoiceThreshold ?? null,
       })
     }
   }, [])
@@ -125,6 +140,15 @@ export default function AdminCompaniesPage() {
       status: editForm.status,
       isGrowthPilot: editForm.isGrowthPilot,
       growthDemoMode: editForm.growthDemoMode,
+      billingModel: editForm.billingModel || null,
+      commissionRate: editForm.commissionRate !== null && editForm.commissionRate !== undefined && (editForm.commissionRate as any) !== ""
+        ? Number(editForm.commissionRate)
+        : null,
+      commissionBasis: editForm.commissionBasis ?? 'total',
+      waiveSubscriptionFee: editForm.waiveSubscriptionFee ?? true,
+      commissionInvoiceThreshold: editForm.commissionInvoiceThreshold !== null && editForm.commissionInvoiceThreshold !== undefined && (editForm.commissionInvoiceThreshold as any) !== ""
+        ? Number(editForm.commissionInvoiceThreshold)
+        : null,
     })
     setEditLoading(false)
     if (res.success) {
@@ -286,7 +310,19 @@ export default function AdminCompaniesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={company.plan === "enterprise" ? "default" : "secondary"}>{company.plan}</Badge>
+                      <div className="flex flex-col gap-1 items-start">
+                        <Badge variant={company.plan === "enterprise" ? "default" : "secondary"}>{company.plan}</Badge>
+                        {company.billingModel === 'commission' && (
+                          <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                            {company.commissionRate ?? 0}% Comm.
+                          </Badge>
+                        )}
+                        {company.billingModel === 'hybrid' && (
+                          <Badge variant="outline" className="text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30">
+                            Hybrid ({company.commissionRate ?? 0}%)
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {company.whatsappConnected ? (
@@ -412,6 +448,92 @@ export default function AdminCompaniesPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="rounded-lg border p-3.5 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-semibold">Billing Model</Label>
+                  <p className="text-xs text-muted-foreground">Select how RelayIQ charges this merchant</p>
+                </div>
+                {editingCompany?.commissionBalanceDue !== undefined && editingCompany.commissionBalanceDue > 0 && (
+                  <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 dark:text-amber-400">
+                    Due: ${Number(editingCompany.commissionBalanceDue).toFixed(2)}
+                  </Badge>
+                )}
+              </div>
+
+              <select
+                id="edit-billing-model"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={editForm.billingModel || ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, billingModel: (e.target.value as any) || null }))}
+              >
+                <option value="">Standard Subscription (Plan default)</option>
+                <option value="commission">Commission-on-Sales (Take Rate %)</option>
+                <option value="hybrid">Hybrid (Subscription + Commission %)</option>
+              </select>
+
+              {(editForm.billingModel === 'commission' || editForm.billingModel === 'hybrid') && (
+                <div className="space-y-3 pt-2 border-t border-border/50">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="edit-commission-rate" className="text-xs">Commission Rate (%)</Label>
+                      <Input
+                        id="edit-commission-rate"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        placeholder="e.g. 5.0"
+                        value={editForm.commissionRate ?? ""}
+                        onChange={(e) => setEditForm((f) => ({ ...f, commissionRate: e.target.value === "" ? null : parseFloat(e.target.value) }))}
+                      />
+                    </div>
+
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="edit-commission-basis" className="text-xs">Commission Basis</Label>
+                      <select
+                        id="edit-commission-basis"
+                        className="rounded-md border border-input bg-background px-3 py-2 text-xs h-9"
+                        value={editForm.commissionBasis || "total"}
+                        onChange={(e) => setEditForm((f) => ({ ...f, commissionBasis: e.target.value as 'total' | 'subtotal' }))}
+                      >
+                        <option value="total">Order Total (with shipping/tax)</option>
+                        <option value="subtotal">Subtotal Only (items only)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="edit-commission-threshold" className="text-xs">Invoice Threshold ($)</Label>
+                      <Input
+                        id="edit-commission-threshold"
+                        type="number"
+                        step="5"
+                        min="0"
+                        placeholder="e.g. 50.00"
+                        value={editForm.commissionInvoiceThreshold ?? ""}
+                        onChange={(e) => setEditForm((f) => ({ ...f, commissionInvoiceThreshold: e.target.value === "" ? null : parseFloat(e.target.value) }))}
+                      />
+                    </div>
+                  </div>
+
+                  {editForm.billingModel === 'commission' && (
+                    <div className="flex items-center justify-between rounded-md border bg-background/50 p-2.5">
+                      <div>
+                        <Label htmlFor="edit-waive-sub" className="text-xs font-medium">Waive Subscription Fee</Label>
+                        <p className="text-[11px] text-muted-foreground">Exempt store from monthly SaaS fee</p>
+                      </div>
+                      <Switch
+                        id="edit-waive-sub"
+                        checked={editForm.waiveSubscriptionFee ?? true}
+                        onCheckedChange={(checked) => setEditForm((f) => ({ ...f, waiveSubscriptionFee: checked }))}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>

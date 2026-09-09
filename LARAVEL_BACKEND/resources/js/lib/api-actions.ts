@@ -2701,6 +2701,11 @@ export interface UpdateAdminCompanyData {
   status?: Company['status']
   isGrowthPilot?: boolean
   growthDemoMode?: boolean
+  billingModel?: 'subscription' | 'commission' | 'hybrid' | null
+  commissionRate?: number | null
+  commissionBasis?: 'total' | 'subtotal'
+  waiveSubscriptionFee?: boolean
+  commissionInvoiceThreshold?: number | null
 }
 
 /**

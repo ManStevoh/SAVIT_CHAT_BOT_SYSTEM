@@ -329,6 +329,12 @@ export interface Company {
   whatsappConnected?: boolean
   whatsappDisplayPhone?: string | null
   whatsappOnboardingStatus?: string | null
+  billingModel?: 'subscription' | 'commission' | 'hybrid' | null
+  commissionRate?: number | null
+  commissionBasis?: 'total' | 'subtotal' | null
+  waiveSubscriptionFee?: boolean
+  commissionInvoiceThreshold?: number | null
+  commissionBalanceDue?: number
 }
 
 export interface User {

@@ -20,6 +20,11 @@ class PlatformSetting extends Model
         'allow_new_registrations',
         'default_registration_plan_slug',
         'force_default_registration_plan',
+        'default_billing_model',
+        'default_commission_rate',
+        'allow_public_commission_signup',
+        'default_commission_threshold',
+        'commission_grace_period_days',
         'require_email_verification',
         'ai_model',
         'max_tokens_per_request',
@@ -93,6 +98,10 @@ class PlatformSetting extends Model
         'ai_learning_config' => 'array',
         'cookie_banner_enabled' => 'boolean',
         'recaptcha_enabled' => 'boolean',
+        'default_commission_rate' => 'decimal:2',
+        'allow_public_commission_signup' => 'boolean',
+        'default_commission_threshold' => 'decimal:2',
+        'commission_grace_period_days' => 'integer',
     ];
 
     /** Hide secrets when serializing (e.g. for API GET); controller returns masked values. */

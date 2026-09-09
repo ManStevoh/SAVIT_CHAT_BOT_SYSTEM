@@ -487,6 +487,12 @@ class OrderPaymentService
             $fresh->fresh(['orderProducts', 'company.settings'])
         );
         $this->provisionPaidCustomerAccountSafely($fresh->fresh(['company']));
+
+        try {
+            app(\App\Services\Billing\CommissionCalculationService::class)->recordOrderCommission($order);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to record order commission: '.$e->getMessage());
+        }
     }
 
     private function recordExperimentConversionIfAssigned(Order $order): void
