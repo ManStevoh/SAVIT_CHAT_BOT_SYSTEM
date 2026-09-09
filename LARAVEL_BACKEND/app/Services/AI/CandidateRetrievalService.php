@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 final class CandidateRetrievalService
 {
@@ -100,11 +101,14 @@ final class CandidateRetrievalService
             $matchedProducts = Product::where('company_id', $tenantId)
                 ->where('status', 'active')
                 ->where(function ($q) use ($keywords) {
+                    $containsName = DB::connection()->getDriverName() === 'sqlite'
+                        ? '\'%\' || LOWER(name) || \'%\''
+                        : 'CONCAT(\'%\', LOWER(name), \'%\')';
                     foreach ($keywords as $kw) {
                         $q->orWhere('name', 'like', '%' . $kw . '%')
                           ->orWhere('description', 'like', '%' . $kw . '%')
                           ->orWhere('category', 'like', '%' . $kw . '%')
-                          ->orWhereRaw('LOWER(?) LIKE CONCAT("%", LOWER(name), "%")', [$kw]);
+                          ->orWhereRaw("LOWER(?) LIKE {$containsName}", [$kw]);
                     }
                 })
                 ->limit(5)

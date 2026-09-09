@@ -112,7 +112,8 @@ final class AgentProactiveMessageService
         } else {
             foreach ($catalogProducts as $prod) {
                 $desc = trim((string) $prod->description);
-                $catalogLines[] = "- {$prod->name} ({$prod->price})" . ($desc !== '' ? ": {$desc}" : '');
+                $price = \App\Support\MoneyFormatter::formatForCompany((float) $prod->price, $company);
+                $catalogLines[] = "- {$prod->name} ({$price})".($desc !== '' ? ": {$desc}" : '');
             }
         }
         $catalogPrompt = implode("\n", $catalogLines);

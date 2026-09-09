@@ -275,8 +275,10 @@ class ConversationalOSPipelineTest extends TestCase
 
         $expectedCatalog = ResponseSpecRenderer::renderCatalogPrompt($company);
         $this->assertEquals($expectedCatalog, $resMenu->customerReply);
-        $this->assertStringContainsString('*Black sneakers* — $350.00', $resMenu->customerReply);
-        $this->assertStringContainsString('*Ceramic plates* — $1,600.00', $resMenu->customerReply);
+        $blackPrice = \App\Support\MoneyFormatter::formatForCompany(350.0, $company);
+        $platesPrice = \App\Support\MoneyFormatter::formatForCompany(1600.0, $company);
+        $this->assertStringContainsString("*Black sneakers* — {$blackPrice}", $resMenu->customerReply);
+        $this->assertStringContainsString("*Ceramic plates* — {$platesPrice}", $resMenu->customerReply);
 
         // Turn 2: Customer asks for "show menu"
         $envShowMenu = new InboundEnvelope('whatsapp', '254743864577', $company->id, 'show menu');
@@ -336,7 +338,8 @@ class ConversationalOSPipelineTest extends TestCase
         $this->assertStringNotContainsString("don't carry shoeracks", $resPic->customerReply);
         $this->assertStringNotContainsString('🛍️ *Here is what we have in store:*', $resPic->customerReply);
         $this->assertStringContainsString('Shoerack', $resPic->customerReply);
-        $this->assertStringContainsString('$600.00', $resPic->customerReply);
+        $shoerackPrice = \App\Support\MoneyFormatter::formatForCompany(600.0, $company);
+        $this->assertStringContainsString($shoerackPrice, $resPic->customerReply);
     }
 
     public function test_replying_2_after_greeting_menu_prompts_order_selection_not_adding_item_2(): void
