@@ -353,6 +353,14 @@ class DeployExecutionService
             $branch,
             $onLine
         );
+        $emitLine('💳 [plans] Seeding public plans to match local catalog...');
+        $this->runStreamingCommand(
+            escapeshellarg($phpBin).' '.escapeshellarg(base_path('artisan')).' db:seed --class=PlanSeeder --force 2>&1',
+            $logs,
+            $statusFile,
+            $branch,
+            $onLine
+        );
     }
 
     /**

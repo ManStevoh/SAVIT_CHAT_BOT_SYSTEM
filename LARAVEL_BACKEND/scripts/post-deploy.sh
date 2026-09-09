@@ -31,6 +31,9 @@ php artisan migrate --force
 echo "==> Seeding all CMS pages..."
 php artisan db:seed --class=CmsPageSeeder --force
 
+echo "==> Seeding public plans to match local catalog..."
+php artisan db:seed --class=PlanSeeder --force
+
 echo "==> Caching config, routes, and views..."
 php artisan config:cache
 php artisan route:cache

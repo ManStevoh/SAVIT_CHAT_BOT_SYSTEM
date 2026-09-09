@@ -205,9 +205,29 @@ class CmsPagePayloadBuilder
                         $content['imageAlt'] = 'RelayIQ teammates in Nairobi reviewing the product together';
                     }
                 }
-                if ($page->slug === 'features' && $s->section_key === 'feature_2' && is_array($content)) {
-                    $content['imageUrl'] = '/images/lando/lando-feature-storefront.jpg?v=man1';
-                    $content['imageAlt'] = 'Customer browsing a shop on his phone outside a Nairobi boutique';
+                if ($page->slug === 'features' && is_array($content)) {
+                    $featurePhotos = [
+                        'feature_1' => [
+                            'imageUrl' => '/images/lando/lando-feature-whatsapp.jpg?v=photo1',
+                            'imageAlt' => 'Shop owner checking WhatsApp orders on her phone in a Nairobi boutique',
+                        ],
+                        'feature_2' => [
+                            'imageUrl' => '/images/lando/lando-feature-storefront.jpg?v=man1',
+                            'imageAlt' => 'Customer browsing a shop on his phone outside a Nairobi boutique',
+                        ],
+                        'feature_3' => [
+                            'imageUrl' => '/images/lando/lando-feature-bookings.jpg?v=photo1',
+                            'imageAlt' => 'Salon stylist confirming a booking calendar on her phone while with a client',
+                        ],
+                        'feature_4' => [
+                            'imageUrl' => '/images/lando/lando-feature-dinein.jpg?v=photo1',
+                            'imageAlt' => 'Guests scanning a table QR code to order and pay at a restaurant',
+                        ],
+                    ];
+                    if (isset($featurePhotos[$s->section_key])) {
+                        $content['imageUrl'] = $featurePhotos[$s->section_key]['imageUrl'];
+                        $content['imageAlt'] = $featurePhotos[$s->section_key]['imageAlt'];
+                    }
                 }
                 if ($page->slug === 'contact' && $s->section_key === 'hero' && is_array($content)) {
                     $contactImage = (string) ($content['imageUrl'] ?? '');
