@@ -72,23 +72,23 @@ export default function DineInPage({ company, table, products, slug, seo }: Prop
       >
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             {company.logo ? (
-              <div className="flex h-9 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+              <div className="flex h-8 sm:h-9 shrink-0 items-center justify-center overflow-hidden rounded-xl">
                 <img
                   src={company.logo}
                   alt={company.name}
-                  className="h-9 w-auto max-w-[140px] sm:max-w-[180px] object-contain"
+                  className="h-8 sm:h-9 w-auto max-w-[90px] sm:max-w-[160px] object-contain"
                 />
               </div>
             ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-sm font-extrabold text-white dark:bg-white dark:text-slate-900">
+              <div className="flex h-8 sm:h-9 w-8 sm:w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-xs sm:text-sm font-extrabold text-white dark:bg-white dark:text-slate-900">
                 {company.name.charAt(0).toUpperCase()}
               </div>
             )}
-            <div>
-              <h1 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">{company.name}</h1>
+            <div className="min-w-0">
+              <h1 className="min-w-0 truncate text-sm font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-base">{company.name}</h1>
               <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">Dine-In Menu</p>
             </div>
           </div>

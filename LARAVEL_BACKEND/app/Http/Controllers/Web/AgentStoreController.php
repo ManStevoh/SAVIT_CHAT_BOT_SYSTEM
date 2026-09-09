@@ -46,10 +46,11 @@ class AgentStoreController extends Controller
                 'clone_store', 'seed_account', 'clone' => $this->handleCloneStore($request),
                 'list_memories', 'memories' => $this->handleListMemories($request),
                 'clear_memories', 'delete_memories', 'purge_memories' => $this->handleClearMemories($request),
+                'upload_image', 'upload' => $this->handleUploadImage($request),
                 'verify_email', 'verify_user' => $this->handleVerifyEmail($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import, clone_store, list_memories, clear_memories, verify_email.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, verify_email.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -116,6 +117,14 @@ class AgentStoreController extends Controller
         }
 
         $data = (array) ($request->input('product') ?: $request->all());
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products/' . $company->id, 'public');
+            $data['image'] = $path;
+        } elseif ($request->hasFile('file')) {
+            $path = $request->file('file')->store('products/' . $company->id, 'public');
+            $data['image'] = $path;
+        }
 
         $result = $this->storeService->createProduct($company, $data);
 
@@ -261,6 +270,36 @@ class AgentStoreController extends Controller
         $result = $this->storeService->cloneStore($data);
 
         return response()->json($result, 201);
+    }
+
+    private function handleUploadImage(Request $request): JsonResponse
+    {
+        $storeId = $request->input('company_id') ?: $request->input('store');
+        $company = $this->storeService->resolveCompany($storeId);
+
+        if (! $company) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store '{$storeId}' not found. Specify a valid company_id or store_slug.",
+            ], 404);
+        }
+
+        $file = $request->file('image') ?: $request->file('file');
+        if (! $file) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No image file provided in request.',
+            ], 400);
+        }
+
+        $path = $file->store('products/' . $company->id, 'public');
+
+        return response()->json([
+            'success' => true,
+            'company_id' => $company->id,
+            'path' => $path,
+            'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($path),
+        ]);
     }
 
     private function handleVerifyEmail(Request $request): JsonResponse
