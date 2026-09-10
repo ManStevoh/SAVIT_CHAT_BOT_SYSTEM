@@ -563,6 +563,27 @@ export default function StorePage({
   }
 
   const hasActiveFilters = Boolean(filters.q || filters.category || filters.business_unit || filters.in_stock || filters.min_price || filters.max_price || (filters.sort && filters.sort !== 'name_asc'))
+  const integratedCatalog = businessUnits.length > 0 && !filters.business_unit
+  const primaryProducts = products.filter((product) => !product.businessUnit || product.businessUnit.type !== 'hospitality')
+  const secondaryProducts = products.filter((product) => product.businessUnit?.type === 'hospitality')
+  const hospitalityUnit = businessUnits.find((unit) => unit.type === 'hospitality')
+
+  const renderProductGrid = (items: StoreProduct[]) => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+      {items.map((product) => (
+        <ProductCard
+          key={product.id}
+          slug={slug}
+          product={product}
+          currency={displayCurrency}
+          rate={displayRate}
+          isWished={wishlistIds.includes(product.id)}
+          onWishlistToggle={toggleWishlist}
+          onQuickAdd={handleQuickAdd}
+        />
+      ))}
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-slate-50/80 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100" style={style}>
@@ -814,14 +835,18 @@ export default function StorePage({
 
         {businessUnits.length > 0 && (
           <div className="rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">One storefront, every part of the brand</p>
-            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
-              {businessUnits.map((unit) => (
-                <div key={unit.slug} className="min-w-0">
-                  <p className="text-sm font-extrabold text-slate-900 dark:text-white">{unit.name}</p>
-                  {unit.description ? <p className="max-w-xl text-xs text-slate-500 dark:text-slate-400">{unit.description}</p> : null}
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Primary storefront</p>
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-base font-extrabold text-slate-900 dark:text-white">Books & Publications</p>
+                <p className="max-w-xl text-xs text-slate-500 dark:text-slate-400">Browse Jostinah's books first. Her BnB stays are available below as part of the same brand.</p>
+              </div>
+              {hospitalityUnit ? (
+                <div className="border-l border-slate-200 pl-4 dark:border-slate-700">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">Also available</p>
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-white">{hospitalityUnit.name}</p>
                 </div>
-              ))}
+              ) : null}
             </div>
           </div>
         )}
@@ -1026,20 +1051,34 @@ export default function StorePage({
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-                    {products.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        slug={slug}
-                        product={product}
-                        currency={displayCurrency}
-                        rate={displayRate}
-                        isWished={wishlistIds.includes(product.id)}
-                        onWishlistToggle={toggleWishlist}
-                        onQuickAdd={handleQuickAdd}
-                      />
-                    ))}
-                  </div>
+                  integratedCatalog ? (
+                      <div className="space-y-8">
+                        {primaryProducts.length > 0 ? (
+                          <section className="space-y-4">
+                            <div className="flex items-end justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Main collection</p>
+                                <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Books & Publications</h2>
+                              </div>
+                              <span className="text-xs font-semibold text-slate-400">{primaryProducts.length} items</span>
+                            </div>
+                            {renderProductGrid(primaryProducts)}
+                          </section>
+                        ) : null}
+                        {secondaryProducts.length > 0 ? (
+                          <section className="space-y-4 border-t-2 border-emerald-100 pt-8 dark:border-emerald-950">
+                            <div className="flex items-end justify-between border-b border-emerald-100 pb-3 dark:border-emerald-950">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">Hospitality</p>
+                                <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">{hospitalityUnit?.name || 'BnB Stays'}</h2>
+                              </div>
+                              <span className="text-xs font-semibold text-slate-400">{secondaryProducts.length} stays</span>
+                            </div>
+                            {renderProductGrid(secondaryProducts)}
+                          </section>
+                        ) : null}
+                      </div>
+                    ) : renderProductGrid(products)
                 )}
               </section>
             )
