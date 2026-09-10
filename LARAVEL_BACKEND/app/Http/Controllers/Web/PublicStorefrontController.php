@@ -1037,10 +1037,10 @@ class PublicStorefrontController extends Controller
             ? $company->storefront_sections
             : null;
 
-        if ($custom === null) {
-            $sections = $this->hasActiveCatalogFilters($filters)
-                ? [['type' => 'catalog']]
-                : $this->defaultHomepageSections($company, $theme, $catalogProducts);
+        if ($this->hasActiveCatalogFilters($filters)) {
+            $sections = [['type' => 'catalog']];
+        } elseif ($custom === null) {
+            $sections = $this->defaultHomepageSections($company, $theme, $catalogProducts);
         } else {
             $sections = $custom;
         }
