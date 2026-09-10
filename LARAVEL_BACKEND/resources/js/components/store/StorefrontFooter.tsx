@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { Instagram } from 'lucide-react'
+import { Heart, Instagram } from 'lucide-react'
 import type { BrandTheme } from '@/lib/theme-utils'
 
 export type StorefrontFooterCompany = {
@@ -17,6 +17,7 @@ export function StorefrontFooter({ slug, company }: { slug: string; company: Sto
   const theme = company.theme ?? {}
   const links = [
     { href: `/s/${slug}/about`, label: 'About' },
+    { href: `/s/${slug}/wishlist`, label: 'Favorites', icon: Heart },
     { href: `/s/${slug}/track`, label: 'Track order' },
     { href: company.termsUrl || `/s/${slug}/terms`, label: 'Terms' },
   ]
@@ -38,6 +39,7 @@ export function StorefrontFooter({ slug, company }: { slug: string; company: Sto
               rel={link.href.includes('/track') ? 'nofollow' : undefined}
               className="hover:text-slate-900 dark:hover:text-white"
             >
+              {link.icon ? <link.icon className="h-3.5 w-3.5" /> : null}
               {link.label}
             </Link>
           ))}
