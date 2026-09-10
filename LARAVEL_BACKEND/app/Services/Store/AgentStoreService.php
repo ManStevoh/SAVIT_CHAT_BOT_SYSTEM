@@ -503,6 +503,10 @@ class AgentStoreService
             $fields['requires_delivery_address'] = (bool) $val;
         }
 
+        if (array_key_exists('service_booking_url', $data) || array_key_exists('serviceBookingUrl', $data)) {
+            $fields['service_booking_url'] = $data['service_booking_url'] ?? $data['serviceBookingUrl'];
+        }
+
         if (! empty($fields)) {
             $product->update($fields);
             $this->syncEmbeddings($product);
