@@ -507,6 +507,15 @@ class AgentStoreService
             $fields['service_booking_url'] = $data['service_booking_url'] ?? $data['serviceBookingUrl'];
         }
 
+        if (array_key_exists('bookable', $data)) {
+            $fields['bookable'] = (bool) $data['bookable'];
+        }
+
+        if (array_key_exists('booking_duration_minutes', $data) || array_key_exists('bookingDurationMinutes', $data)) {
+            $duration = $data['booking_duration_minutes'] ?? $data['bookingDurationMinutes'];
+            $fields['booking_duration_minutes'] = is_numeric($duration) ? max(5, (int) $duration) : null;
+        }
+
         if (! empty($fields)) {
             $product->update($fields);
             $this->syncEmbeddings($product);

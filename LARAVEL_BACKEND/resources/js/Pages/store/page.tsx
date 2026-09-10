@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link, router } from '@inertiajs/react'
 import {
   ArrowRight,
+  CalendarCheck,
   Check,
   Copy,
   Eye,
@@ -567,6 +568,7 @@ export default function StorePage({
   const primaryProducts = products.filter((product) => !product.businessUnit || product.businessUnit.type !== 'hospitality')
   const secondaryProducts = products.filter((product) => product.businessUnit?.type === 'hospitality')
   const hospitalityUnit = businessUnits.find((unit) => unit.type === 'hospitality')
+  const bnbProducts = products.filter((product) => product.category?.toLowerCase() === 'bnb stays')
 
   const renderProductGrid = (items: StoreProduct[]) => (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
@@ -849,6 +851,33 @@ export default function StorePage({
               ) : null}
             </div>
           </div>
+        )}
+
+        {bnbProducts.length > 0 && (
+          <section className="overflow-hidden rounded-3xl border border-emerald-200/80 bg-emerald-50 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
+                  <CalendarCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">Stay with us</p>
+                  <h2 className="mt-1 text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    {bnbProducts.length === 1 ? bnbProducts[0].name : 'Book a BnB stay'}
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                    Check availability and request your stay online.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={`/book/${slug}`}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-opacity hover:opacity-90"
+              >
+                Book your stay <ArrowRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </section>
         )}
 
         {/* Category Pills Bar */}
