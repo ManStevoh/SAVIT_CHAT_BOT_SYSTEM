@@ -736,6 +736,8 @@ class PublicStorefrontController extends Controller
             'company' => $this->companyPayload($order->company),
             'paymentOptions' => $this->paymentOptions($order),
             'initialMethod' => $targetMethod,
+            'manualSubmitted' => (bool) session('manual_submitted', false),
+            'status' => session('status'),
             'seo' => $this->seo->noindex('Pay — '.($order->company?->name ?: 'Order')),
         ]);
     }
@@ -755,6 +757,7 @@ class PublicStorefrontController extends Controller
             'method' => 'required|string|in:cod,stripe,paystack,mpesa,pesapal,flutterwave,paypal,manual',
             'phone' => 'nullable|string|max:40',
             'email' => 'nullable|email|max:255',
+            'transaction_code' => 'nullable|string|max:100',
         ]);
 
         if ($order->payment_status === 'paid') {
@@ -842,9 +845,41 @@ class PublicStorefrontController extends Controller
                 return back()->withErrors(['method' => $result['error'] ?? 'Could not send M-Pesa prompt.']);
 
             case 'manual':
-                $order->update(['payment_method' => 'manual']);
+                $txnCode = strtoupper(trim((string) ($validated['transaction_code'] ?? $request->input('code') ?? $request->input('reference') ?? '')));
+                $payingPhone = trim((string) ($validated['phone'] ?? ''));
 
-                return redirect()->to(url("/pay/{$token}"))->with('status', 'Manual payment instructions shown below.');
+                $updateData = ['payment_method' => 'manual'];
+                $notes = [];
+                if ($txnCode !== '') {
+                    $notes[] = "M-Pesa Ref: {$txnCode}";
+                }
+                if ($payingPhone !== '') {
+                    $notes[] = "Paying Phone: {$payingPhone}";
+                }
+                if (! empty($notes)) {
+                    $existing = $order->order_notes ? trim($order->order_notes)."\n" : '';
+                    $updateData['order_notes'] = $existing.implode(' | ', $notes);
+                }
+                $order->update($updateData);
+
+                // Notify store owner
+                $ownerEmail = $order->company?->email ?: \App\Models\User::where('company_id', $order->company_id)->where('role', 'company_owner')->value('email');
+                if ($ownerEmail) {
+                    try {
+                        app(MailService::class)->sendOwnerManualPaymentSubmittedNotification(
+                            $order,
+                            $ownerEmail,
+                            $txnCode ?: null,
+                            $payingPhone ?: null
+                        );
+                    } catch (\Throwable $e) {
+                        Log::warning('Failed to send owner manual payment submitted email', ['error' => $e->getMessage()]);
+                    }
+                }
+
+                return redirect()->to(url("/pay/{$token}"))
+                    ->with('manual_submitted', true)
+                    ->with('status', 'Payment submitted! The seller has been notified to verify your payment.');
         }
 
         return back();

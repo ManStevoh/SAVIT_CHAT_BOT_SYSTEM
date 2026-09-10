@@ -262,19 +262,98 @@ class MailService
 
     /**
      * Send new order notification to company email (if notifications_enabled).
+    /**
+     * Send new order notification to company owner with actionable confirmation instructions.
      */
     public function sendNewOrderNotification(
         string $to,
         string $orderNumber,
         string $customerName,
         float $total,
-        string $ordersUrl
+        string $ordersUrl,
+        ?Order $order = null
     ): void {
         $appName = self::applicationName();
-        $subject = '[' . $appName . '] New order #' . $orderNumber;
-        $html = '<p>You have received a new order.</p>';
-        $html .= '<p><strong>Order:</strong> ' . e($orderNumber) . '<br><strong>Customer:</strong> ' . e($customerName) . '<br><strong>Total:</strong> ' . number_format($total, 2) . '</p>';
-        $html .= '<p><a href="' . e($ordersUrl) . '" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View in dashboard</a></p>';
+        $storeName = $order?->company?->name ?: $appName;
+        $subject = "Action Required: New order #{$orderNumber} from {$customerName} — Confirm to proceed";
+
+        $html = '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #1e293b;">';
+        $html .= '<h2 style="color:#0f172a; margin-bottom: 8px;">New Order Received!</h2>';
+        $html .= '<p style="margin-top:0;">You have received a new purchase for <strong>' . e($storeName) . '</strong>.</p>';
+
+        $html .= '<div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 16px; margin: 18px 0; color: #92400e;">';
+        $html .= '<strong style="display:block; font-size: 14px; margin-bottom: 4px;">⚠️ Action Required: Confirm Order to Proceed</strong>';
+        $html .= '<span style="font-size: 13px;">Please verify payment and confirm this order in your dashboard so the goods can proceed to the next stage (fulfillment / delivery).</span>';
+        $html .= '</div>';
+
+        $html .= '<table style="width:100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">';
+        $html .= '<tr><td style="padding: 6px 0; color: #64748b; width: 140px;">Order Number:</td><td style="padding: 6px 0; font-weight: 600; color: #0f172a;">#' . e($orderNumber) . '</td></tr>';
+        $html .= '<tr><td style="padding: 6px 0; color: #64748b;">Customer:</td><td style="padding: 6px 0; font-weight: 600; color: #0f172a;">' . e($customerName) . ($order && $order->customer_phone ? ' (' . e($order->customer_phone) . ')' : '') . '</td></tr>';
+        if ($order && $order->customer_email) {
+            $html .= '<tr><td style="padding: 6px 0; color: #64748b;">Customer Email:</td><td style="padding: 6px 0; color: #0f172a;">' . e($order->customer_email) . '</td></tr>';
+        }
+        $formattedTotal = $order && $order->company ? MoneyFormatter::formatCompany($order->company, $total) : number_format($total, 2);
+        $html .= '<tr><td style="padding: 6px 0; color: #64748b;">Total Amount:</td><td style="padding: 6px 0; font-weight: 700; color: #0f172a; font-size: 16px;">' . e($formattedTotal) . '</td></tr>';
+        if ($order && $order->payment_method) {
+            $methodLabel = $order->payment_method === 'manual' ? 'Manual / M-Pesa (Pochi la Biashara)' : ucfirst($order->payment_method);
+            $html .= '<tr><td style="padding: 6px 0; color: #64748b;">Payment Method:</td><td style="padding: 6px 0; font-weight: 600; color: #0f172a;">' . e($methodLabel) . '</td></tr>';
+        }
+        $html .= '</table>';
+
+        if ($order) {
+            $html .= $this->orderItemsHtml($order);
+        }
+
+        $html .= '<p style="margin-top: 24px;">' . $this->emailButton($ordersUrl, 'Review & Confirm Order in Dashboard') . '</p>';
+        $html .= '<p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">Once you confirm the payment in your dashboard, the order status will advance and the customer will receive their confirmation details.</p>';
+        $html .= '</div>';
+
+        $html = self::wrapEmailBody($html);
+        $this->send($to, $subject, $html, strip_tags($html));
+    }
+
+    /**
+     * Send notification to owner when customer reports submitting a manual payment (M-Pesa).
+     */
+    public function sendOwnerManualPaymentSubmittedNotification(
+        Order $order,
+        string $to,
+        ?string $txnCode = null,
+        ?string $payingPhone = null
+    ): void {
+        $appName = self::applicationName();
+        $storeName = $order->company?->name ?: $appName;
+        $customerName = $order->customer_name ?: 'A customer';
+        $orderNumber = (string) $order->order_number;
+        $subject = "Payment Submitted: Order #{$orderNumber} by {$customerName} — Verify & Confirm";
+        $ordersUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/').'/dashboard/orders';
+
+        $html = '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #1e293b;">';
+        $html .= '<h2 style="color:#0f172a; margin-bottom: 8px;">Customer Reported Payment!</h2>';
+        $html .= '<p style="margin-top:0;"><strong>' . e($customerName) . '</strong> has submitted manual payment for Order <strong>#' . e($orderNumber) . '</strong> on ' . e($storeName) . '.</p>';
+
+        $html .= '<div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 16px; margin: 18px 0; color: #166534;">';
+        $html .= '<strong style="display:block; font-size: 14px; margin-bottom: 4px;">✅ Payment Confirmation Required</strong>';
+        $html .= '<span style="font-size: 13px;">Please check your M-Pesa messages / bank account for the payment below, then click to confirm the order in your dashboard so goods can proceed to the next stage.</span>';
+        $html .= '</div>';
+
+        $html .= '<table style="width:100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">';
+        $html .= '<tr><td style="padding: 6px 0; color: #64748b; width: 150px;">Order Number:</td><td style="padding: 6px 0; font-weight: 600; color: #0f172a;">#' . e($orderNumber) . '</td></tr>';
+        $formattedTotal = MoneyFormatter::formatCompany($order->company, (float) $order->total);
+        $html .= '<tr><td style="padding: 6px 0; color: #64748b;">Expected Amount:</td><td style="padding: 6px 0; font-weight: 700; color: #0f172a; font-size: 16px;">' . e($formattedTotal) . '</td></tr>';
+        if ($txnCode) {
+            $html .= '<tr><td style="padding: 6px 0; color: #64748b;">M-Pesa Reference:</td><td style="padding: 6px 0; font-weight: 700; color: #1e40af; font-family: monospace; font-size: 15px;">' . e($txnCode) . '</td></tr>';
+        }
+        if ($payingPhone) {
+            $html .= '<tr><td style="padding: 6px 0; color: #64748b;">Customer Phone:</td><td style="padding: 6px 0; font-weight: 600; color: #0f172a;">' . e($payingPhone) . '</td></tr>';
+        }
+        $html .= '</table>';
+
+        $html .= $this->orderItemsHtml($order);
+
+        $html .= '<p style="margin-top: 24px;">' . $this->emailButton($ordersUrl, 'Open Orders Dashboard to Confirm') . '</p>';
+        $html .= '</div>';
+
         $html = self::wrapEmailBody($html);
         $this->send($to, $subject, $html, strip_tags($html));
     }

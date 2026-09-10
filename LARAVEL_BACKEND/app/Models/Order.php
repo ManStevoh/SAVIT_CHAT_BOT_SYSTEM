@@ -225,17 +225,25 @@ class Order extends Model
                 return;
             }
             $settings = $company->settings;
-            $notificationsOn = $settings && $settings->notifications_enabled;
+            $notificationsOn = $settings ? (bool) $settings->notifications_enabled : true;
 
-            if ($notificationsOn && $company->email) {
+            $ownerEmail = $company->email;
+            if (! $ownerEmail) {
+                $ownerEmail = User::where('company_id', $company->id)
+                    ->where('role', 'company_owner')
+                    ->value('email');
+            }
+
+            if ($notificationsOn && $ownerEmail) {
                 try {
                     $ordersUrl = rtrim(config('app.frontend_url', config('app.url')), '/').'/dashboard/orders';
                     app(MailService::class)->sendNewOrderNotification(
-                        $company->email,
-                        $order->order_number,
+                        $ownerEmail,
+                        (string) $order->order_number,
                         $order->customer_name ?? 'Customer',
                         (float) $order->total,
-                        $ordersUrl
+                        $ordersUrl,
+                        $order
                     );
                 } catch (\Throwable $e) {
                     Log::warning('Failed to send new order notification', ['order_id' => $order->id, 'error' => $e->getMessage()]);
