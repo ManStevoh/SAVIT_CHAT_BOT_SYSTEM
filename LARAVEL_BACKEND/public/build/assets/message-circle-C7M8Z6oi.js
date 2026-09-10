@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:LARAVEL_BACKEND/public/build/assets/message-circle-De2s1B1s.js
-import{g as e}from"./app-DRgQiHI0.js";const s=[["path",{d:"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719",key:"1sd12s"}]],c=e("message-circle",s);export{c as M};
-========
-import{p as e}from"./app-Cd0p0AyH.js";const s=[["path",{d:"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719",key:"1sd12s"}]],c=e("message-circle",s);export{c as M};
->>>>>>>> origin/feature/cms-content-and-plans:LARAVEL_BACKEND/public/build/assets/message-circle-C7M8Z6oi.js

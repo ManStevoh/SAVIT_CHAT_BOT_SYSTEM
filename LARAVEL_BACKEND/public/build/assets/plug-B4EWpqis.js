@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:LARAVEL_BACKEND/public/build/assets/plug-B4EWpqis.js
-import{g as a}from"./app-DRgQiHI0.js";const e=[["path",{d:"M12 22v-5",key:"1ega77"}],["path",{d:"M15 8V2",key:"18g5xt"}],["path",{d:"M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z",key:"1xoxul"}],["path",{d:"M9 8V2",key:"14iosj"}]],t=a("plug",e);export{t as P};
-========
-import{p as a}from"./app-Cd0p0AyH.js";const e=[["path",{d:"M12 22v-5",key:"1ega77"}],["path",{d:"M15 8V2",key:"18g5xt"}],["path",{d:"M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z",key:"1xoxul"}],["path",{d:"M9 8V2",key:"14iosj"}]],t=a("plug",e);export{t as P};
->>>>>>>> origin/feature/cms-content-and-plans:LARAVEL_BACKEND/public/build/assets/plug-CTdWDPGh.js

@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:LARAVEL_BACKEND/public/build/assets/download-DL8i_TpI.js
-import{g as o}from"./app-DRgQiHI0.js";const a=[["path",{d:"M12 15V3",key:"m9g1x1"}],["path",{d:"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4",key:"ih7n3h"}],["path",{d:"m7 10 5 5 5-5",key:"brsn70"}]],e=o("download",a);export{e as D};
-========
-import{p as o}from"./app-Cd0p0AyH.js";const a=[["path",{d:"M12 15V3",key:"m9g1x1"}],["path",{d:"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4",key:"ih7n3h"}],["path",{d:"m7 10 5 5 5-5",key:"brsn70"}]],e=o("download",a);export{e as D};
->>>>>>>> origin/feature/cms-content-and-plans:LARAVEL_BACKEND/public/build/assets/download-5v8XT3ax.js

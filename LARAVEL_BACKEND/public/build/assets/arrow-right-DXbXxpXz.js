@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:LARAVEL_BACKEND/public/build/assets/arrow-right-Bnn-8SUN.js
-import{g as o}from"./app-DRgQiHI0.js";const r=[["path",{d:"M5 12h14",key:"1ays0h"}],["path",{d:"m12 5 7 7-7 7",key:"xquz4c"}]],a=o("arrow-right",r);export{a as A};
-========
-import{p as o}from"./app-Cd0p0AyH.js";const r=[["path",{d:"M5 12h14",key:"1ays0h"}],["path",{d:"m12 5 7 7-7 7",key:"xquz4c"}]],a=o("arrow-right",r);export{a as A};
->>>>>>>> origin/feature/cms-content-and-plans:LARAVEL_BACKEND/public/build/assets/arrow-right-DXbXxpXz.js

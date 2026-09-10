@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:LARAVEL_BACKEND/public/build/assets/phone-DHl4OPIb.js
-import{g as a}from"./app-DRgQiHI0.js";const o=[["path",{d:"M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384",key:"9njp5v"}]],n=a("phone",o);export{n as P};
-========
-import{p as a}from"./app-Cd0p0AyH.js";const o=[["path",{d:"M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384",key:"9njp5v"}]],n=a("phone",o);export{n as P};
->>>>>>>> origin/feature/cms-content-and-plans:LARAVEL_BACKEND/public/build/assets/phone-Dpzz6fCS.js
