@@ -1198,19 +1198,25 @@ class PublicStorefrontController extends Controller
      */
     protected function defaultFeaturedProducts(array $catalogProducts): array
     {
-        $onSale = array_values(array_filter($catalogProducts, fn ($p) => ! empty($p['onSale'])));
+        $primaryProducts = array_values(array_filter($catalogProducts, function ($product) {
+            $unit = $product['businessUnit'] ?? null;
+
+            return ! is_array($unit) || ($unit['type'] ?? null) !== 'hospitality';
+        }));
+        $featuredPool = $primaryProducts !== [] ? $primaryProducts : $catalogProducts;
+        $onSale = array_values(array_filter($featuredPool, fn ($p) => ! empty($p['onSale'])));
         if ($onSale !== []) {
             return array_slice($onSale, 0, min(2, count($onSale)));
         }
 
-        $isAllBooks = ! empty($catalogProducts) && collect($catalogProducts)->every(
+        $isAllBooks = ! empty($featuredPool) && collect($featuredPool)->every(
             fn ($p) => strcasecmp((string) ($p['category'] ?? ''), 'Books') === 0
         );
 
         // Always show top 2 featured items for bookshops and small catalogs (<= 8 items)
-        $limit = ($isAllBooks || count($catalogProducts) <= 8) ? 2 : 4;
+        $limit = ($isAllBooks || count($featuredPool) <= 8) ? 2 : 4;
 
-        return array_slice($catalogProducts, 0, $limit);
+        return array_slice($featuredPool, 0, $limit);
     }
 
     /**
