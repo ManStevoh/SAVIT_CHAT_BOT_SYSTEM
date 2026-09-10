@@ -415,7 +415,7 @@ export default function StoreCheckoutPage({
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         required
-                        placeholder="e.g. Ken Wafula"
+                        placeholder="e.g. Jane Doe"
                         className="pl-10 rounded-2xl"
                       />
                     </div>
