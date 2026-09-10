@@ -339,6 +339,7 @@ class AgentStoreService
                 'min_notice_minutes' => max(0, (int) ($data['min_notice_minutes'] ?? 60)),
                 'max_days_ahead' => max(1, (int) ($data['max_days_ahead'] ?? 90)),
                 'public_slug' => $slug,
+                'calendar_feed_token' => $data['calendar_feed_token'] ?? Str::random(48),
                 'is_enabled' => true,
                 'payment_requirement' => in_array(($data['payment_requirement'] ?? 'optional'), ['at_venue', 'required', 'optional'], true) ? $data['payment_requirement'] : 'optional',
                 'whatsapp_booking_mode' => in_array(($data['whatsapp_booking_mode'] ?? 'hybrid'), ['whatsapp_native', 'web_link', 'hybrid'], true) ? $data['whatsapp_booking_mode'] : 'hybrid',
