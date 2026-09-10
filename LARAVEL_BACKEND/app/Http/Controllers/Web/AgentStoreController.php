@@ -41,6 +41,7 @@ class AgentStoreController extends Controller
                 'add_product', 'create', 'add' => $this->handleAddProduct($request),
                 'update_product', 'update' => $this->handleUpdateProduct($request),
                 'update_store', 'store_settings', 'settings' => $this->handleUpdateStore($request),
+                'assign_free_plan', 'free_plan' => $this->handleAssignFreePlan($request),
                 'remove_product', 'delete', 'archive' => $this->handleDeleteProduct($request),
                 'bulk_import', 'bulk' => $this->handleBulkImport($request),
                 'clone_store', 'seed_account', 'clone' => $this->handleCloneStore($request),
@@ -50,7 +51,7 @@ class AgentStoreController extends Controller
                 'verify_email', 'verify_user' => $this->handleVerifyEmail($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, verify_email.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, assign_free_plan, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, verify_email.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -221,6 +222,21 @@ class AgentStoreController extends Controller
         $result = $this->storeService->updateStoreSettings($company, $settings);
 
         return response()->json($result);
+    }
+
+    private function handleAssignFreePlan(Request $request): JsonResponse
+    {
+        $storeId = $request->input('company_id') ?: $request->input('store');
+        $company = $this->storeService->resolveCompany($storeId);
+
+        if (! $company) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store '{$storeId}' not found. Specify a valid company_id or store_slug.",
+            ], 404);
+        }
+
+        return response()->json($this->storeService->assignFreePlan($company));
     }
 
     private function handleListMemories(Request $request): JsonResponse

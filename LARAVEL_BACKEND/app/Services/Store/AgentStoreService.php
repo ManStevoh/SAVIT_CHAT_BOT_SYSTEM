@@ -7,6 +7,7 @@ use App\Models\CustomerMemory;
 use App\Models\Plan;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Agent\AgentCommerceProvisioningService;
 use App\Services\AI\KnowledgeChunkService;
@@ -153,6 +154,55 @@ class AgentStoreService
             'currency'                   => $settings->fresh()->displayCurrencyCode(),
             'currency_symbol'            => $settings->fresh()->currency_symbol,
             'message'                    => "Store '{$freshCompany->name}' settings updated successfully.",
+        ];
+    }
+
+    public function assignFreePlan(Company $company): array
+    {
+        $plan = Plan::query()->where('slug', 'free')->where('is_free', true)->first();
+        if (! $plan) {
+            throw new InvalidArgumentException('The canonical free plan is not configured.');
+        }
+
+        $subscription = Subscription::query()
+            ->where('company_id', $company->id)
+            ->latest('end_date')
+            ->first();
+
+        if (! $subscription) {
+            $subscription = new Subscription(['company_id' => $company->id]);
+        }
+
+        $subscription->fill([
+            'plan' => $plan->slug,
+            'status' => 'active',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addYears(100)->toDateString(),
+            'amount' => 0,
+            'billing_cycle' => 'yearly',
+            'stripe_subscription_id' => null,
+        ]);
+        $subscription->save();
+
+        $company->update(['plan' => $plan->slug]);
+        app(AgentCommerceProvisioningService::class)->syncForCompany($company->fresh());
+
+        $this->recordAudit('agent_free_plan_assigned', $company->id, [
+            'subscription_id' => $subscription->id,
+            'plan' => $plan->slug,
+        ]);
+
+        return [
+            'success' => true,
+            'company_id' => $company->id,
+            'company_name' => $company->name,
+            'plan' => $plan->slug,
+            'plan_name' => $plan->name,
+            'subscription_id' => $subscription->id,
+            'status' => $subscription->status,
+            'amount' => 0,
+            'end_date' => $subscription->end_date->format('Y-m-d'),
+            'message' => "Store '{$company->name}' is now on the free plan.",
         ];
     }
 
