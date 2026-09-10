@@ -865,44 +865,6 @@ export default function StorePage({
           </div>
         )}
 
-        {bnbProducts.length > 0 && (
-          <section className="overflow-hidden rounded-3xl border border-emerald-200/80 bg-emerald-50 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
-            <div className="grid grid-cols-4 gap-1.5 bg-emerald-100/70 p-1.5 dark:bg-emerald-950/50 sm:grid-cols-8">
-              {bnbBannerImages.map((image, index) => (
-                <img
-                  key={image}
-                  src={image}
-                  alt={`BnB stay ${index + 1}`}
-                  className="aspect-[4/3] w-full rounded-xl object-cover"
-                  loading={index > 3 ? 'lazy' : 'eager'}
-                />
-              ))}
-            </div>
-            <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
-                  <CalendarCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">Stay with us</p>
-                  <h2 className="mt-1 text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
-                    {bnbProducts.length === 1 ? bnbProducts[0].name : 'Book a BnB stay'}
-                  </h2>
-                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                    Check availability and request your stay online.
-                  </p>
-                </div>
-              </div>
-              <a
-                href={`/book/${slug}`}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-opacity hover:opacity-90"
-              >
-                Book your stay <ArrowRight className="h-3.5 w-3.5" />
-              </a>
-            </div>
-          </section>
-        )}
-
         {/* Category Pills Bar */}
         {allCategories.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -1137,6 +1099,47 @@ export default function StorePage({
           }
           return null
         })}
+
+        {bnbProducts.length > 0 && (
+          <section className="overflow-hidden rounded-[2rem] border border-emerald-200/80 bg-emerald-50 shadow-xl shadow-emerald-900/10 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:shadow-none">
+            <div className="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-lg shadow-emerald-700/20">
+                  <CalendarCheck className="h-6 w-6" />
+                </div>
+                <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400">Stay with us</p>
+                <h2 className="mt-2 max-w-lg text-3xl font-black leading-tight tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+                  {bnbProducts.length === 1 ? bnbProducts[0].name : 'Your comfortable stay starts here'}
+                </h2>
+                <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                  Luxurious furnished BnB stays in Bamburi Mtambo, opposite JCC Church, with CCTV, backup power, a gated compound, and a welcoming neighborhood.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                  <span className="rounded-full bg-white/80 px-3 py-1.5 dark:bg-emerald-900/50">From KSh 5,000 per night</span>
+                  <span className="rounded-full bg-white/80 px-3 py-1.5 dark:bg-emerald-900/50">Discount over 3 days</span>
+                </div>
+                <a
+                  href={`/book/${slug}`}
+                  className="mt-7 inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-700/20 transition-transform hover:-translate-y-0.5"
+                >
+                  Check availability and book <ArrowRight className="h-4 w-4" />
+                </a>
+                <p className="mt-4 text-xs font-semibold text-slate-500 dark:text-slate-400">Call Belinda: 0103 649842</p>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 bg-emerald-100/70 p-1.5 sm:grid-cols-4 lg:grid-cols-2 dark:bg-emerald-950/50">
+                {bnbBannerImages.map((image, index) => (
+                  <img
+                    key={image}
+                    src={image}
+                    alt={`BnB stay ${index + 1}`}
+                    className="aspect-[4/3] h-full min-h-28 w-full rounded-2xl object-cover sm:min-h-32 lg:min-h-36"
+                    loading="lazy"
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Floating WhatsApp Chat Pill */}
