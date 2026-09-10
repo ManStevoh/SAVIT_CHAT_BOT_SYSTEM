@@ -84,6 +84,17 @@ type Section = {
   items?: { quote: string; author: string; rating?: number | null }[]
 }
 
+const bnbBannerImages = [
+  '/images/bnb/bnb-01.jpeg',
+  '/images/bnb/bnb-02.jpeg',
+  '/images/bnb/bnb-03.jpeg',
+  '/images/bnb/bnb-04.jpeg',
+  '/images/bnb/bnb-05.jpeg',
+  '/images/bnb/bnb-06.jpeg',
+  '/images/bnb/bnb-07.jpeg',
+  '/images/bnb/bnb-08.jpeg',
+]
+
 type AltCurrency = { code: string; label: string; rate: number }
 
 type Props = {
@@ -449,10 +460,12 @@ export default function StorePage({
 
   const theme = company.theme ?? {}
   const style = resolveStorefrontStyle(theme)
+  const bnbProducts = products.filter((product) => product.category?.toLowerCase() === 'bnb stays')
+  const visibleProducts = products.filter((product) => product.category?.toLowerCase() !== 'bnb stays')
 
   const allCategories = useMemo(
-    () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[],
-    [products]
+    () => Array.from(new Set(visibleProducts.map((p) => p.category).filter(Boolean))) as string[],
+    [visibleProducts]
   )
   const businessUnits = company.businessUnits || []
 
@@ -565,10 +578,9 @@ export default function StorePage({
 
   const hasActiveFilters = Boolean(filters.q || filters.category || filters.business_unit || filters.in_stock || filters.min_price || filters.max_price || (filters.sort && filters.sort !== 'name_asc'))
   const integratedCatalog = businessUnits.length > 0 && !filters.business_unit
-  const primaryProducts = products.filter((product) => !product.businessUnit || product.businessUnit.type !== 'hospitality')
-  const secondaryProducts = products.filter((product) => product.businessUnit?.type === 'hospitality')
+  const primaryProducts = visibleProducts.filter((product) => !product.businessUnit || product.businessUnit.type !== 'hospitality')
+  const secondaryProducts = visibleProducts.filter((product) => product.businessUnit?.type === 'hospitality')
   const hospitalityUnit = businessUnits.find((unit) => unit.type === 'hospitality')
-  const bnbProducts = products.filter((product) => product.category?.toLowerCase() === 'bnb stays')
 
   const renderProductGrid = (items: StoreProduct[]) => (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
@@ -855,6 +867,17 @@ export default function StorePage({
 
         {bnbProducts.length > 0 && (
           <section className="overflow-hidden rounded-3xl border border-emerald-200/80 bg-emerald-50 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <div className="grid grid-cols-4 gap-1.5 bg-emerald-100/70 p-1.5 dark:bg-emerald-950/50 sm:grid-cols-8">
+              {bnbBannerImages.map((image, index) => (
+                <img
+                  key={image}
+                  src={image}
+                  alt={`BnB stay ${index + 1}`}
+                  className="aspect-[4/3] w-full rounded-xl object-cover"
+                  loading={index > 3 ? 'lazy' : 'eager'}
+                />
+              ))}
+            </div>
             <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
@@ -962,7 +985,7 @@ export default function StorePage({
             )
           }
           if (section.type === 'featured_products') {
-            const featured = section.products || []
+            const featured = (section.products || []).filter((product) => product.category?.toLowerCase() !== 'bnb stays')
             if (featured.length === 0) return null
             return (
               <section key={idx} className="space-y-4">
@@ -989,7 +1012,7 @@ export default function StorePage({
             )
           }
           if (section.type === 'collection_shelf') {
-            const shelfProducts = section.products || []
+            const shelfProducts = (section.products || []).filter((product) => product.category?.toLowerCase() !== 'bnb stays')
             if (shelfProducts.length === 0) return null
             return (
               <section key={idx} className="space-y-4">
@@ -1060,11 +1083,11 @@ export default function StorePage({
               <section key={idx} id="catalog" className="space-y-4">
                 <div className="flex items-center justify-between px-1">
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    {products.length} {products.length === 1 ? 'Product' : 'Products'} Available
+                    {visibleProducts.length} {visibleProducts.length === 1 ? 'Product' : 'Products'} Available
                   </p>
                 </div>
 
-                {products.length === 0 ? (
+                {visibleProducts.length === 0 ? (
                   <div className="rounded-3xl border border-dashed border-slate-200/80 bg-white p-12 text-center text-xs text-slate-500 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
                     <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">No products match your search keyword or filter.</p>
                     {hasActiveFilters && (
@@ -1107,7 +1130,7 @@ export default function StorePage({
                           </section>
                         ) : null}
                       </div>
-                    ) : renderProductGrid(products)
+                    ) : renderProductGrid(visibleProducts)
                 )}
               </section>
             )
