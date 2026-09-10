@@ -514,6 +514,27 @@ class AgentStoreService
             }
         }
 
+        // If it is a base64 data URI or raw base64 payload
+        if (str_starts_with($imageSource, 'data:image/')) {
+            try {
+                [$meta, $rawBase64] = explode(',', $imageSource, 2);
+                $ext = 'png';
+                if (str_contains($meta, 'jpeg') || str_contains($meta, 'jpg')) $ext = 'jpg';
+                elseif (str_contains($meta, 'webp')) $ext = 'webp';
+                elseif (str_contains($meta, 'gif')) $ext = 'gif';
+
+                $decoded = base64_decode($rawBase64);
+                if ($decoded !== false && strlen($decoded) > 0) {
+                    $filename = 'products/' . $companyId . '/' . Str::random(32) . '.' . $ext;
+                    Storage::disk('public')->put($filename, $decoded);
+
+                    return $filename;
+                }
+            } catch (Throwable $e) {
+                Log::warning("AgentStoreService: Failed to decode base64 product image: " . $e->getMessage());
+            }
+        }
+
         // Relative path or local storage key
         return $imageSource;
     }
