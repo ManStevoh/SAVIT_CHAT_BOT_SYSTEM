@@ -3,6 +3,7 @@
 namespace App\Services\Store;
 
 use App\Models\Company;
+use App\Models\BusinessUnit;
 use App\Models\CustomerMemory;
 use App\Models\Plan;
 use App\Models\Product;
@@ -257,6 +258,74 @@ class AgentStoreService
         return $products->map(fn (Product $p) => $this->productToSummary($p))->all();
     }
 
+    public function listBusinessUnits(Company $company): array
+    {
+        return $company->businessUnits()->withCount('products')->get()->map(fn (BusinessUnit $unit) => [
+            'id' => $unit->id,
+            'name' => $unit->name,
+            'slug' => $unit->slug,
+            'type' => $unit->type,
+            'description' => $unit->description,
+            'logo' => $unit->logo,
+            'hero_image' => $unit->hero_image,
+            'settings' => $unit->settings,
+            'status' => $unit->status,
+            'products_count' => $unit->products_count,
+        ])->all();
+    }
+
+    public function createBusinessUnit(Company $company, array $data): array
+    {
+        $name = trim((string) ($data['name'] ?? ''));
+        if ($name === '') {
+            throw new InvalidArgumentException('Business unit name is required.');
+        }
+
+        $slug = Str::slug((string) ($data['slug'] ?? $name));
+        if ($slug === '') {
+            throw new InvalidArgumentException('Business unit slug is required.');
+        }
+        if ($company->businessUnits()->where('slug', $slug)->exists()) {
+            throw new InvalidArgumentException("Business unit '{$slug}' already exists.");
+        }
+
+        $unit = $company->businessUnits()->create([
+            'name' => $name,
+            'slug' => $slug,
+            'type' => trim((string) ($data['type'] ?? 'general')) ?: 'general',
+            'description' => $data['description'] ?? null,
+            'logo' => $data['logo'] ?? null,
+            'hero_image' => $data['hero_image'] ?? $data['heroImage'] ?? null,
+            'settings' => $data['settings'] ?? null,
+            'status' => in_array(($data['status'] ?? 'active'), ['active', 'inactive'], true) ? $data['status'] : 'active',
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+        ]);
+
+        $this->recordAudit('agent_business_unit_created', $company->id, ['business_unit_id' => $unit->id, 'slug' => $unit->slug]);
+
+        return ['success' => true, 'business_unit' => $unit->fresh()->toArray()];
+    }
+
+    public function updateBusinessUnit(Company $company, int|string|null $identifier, array $data): array
+    {
+        $unit = is_numeric($identifier)
+            ? $company->businessUnits()->find((int) $identifier)
+            : $company->businessUnits()->where(function ($query) use ($identifier) {
+                $query->where('slug', (string) $identifier)->orWhere('name', (string) $identifier);
+            })->first();
+        if (! $unit) {
+            throw new InvalidArgumentException('Business unit not found.');
+        }
+
+        $fields = array_intersect_key($data, array_flip(['name', 'description', 'logo', 'hero_image', 'settings', 'sort_order']));
+        if (isset($data['type'])) $fields['type'] = trim((string) $data['type']);
+        if (isset($data['status']) && in_array($data['status'], ['active', 'inactive'], true)) $fields['status'] = $data['status'];
+        if (isset($data['slug'])) $fields['slug'] = Str::slug((string) $data['slug']);
+        $unit->update($fields);
+
+        return ['success' => true, 'business_unit' => $unit->fresh()->toArray()];
+    }
+
     /**
      * Create a single product for a company.
      */
@@ -299,9 +368,14 @@ class AgentStoreService
         $slug = $this->generateUniqueSlug($company->id, $data['slug'] ?? $name);
 
         $imagePath = $this->resolveAndStoreImage($company->id, $data['image_url'] ?? $data['image'] ?? null);
+        $businessUnitId = $data['business_unit_id'] ?? $data['businessUnitId'] ?? null;
+        if ($businessUnitId !== null && ! $company->businessUnits()->whereKey((int) $businessUnitId)->exists()) {
+            throw new InvalidArgumentException('Business unit does not belong to this store.');
+        }
 
         $product = Product::create([
             'company_id'               => $company->id,
+            'business_unit_id'         => $businessUnitId !== null ? (int) $businessUnitId : null,
             'name'                     => $name,
             'slug'                     => $slug,
             'price'                    => $price,

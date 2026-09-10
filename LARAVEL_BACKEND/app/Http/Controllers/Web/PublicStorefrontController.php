@@ -45,6 +45,7 @@ class PublicStorefrontController extends Controller
             'q' => $request->query('q'),
             'sort' => $request->query('sort'),
             'category' => $request->query('category'),
+            'business_unit' => $request->query('business'),
             'in_stock' => $request->query('in_stock'),
             'min_price' => $request->query('min_price'),
             'max_price' => $request->query('max_price'),
@@ -352,7 +353,7 @@ class PublicStorefrontController extends Controller
             return redirect()->to(url("/s/{$slug}/cart"));
         }
 
-        $company->loadMissing('settings');
+        $company->loadMissing(['settings', 'businessUnits']);
         $settings = $company->settings;
         $locale = $this->resolveLocale($company, $request);
 
@@ -959,6 +960,15 @@ class PublicStorefrontController extends Controller
 
         return [
             'name' => $company->name,
+            'businessUnits' => $company->businessUnits
+                ->where('status', 'active')
+                ->map(fn ($unit) => [
+                    'id' => (string) $unit->id,
+                    'name' => $unit->name,
+                    'slug' => $unit->slug,
+                    'type' => $unit->type,
+                    'description' => $unit->description,
+                ])->values()->all(),
             'logo' => $company->logo ? asset('storage/'.$company->logo) : null,
             'currency' => $baseCurrency,
             'moneyOptions' => $settings?->moneyDisplayOptions() ?? ['symbol' => 'KSh', 'thousands' => ',', 'decimal' => '.'],
@@ -1257,7 +1267,7 @@ class PublicStorefrontController extends Controller
     /** @param  array<string, mixed>  $filters */
     protected function hasActiveCatalogFilters(array $filters): bool
     {
-        foreach (['q', 'category', 'min_price', 'max_price', 'type'] as $key) {
+        foreach (['q', 'category', 'business_unit', 'min_price', 'max_price', 'type'] as $key) {
             $value = $filters[$key] ?? null;
             if (is_string($value) && trim($value) !== '' && strtolower(trim($value)) !== 'all') {
                 return true;

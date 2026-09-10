@@ -77,6 +77,11 @@ class Company extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function businessUnits(): HasMany
+    {
+        return $this->hasMany(BusinessUnit::class)->orderBy('sort_order')->orderBy('name');
+    }
+
     public function taxRates(): HasMany
     {
         return $this->hasMany(TaxRate::class);

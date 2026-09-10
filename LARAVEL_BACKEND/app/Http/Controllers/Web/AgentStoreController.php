@@ -38,6 +38,9 @@ class AgentStoreController extends Controller
             return match ($action) {
                 'list_stores', 'stores' => $this->handleListStores($request),
                 'list_products', 'products' => $this->handleListProducts($request),
+                'list_business_units', 'business_units' => $this->handleListBusinessUnits($request),
+                'create_business_unit', 'add_business_unit' => $this->handleCreateBusinessUnit($request),
+                'update_business_unit' => $this->handleUpdateBusinessUnit($request),
                 'add_product', 'create', 'add' => $this->handleAddProduct($request),
                 'update_product', 'update' => $this->handleUpdateProduct($request),
                 'update_store', 'store_settings', 'settings' => $this->handleUpdateStore($request),
@@ -51,7 +54,7 @@ class AgentStoreController extends Controller
                 'verify_email', 'verify_user' => $this->handleVerifyEmail($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, add_product, update_product, update_store, assign_free_plan, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, verify_email.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, list_business_units, create_business_unit, update_business_unit, add_product, update_product, update_store, assign_free_plan, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, verify_email.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -103,6 +106,41 @@ class AgentStoreController extends Controller
             'count'        => count($products),
             'products'     => $products,
         ]);
+    }
+
+    private function handleListBusinessUnits(Request $request): JsonResponse
+    {
+        $company = $this->storeService->resolveCompany($request->input('company_id') ?: $request->input('store'));
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Store not found.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'company_id' => $company->id,
+            'business_units' => $this->storeService->listBusinessUnits($company),
+        ]);
+    }
+
+    private function handleCreateBusinessUnit(Request $request): JsonResponse
+    {
+        $company = $this->storeService->resolveCompany($request->input('company_id') ?: $request->input('store'));
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Store not found.'], 404);
+        }
+
+        return response()->json($this->storeService->createBusinessUnit($company, (array) ($request->input('business_unit') ?: $request->all())), 201);
+    }
+
+    private function handleUpdateBusinessUnit(Request $request): JsonResponse
+    {
+        $company = $this->storeService->resolveCompany($request->input('company_id') ?: $request->input('store'));
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Store not found.'], 404);
+        }
+
+        $identifier = $request->input('business_unit_id') ?: $request->input('business_unit') ?: $request->input('slug') ?: $request->input('name');
+        return response()->json($this->storeService->updateBusinessUnit($company, $identifier, (array) ($request->input('updates') ?: $request->all())));
     }
 
     private function handleAddProduct(Request $request): JsonResponse

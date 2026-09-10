@@ -96,7 +96,7 @@ class StorefrontService
 
         $query = Product::where('company_id', $company->id)
             ->where('status', 'active')
-            ->with(['activeVariants', 'images']);
+            ->with(['activeVariants', 'images', 'businessUnit']);
 
         if (ctype_digit($identifier)) {
             $query->where(function ($q) use ($identifier) {
@@ -136,6 +136,15 @@ class StorefrontService
         $category = $filters['category'] ?? null;
         if (is_string($category) && $category !== '' && strtolower($category) !== 'all') {
             $query->where('category', $category);
+        }
+
+        $businessUnit = $filters['business_unit'] ?? null;
+        if (is_string($businessUnit) && $businessUnit !== '' && strtolower($businessUnit) !== 'all') {
+            $query->whereHas('businessUnit', function ($sub) use ($company, $businessUnit) {
+                $sub->where('company_id', $company->id)
+                    ->where('slug', $businessUnit)
+                    ->where('status', 'active');
+            });
         }
 
         $type = $filters['type'] ?? null;
@@ -247,6 +256,12 @@ class StorefrontService
             'onSale' => $onSale,
             'discountPercent' => $discountPercent,
             'category' => $product->category,
+            'businessUnit' => $product->relationLoaded('businessUnit') && $product->businessUnit ? [
+                'id' => (string) $product->businessUnit->id,
+                'name' => $product->businessUnit->name,
+                'slug' => $product->businessUnit->slug,
+                'type' => $product->businessUnit->type,
+            ] : null,
             'productType' => $product->product_type ?: 'physical',
             'fulfillmentType' => $product->fulfillment_type ?: 'shipping',
             'trackInventory' => $trackInventory,

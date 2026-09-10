@@ -14,6 +14,7 @@ class Product extends Model
 
     protected $fillable = [
         'company_id',
+        'business_unit_id',
         'name',
         'slug',
         'description',
@@ -182,6 +183,11 @@ class Product extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function businessUnit(): BelongsTo
+    {
+        return $this->belongsTo(BusinessUnit::class);
     }
 
     public function taxRate(): BelongsTo

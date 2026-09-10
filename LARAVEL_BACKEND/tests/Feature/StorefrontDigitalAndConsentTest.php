@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\CompanySetting;
+use App\Models\BusinessUnit;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\StorefrontCustomer;
@@ -326,5 +327,31 @@ class StorefrontDigitalAndConsentTest extends TestCase
         $this->assertSame('service', $order->fulfillment_type);
         $this->assertNull($order->delivery_address);
         $this->assertEquals(0.0, (float) $order->delivery_fee);
+    }
+
+    public function test_catalog_can_be_scoped_to_a_business_unit_without_a_second_company(): void
+    {
+        [$company, $ebook, $mug] = $this->seedDigitalStore();
+        $unit = BusinessUnit::create([
+            'company_id' => $company->id,
+            'name' => 'Studio Services',
+            'slug' => 'studio-services',
+            'type' => 'services',
+            'status' => 'active',
+        ]);
+        $mug->update(['business_unit_id' => $unit->id]);
+
+        $this->get("/s/{$company->store_slug}?business=studio-services")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('store/page')
+                ->where('company.businessUnits.0.slug', 'studio-services')
+                ->where('filters.business_unit', 'studio-services')
+                ->where('products.0.id', (string) $mug->id)
+            );
+
+        $this->assertSame($company->id, $unit->company_id);
+        $this->assertCount(1, $company->fresh()->businessUnits);
+        $this->assertSame($company->id, $ebook->fresh()->company_id);
     }
 }

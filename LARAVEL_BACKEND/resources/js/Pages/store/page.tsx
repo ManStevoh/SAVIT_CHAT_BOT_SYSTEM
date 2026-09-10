@@ -47,6 +47,7 @@ type StoreProduct = {
   image?: string | null
   variants?: Variant[]
   productType?: string | null
+  businessUnit?: { id: string; name: string; slug: string; type?: string | null } | null
   fulfillmentType?: string | null
   bookable?: boolean
   bookingDurationMinutes?: number | null
@@ -59,6 +60,7 @@ type Filters = {
   q?: string | null
   sort?: string | null
   category?: string | null
+  business_unit?: string | null
   in_stock?: string | boolean | number | null
   min_price?: string | number | null
   max_price?: string | number | null
@@ -87,6 +89,7 @@ type Props = {
   slug: string
   company: {
     name: string
+    businessUnits?: { id: string; name: string; slug: string; type?: string | null; description?: string | null }[]
     logo?: string | null
     currency: string
     displayCurrency?: string
@@ -445,6 +448,7 @@ export default function StorePage({
     () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[],
     [products]
   )
+  const businessUnits = company.businessUnits || []
 
   const resolvedSections = useMemo(() => {
     const list = sections && sections.length > 0 ? [...sections] : [{ type: 'catalog' }]
@@ -470,6 +474,7 @@ export default function StorePage({
       q: q || undefined,
       sort: sort || undefined,
       category: filters.category || undefined,
+      business: filters.business_unit || undefined,
       in_stock: inStockOnly ? 1 : undefined,
       min_price: minPrice || undefined,
       max_price: maxPrice || undefined,
@@ -485,6 +490,10 @@ export default function StorePage({
 
   const setCategory = (category: string | null) => {
     applyFilters({ category: category || undefined })
+  }
+
+  const setBusinessUnit = (slug: string | null) => {
+    applyFilters({ business: slug || undefined })
   }
 
   const toggleInStock = () => {
@@ -552,7 +561,7 @@ export default function StorePage({
     }
   }
 
-  const hasActiveFilters = Boolean(filters.q || filters.category || filters.in_stock || filters.min_price || filters.max_price || (filters.sort && filters.sort !== 'name_asc'))
+  const hasActiveFilters = Boolean(filters.q || filters.category || filters.business_unit || filters.in_stock || filters.min_price || filters.max_price || (filters.sort && filters.sort !== 'name_asc'))
 
   return (
     <div className="min-h-screen bg-slate-50/80 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100" style={style}>
@@ -801,6 +810,41 @@ export default function StorePage({
             </div>
           )}
         </div>
+
+        {businessUnits.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setBusinessUnit(null)}
+              className={`rounded-full px-4 py-2 text-xs font-bold transition-all ${
+                !filters.business_unit
+                  ? 'text-white shadow-md'
+                  : 'border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
+              }`}
+              style={!filters.business_unit ? { background: 'var(--sf-primary, #0f172a)' } : undefined}
+            >
+              All businesses
+            </button>
+            {businessUnits.map((unit) => {
+              const isActive = filters.business_unit === unit.slug
+              return (
+                <button
+                  key={unit.slug}
+                  type="button"
+                  onClick={() => setBusinessUnit(unit.slug)}
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition-all ${
+                    isActive
+                      ? 'text-white shadow-md'
+                      : 'border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
+                  }`}
+                  style={isActive ? { background: 'var(--sf-primary, #0f172a)' } : undefined}
+                >
+                  {unit.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* Category Pills Bar */}
         {allCategories.length > 0 && (
