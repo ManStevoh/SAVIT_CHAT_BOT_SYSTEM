@@ -286,17 +286,19 @@ export default function StoreCheckoutPage({
     >
       {/* Top Navbar */}
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5">
+        <div className="mx-auto grid max-w-5xl grid-cols-[auto_1fr] items-center gap-3 px-3 py-2.5 sm:flex sm:justify-between sm:px-4 sm:py-3.5">
           <Link
             href={`/s/${slug}/cart`}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            className="inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white sm:gap-2"
           >
-            <ArrowLeft className="h-4 w-4" /> Return to Cart
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            <span className="truncate sm:hidden">Cart</span>
+            <span className="hidden sm:inline">Return to Cart</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{company.name}</span>
-            <span className="text-slate-300 dark:text-slate-700">|</span>
-            <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Order Checkout</h1>
+          <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
+            <span className="hidden max-w-56 truncate text-xs font-bold uppercase tracking-wider text-slate-400 sm:inline">{company.name}</span>
+            <span className="hidden text-slate-300 dark:text-slate-700 sm:inline">|</span>
+            <h1 className="truncate text-right text-sm font-bold tracking-tight text-slate-900 dark:text-white">Order Checkout</h1>
           </div>
           <div className="hidden items-center gap-1 text-xs text-slate-400 sm:flex">
             <Lock className="h-3.5 w-3.5 text-emerald-600" /> Secure Checkout
@@ -500,7 +502,7 @@ export default function StoreCheckoutPage({
                   </div>
                 ) : (
                   <>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <button
                     type="button"
                     onClick={() => setFulfillmentType('delivery')}
