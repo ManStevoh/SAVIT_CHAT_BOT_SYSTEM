@@ -1123,6 +1123,9 @@ class PublicStorefrontController extends Controller
      */
     protected function defaultHomepageSections(Company $company, array $theme, array $catalogProducts): array
     {
+        $hasBusinessUnits = $company->relationLoaded('businessUnits')
+            ? $company->businessUnits->isNotEmpty()
+            : $company->businessUnits()->exists();
         $sections = [[
             'type' => 'hero',
             'headline' => ! empty($theme['hero_headline']) ? $theme['hero_headline'] : $company->name,
