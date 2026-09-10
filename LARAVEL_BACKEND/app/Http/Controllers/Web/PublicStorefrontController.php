@@ -1123,6 +1123,9 @@ class PublicStorefrontController extends Controller
      */
     protected function defaultHomepageSections(Company $company, array $theme, array $catalogProducts): array
     {
+        $hasBusinessUnits = $company->relationLoaded('businessUnits')
+            ? $company->businessUnits->isNotEmpty()
+            : $company->businessUnits()->exists();
         $sections = [[
             'type' => 'hero',
             'headline' => ! empty($theme['hero_headline']) ? $theme['hero_headline'] : $company->name,
@@ -1137,7 +1140,7 @@ class PublicStorefrontController extends Controller
         $featured = $this->defaultFeaturedProducts($catalogProducts);
         // Only show a separate featured products shelf if it is a curated subset (e.g. items on sale or catalog > featured)
         // to avoid duplicating the entire catalog immediately above the main catalog grid
-        if (count($catalogProducts) > count($featured) && $featured !== []) {
+        if (! $hasBusinessUnits && count($catalogProducts) > count($featured) && $featured !== []) {
             $isAllBooks = ! empty($catalogProducts) && collect($catalogProducts)->every(
                 fn ($p) => strcasecmp((string) ($p['category'] ?? ''), 'Books') === 0
             );
@@ -1169,7 +1172,7 @@ class PublicStorefrontController extends Controller
         }
 
         $categories = $this->catalogCategories($catalogProducts);
-        if (count($categories) >= 2) {
+        if (! $hasBusinessUnits && count($categories) >= 2) {
             foreach (array_slice($categories, 0, 6) as $category) {
                 $shelf = array_values(array_filter(
                     $catalogProducts,
