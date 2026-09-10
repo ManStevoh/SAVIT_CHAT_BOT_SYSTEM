@@ -1148,11 +1148,15 @@ class PublicStorefrontController extends Controller
     {
         $onSale = array_values(array_filter($catalogProducts, fn ($p) => ! empty($p['onSale'])));
         if ($onSale !== []) {
-            return array_slice($onSale, 0, 8);
+            return array_slice($onSale, 0, min(2, count($onSale)));
         }
 
-        // When not on sale, select a curated subset (e.g. 2 items for small catalogs <= 4)
-        $limit = count($catalogProducts) <= 4 ? 2 : 4;
+        $isAllBooks = ! empty($catalogProducts) && collect($catalogProducts)->every(
+            fn ($p) => strcasecmp((string) ($p['category'] ?? ''), 'Books') === 0
+        );
+
+        // Always show top 2 featured items for bookshops and small catalogs (<= 8 items)
+        $limit = ($isAllBooks || count($catalogProducts) <= 8) ? 2 : 4;
 
         return array_slice($catalogProducts, 0, $limit);
     }

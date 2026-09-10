@@ -875,7 +875,7 @@ export default function StorePage({
               <section key={idx} className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4 text-amber-500" /> Featured Products
+                    <Sparkles className="h-4 w-4 text-amber-500" /> {section.headline || 'Featured Products'}
                   </h2>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
