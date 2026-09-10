@@ -244,6 +244,8 @@ class StorefrontService
             })->values()->all();
         }
 
+        $businessUnit = $product->businessUnit;
+
         return [
             'id' => (string) $product->id,
             'slug' => $product->slug,
@@ -256,11 +258,11 @@ class StorefrontService
             'onSale' => $onSale,
             'discountPercent' => $discountPercent,
             'category' => $product->category,
-            'businessUnit' => $product->relationLoaded('businessUnit') && $product->businessUnit ? [
-                'id' => (string) $product->businessUnit->id,
-                'name' => $product->businessUnit->name,
-                'slug' => $product->businessUnit->slug,
-                'type' => $product->businessUnit->type,
+            'businessUnit' => $businessUnit ? [
+                'id' => (string) $businessUnit->id,
+                'name' => $businessUnit->name,
+                'slug' => $businessUnit->slug,
+                'type' => $businessUnit->type,
             ] : null,
             'productType' => $product->product_type ?: 'physical',
             'fulfillmentType' => $product->fulfillment_type ?: 'shipping',
