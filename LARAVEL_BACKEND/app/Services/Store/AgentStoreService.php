@@ -4,6 +4,7 @@ namespace App\Services\Store;
 
 use App\Models\Company;
 use App\Models\BusinessUnit;
+use App\Models\BookingSetting;
 use App\Models\CustomerMemory;
 use App\Models\Plan;
 use App\Models\Product;
@@ -324,6 +325,33 @@ class AgentStoreService
         $unit->update($fields);
 
         return ['success' => true, 'business_unit' => $unit->fresh()->toArray()];
+    }
+
+    public function setupBookingSettings(Company $company, array $data): array
+    {
+        $slug = Str::slug((string) ($data['public_slug'] ?? $data['slug'] ?? $company->store_slug.'-bookings'));
+        $settings = BookingSetting::updateOrCreate(
+            ['company_id' => $company->id],
+            [
+                'timezone' => $data['timezone'] ?? config('app.timezone', 'Africa/Nairobi'),
+                'default_duration_minutes' => max(5, (int) ($data['default_duration_minutes'] ?? 1440)),
+                'buffer_minutes' => max(0, (int) ($data['buffer_minutes'] ?? 0)),
+                'min_notice_minutes' => max(0, (int) ($data['min_notice_minutes'] ?? 60)),
+                'max_days_ahead' => max(1, (int) ($data['max_days_ahead'] ?? 90)),
+                'public_slug' => $slug,
+                'is_enabled' => true,
+                'payment_requirement' => in_array(($data['payment_requirement'] ?? 'optional'), ['at_venue', 'required', 'optional'], true) ? $data['payment_requirement'] : 'optional',
+                'whatsapp_booking_mode' => in_array(($data['whatsapp_booking_mode'] ?? 'hybrid'), ['whatsapp_native', 'web_link', 'hybrid'], true) ? $data['whatsapp_booking_mode'] : 'hybrid',
+            ]
+        );
+
+        return [
+            'success' => true,
+            'company_id' => $company->id,
+            'public_slug' => $settings->public_slug,
+            'booking_url' => url('/book/'.$settings->public_slug),
+            'settings' => $settings->toArray(),
+        ];
     }
 
     /**

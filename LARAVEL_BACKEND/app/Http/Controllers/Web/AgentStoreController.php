@@ -41,6 +41,7 @@ class AgentStoreController extends Controller
                 'list_business_units', 'business_units' => $this->handleListBusinessUnits($request),
                 'create_business_unit', 'add_business_unit' => $this->handleCreateBusinessUnit($request),
                 'update_business_unit' => $this->handleUpdateBusinessUnit($request),
+                'setup_booking_settings', 'configure_booking' => $this->handleSetupBookingSettings($request),
                 'add_product', 'create', 'add' => $this->handleAddProduct($request),
                 'update_product', 'update' => $this->handleUpdateProduct($request),
                 'update_store', 'store_settings', 'settings' => $this->handleUpdateStore($request),
@@ -54,7 +55,7 @@ class AgentStoreController extends Controller
                 'verify_email', 'verify_user' => $this->handleVerifyEmail($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, list_business_units, create_business_unit, update_business_unit, add_product, update_product, update_store, assign_free_plan, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, verify_email.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, list_business_units, create_business_unit, update_business_unit, setup_booking_settings, add_product, update_product, update_store, assign_free_plan, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, verify_email.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -141,6 +142,16 @@ class AgentStoreController extends Controller
 
         $identifier = $request->input('business_unit_id') ?: $request->input('business_unit') ?: $request->input('slug') ?: $request->input('name');
         return response()->json($this->storeService->updateBusinessUnit($company, $identifier, (array) ($request->input('updates') ?: $request->all())));
+    }
+
+    private function handleSetupBookingSettings(Request $request): JsonResponse
+    {
+        $company = $this->storeService->resolveCompany($request->input('company_id') ?: $request->input('store'));
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Store not found.'], 404);
+        }
+
+        return response()->json($this->storeService->setupBookingSettings($company, (array) ($request->input('settings') ?: $request->all())));
     }
 
     private function handleAddProduct(Request $request): JsonResponse
