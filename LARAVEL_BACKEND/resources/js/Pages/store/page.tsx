@@ -89,7 +89,7 @@ type Props = {
   slug: string
   company: {
     name: string
-    businessUnits?: { id: string; name: string; slug: string; type?: string | null; description?: string | null }[]
+    businessUnits?: { id: string; name: string; slug: string; type?: string | null; description?: string | null; logo?: string | null; heroImage?: string | null }[]
     logo?: string | null
     currency: string
     displayCurrency?: string
@@ -449,6 +449,7 @@ export default function StorePage({
     [products]
   )
   const businessUnits = company.businessUnits || []
+  const activeBusinessUnit = businessUnits.find((unit) => unit.slug === filters.business_unit) || null
 
   const resolvedSections = useMemo(() => {
     const list = sections && sections.length > 0 ? [...sections] : [{ type: 'catalog' }]
@@ -812,37 +813,49 @@ export default function StorePage({
         </div>
 
         {businessUnits.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <button
-              type="button"
-              onClick={() => setBusinessUnit(null)}
-              className={`rounded-full px-4 py-2 text-xs font-bold transition-all ${
-                !filters.business_unit
-                  ? 'text-white shadow-md'
-                  : 'border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
-              }`}
-              style={!filters.business_unit ? { background: 'var(--sf-primary, #0f172a)' } : undefined}
-            >
-              All businesses
-            </button>
-            {businessUnits.map((unit) => {
-              const isActive = filters.business_unit === unit.slug
-              return (
-                <button
-                  key={unit.slug}
-                  type="button"
-                  onClick={() => setBusinessUnit(unit.slug)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition-all ${
-                    isActive
-                      ? 'text-white shadow-md'
-                      : 'border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
-                  }`}
-                  style={isActive ? { background: 'var(--sf-primary, #0f172a)' } : undefined}
-                >
-                  {unit.name}
-                </button>
-              )
-            })}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setBusinessUnit(null)}
+                className={`rounded-full px-4 py-2 text-xs font-bold transition-all ${
+                  !filters.business_unit
+                    ? 'text-white shadow-md'
+                    : 'border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
+                }`}
+                style={!filters.business_unit ? { background: 'var(--sf-primary, #0f172a)' } : undefined}
+              >
+                All businesses
+              </button>
+              {businessUnits.map((unit) => {
+                const isActive = filters.business_unit === unit.slug
+                return (
+                  <button
+                    key={unit.slug}
+                    type="button"
+                    onClick={() => setBusinessUnit(unit.slug)}
+                    className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition-all ${
+                      isActive
+                        ? 'text-white shadow-md'
+                        : 'border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
+                    }`}
+                    style={isActive ? { background: 'var(--sf-primary, #0f172a)' } : undefined}
+                  >
+                    {unit.name}
+                  </button>
+                )
+              })}
+            </div>
+            {activeBusinessUnit && (
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                {activeBusinessUnit.logo ? <img src={activeBusinessUnit.logo} alt="" className="h-9 w-9 rounded-xl object-cover" /> : null}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Now browsing</p>
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-white">{activeBusinessUnit.name}</p>
+                  {activeBusinessUnit.description ? <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{activeBusinessUnit.description}</p> : null}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

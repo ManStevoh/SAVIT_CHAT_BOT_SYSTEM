@@ -968,6 +968,8 @@ class PublicStorefrontController extends Controller
                     'slug' => $unit->slug,
                     'type' => $unit->type,
                     'description' => $unit->description,
+                    'logo' => $unit->logo ? asset('storage/'.$unit->logo) : null,
+                    'heroImage' => $unit->hero_image ? asset('storage/'.$unit->hero_image) : null,
                 ])->values()->all(),
             'logo' => $company->logo ? asset('storage/'.$company->logo) : null,
             'currency' => $baseCurrency,
