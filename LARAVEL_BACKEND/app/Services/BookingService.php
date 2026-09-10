@@ -153,36 +153,50 @@ class BookingService
         }
 
         $settings = $this->ensureSettings($company);
+        if ($product !== null && (! $product->exists || (int) $product->company_id !== (int) $company->id || ! $product->bookable || $product->status !== 'active')) {
+            throw new \RuntimeException('The selected service is not available for booking.');
+        }
+        if ($order !== null && ((int) $order->company_id !== (int) $company->id || $order->payment_status !== 'paid')) {
+            throw new \RuntimeException('The selected order is not eligible for booking.');
+        }
+        if ($line !== null && ($line->order_id !== $order?->id || $line->product_id !== $product?->id)) {
+            throw new \RuntimeException('The selected order line does not match this service.');
+        }
         $startsAt = Carbon::parse($payload['startsAt'] ?? $payload['starts_at'])->utc();
         $duration = (int) ($product?->booking_duration_minutes ?: $settings->default_duration_minutes);
         $endsAt = isset($payload['endsAt']) || isset($payload['ends_at'])
             ? Carbon::parse($payload['endsAt'] ?? $payload['ends_at'])->utc()
             : $startsAt->copy()->addMinutes(max(5, $duration));
 
-        $slots = $this->availableSlots($company, $product, $startsAt->copy()->subMinute(), $endsAt->copy()->addMinute());
-        $exact = collect($slots)->first(function (array $slot) use ($startsAt) {
-            return Carbon::parse($slot['start'])->equalTo($startsAt);
-        });
-        if (! $exact) {
-            throw new \RuntimeException('That time slot is no longer available.');
-        }
+        $booking = DB::transaction(function () use ($company, $product, $order, $line, $payload, $startsAt, $endsAt) {
+            // Serialize slot checks per company so two requests cannot reserve the same time.
+            Company::query()->whereKey($company->id)->lockForUpdate()->first();
 
-        $booking = Booking::create([
-            'company_id' => $company->id,
-            'product_id' => $product?->id,
-            'order_id' => $order?->id,
-            'order_product_id' => $line?->id,
-            'customer_name' => (string) ($payload['customerName'] ?? $payload['customer_name'] ?? 'Guest'),
-            'customer_email' => $payload['customerEmail'] ?? $payload['customer_email'] ?? null,
-            'customer_phone' => $payload['customerPhone'] ?? $payload['customer_phone'] ?? null,
-            'starts_at' => $startsAt,
-            'ends_at' => $endsAt,
-            'status' => Booking::STATUS_CONFIRMED,
-            'title' => $payload['title'] ?? ($product?->name ?: 'Meeting'),
-            'notes' => $payload['notes'] ?? null,
-            'ics_uid' => (string) Str::uuid(),
-            'manage_token' => Str::random(40),
-        ]);
+            $slots = $this->availableSlots($company, $product, $startsAt->copy()->subMinute(), $endsAt->copy()->addMinute());
+            $exact = collect($slots)->first(function (array $slot) use ($startsAt) {
+                return Carbon::parse($slot['start'])->equalTo($startsAt);
+            });
+            if (! $exact) {
+                throw new \RuntimeException('That time slot is no longer available.');
+            }
+
+            return Booking::create([
+                'company_id' => $company->id,
+                'product_id' => $product?->id,
+                'order_id' => $order?->id,
+                'order_product_id' => $line?->id,
+                'customer_name' => (string) ($payload['customerName'] ?? $payload['customer_name'] ?? 'Guest'),
+                'customer_email' => $payload['customerEmail'] ?? $payload['customer_email'] ?? null,
+                'customer_phone' => $payload['customerPhone'] ?? $payload['customer_phone'] ?? null,
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+                'status' => Booking::STATUS_CONFIRMED,
+                'title' => $payload['title'] ?? ($product?->name ?: 'Meeting'),
+                'notes' => $payload['notes'] ?? null,
+                'ics_uid' => (string) Str::uuid(),
+                'manage_token' => Str::random(40),
+            ]);
+        });
 
         $this->notifyWebhook($settings, $booking);
 

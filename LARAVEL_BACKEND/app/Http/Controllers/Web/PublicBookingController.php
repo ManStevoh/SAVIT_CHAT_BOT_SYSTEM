@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\BookingSetting;
 use App\Models\Company;
 use App\Models\Order;
+use App\Models\OrderProduct;
 use App\Models\Product;
 use App\Services\BookingService;
 use App\Services\Cms\CmsSeoService;
@@ -100,6 +101,7 @@ class PublicBookingController extends Controller
             $product = Product::where('company_id', $company->id)
                 ->where('id', $validated['productId'])
                 ->where('bookable', true)
+                ->where('status', 'active')
                 ->firstOrFail();
         }
 
@@ -109,10 +111,23 @@ class PublicBookingController extends Controller
                 ->where('id', $validated['orderId'])
                 ->where('payment_status', 'paid')
                 ->first();
+            if (! $order) {
+                abort(422, 'The selected order is not eligible for booking.');
+            }
+        }
+
+        $line = null;
+        if ($order && $product) {
+            $line = OrderProduct::where('order_id', $order->id)
+                ->where('product_id', $product->id)
+                ->first();
+            if (! $line) {
+                abort(422, 'The selected order does not contain this service.');
+            }
         }
 
         try {
-            $booking = $this->bookings->createBooking($company, $validated, $product, $order);
+            $booking = $this->bookings->createBooking($company, $validated, $product, $order, $line);
         } catch (\RuntimeException $e) {
             return back()->withErrors(['startsAt' => $e->getMessage()]);
         }

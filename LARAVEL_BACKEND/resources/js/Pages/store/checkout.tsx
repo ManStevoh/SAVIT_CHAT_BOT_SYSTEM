@@ -34,7 +34,7 @@ import { StorefrontAuthModal } from '@/components/store/StorefrontAuthModal'
 import { resolveStorefrontStyle, type BrandTheme } from '@/lib/theme-utils'
 
 type CartItem = { key: string; name: string; price: number; quantity: number; lineTotal: number; isDigital?: boolean }
-type CartSummary = { items: CartItem[]; subtotal: number; taxTotal: number; total: number; digitalOnly?: boolean; hasDigitalItems?: boolean }
+type CartSummary = { items: CartItem[]; subtotal: number; taxTotal: number; total: number; digitalOnly?: boolean; hasDigitalItems?: boolean; serviceOnly?: boolean; hasServices?: boolean }
 
 type SuggestedAddress = { line: string; city?: string | null; label?: string | null; customerName?: string | null } | null
 
@@ -68,6 +68,8 @@ type Props = {
   presetDineInTableCode?: string | null
   suggestedAddress?: SuggestedAddress
   digitalOnly?: boolean
+  serviceOnly?: boolean
+  hasServices?: boolean
   hasDigitalItems?: boolean
   errors?: Record<string, string>
 }
@@ -91,6 +93,8 @@ export default function StoreCheckoutPage({
   presetDineInTableCode,
   suggestedAddress = null,
   digitalOnly = false,
+  serviceOnly = false,
+  hasServices = false,
   hasDigitalItems = false,
   errors = {},
 }: Props) {
@@ -103,8 +107,8 @@ export default function StoreCheckoutPage({
   const [tipAmount, setTipAmount] = useState('')
   const [couponCode, setCouponCode] = useState('')
   const [selectedTipPercent, setSelectedTipPercent] = useState<number | null>(null)
-  const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup' | 'dine_in' | 'digital'>(
-    digitalOnly ? 'digital' : dineInEnabled && presetDineInTableCode ? 'dine_in' : 'delivery'
+  const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup' | 'dine_in' | 'digital' | 'service'>(
+    digitalOnly ? 'digital' : serviceOnly ? 'service' : dineInEnabled && presetDineInTableCode ? 'dine_in' : 'delivery'
   )
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [marketingConsent, setMarketingConsent] = useState(false)
@@ -188,11 +192,15 @@ export default function StoreCheckoutPage({
       setFulfillmentType('digital')
       return
     }
+    if (serviceOnly) {
+      setFulfillmentType('service')
+      return
+    }
     if (dineInEnabled && presetDineInTableCode) {
       setFulfillmentType('dine_in')
       setDineInTableCode(presetDineInTableCode)
     }
-  }, [digitalOnly, dineInEnabled, presetDineInTableCode])
+  }, [digitalOnly, serviceOnly, dineInEnabled, presetDineInTableCode])
 
   useEffect(() => {
     if (suggestedAddress?.line && !deliveryAddress) {
@@ -498,6 +506,20 @@ export default function StoreCheckoutPage({
                         <p className="text-sm font-bold text-slate-900 dark:text-white">Digital delivery</p>
                         <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                           This cart is digital only — no delivery address needed. After payment, files or license keys are sent to the email above.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : serviceOnly ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white dark:bg-emerald-600">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Service appointment</p>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                          No delivery address is needed. Continue with your email and the service provider will confirm your appointment details.
                         </p>
                       </div>
                     </div>

@@ -248,12 +248,15 @@ class StorefrontService
             'discountPercent' => $discountPercent,
             'category' => $product->category,
             'productType' => $product->product_type ?: 'physical',
+            'fulfillmentType' => $product->fulfillment_type ?: 'shipping',
             'trackInventory' => $trackInventory,
             'stock' => $stock,
             'soldOut' => $soldOut,
             'lowStock' => $lowStock,
             'maxQty' => $maxQty,
             'bookable' => (bool) $product->bookable,
+            'bookingDurationMinutes' => $product->booking_duration_minutes,
+            'serviceBookingUrl' => $product->service_booking_url,
             'images' => $imageUrls,
             'imageGallery' => $imageGallery,
             'image' => $imageUrls[0] ?? null,
@@ -651,6 +654,9 @@ class StorefrontService
                 'image' => $this->firstImageUrl($product),
                 'productType' => $product->product_type ?: 'physical',
                 'isDigital' => $this->productIsDigital($product),
+                'isService' => $this->productIsService($product),
+                'requiresDeliveryAddress' => (bool) $product->requires_delivery_address,
+                'bookable' => (bool) $product->bookable,
             ];
 
             $calcItems[] = [
@@ -686,22 +692,27 @@ class StorefrontService
             'itemCount' => array_sum(array_column($items, 'quantity')),
             'digitalOnly' => $profile['digitalOnly'],
             'hasDigitalItems' => $profile['hasDigitalItems'],
+            'serviceOnly' => $profile['serviceOnly'],
+            'hasServices' => $profile['hasServices'],
             'hasPhysicalItems' => $profile['hasPhysicalItems'],
         ];
     }
 
     /**
      * @param  list<array<string, mixed>>  $items
-     * @return array{digitalOnly: bool, hasDigitalItems: bool, hasPhysicalItems: bool}
+    * @return array{digitalOnly: bool, hasDigitalItems: bool, serviceOnly: bool, hasServices: bool, hasPhysicalItems: bool}
      */
     public function cartFulfillmentProfileFromItems(array $items): array
     {
         $digital = 0;
         $physical = 0;
+        $services = 0;
         foreach ($items as $item) {
             if (! empty($item['isDigital'])) {
                 $digital++;
             } else {
+            } elseif (! empty($item['isService'])) {
+                $services++;
                 $physical++;
             }
         }
@@ -709,7 +720,9 @@ class StorefrontService
         return [
             'digitalOnly' => $digital > 0 && $physical === 0,
             'hasDigitalItems' => $digital > 0,
+            'serviceOnly' => $services > 0 && $digital === 0 && $physical === 0,
             'hasPhysicalItems' => $physical > 0,
+            'hasServices' => $services > 0,
         ];
     }
 
@@ -719,6 +732,12 @@ class StorefrontService
         $fulfillment = strtolower((string) ($product->fulfillment_type ?? ''));
 
         return $type === 'digital' || in_array($fulfillment, ['download', 'link'], true);
+    }
+
+    public function productIsService(Product $product): bool
+    {
+        return strtolower((string) ($product->product_type ?? '')) === 'service'
+            || strtolower((string) ($product->fulfillment_type ?? '')) === 'booking';
     }
 
     protected function firstImageUrl(Product $product): ?string
@@ -830,7 +849,9 @@ class StorefrontService
         $fulfillmentType = $checkout['fulfillmentType'] ?? $session->fulfillment_type ?? 'delivery';
         if ($profile['digitalOnly']) {
             $fulfillmentType = 'digital';
-        } elseif (! in_array($fulfillmentType, ['delivery', 'pickup', 'dine_in'], true)) {
+        } elseif ($profile['serviceOnly']) {
+            $fulfillmentType = 'service';
+        } elseif (! in_array($fulfillmentType, ['delivery', 'pickup', 'dine_in', 'service'], true)) {
             $fulfillmentType = 'delivery';
         }
 
@@ -1107,6 +1128,8 @@ class StorefrontService
         $fulfillmentType = $input['fulfillmentType'] ?? $session->fulfillment_type ?? 'delivery';
         if ($profile['digitalOnly']) {
             $fulfillmentType = 'digital';
+        } elseif ($profile['serviceOnly']) {
+            $fulfillmentType = 'service';
         } elseif (! in_array($fulfillmentType, ['delivery', 'pickup', 'dine_in'], true)) {
             $fulfillmentType = 'delivery';
         }

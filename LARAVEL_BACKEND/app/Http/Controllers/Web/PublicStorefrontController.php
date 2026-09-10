@@ -377,6 +377,8 @@ class PublicStorefrontController extends Controller
             'presetDineInTableCode' => $request->query('table') ? (string) $request->query('table') : null,
             'suggestedAddress' => $this->storefront->suggestedAddressForPhone($company, is_string($phone) ? $phone : null),
             'digitalOnly' => (bool) ($cart['digitalOnly'] ?? false),
+            'serviceOnly' => (bool) ($cart['serviceOnly'] ?? false),
+            'hasServices' => (bool) ($cart['hasServices'] ?? false),
             'hasDigitalItems' => (bool) ($cart['hasDigitalItems'] ?? false),
             'locale' => $locale,
             'chrome' => self::CHROME_STRINGS[$locale] ?? self::CHROME_STRINGS['en'],
@@ -402,7 +404,7 @@ class PublicStorefrontController extends Controller
             'customerName' => 'required|string|max:255',
             'customerPhone' => $hasWhatsAppPhone ? 'required|string|max:40' : 'nullable|string|max:40',
             'customerEmail' => $emailRequired ? 'required|email|max:255' : 'nullable|email|max:255',
-            'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in,digital',
+                'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in,digital,service',
             'deliveryAddress' => 'nullable|string|max:1000',
             'dineInTableCode' => 'nullable|string|max:100',
             'orderNotes' => 'nullable|string|max:1000',
@@ -497,7 +499,7 @@ class PublicStorefrontController extends Controller
         $this->persistCartToken($company, $session->session_token);
 
         $validated = $request->validate([
-            'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in,digital',
+            'fulfillmentType' => 'nullable|string|in:delivery,pickup,dine_in,digital,service',
             'deliveryAddress' => 'nullable|string|max:1000',
             'couponCode' => 'nullable|string|max:64',
             'tipAmount' => 'nullable|numeric|min:0',

@@ -83,7 +83,17 @@ final class CreateBookingTool implements AgentTool
             $productId = isset($arguments['product_id']) ? (int) $arguments['product_id'] : null;
             $product = null;
             if ($productId) {
-                $product = Product::where('company_id', $company->id)->where('id', $productId)->first();
+                $product = Product::where('company_id', $company->id)
+                    ->where('id', $productId)
+                    ->where('status', 'active')
+                    ->where('bookable', true)
+                    ->first();
+                if (! $product) {
+                    return [
+                        'success' => false,
+                        'message' => 'The selected service is not available for booking.',
+                    ];
+                }
             }
 
             $customerName = trim((string) ($arguments['customer_name'] ?? '')) ?: ($context->customerName ?: 'Customer');

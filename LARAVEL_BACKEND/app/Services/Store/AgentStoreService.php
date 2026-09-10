@@ -287,9 +287,10 @@ class AgentStoreService
             ? strtolower((string) ($data['product_type'] ?? $data['productType'] ?? 'physical'))
             : 'physical';
 
-        $fulfillmentType = in_array(strtolower((string) ($data['fulfillment_type'] ?? $data['fulfillmentType'] ?? 'manual')), ['shipping', 'download', 'link', 'booking', 'manual'], true)
-            ? strtolower((string) ($data['fulfillment_type'] ?? $data['fulfillmentType'] ?? 'manual'))
-            : 'manual';
+        $defaultFulfillment = $productType === 'service' ? 'booking' : ($productType === 'digital' ? 'download' : 'manual');
+        $fulfillmentType = in_array(strtolower((string) ($data['fulfillment_type'] ?? $data['fulfillmentType'] ?? $defaultFulfillment)), ['shipping', 'download', 'link', 'booking', 'manual'], true)
+            ? strtolower((string) ($data['fulfillment_type'] ?? $data['fulfillmentType'] ?? $defaultFulfillment))
+            : $defaultFulfillment;
 
         $trackInventory = isset($data['track_inventory'])
             ? (bool) $data['track_inventory']
@@ -314,6 +315,9 @@ class AgentStoreService
             'track_inventory'          => $trackInventory,
             'image'                    => $imagePath,
             'requires_delivery_address'=> (bool) ($data['requires_delivery_address'] ?? $data['requiresDeliveryAddress'] ?? ($productType === 'physical')),
+            'bookable'                 => (bool) ($data['bookable'] ?? ($productType === 'service' && $fulfillmentType === 'booking')),
+            'booking_duration_minutes' => isset($data['booking_duration_minutes']) ? max(5, (int) $data['booking_duration_minutes']) : null,
+            'service_booking_url'      => $data['service_booking_url'] ?? $data['serviceBookingUrl'] ?? null,
         ]);
 
         if (! empty($imagePath)) {

@@ -70,7 +70,7 @@ final class SearchProductsTool implements AgentTool
         $products = Product::query()
             ->where('company_id', $companyId)
             ->whereIn('id', array_slice($ids, 0, $limit))
-            ->get(['id', 'name', 'price', 'compare_at_price', 'stock', 'description']);
+            ->get(['id', 'name', 'price', 'compare_at_price', 'stock', 'description', 'product_type', 'fulfillment_type', 'bookable', 'booking_duration_minutes', 'service_booking_url']);
 
         return [
             'products' => $products->map(function (Product $p) use ($settings) {
@@ -83,6 +83,11 @@ final class SearchProductsTool implements AgentTool
                     'price' => MoneyFormatter::formatFromSettings($price, $settings),
                     'stock' => $p->stock,
                     'description' => mb_substr((string) ($p->description ?? ''), 0, 200),
+                    'productType' => $p->product_type,
+                    'fulfillmentType' => $p->fulfillment_type,
+                    'bookable' => (bool) $p->bookable,
+                    'bookingDurationMinutes' => $p->booking_duration_minutes,
+                    'serviceBookingUrl' => $p->service_booking_url,
                     'onSale' => $onSale,
                 ];
                 if ($onSale) {

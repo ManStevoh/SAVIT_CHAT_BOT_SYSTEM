@@ -280,4 +280,51 @@ class StorefrontDigitalAndConsentTest extends TestCase
         $this->assertSame('Westlands Nairobi', $order->delivery_address);
         $this->assertGreaterThan(0, (float) $order->delivery_fee);
     }
+
+    public function test_service_only_checkout_skips_delivery_and_uses_service_fulfillment(): void
+    {
+        [$company] = $this->seedDigitalStore();
+        $service = Product::create([
+            'company_id' => $company->id,
+            'name' => 'Brand Strategy Session',
+            'slug' => 'brand-strategy-session',
+            'price' => 150,
+            'stock' => 0,
+            'status' => 'active',
+            'product_type' => 'service',
+            'fulfillment_type' => 'booking',
+            'track_inventory' => false,
+            'requires_delivery_address' => false,
+            'bookable' => true,
+            'booking_duration_minutes' => 60,
+        ]);
+        $slug = $company->store_slug;
+
+        $this->post("/s/{$slug}/cart", [
+            'productId' => $service->id,
+            'quantity' => 1,
+        ])->assertRedirect();
+
+        $this->get("/s/{$slug}/checkout")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('store/checkout')
+                ->where('serviceOnly', true)
+                ->where('hasServices', true)
+                ->where('digitalOnly', false)
+            );
+
+        $this->post("/s/{$slug}/checkout", [
+            'customerName' => 'Service Buyer',
+            'customerEmail' => 'service@example.com',
+            'fulfillmentType' => 'delivery',
+            'acceptTerms' => true,
+        ])->assertRedirect();
+
+        $order = Order::where('company_id', $company->id)->first();
+        $this->assertNotNull($order);
+        $this->assertSame('service', $order->fulfillment_type);
+        $this->assertNull($order->delivery_address);
+        $this->assertEquals(0.0, (float) $order->delivery_fee);
+    }
 }

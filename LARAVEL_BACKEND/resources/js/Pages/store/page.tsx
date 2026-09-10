@@ -47,6 +47,10 @@ type StoreProduct = {
   image?: string | null
   variants?: Variant[]
   productType?: string | null
+  fulfillmentType?: string | null
+  bookable?: boolean
+  bookingDurationMinutes?: number | null
+  serviceBookingUrl?: string | null
   averageRating?: number | null
   reviewCount?: number
 }
@@ -377,6 +381,16 @@ function ProductCard({
             )}
           </div>
 
+          {product.productType === 'service' && product.bookable && product.serviceBookingUrl ? (
+            <Button
+              asChild
+              size="sm"
+              className="h-9 w-full shrink-0 px-3 text-[11px] font-bold text-white shadow-xs sm:h-8 sm:w-auto"
+              style={{ background: 'var(--sf-primary, #0f172a)', borderRadius: 'var(--sf-radius, 0.75rem)' }}
+            >
+              <a href={product.serviceBookingUrl}>Book now</a>
+            </Button>
+          ) : (
           <Button
             type="button"
             size="sm"
@@ -394,6 +408,7 @@ function ProductCard({
             <Plus className="mr-1 h-3.5 w-3.5 shrink-0" />
             {product.soldOut ? 'Sold out' : 'Add to cart'}
           </Button>
+          )}
         </div>
       </div>
     </div>
