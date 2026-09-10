@@ -10,6 +10,12 @@ if [ -f public/hot ]; then
   rm -f public/hot
 fi
 
+# Stale static copies bypass Laravel on LiteSpeed (Last-Modified / Accept-Ranges).
+if [ -f public/sitemap.xml ] || [ -f public/robots.txt ]; then
+  echo "==> Removing stale public/sitemap.xml and public/robots.txt..."
+  rm -f public/sitemap.xml public/robots.txt
+fi
+
 if [ ! -f public/build/manifest.json ]; then
   echo "ERROR: public/build/manifest.json is missing. Frontend was not built."
   if command -v npm >/dev/null 2>&1; then

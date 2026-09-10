@@ -6,6 +6,12 @@
 
     RewriteEngine On
 
+    # Always generate sitemap and robots dynamically. A leftover public/sitemap.xml
+    # on LiteSpeed is served as a static file and skips Laravel.
+    RewriteRule ^sitemap(-[a-z]+)?\.xml$ index.php [L]
+    RewriteRule ^robots\.txt$ index.php [L]
+    RewriteRule ^llms(-full)?\.txt$ index.php [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

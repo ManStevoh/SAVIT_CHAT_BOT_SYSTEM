@@ -32,7 +32,12 @@ export function StorefrontFooter({ slug, company }: { slug: string; company: Sto
         </div>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
           {links.map((link) => (
-            <Link key={link.href} href={link.href} className="hover:text-slate-900 dark:hover:text-white">
+            <Link
+              key={link.href}
+              href={link.href}
+              rel={link.href.includes('/track') ? 'nofollow' : undefined}
+              className="hover:text-slate-900 dark:hover:text-white"
+            >
               {link.label}
             </Link>
           ))}
