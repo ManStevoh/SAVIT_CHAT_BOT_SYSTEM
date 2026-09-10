@@ -700,7 +700,7 @@ class StorefrontService
 
     /**
      * @param  list<array<string, mixed>>  $items
-    * @return array{digitalOnly: bool, hasDigitalItems: bool, serviceOnly: bool, hasServices: bool, hasPhysicalItems: bool}
+        * @return array{digitalOnly: bool, hasDigitalItems: bool, serviceOnly: bool, hasServices: bool, hasPhysicalItems: bool}
      */
     public function cartFulfillmentProfileFromItems(array $items): array
     {
@@ -710,15 +710,15 @@ class StorefrontService
         foreach ($items as $item) {
             if (! empty($item['isDigital'])) {
                 $digital++;
-            } else {
             } elseif (! empty($item['isService'])) {
                 $services++;
+            } else {
                 $physical++;
             }
         }
 
         return [
-            'digitalOnly' => $digital > 0 && $physical === 0,
+            'digitalOnly' => $digital > 0 && $physical === 0 && $services === 0,
             'hasDigitalItems' => $digital > 0,
             'serviceOnly' => $services > 0 && $digital === 0 && $physical === 0,
             'hasPhysicalItems' => $physical > 0,
