@@ -151,7 +151,7 @@ export default function StoreWishlistPage({
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{company.name}</span>
             <span className="text-slate-300 dark:text-slate-700">|</span>
-            <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Saved Wishlist</h1>
+            <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Favorites</h1>
           </div>
 
           <div className="flex items-center gap-2">

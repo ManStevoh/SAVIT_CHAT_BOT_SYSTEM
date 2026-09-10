@@ -692,9 +692,9 @@ export default function StorePage({
             )}
 
             <Link href={`/s/${slug}/wishlist`}>
-              <Button variant="outline" size="sm" className="gap-1 px-2.5 rounded-xl border-slate-200 text-xs font-semibold dark:border-slate-800 sm:gap-1.5 sm:px-3" title="Wishlist">
+              <Button variant="outline" size="sm" className="gap-1 px-2.5 rounded-xl border-slate-200 text-xs font-semibold dark:border-slate-800 sm:gap-1.5 sm:px-3" title="Favorites">
                 <Heart className={`h-3.5 w-3.5 ${wishlistIds.length > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
-                <span className="hidden sm:inline">{chrome?.wishlist || 'Wishlist'}</span>
+                <span>{chrome?.wishlist || 'Favorites'}</span>
                 {wishlistIds.length > 0 ? ` (${wishlistIds.length})` : ''}
               </Button>
             </Link>

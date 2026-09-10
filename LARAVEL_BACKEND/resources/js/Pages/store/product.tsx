@@ -307,7 +307,7 @@ export default function StoreProductPage({
             <Link href={`/s/${slug}/wishlist`}>
               <Button variant="outline" size="sm" className="gap-1.5 rounded-xl border-slate-200 text-xs font-semibold dark:border-slate-800">
                 <Heart className={`h-3.5 w-3.5 ${wishlistIds.includes(product.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
-                <span className="hidden sm:inline">Wishlist</span>
+                <span>Favorites</span>
                 {wishlistIds.length > 0 ? ` (${wishlistIds.length})` : ''}
               </Button>
             </Link>
