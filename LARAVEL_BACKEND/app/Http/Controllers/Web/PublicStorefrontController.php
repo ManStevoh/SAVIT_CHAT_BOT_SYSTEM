@@ -363,6 +363,9 @@ class PublicStorefrontController extends Controller
         return Inertia::render('store/checkout', [
             'slug' => $slug,
             'sessionPhone' => is_string($phone) && trim($phone) !== '' ? trim($phone) : null,
+            'sessionEmail' => is_string($session->customer_email) && trim($session->customer_email) !== ''
+                ? trim($session->customer_email)
+                : null,
             'company' => $this->companyPayload(
                 $company,
                 $request,
@@ -393,7 +396,7 @@ class PublicStorefrontController extends Controller
         $cart = $this->storefront->cartSummary($company, $session);
         $hasDigitalItems = (bool) ($cart['hasDigitalItems'] ?? false);
         $digitalOnly = (bool) ($cart['digitalOnly'] ?? false);
-        $emailRequired = ! $hasWhatsAppPhone || (bool) $authCustomer || $hasDigitalItems;
+        $emailRequired = true;
 
         $validated = $request->validate([
             'customerName' => 'required|string|max:255',

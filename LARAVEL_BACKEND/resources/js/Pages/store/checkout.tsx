@@ -51,6 +51,7 @@ type Quote = {
 type Props = {
   slug: string
   sessionPhone?: string | null
+  sessionEmail?: string | null
   company: {
     name: string
     currency: string
@@ -83,6 +84,7 @@ function formatPrice(amount: number, currency: string, rate: number = 1): string
 export default function StoreCheckoutPage({
   slug,
   sessionPhone = null,
+  sessionEmail = null,
   company,
   cart,
   dineInEnabled,
@@ -95,7 +97,7 @@ export default function StoreCheckoutPage({
   const authCustomer = company.authCustomer
   const [customerName, setCustomerName] = useState(authCustomer?.name || suggestedAddress?.customerName || '')
   const [customerPhone, setCustomerPhone] = useState(sessionPhone || '')
-  const [customerEmail, setCustomerEmail] = useState(authCustomer?.email || '')
+  const [customerEmail, setCustomerEmail] = useState(authCustomer?.email || sessionEmail || '')
   const [orderNotes, setOrderNotes] = useState('')
   const [giftMessage, setGiftMessage] = useState('')
   const [tipAmount, setTipAmount] = useState('')
@@ -423,7 +425,7 @@ export default function StoreCheckoutPage({
 
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Email Address {hasDigitalItems || !isWhatsAppVisitor ? '' : '(Optional)'}
+                      Email Address
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
@@ -431,7 +433,7 @@ export default function StoreCheckoutPage({
                         type="email"
                         value={customerEmail}
                         onChange={(e) => setCustomerEmail(e.target.value)}
-                        required={!isWhatsAppVisitor || hasDigitalItems}
+                        required
                         placeholder="you@example.com"
                         className="pl-10 rounded-2xl"
                       />
