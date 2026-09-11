@@ -1111,6 +1111,14 @@ class PublicStorefrontController extends Controller
             if ($type === 'testimonials' && empty($section['items'])) {
                 $section['items'] = $quotes;
             }
+            if ($type === 'hero' && ! empty($section['image']) && $company->logo) {
+                // Defensive: never render the company logo again inside the hero
+                // banner (it already shows in the sticky header).
+                $logoUrl = asset('storage/'.$company->logo);
+                if (is_string($section['image']) && ($section['image'] === $logoUrl || str_ends_with($section['image'], 'storage/'.$company->logo))) {
+                    $section['image'] = null;
+                }
+            }
 
             return $section;
         }, $sections));
@@ -1134,7 +1142,10 @@ class PublicStorefrontController extends Controller
                 : ('Shop '.$company->name.' — browse the catalog, add to cart, and check out when you are ready.'),
             'cta_label' => ! empty($theme['hero_cta_label']) ? $theme['hero_cta_label'] : 'Shop the catalog',
             'cta_href' => ! empty($theme['hero_cta_href']) ? $theme['hero_cta_href'] : '#catalog',
-            'image' => $company->logo ? asset('storage/'.$company->logo) : null,
+            // Never fall back to the company logo here: the logo already shows in
+            // the sticky header, and rendering it again inside the hero banner
+            // looks duplicated/scattered on mobile. Only use an explicit hero image.
+            'image' => ! empty($theme['hero_image']) ? $theme['hero_image'] : null,
         ]];
 
         $featured = $this->defaultFeaturedProducts($catalogProducts);

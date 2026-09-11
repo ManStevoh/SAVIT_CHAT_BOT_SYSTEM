@@ -904,12 +904,19 @@ export default function StorePage({
         {/* Sections & Catalog Grid */}
         {resolvedSections.map((section, idx) => {
           if (section.type === 'hero') {
+            // Guard: the company logo already renders in the sticky header, so
+            // never render it again inside the hero banner (looks duplicated
+            // and scattered on mobile). Only render a distinct hero image.
+            const heroImage =
+              section.image && company.logo && section.image.endsWith(company.logo)
+                ? null
+                : section.image || null
             return (
               <section key={idx} className="overflow-hidden rounded-3xl bg-slate-900 text-white shadow-xl">
-                <div className="grid gap-6 p-8 md:grid-cols-2 md:items-center">
-                  <div className="space-y-3">
-                    <h2 className="text-3xl font-extrabold tracking-tight">{section.headline || company.name}</h2>
-                    {section.subhead && <p className="text-xs text-slate-300 leading-relaxed">{section.subhead}</p>}
+                <div className={`grid gap-5 p-6 sm:p-8 ${heroImage ? 'md:grid-cols-2 md:items-center' : 'text-center justify-items-center'}`}>
+                  <div className={`space-y-3 ${heroImage ? '' : 'mx-auto max-w-xl'}`}>
+                    <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{section.headline || company.name}</h2>
+                    {section.subhead && <p className="text-xs text-slate-300 leading-relaxed sm:text-sm">{section.subhead}</p>}
                     {section.cta_label && (
                       <a
                         href={section.cta_href || `#catalog`}
@@ -919,13 +926,13 @@ export default function StorePage({
                       </a>
                     )}
                   </div>
-                  {section.image && (
+                  {heroImage && (
                     <div className="flex items-center justify-center md:justify-end">
                       <div className="inline-flex max-w-full items-center justify-center overflow-hidden rounded-2xl shadow-md">
                         <img
-                          src={section.image}
+                          src={heroImage}
                           alt={section.headline || company.name}
-                          className="h-auto max-h-52 w-auto max-w-full object-contain md:max-h-64"
+                          className="h-auto max-h-40 w-auto max-w-full object-contain sm:max-h-52 md:max-h-64"
                         />
                       </div>
                     </div>
