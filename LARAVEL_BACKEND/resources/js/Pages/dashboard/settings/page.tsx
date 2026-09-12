@@ -26,12 +26,12 @@ import { TeamSection } from "@/components/settings/TeamSection"
 type SectionId = "profile" | "branding" | "order-payments" | "whatsapp" | "ai" | "team"
 
 const SECTIONS: { id: SectionId; label: string; desc: string; icon: typeof Building2 }[] = [
-  { id: "profile", label: "Business", desc: "Profile, region, currency", icon: Building2 },
-  { id: "branding", label: "Brand", desc: "Logo, colors, storefront", icon: Palette },
-  { id: "order-payments", label: "Payments", desc: "M-Pesa, cards, delivery", icon: CreditCard },
-  { id: "whatsapp", label: "WhatsApp", desc: "Number & templates", icon: MessageSquare },
-  { id: "ai", label: "AI assistant", desc: "Persona, selling, voice", icon: Bot },
-  { id: "team", label: "Team", desc: "Members & invites", icon: Users },
+  { id: "profile", label: "Business", desc: "Details, sales channels, region and currency.", icon: Building2 },
+  { id: "branding", label: "Brand", desc: "Logo, colors and storefront appearance.", icon: Palette },
+  { id: "order-payments", label: "Payments", desc: "M-Pesa, cards, cash, delivery and recovery.", icon: CreditCard },
+  { id: "whatsapp", label: "WhatsApp", desc: "Connection, setup and message templates.", icon: MessageSquare },
+  { id: "ai", label: "AI assistant", desc: "Persona, selling agent, voice and brand voice.", icon: Bot },
+  { id: "team", label: "Team", desc: "Members, invites and seats.", icon: Users },
 ]
 
 /** Legacy/alias tab values keep working: appearance→brand, byok/notifications→AI. */
@@ -99,10 +99,10 @@ function SettingsContent() {
         </Link>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[230px_minmax(0,1fr)]">
-        {/* Section nav: rail on desktop, scroll row on mobile */}
-        <nav className="md:sticky md:top-4 md:self-start">
-          <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
+      <div className="space-y-5">
+        {/* Section tabs: segmented control, not a second sidebar */}
+        <div className="overflow-x-auto pb-1">
+          <div className="flex min-w-max gap-1 rounded-2xl border border-border bg-muted/50 p-1.5 sm:inline-flex sm:min-w-0 sm:max-w-full sm:flex-wrap">
             {SECTIONS.map((s) => {
               const selected = active === s.id
               return (
@@ -111,29 +111,27 @@ function SettingsContent() {
                   type="button"
                   onClick={() => select(s.id)}
                   className={cn(
-                    "flex min-w-[150px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors md:min-w-0",
+                    "flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-all",
                     selected
-                      ? "border-primary/30 bg-primary/[0.06]"
-                      : "border-transparent hover:border-border hover:bg-muted/50"
+                      ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <s.icon className={cn("h-4 w-4 shrink-0", selected ? "text-primary" : "text-muted-foreground")} />
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
-                      {s.label}
-                      {s.id === "whatsapp" && isStarter && (
-                        <span className="rounded bg-primary/10 px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">
-                          Growth
-                        </span>
-                      )}
+                  <s.icon className={cn("h-4 w-4", selected && "text-primary")} />
+                  {s.label}
+                  {s.id === "whatsapp" && isStarter && (
+                    <span className="rounded bg-primary/10 px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      Growth
                     </span>
-                    <span className="hidden truncate text-[11px] text-muted-foreground md:block">{s.desc}</span>
-                  </span>
+                  )}
                 </button>
               )
             })}
           </div>
-        </nav>
+        </div>
+        <p className="text-[13px] text-muted-foreground">
+          {SECTIONS.find((s) => s.id === active)?.desc}
+        </p>
 
         {/* Active section */}
         <div className="min-w-0">
