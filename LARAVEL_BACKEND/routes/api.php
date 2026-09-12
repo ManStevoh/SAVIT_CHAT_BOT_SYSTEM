@@ -426,6 +426,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::delete('users/{user}', [UserController::class, 'destroy']);
     Route::get('subscriptions', [App\Http\Controllers\Api\Admin\SubscriptionController::class, 'index']);
     Route::patch('subscriptions/{subscription}', [App\Http\Controllers\Api\Admin\SubscriptionController::class, 'update']);
+    Route::get('commissions/overview', [App\Http\Controllers\Api\Admin\CommissionController::class, 'overview']);
+    Route::get('commissions/companies', [App\Http\Controllers\Api\Admin\CommissionController::class, 'companies']);
+    Route::get('commissions/invoices', [App\Http\Controllers\Api\Admin\CommissionController::class, 'invoices']);
+    Route::post('commissions/invoices/generate', [App\Http\Controllers\Api\Admin\CommissionController::class, 'generate']);
+    Route::post('commissions/invoices/{invoice}/mark-paid', [App\Http\Controllers\Api\Admin\CommissionController::class, 'markPaid']);
     Route::get('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'index']);
     Route::post('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'store']);
     Route::put('plans/{plan}', [App\Http\Controllers\Api\Admin\PlanController::class, 'update']);

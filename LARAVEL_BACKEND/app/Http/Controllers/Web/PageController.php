@@ -368,6 +368,11 @@ class PageController extends Controller
         return Inertia::render('admin/revenue/page');
     }
 
+    public function adminCommissions(): Response
+    {
+        return Inertia::render('admin/commissions/page');
+    }
+
     public function adminSettings(): Response
     {
         return Inertia::render('admin/settings/page');

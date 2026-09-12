@@ -22,6 +22,7 @@ import {
   Layout,
   Tag,
   Mail,
+  Percent,
 } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
@@ -33,6 +34,7 @@ const navigationMain = [
   { name: "Offers & Coupons", href: "/admin/offers", icon: Tag },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
+  { name: "Commissions", href: "/admin/commissions", icon: Percent },
   { name: "Growth Portfolio", href: "/admin/growth", icon: Rocket },
 ]
 

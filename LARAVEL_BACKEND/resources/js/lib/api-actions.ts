@@ -2955,6 +2955,11 @@ export interface PlatformSettings {
   defaultRegistrationPlanSlug?: string | null
   forceDefaultRegistrationPlan?: boolean
   requireEmailVerification?: boolean
+  defaultBillingModel?: string | null
+  defaultCommissionRate?: number | null
+  allowPublicCommissionSignup?: boolean
+  defaultCommissionThreshold?: number | null
+  commissionGracePeriodDays?: number | null
   aiModel?: string | null
   maxTokensPerRequest?: number | null
   rateLimitPerMinute?: number | null
@@ -3024,6 +3029,11 @@ export interface UpdatePlatformSettingsData {
   defaultRegistrationPlanSlug?: string | null
   forceDefaultRegistrationPlan?: boolean
   requireEmailVerification?: boolean
+  defaultBillingModel?: string
+  defaultCommissionRate?: number
+  allowPublicCommissionSignup?: boolean
+  defaultCommissionThreshold?: number
+  commissionGracePeriodDays?: number
   aiModel?: string
   maxTokensPerRequest?: number
   rateLimitPerMinute?: number
@@ -4526,6 +4536,97 @@ export async function inviteTeamMember(
       method: 'POST',
       body: data,
     })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/* ------------------------- Commission billing (admin) ------------------------- */
+
+export interface CommissionOverview {
+  enabled: boolean
+  owedNow: number
+  settledTotal: number
+  accruedTotal: number
+  monthCommission: number
+  monthSales: number
+  companyCount: number
+  pendingInvoices: number
+  pendingInvoicesTotal: number
+  topDebtors: { id: string; name: string; balanceDue: number; rate: number }[]
+  defaults: {
+    billingModel: string
+    rate: number
+    threshold: number
+    graceDays: number
+    publicSignup: boolean
+  }
+}
+
+export interface CommissionCompanyRow {
+  id: string
+  name: string
+  email?: string | null
+  model: string
+  modelOverridden: boolean
+  rate: number
+  rateOverridden: boolean
+  basis: string
+  balanceDue: number
+  threshold: number
+  monthSales: number
+  monthOrders: number
+  overdue: boolean
+}
+
+export interface CommissionInvoiceRow {
+  id: string
+  number: string
+  companyId: string
+  companyName: string
+  periodStart?: string | null
+  periodEnd?: string | null
+  ordersCount: number
+  grossSales: number
+  amountDue: number
+  status: string
+  dueDate?: string | null
+  paidAt?: string | null
+  paymentReference?: string | null
+  paymentMethod?: string | null
+}
+
+/** GET /api/admin/commissions/overview */
+export async function getCommissionOverview(): Promise<CommissionOverview> {
+  return apiRequest<CommissionOverview>('/api/admin/commissions/overview')
+}
+
+/** GET /api/admin/commissions/companies */
+export async function listCommissionCompanies(): Promise<{ companies: CommissionCompanyRow[] }> {
+  return apiRequest('/api/admin/commissions/companies')
+}
+
+/** GET /api/admin/commissions/invoices */
+export async function listCommissionInvoices(): Promise<{ invoices: CommissionInvoiceRow[] }> {
+  return apiRequest('/api/admin/commissions/invoices')
+}
+
+/** POST /api/admin/commissions/invoices/generate */
+export async function generateCommissionInvoices(): Promise<{ success: boolean; created?: number; message?: string }> {
+  try {
+    return await apiRequest('/api/admin/commissions/invoices/generate', { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/** POST /api/admin/commissions/invoices/{id}/mark-paid */
+export async function markCommissionInvoicePaid(
+  id: string,
+  data?: { payment_reference?: string; payment_method?: string }
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    return await apiRequest(`/api/admin/commissions/invoices/${id}/mark-paid`, { method: 'POST', body: data ?? {} })
   } catch (e) {
     return handleApiError(e)
   }
