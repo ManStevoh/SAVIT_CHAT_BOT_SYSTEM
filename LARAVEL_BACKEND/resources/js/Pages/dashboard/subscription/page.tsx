@@ -30,7 +30,7 @@ function SubscriptionPageContent() {
   const { data: billingHistory = [] } = useSubscriptionInvoices()
   const { data: usageData } = useSubscriptionUsage()
   const [pricingCurrency, setPricingCurrency] = useState<string | null>(null)
-  const { data: plansResponse } = usePlans(pricingCurrency)
+  const { data: plansResponse, isLoading: plansLoading } = usePlans(pricingCurrency)
   const plansData = plansResponse?.plans ?? []
   const activeCurrency = plansResponse?.currency ?? pricingCurrency ?? "KES"
   const currencies = plansResponse?.availableCurrencies?.length
@@ -592,7 +592,7 @@ function SubscriptionPageContent() {
           payment starts immediately and replaces the trial.
         </div>
       )}
-      {!isCommissionMerchant && !anyCheckoutAvailable && (
+      {!isCommissionMerchant && !plansLoading && !anyCheckoutAvailable && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           No payment methods are ready on this platform, so Subscribe / Renew buttons stay unavailable. An admin must
           enable a gateway under Admin → Payment Gateways and save credentials (or bank details for Bank Transfer).
@@ -876,7 +876,17 @@ function SubscriptionPageContent() {
             )}
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {plans.map((plan) => (
+            {plansLoading && plans.length === 0
+              ? [1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-xl border border-border p-6">
+                    <div className="h-16 animate-pulse rounded bg-muted" />
+                    <div className="mt-4 space-y-2">
+                      <div className="h-3 animate-pulse rounded bg-muted" />
+                      <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+                    </div>
+                  </div>
+                ))
+              : plans.map((plan) => (
               <div
                 key={plan.id}
                 className={`relative rounded-xl border p-6 ${

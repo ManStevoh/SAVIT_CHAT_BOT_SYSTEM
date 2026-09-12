@@ -366,21 +366,25 @@ class AuthController extends Controller
         // Always send welcome (includes trial details when applicable). Verification email is separate when required.
         $this->sendRegistrationWelcome($user, $company, $trial);
 
+        // Free plans are never trials — only real paid trials set the trial flags
+        // (otherwise Starter signups see "free trial" banners and notifications).
+        $realTrial = $trial && empty($trial['is_free']) ? $trial : null;
+
         return response()->json([
             'success' => true,
             'message' => $requireVerification
                 ? 'Registration successful! Please check your email to verify your account.'
                 : 'Registration successful! You can now sign in.',
             'requireEmailVerification' => $requireVerification,
-            'trialStarted' => $trial !== null,
-            'trialDays' => $trial['days'] ?? null,
-            'trialPlan' => $trial['plan_slug'] ?? null,
-            'trialPlanName' => $trial['plan_name'] ?? null,
+            'trialStarted' => $realTrial !== null,
+            'trialDays' => $realTrial['days'] ?? null,
+            'trialPlan' => $realTrial['plan_slug'] ?? null,
+            'trialPlanName' => $realTrial['plan_name'] ?? null,
             'requiresPayment' => $requiresPayment,
             'selectedPlanId' => $selectedPlan ? (string) $selectedPlan->id : null,
             'postLoginPath' => $requiresPayment && $selectedPlan
                 ? '/dashboard/subscription?subscribe='.$selectedPlan->id
-                : ($trial
+                : ($realTrial
                     ? '/dashboard?trial_started=1'
                     : '/dashboard'),
         ]);
@@ -622,6 +626,9 @@ class AuthController extends Controller
      */
     private function sendRegistrationWelcome(User $user, Company $company, ?array $trial): void
     {
+        // Free plans (e.g. Starter) are active forever — never a trial. Only real
+        // paid trials get trial messaging (email subject is already gated by $isTrial).
+        $isRealTrial = ! empty($trial) && empty($trial['is_free']);
         try {
             if ($user->email) {
                 app(MailService::class)->sendWelcomeTrialEmail(
@@ -630,11 +637,11 @@ class AuthController extends Controller
                     $trial['plan_name'] ?? 'Starter',
                     $trial['days'] ?? (int) config('subscription.default_trial_days', 14),
                     $trial['end_date'] ?? now()->addDays(14)->format('F j, Y'),
-                    ! empty($trial) && empty($trial['is_free'])
+                    $isRealTrial
                 );
             }
 
-            if ($trial) {
+            if ($isRealTrial) {
                 app(NotificationDispatcher::class)->dispatch($company, 'subscription.trial_started', [
                     'plan' => $trial['plan_name'],
                     'days' => $trial['days'],
