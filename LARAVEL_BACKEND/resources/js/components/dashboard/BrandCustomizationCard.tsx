@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import {
   COLOR_PRESETS,
   FONT_OPTIONS,
@@ -29,6 +28,7 @@ import {
   Maximize2,
   ShoppingBag,
   ExternalLink,
+  ChevronDown,
 } from 'lucide-react'
 import { apiRequest } from '@/lib/api-client'
 import { useSWRConfig } from 'swr'
@@ -77,6 +77,9 @@ export function BrandCustomizationCard({
   const [heroCtaHref, setHeroCtaHref] = useState(initialTheme?.hero_cta_href || '#catalog')
 
   const [previewTab, setPreviewTab] = useState<'storefront' | 'bio' | 'widget'>('storefront')
+  const [customColorsOpen, setCustomColorsOpen] = useState(false)
+  const [customBannerOpen, setCustomBannerOpen] = useState(false)
+  const [finePrintOpen, setFinePrintOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -291,14 +294,9 @@ export function BrandCustomizationCard({
       {/* Header and Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Brand &amp; Appearance Customization</h2>
-            <Badge variant="outline" className="gap-1 border-primary/30 text-primary">
-              <Sparkles className="h-3 w-3" /> Live
-            </Badge>
-          </div>
+          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Make it yours</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Customize logos, color palettes, fonts, and styling across your Storefront, Link-in-Bio, and Web Chatbot.
+            Logo, colors and style — watch the phone preview update as you go.
           </p>
         </div>
 
@@ -306,13 +304,13 @@ export function BrandCustomizationCard({
           {storeSlug && (
             <Button variant="outline" size="sm" asChild className="w-full gap-1.5 sm:w-auto">
               <a href={`/s/${storeSlug}`} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" /> View Live Store
+                <ExternalLink className="h-3.5 w-3.5" /> View store
               </a>
             </Button>
           )}
           <Button onClick={handleSave} disabled={saving} className="w-full gap-2 sm:w-auto">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Save Brand Settings
+            Save design
           </Button>
         </div>
       </div>
@@ -332,14 +330,14 @@ export function BrandCustomizationCard({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Customization Controls (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Logo & Brand Identity */}
+          {/* Logo */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Store className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle className="text-base">Brand Logo</CardTitle>
-                  <CardDescription>Upload your brand logo for headers, invoices, bio links, and chat</CardDescription>
+                  <CardTitle className="text-base">Logo</CardTitle>
+                  <CardDescription>Shows in your store header, receipts and chat</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -383,7 +381,7 @@ export function BrandCustomizationCard({
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Recommended: PNG or SVG with transparent background (min 200×200px, max 2MB).
+                    PNG or JPG with a plain background works best (max 2MB).
                   </p>
                   <input
                     type="file"
@@ -397,138 +395,116 @@ export function BrandCustomizationCard({
             </CardContent>
           </Card>
 
-          {/* Color Palette Studio */}
+          {/* Colors — presets first, custom tucked away */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Palette className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle className="text-base">Color Palette &amp; Themes</CardTitle>
-                  <CardDescription>Define your primary brand colors or pick from curated palettes</CardDescription>
+                  <CardTitle className="text-base">Colors</CardTitle>
+                  <CardDescription>Pick a look — your buttons, prices and links follow it</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Primary & Accent Inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primaryColor" className="text-sm font-medium">
-                    Primary Brand Color
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative h-10 w-12 shrink-0 rounded-lg border overflow-hidden shadow-xs">
-                      <input
-                        type="color"
-                        id="primaryColorPicker"
-                        value={primaryColor}
-                        onChange={(e) => setPrimaryColor(e.target.value)}
-                        className="absolute -inset-2 h-14 w-16 cursor-pointer border-0 p-0"
-                      />
-                    </div>
-                    <Input
-                      id="primaryColor"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      placeholder="#2563eb"
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Used on primary buttons, headers, accents &amp; CTAs.</p>
-                </div>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {COLOR_PRESETS.map((preset) => {
+                  const isSelected =
+                    primaryColor.toLowerCase() === preset.primary.toLowerCase() &&
+                    accentColor.toLowerCase() === preset.accent.toLowerCase()
 
-                <div className="space-y-2">
-                  <Label htmlFor="accentColor" className="text-sm font-medium">
-                    Secondary / Accent Color
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative h-10 w-12 shrink-0 rounded-lg border overflow-hidden shadow-xs">
-                      <input
-                        type="color"
-                        id="accentColorPicker"
-                        value={accentColor}
-                        onChange={(e) => setAccentColor(e.target.value)}
-                        className="absolute -inset-2 h-14 w-16 cursor-pointer border-0 p-0"
+                  return (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => applyPreset(preset)}
+                      className={`group relative flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all hover:shadow-xs ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border/70 hover:border-border hover:bg-muted/40'
+                      }`}
+                    >
+                      <span
+                        className="h-8 w-8 rounded-full shadow-xs ring-1 ring-black/10 shrink-0"
+                        style={{ background: `linear-gradient(135deg, ${preset.primary} 50%, ${preset.accent} 50%)` }}
                       />
-                    </div>
-                    <Input
-                      id="accentColor"
-                      value={accentColor}
-                      onChange={(e) => setAccentColor(e.target.value)}
-                      placeholder="#3b82f6"
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Used on highlights, banners, badges &amp; secondary links.</p>
-                </div>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold truncate">{preset.name}</span>
+                        <span className="block text-[11px] text-muted-foreground truncate">
+                          {preset.description.split(',')[0]}
+                        </span>
+                      </span>
+                      {isSelected && <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />}
+                    </button>
+                  )
+                })}
               </div>
 
-              {/* 1-Click Curated Presets */}
-              <div className="space-y-2.5 pt-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    1-Click Brand Presets
-                  </Label>
-                  <span className="text-xs text-muted-foreground">Click to apply</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {COLOR_PRESETS.map((preset) => {
-                    const isSelected =
-                      primaryColor.toLowerCase() === preset.primary.toLowerCase() &&
-                      accentColor.toLowerCase() === preset.accent.toLowerCase()
-
-                    return (
-                      <button
-                        key={preset.name}
-                        type="button"
-                        onClick={() => applyPreset(preset)}
-                        className={`group relative flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all hover:shadow-xs ${
-                          isSelected
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                            : 'border-border/70 hover:border-border hover:bg-muted/40'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <div
-                            className="h-4 w-4 rounded-full shadow-xs ring-1 ring-black/10 shrink-0"
-                            style={{ background: preset.primary }}
+              <div className="rounded-xl border border-border">
+                <button
+                  type="button"
+                  onClick={() => setCustomColorsOpen((v) => !v)}
+                  className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[13px] font-medium"
+                >
+                  Mix your own colors
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${customColorsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {customColorsOpen && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-border/60 p-3.5">
+                    {([
+                      ['Main color', primaryColor, setPrimaryColor, 'Buttons, prices, headings'],
+                      ['Second color', accentColor, setAccentColor, 'Badges, banners, highlights'],
+                      ['Page background', bgColor, setBgColor, 'Behind everything'],
+                    ] as const).map(([label, value, setter, hint]) => (
+                      <div key={label} className="space-y-1.5">
+                        <Label className="text-xs">{label}</Label>
+                        <div className="flex items-center gap-2">
+                          <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden">
+                            <input
+                              type="color"
+                              value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : '#2563eb'}
+                              onChange={(e) => setter(e.target.value)}
+                              className="absolute -inset-2 h-14 w-14 cursor-pointer border-0 p-0"
+                            />
+                          </div>
+                          <Input
+                            value={value}
+                            onChange={(e) => setter(e.target.value)}
+                            placeholder="#2563eb"
+                            className="font-mono text-xs h-9"
                           />
-                          <div
-                            className="h-3 w-3 rounded-full shadow-xs ring-1 ring-black/10 shrink-0 -ml-1"
-                            style={{ background: preset.accent }}
-                          />
-                          <span className="text-xs font-medium truncate">{preset.name}</span>
-                          {isSelected && <Check className="h-3 w-3 text-primary ml-auto shrink-0" />}
                         </div>
-                        <span className="text-[11px] text-muted-foreground leading-tight line-clamp-1">
-                          {preset.description}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+                        <p className="text-[11px] text-muted-foreground">{hint}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Typography & Shape Geometry */}
+          {/* Text style */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Type className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle className="text-base">Typography &amp; Button Style</CardTitle>
-                  <CardDescription>Set the typeface and component border radius for your storefront</CardDescription>
+                  <CardTitle className="text-base">Text style</CardTitle>
+                  <CardDescription>Letters and how round things feel</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Font Family Selection */}
-              <div className="space-y-2.5">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Font Family
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {FONT_OPTIONS.map((font) => (
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {FONT_OPTIONS.map((font) => {
+                  const plain: Record<string, string> = {
+                    sans: 'Modern',
+                    plus_jakarta: 'Geometric',
+                    serif: 'Elegant',
+                    outfit: 'Friendly',
+                    mono: 'Mono',
+                  }
+                  return (
                     <button
                       key={font.value}
                       type="button"
@@ -540,127 +516,152 @@ export function BrandCustomizationCard({
                       }`}
                     >
                       <div className="space-y-0.5">
-                        <p className="text-xs font-semibold">{font.label}</p>
-                        <p className="text-xs text-muted-foreground" style={{ fontFamily: font.fontFamily }}>
-                          The quick brown fox jumps
+                        <p className="text-xs font-semibold">{plain[font.value] ?? font.label}</p>
+                        <p className="text-sm text-muted-foreground" style={{ fontFamily: font.fontFamily }}>
+                          Looks like this
                         </p>
                       </div>
                       {fontFamily === font.value && <Check className="h-4 w-4 text-primary shrink-0 ml-2" />}
                     </button>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
 
-              {/* Corner Radius / Geometry */}
               <div className="space-y-2.5">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Button &amp; Card Corners
+                  Roundness
                 </Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {RADIUS_OPTIONS.map((radius) => (
-                    <button
-                      key={radius.value}
-                      type="button"
-                      onClick={() => setBorderRadius(radius.value)}
-                      className={`flex flex-col items-center gap-2 p-3 border text-center transition-all ${radius.className} ${
-                        borderRadius === radius.value
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                          : 'border-border/70 hover:border-border hover:bg-muted/40'
-                      }`}
-                    >
-                      <div
-                        className={`h-6 w-12 border-2 border-primary/60 bg-primary/20 ${radius.className}`}
-                      />
-                      <span className="text-xs font-medium">{radius.label}</span>
-                    </button>
-                  ))}
+                  {RADIUS_OPTIONS.map((radius) => {
+                    const plain: Record<string, string> = { none: 'Sharp', sm: 'Soft', md: 'Modern', full: 'Pill' }
+                    return (
+                      <button
+                        key={radius.value}
+                        type="button"
+                        onClick={() => setBorderRadius(radius.value)}
+                        className={`flex flex-col items-center gap-2 p-3 border text-center transition-all ${radius.className} ${
+                          borderRadius === radius.value
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'border-border/70 hover:border-border hover:bg-muted/40'
+                        }`}
+                      >
+                        <div
+                          className={`h-6 w-12 border-2 border-primary/60 bg-primary/20 ${radius.className}`}
+                        />
+                        <span className="text-xs font-medium">{plain[radius.value] ?? radius.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Announcement Bar & Custom Colors */}
+          {/* Announcement bar — one field, colors automatic unless customized */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle className="text-base">Storefront Announcement Banner</CardTitle>
-                  <CardDescription>Top sales messages, offers, or notice across all store pages</CardDescription>
+                  <CardTitle className="text-base">Top banner</CardTitle>
+                  <CardDescription>A message across the top of your store — sales, offers, notices</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="announcementBar">Top Announcement Banner Text</Label>
+                <Label htmlFor="announcementBar">Banner text</Label>
                 <Input
                   id="announcementBar"
                   value={announcementBar}
                   onChange={(e) => setAnnouncementBar(e.target.value)}
-                  placeholder="e.g. 🎉 Free express delivery on all orders over $50 this weekend!"
+                  placeholder="e.g. Free delivery this weekend!"
                   maxLength={200}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Displays across your public store header. Leave empty to hide banner.
+                  Empty = no banner. Colors follow your look automatically.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <div className="space-y-2">
-                  <Label htmlFor="announcementBg" className="text-xs">Banner Background (Optional)</Label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden shadow-xs">
-                      <input
-                        type="color"
-                        value={announcementBg || accentColor}
-                        onChange={(e) => setAnnouncementBg(e.target.value)}
-                        className="absolute -inset-2 h-14 w-14 cursor-pointer border-0 p-0"
-                      />
+              <div className="rounded-xl border border-border">
+                <button
+                  type="button"
+                  onClick={() => setCustomBannerOpen((v) => !v)}
+                  className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[13px] font-medium"
+                >
+                  Custom banner colors
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${customBannerOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {customBannerOpen && (
+                  <div className="space-y-3 border-t border-border/60 p-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Background</Label>
+                        <div className="flex items-center gap-2">
+                          <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden">
+                            <input
+                              type="color"
+                              value={announcementBg || accentColor}
+                              onChange={(e) => setAnnouncementBg(e.target.value)}
+                              className="absolute -inset-2 h-14 w-14 cursor-pointer border-0 p-0"
+                            />
+                          </div>
+                          <Input
+                            value={announcementBg}
+                            onChange={(e) => setAnnouncementBg(e.target.value)}
+                            placeholder="Auto"
+                            className="font-mono text-xs h-9"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Text color</Label>
+                        <div className="flex items-center gap-2">
+                          <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden">
+                            <input
+                              type="color"
+                              value={announcementText || '#ffffff'}
+                              onChange={(e) => setAnnouncementText(e.target.value)}
+                              className="absolute -inset-2 h-14 w-14 cursor-pointer border-0 p-0"
+                            />
+                          </div>
+                          <Input
+                            value={announcementText}
+                            onChange={(e) => setAnnouncementText(e.target.value)}
+                            placeholder="Auto (white)"
+                            className="font-mono text-xs h-9"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <Input
-                      id="announcementBg"
-                      value={announcementBg}
-                      onChange={(e) => setAnnouncementBg(e.target.value)}
-                      placeholder={accentColor}
-                      className="font-mono text-xs h-9"
-                    />
+                    {(announcementBg || announcementText) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-muted-foreground"
+                        onClick={() => {
+                          setAnnouncementBg('')
+                          setAnnouncementText('')
+                        }}
+                      >
+                        <RefreshCw className="mr-1.5 h-3 w-3" /> Back to automatic colors
+                      </Button>
+                    )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">Defaults to accent color if empty.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="announcementText" className="text-xs">Banner Text Color (Optional)</Label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden shadow-xs">
-                      <input
-                        type="color"
-                        value={announcementText || '#ffffff'}
-                        onChange={(e) => setAnnouncementText(e.target.value)}
-                        className="absolute -inset-2 h-14 w-14 cursor-pointer border-0 p-0"
-                      />
-                    </div>
-                    <Input
-                      id="announcementText"
-                      value={announcementText}
-                      onChange={(e) => setAnnouncementText(e.target.value)}
-                      placeholder="#ffffff"
-                      className="font-mono text-xs h-9"
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">Defaults to crisp white.</p>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Promotional Hero Banner & Floating CTA */}
+          {/* Welcome banner */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Store className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle className="text-base">Promotional Hero &amp; Actions</CardTitle>
-                  <CardDescription>Featured hero section and floating customer action buttons</CardDescription>
+                  <CardTitle className="text-base">Welcome banner</CardTitle>
+                  <CardDescription>A headline greeting at the top of your store</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -672,84 +673,89 @@ export function BrandCustomizationCard({
                   onChange={(e) => setHeroEnabled(e.target.checked)}
                   className="h-4 w-4 rounded border-input"
                 />
-                Enable promotional hero banner on store homepage
+                Show welcome banner
               </label>
 
               {heroEnabled && (
-                <div className="space-y-3 rounded-xl border bg-muted/20 p-3.5">
+                <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Hero Headline</Label>
+                    <Label className="text-xs">Headline</Label>
                     <Input
                       value={heroHeadline}
                       onChange={(e) => setHeroHeadline(e.target.value)}
                       placeholder={`Welcome to ${businessName}`}
                       maxLength={120}
-                      className="h-8 text-xs"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Hero Subtitle / Description</Label>
+                    <Label className="text-xs">Subheading</Label>
                     <Input
                       value={heroSubhead}
                       onChange={(e) => setHeroSubhead(e.target.value)}
-                      placeholder="Browse our new collection and enjoy fast WhatsApp ordering & instant checkout."
+                      placeholder="Browse our collection and order in seconds."
                       maxLength={255}
-                      className="h-8 text-xs"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">CTA Button Label</Label>
-                      <Input
-                        value={heroCtaLabel}
-                        onChange={(e) => setHeroCtaLabel(e.target.value)}
-                        placeholder="Shop Now"
-                        maxLength={64}
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">CTA Button Target</Label>
-                      <Input
-                        value={heroCtaHref}
-                        onChange={(e) => setHeroCtaHref(e.target.value)}
-                        placeholder="#catalog"
-                        maxLength={255}
-                        className="h-8 text-xs"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Button text</Label>
+                    <Input
+                      value={heroCtaLabel}
+                      onChange={(e) => setHeroCtaLabel(e.target.value)}
+                      placeholder="Shop now"
+                      maxLength={64}
+                      className="max-w-xs"
+                    />
                   </div>
                 </div>
               )}
-
-              <div className="space-y-2 pt-2 border-t">
-                <Label htmlFor="whatsappBtnText">Custom WhatsApp Floating Chat Button Text</Label>
-                <Input
-                  id="whatsappBtnText"
-                  value={whatsappBtnText}
-                  onChange={(e) => setWhatsappBtnText(e.target.value)}
-                  placeholder="Chat on WhatsApp"
-                  maxLength={64}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Customizes the floating green WhatsApp button text on public store pages. Defaults to "Chat on WhatsApp".
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t">
-                <Label htmlFor="footerText">Custom Footer Copyright / Tagline</Label>
-                <Input
-                  id="footerText"
-                  value={footerText}
-                  onChange={(e) => setFooterText(e.target.value)}
-                  placeholder={`© ${new Date().getFullYear()} ${businessName}. All rights reserved.`}
-                  maxLength={255}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Shown in the footer across public storefront, product, cart, and checkout pages.
-                </p>
-              </div>
             </CardContent>
+          </Card>
+
+          {/* Rarely-touched wording, collapsed */}
+          <Card>
+            <button
+              type="button"
+              onClick={() => setFinePrintOpen((v) => !v)}
+              className="flex w-full items-center justify-between px-5 py-4 text-left"
+            >
+              <span>
+                <span className="block text-sm font-semibold">Fine print</span>
+                <span className="block text-xs text-muted-foreground">Button link, chat button text, footer line</span>
+              </span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${finePrintOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {finePrintOpen && (
+              <CardContent className="space-y-4 border-t pt-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Where the banner button goes</Label>
+                  <Input
+                    value={heroCtaHref}
+                    onChange={(e) => setHeroCtaHref(e.target.value)}
+                    placeholder="#catalog"
+                    maxLength={255}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">WhatsApp chat button text</Label>
+                  <Input
+                    value={whatsappBtnText}
+                    onChange={(e) => setWhatsappBtnText(e.target.value)}
+                    placeholder="Chat on WhatsApp"
+                    maxLength={64}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Footer line</Label>
+                  <Input
+                    value={footerText}
+                    onChange={(e) => setFooterText(e.target.value)}
+                    placeholder={`© ${new Date().getFullYear()} ${businessName}`}
+                    maxLength={255}
+                  />
+                </div>
+              </CardContent>
+            )}
           </Card>
         </div>
 
@@ -760,7 +766,7 @@ export function BrandCustomizationCard({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Eye className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Real-Time Brand Preview</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Preview</CardTitle>
                 </div>
                 <div className="flex items-center rounded-lg border bg-background p-0.5">
                   <button
@@ -800,7 +806,12 @@ export function BrandCustomizationCard({
               </div>
             </CardHeader>
 
-            <CardContent className="p-0">
+            <CardContent className="bg-muted/40 p-3">
+              {/* Phone frame — this is what customers hold */}
+              <div className="mx-auto max-w-[340px] overflow-hidden rounded-[1.75rem] border border-slate-300 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-950">
+                <div className="flex justify-center bg-white pb-1.5 pt-2 dark:bg-slate-950">
+                  <div className="h-4 w-24 rounded-full bg-slate-900 dark:bg-slate-700" />
+                </div>
               {/* Storefront Mockup Preview */}
               {previewTab === 'storefront' && (
                 <div
@@ -1054,6 +1065,7 @@ export function BrandCustomizationCard({
                   </div>
                 </div>
               )}
+              </div>
             </CardContent>
           </Card>
         </div>
