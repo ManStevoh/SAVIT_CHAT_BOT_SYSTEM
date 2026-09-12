@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useChats, useMessages, useProducts, useCompanySettings, useSubscription } from '@/lib/api-hooks'
+import { useChats, useMessages, useProducts, useCompanySettings, useSubscription, useWhatsAppNumbers } from '@/lib/api-hooks'
 import { sendMessage, handBackToBot, createOrderFromChat, previewOrderTotals, submitMessageLearningFeedback, downloadPromptLog, clearChatHistory } from '@/lib/api-actions'
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
@@ -43,6 +44,7 @@ import {
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
 import { FormModal } from '@/components/shared/modal'
+import { LockedFeatureGate } from '@/components/shared/upgrade-prompt'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,6 +92,10 @@ export default function ChatsPage() {
   const { data: subscription } = useSubscription()
   // Starter is a manual workspace: no AI conversations, so no AI actions.
   const isStarter = (subscription?.plan ?? "free") === "free"
+  const { data: whatsappNumbers = [] } = useWhatsAppNumbers()
+  // No WhatsApp on Starter → empty inbox becomes the upgrade moment.
+  const waConnected = whatsappNumbers.some((n) => n.status === "active") || whatsappNumbers.length > 0
+  const showWaGate = isStarter && !waConnected
   const formatMoney = (value: number) =>
     formatCurrencyAmount(
       value,
@@ -416,6 +422,19 @@ export default function ChatsPage() {
 
         <ScrollArea className="min-h-0 flex-1">
           <div className="p-2">
+            {showWaGate && !chatsLoading && chats && chats.length > 0 && (
+              <Link
+                href="/dashboard/subscription#plans"
+                className="mb-2 flex items-center gap-2.5 rounded-xl border border-primary/25 bg-primary/[0.05] px-3 py-2.5 transition-colors hover:bg-primary/[0.09]"
+              >
+                <MessageSquare className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1 text-xs leading-snug text-muted-foreground">
+                  <span className="font-semibold text-foreground">Get these chats on WhatsApp.</span>{' '}
+                  Growth connects your number with AI replies.
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-primary">View plans →</span>
+              </Link>
+            )}
             {/* Loading State */}
             {chatsLoading && (
               <div className="space-y-2">
@@ -449,13 +468,24 @@ export default function ChatsPage() {
 
             {/* Empty State */}
             {!chatsLoading && !chatsError && (!chats || chats.length === 0) && (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <MessageSquare className="h-10 w-10 text-muted-foreground/50" />
-                <p className="mt-2 font-medium text-foreground">No conversations</p>
-                <p className="text-sm text-muted-foreground">
-                  {searchQuery ? 'Try a different search' : 'Chats will appear here'}
-                </p>
-              </div>
+              showWaGate && !searchQuery ? (
+                <div className="p-4">
+                  <LockedFeatureGate
+                    icon={MessageSquare}
+                    title="Your customers are on WhatsApp"
+                    description="Your inbox is empty because Starter doesn't include WhatsApp. Connect your number on Growth and every customer message — with AI replies — lands here."
+                    planLabel="Starter (KSh 0)"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <MessageSquare className="h-10 w-10 text-muted-foreground/50" />
+                  <p className="mt-2 font-medium text-foreground">No conversations</p>
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery ? 'Try a different search' : 'Chats will appear here'}
+                  </p>
+                </div>
+              )
             )}
 
             {/* Chat List */}

@@ -244,7 +244,10 @@ export function ProductWizardModal({
     }
   }
 
-  const step1Valid = !validateProductFields({ ...data, maxDownloads: '', bookingDurationMinutes: '', stock: '' })
+  const step1Valid = useMemo(
+    () => Object.keys(validateProductFields({ ...data, maxDownloads: '', bookingDurationMinutes: '', stock: '' })).length === 0,
+    [data]
+  )
   const fullErrors = useMemo(() => validateProductFields(data), [data])
 
   const goNext = () => {
