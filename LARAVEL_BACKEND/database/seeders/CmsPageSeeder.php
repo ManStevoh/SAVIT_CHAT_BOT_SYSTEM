@@ -603,10 +603,10 @@ class CmsPageSeeder extends Seeder
                         'is_enabled' => false,
                         'content' => [
                             'title' => 'What every plan includes',
-                            'html' => '<p>RelayIQ pricing starts with a <strong>free forever Starter</strong> plan so every business can sell on WhatsApp, the web, and at the table.</p>
+                            'html' => '<p>RelayIQ pricing starts with a <strong>free forever Starter</strong> plan so every business can sell on the web and at the table. Add WhatsApp on Growth.</p>
 <ul>
 <li><strong>Starter</strong> — Free forever. Storefront, bookings, dine-in (5 tables), 20 products (physical or digital), and 30 bookings per month.</li>
-<li><strong>Growth</strong> — KSh 2,000/month. Up to 50 products, 20 tables, 150 bookings/month, and more AI conversations.</li>
+<li><strong>Growth</strong> — KSh 2,000/month. Up to 50 products, 20 tables, 150 bookings/month, WhatsApp number & campaigns, and more AI conversations.</li>
 <li><strong>Custom</strong> — Limits and pricing set with the sales team for high-volume operations.</li>
 </ul>
 <p>Compare features below, then <a href="/register">get started free</a> or explore the <a href="/whatsapp-ai-sales-agent">AI sales agent for WhatsApp</a>.</p>',
@@ -636,10 +636,10 @@ class CmsPageSeeder extends Seeder
                                         'Physical & digital catalog (20)',
                                         'Bookings (30 / month)',
                                         'Dine-in tables (5)',
-                                        '1 WhatsApp number',
                                         '50 AI conversations / month',
                                         'M-Pesa',
                                         'RelayIQ branding',
+                                        'WhatsApp on Growth & Custom',
                                     ],
                                 ],
                                 [
@@ -652,6 +652,7 @@ class CmsPageSeeder extends Seeder
                                         'Dine-in tables (20)',
                                         '1,000 AI conversations / month',
                                         '3 team seats',
+                                        'WhatsApp number & campaigns',
                                         'Paystack & Stripe',
                                         'Upgrade anytime from free Starter',
                                     ],

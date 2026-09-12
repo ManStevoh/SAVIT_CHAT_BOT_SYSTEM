@@ -80,6 +80,7 @@ class PlanEntitlementEnforcementTest extends TestCase
         $this->assertTrue($free->entitlements['allow_service']);
         $this->assertSame(30, $free->entitlements['max_bookings_per_month']);
         $this->assertSame(5, $free->entitlements['max_tables']);
+        $this->assertSame(0, $free->entitlements['whatsapp_numbers']);
         $this->assertFalse($free->entitlements['allow_whatsapp_campaigns']);
         $this->assertFalse($free->entitlements['growth_enabled']);
 

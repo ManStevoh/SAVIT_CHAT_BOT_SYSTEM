@@ -123,7 +123,7 @@ function entitlementsFromPlan(plan: Plan): PlanEntitlements {
     maxProducts: e.maxProductsUnlimited ? null : (e.maxProducts ?? 100),
     maxProductsUnlimited: !!e.maxProductsUnlimited || e.maxProducts == null,
     team: e.team ?? 1,
-    whatsappNumbers: e.whatsappNumbers ?? 1,
+    whatsappNumbers: e.whatsappNumbers ?? 0,
     aiCostUsd: e.aiCostUsd ?? null,
     aiModelModes: e.aiModelModes?.length ? e.aiModelModes : ["auto"],
     allowByok: !!e.allowByok,
@@ -401,7 +401,7 @@ export default function AdminPlansPage() {
                           products {plan.entitlements.maxProductsUnlimited || plan.entitlements.maxProducts == null ? "∞" : plan.entitlements.maxProducts}
                           {" · "}msgs {plan.entitlements.messagesUnlimited || plan.entitlements.messages == null ? "∞" : plan.entitlements.messages}
                           {" · "}team {plan.entitlements.team ?? "—"}
-                          {" · "}WA {plan.entitlements.whatsappNumbers ?? 1}
+                          {" · "}WA {plan.entitlements.whatsappNumbers ?? 0}
                           {plan.entitlements.crmLevel === "advanced" ? " · Adv CRM" : ""}
                           {plan.entitlements.apiAccess ? " · API" : ""}
                           {plan.entitlements.analytics ? " · Analytics" : ""}
@@ -667,16 +667,17 @@ export default function AdminPlansPage() {
                   <Input
                     id="ent-wa"
                     type="number"
-                    min={1}
-                    value={form.entitlements.whatsappNumbers ?? 1}
-                    onChange={(e) =>
-                      setForm((f) => ({
+                    min={0}
+                    value={form.entitlements.whatsappNumbers ?? 0}
+                    onChange={(e) => {
+                      const parsed = parseInt(e.target.value, 10)
+                      return setForm((f) => ({
                         ...f,
-                        entitlements: { ...f.entitlements, whatsappNumbers: parseInt(e.target.value, 10) || 1 },
+                        entitlements: { ...f.entitlements, whatsappNumbers: Number.isNaN(parsed) ? 0 : Math.max(0, parsed) },
                       }))
-                    }
+                    }}
                   />
-                  <p className="text-xs text-muted-foreground">Max connected numbers for company.</p>
+                  <p className="text-xs text-muted-foreground">Max connected numbers for company. Set 0 to exclude WhatsApp (e.g. Starter).</p>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="ent-crm">Customer CRM level</Label>

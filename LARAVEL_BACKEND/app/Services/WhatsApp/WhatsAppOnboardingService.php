@@ -339,6 +339,13 @@ class WhatsAppOnboardingService
                 \App\Services\PlanLimitService::getCurrentPlanSlug($company)
             );
 
+            if ($limit <= 0) {
+                return [
+                    'success' => false,
+                    'message' => 'WhatsApp is not included in the Starter plan. Upgrade to Growth to connect your WhatsApp number.',
+                ];
+            }
+
             return [
                 'success' => false,
                 'message' => "WhatsApp number limit reached ({$limit}) for your plan. Upgrade or disconnect an existing number.",

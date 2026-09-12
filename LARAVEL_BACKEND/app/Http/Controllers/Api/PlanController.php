@@ -106,7 +106,7 @@ class PlanController extends Controller
                     'messages' => $limits['messages'],
                     'maxProducts' => $limits['max_products'] ?? null,
                     'team' => $limits['team'] ?? null,
-                    'whatsappNumbers' => $limits['whatsapp_numbers'] ?? 1,
+                    'whatsappNumbers' => $limits['whatsapp_numbers'] ?? 0,
                     'apiAccess' => (bool) ($limits['api_access'] ?? false),
                     'analytics' => (bool) ($limits['analytics'] ?? false),
                     'analyticsLevel' => (string) ($limits['analytics_level'] ?? ($limits['analytics'] ? 'standard' : 'basic')),

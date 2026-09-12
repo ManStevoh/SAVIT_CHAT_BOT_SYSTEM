@@ -119,9 +119,8 @@ export function usePlans(currency?: string | null) {
           price: currency === 'USD' ? '$0' : currency === 'NGN' ? '₦0' : 'KSh 0',
           priceAmount: 0,
           currency: currency ?? 'KES',
-          description: 'Get started selling on WhatsApp with essential commerce tools',
+          description: 'Get started selling online with essential commerce tools',
           features: [
-            '1 WhatsApp connection',
             '20 products',
             '50 AI conversations/month',
             'Basic storefront',
@@ -129,6 +128,7 @@ export function usePlans(currency?: string | null) {
             'M-Pesa payment integration',
             'RelayIQ branding',
             'Limited automation (5 posts/mo)',
+            'Upgrade to Growth for WhatsApp',
           ],
           popular: false,
           cta: 'Get Started Free',

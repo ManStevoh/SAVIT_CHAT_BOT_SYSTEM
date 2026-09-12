@@ -66,7 +66,7 @@ function mpesaSecretKey(field: "passkey" | "consumer_secret") {
   return `mpesa:${field}`
 }
 // API: GET /api/company/settings (useCompanySettings), PUT /api/company/settings (updateSettings)
-import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers, type BusinessDnaPreset, type BusinessDnaSettings } from "@/lib/api-hooks"
+import { useCompanySettings, useCompanyTeam, useWhatsAppNumbers, useSubscription, type BusinessDnaPreset, type BusinessDnaSettings } from "@/lib/api-hooks"
 import { apiRequest } from "@/lib/api-client"
 import { CATALOG_CURRENCY_OPTIONS, normalizeCurrencyCode, pairedDecimalForThousands, formatCurrencyAmount } from "@/lib/format-currency"
 import { useSWRConfig } from "swr"
@@ -125,6 +125,8 @@ export default function SettingsPage() {
   const { data: settings } = useCompanySettings()
   const { data: teamMembers = [] } = useCompanyTeam({ enabled: activeTab === 'team' })
   const { data: whatsappNumbers = [] } = useWhatsAppNumbers({ enabled: activeTab === 'whatsapp' })
+  const { data: subscription } = useSubscription()
+  const waPlanIsStarter = (subscription?.plan ?? "free") === "free"
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [profileSuccess, setProfileSuccess] = useState(false)
@@ -1767,7 +1769,9 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>WhatsApp Business</CardTitle>
               <CardDescription>
-                {manualConnectEnabled
+                {waPlanIsStarter && !waStatus?.connected
+                  ? "WhatsApp is included on Growth and Custom plans — upgrade to connect your number."
+                  : manualConnectEnabled
                   ? "Connect via Facebook (recommended) or paste Meta API credentials manually if your administrator enabled that option."
                   : "Connect WhatsApp with Facebook Embedded Signup — no Meta Developer account needed."}
               </CardDescription>
@@ -1858,6 +1862,20 @@ export default function SettingsPage() {
                   )}
                   <Button variant="outline" onClick={handleWhatsAppDisconnect} disabled={waLoading}>
                     Disconnect WhatsApp
+                  </Button>
+                </div>
+              ) : waPlanIsStarter ? (
+                /* STARTER: WhatsApp not included — upgrade gate */
+                <div className="rounded-lg border border-border bg-muted/20 p-6 text-center space-y-3">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                    <Smartphone className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-base font-semibold text-foreground">WhatsApp is available on Growth</h3>
+                  <p className="mx-auto max-w-md text-sm text-muted-foreground">
+                    Your Starter plan includes the online storefront, bookings, and dine-in. Connect your WhatsApp Business number, run campaigns, and let the AI reply to customers by upgrading to Growth.
+                  </p>
+                  <Button asChild>
+                    <Link href="/dashboard/subscription">Upgrade to Growth</Link>
                   </Button>
                 </div>
               ) : (

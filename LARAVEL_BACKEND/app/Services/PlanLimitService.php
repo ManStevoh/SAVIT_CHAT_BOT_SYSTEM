@@ -71,7 +71,7 @@ final class PlanLimitService
 
     public static function getWhatsAppNumberLimitForPlan(string $plan): int
     {
-        return max(1, (int) (self::getLimitsForPlan($plan)['whatsapp_numbers'] ?? 1));
+        return max(0, (int) (self::getLimitsForPlan($plan)['whatsapp_numbers'] ?? 0));
     }
 
     public static function planHasApiAccess(string $plan): bool

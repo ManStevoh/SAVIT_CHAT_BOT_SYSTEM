@@ -217,7 +217,7 @@ class SubscriptionController extends Controller
         $items = [
             ['name' => 'Messages', 'used' => $messageCount, 'limit' => $planLimits['messages']],
             ['name' => 'Products', 'used' => $productCount, 'limit' => $planLimits['max_products'] ?? null],
-            ['name' => 'WhatsApp numbers', 'used' => $waCount, 'limit' => $planLimits['whatsapp_numbers'] ?? 1],
+            ['name' => 'WhatsApp numbers', 'used' => $waCount, 'limit' => $planLimits['whatsapp_numbers'] ?? 0],
             ['name' => 'Team members', 'used' => $teamCount, 'limit' => $planLimits['team']],
         ];
 

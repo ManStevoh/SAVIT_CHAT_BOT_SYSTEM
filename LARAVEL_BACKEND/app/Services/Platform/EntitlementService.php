@@ -21,7 +21,7 @@ final class EntitlementService
             'messages' => 50,
             'max_products' => 20,
             'team' => 1,
-            'whatsapp_numbers' => 1,
+            'whatsapp_numbers' => 0,
             'ai_cost_usd' => 1.0,
             'ai_model_modes' => ['auto'],
             'allow_byok' => false,
@@ -185,7 +185,7 @@ final class EntitlementService
             'messages' => 50,
             'max_products' => 20,
             'team' => 1,
-            'whatsapp_numbers' => 1,
+            'whatsapp_numbers' => 0,
             'ai_cost_usd' => 1.0,
             'ai_model_modes' => ['auto'],
             'allow_byok' => false,
@@ -250,7 +250,7 @@ final class EntitlementService
             $out['team'] = max(1, (int) $input['team']);
         }
         if (array_key_exists('whatsapp_numbers', $input)) {
-            $out['whatsapp_numbers'] = max(1, (int) $input['whatsapp_numbers']);
+            $out['whatsapp_numbers'] = max(0, (int) $input['whatsapp_numbers']);
         }
         if (array_key_exists('ai_cost_usd', $input)) {
             $cost = $input['ai_cost_usd'];
@@ -436,7 +436,7 @@ final class EntitlementService
 
     public function whatsappNumberLimit(Company $company): int
     {
-        return max(1, (int) ($this->limitsForCompany($company)['whatsapp_numbers'] ?? 1));
+        return max(0, (int) ($this->limitsForCompany($company)['whatsapp_numbers'] ?? 0));
     }
 
     public function canAddTeamMember(Company $company): bool
@@ -451,12 +451,18 @@ final class EntitlementService
         $limit = $this->whatsappNumberLimit($company);
         $query = WhatsAppAccount::where('company_id', $company->id);
 
-        // Reconnecting / replacing the same Meta phone number always allowed.
+        // Reconnecting / replacing the same Meta phone number always allowed
+        // (token refresh for an already-connected number, incl. grandfathered).
         if ($phoneNumberId) {
             $existingSame = (clone $query)->where('phone_number_id', $phoneNumberId)->exists();
             if ($existingSame) {
                 return true;
             }
+        }
+
+        // Plans without any WhatsApp allowance (e.g. Starter) cannot add numbers.
+        if ($limit <= 0) {
+            return false;
         }
 
         // Current product stores one account per company (updateOrCreate by company_id).
