@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,8 +8,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { DataTable, type Column, type Filter } from '@/components/shared/data-table'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { FormModal, ConfirmModal } from '@/components/shared/modal'
-import { InputField, TextareaField, SelectField } from '@/components/shared/form-field'
+import { ConfirmModal } from '@/components/shared/modal'
+import { ProductWizardModal } from '@/components/dashboard/products/ProductWizardModal'
+import type { ProductFormFields, WizardFiles } from '@/components/dashboard/products/ProductWizardModal'
+import { emptyProductFields, validateProductFields } from '@/components/dashboard/products/ProductWizardModal'
 import { useProducts, useCompanySettings, useTaxRates, useSubscription } from '@/lib/api-hooks'
 import { PlanLimitBar, UpgradePrompt } from '@/components/shared/upgrade-prompt'
 import { STARTER_LIMITS, isStarterPlan, isAtLimit, isNearLimit } from '@/lib/use-plan'
@@ -76,59 +78,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 
-interface ProductFormData {
-  name: string
-  description: string
-  metaTitle: string
-  metaDescription: string
-  slug: string
-  price: string
-  compareAtPrice: string
-  taxRateId: string
-  category: string
-  productType: 'physical' | 'digital' | 'service'
-  fulfillmentType: 'shipping' | 'download' | 'link' | 'booking' | 'manual'
-  trackInventory: boolean
-  requiresDeliveryAddress: boolean
-  accessUrl: string
-  serviceBookingUrl: string
-  fulfillmentInstructions: string
-  licenseKeyMode: 'none' | 'auto' | 'pool'
-  licenseKeyPrefix: string
-  accessExpiresDays: string
-  maxDownloads: string
-  bookable: boolean
-  bookingDurationMinutes: string
-  licenseKeys: string
-  stock: string
-}
-
-const initialFormData: ProductFormData = {
-  name: '',
-  description: '',
-  metaTitle: '',
-  metaDescription: '',
-  slug: '',
-  price: '',
-  compareAtPrice: '',
-  taxRateId: 'none',
-  category: '',
-  productType: 'physical',
-  fulfillmentType: 'shipping',
-  trackInventory: true,
-  requiresDeliveryAddress: true,
-  accessUrl: '',
-  serviceBookingUrl: '',
-  fulfillmentInstructions: '',
-  licenseKeyMode: 'none',
-  licenseKeyPrefix: '',
-  accessExpiresDays: '',
-  maxDownloads: '',
-  bookable: false,
-  bookingDurationMinutes: '',
-  licenseKeys: '',
-  stock: '',
-}
+const initialFormData: ProductFormFields = emptyProductFields
 
 function variantDisplayImage(variant: ProductVariant): string | null {
   const fromField = resolveBackendMediaUrl(variant.image ?? null)
@@ -185,11 +135,9 @@ export default function ProductsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [formData, setFormData] = useState<ProductFormData>(initialFormData)
-  const [productImageFile, setProductImageFile] = useState<File | null>(null)
-  const [digitalFile, setDigitalFile] = useState<File | null>(null)
+  const [formData, setFormData] = useState<ProductFormFields>(initialFormData)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [wizardKey, setWizardKey] = useState(0)
   const [exportOpen, setExportOpen] = useState(false)
   const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv')
   const [exporting, setExporting] = useState(false)
@@ -232,6 +180,15 @@ export default function ProductsPage() {
     outOfStock: products?.filter((p) => p.stock === 0).length || 0,
   }
 
+  // Existing categories for the wizard's suggestions
+  const existingCategories = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of products ?? []) {
+      if (p.category?.trim()) set.add(p.category.trim())
+    }
+    return [...set].sort()
+  }, [products])
+
   // Starter plan catalog cap (KSh 0: 20 physical or digital products).
   const { data: subscription } = useSubscription()
   const starterCatalog = isStarterPlan(subscription?.plan)
@@ -239,158 +196,88 @@ export default function ProductsPage() {
   const catalogFull = isAtLimit(stats.total, productLimit)
   const catalogNear = isNearLimit(stats.total, productLimit)
 
-  // Validate form
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {}
-    
-    if (!formData.name.trim()) {
-      errors.name = 'Product name is required'
-    }
-    if (formData.price === '' || Number.isNaN(parseFloat(formData.price)) || parseFloat(formData.price) < 0) {
-      errors.price = 'Enter a valid price (0 or more; use 0 if only variants have prices)'
-    }
-    if (!formData.category) {
-      errors.category = 'Category is required'
-    }
-    if (!formData.stock || parseInt(formData.stock) < 0) {
-      errors.stock = 'Valid stock quantity is required'
-    }
-    if (formData.maxDownloads && (!Number.isInteger(Number(formData.maxDownloads)) || Number(formData.maxDownloads) < 1)) {
-      errors.maxDownloads = 'Download limit must be a whole number of at least 1'
-    }
-    if (formData.bookable && formData.bookingDurationMinutes &&
-      (!Number.isInteger(Number(formData.bookingDurationMinutes)) ||
-        Number(formData.bookingDurationMinutes) < 5 ||
-        Number(formData.bookingDurationMinutes) > 480)) {
-      errors.bookingDurationMinutes = 'Duration must be between 5 and 480 minutes'
-    }
-    
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-
-  // Handle form field change
-  const handleFieldChange = (field: keyof ProductFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    // Clear error when user types
-    if (formErrors[field]) {
-      setFormErrors((prev) => ({ ...prev, [field]: '' }))
-    }
-  }
+  // Build the API payload from wizard data — shared by create + edit
+  const buildPayload = (d: ProductFormFields, files: WizardFiles) => ({
+    name: d.name,
+    description: d.description,
+    metaTitle: d.metaTitle || null,
+    metaDescription: d.metaDescription || null,
+    slug: d.slug || null,
+    price: parseFloat(d.price),
+    compareAtPrice: d.compareAtPrice.trim() === '' ? null : parseFloat(d.compareAtPrice),
+    taxRateId: d.taxRateId === 'none' ? null : d.taxRateId,
+    category: d.category,
+    productType: d.productType,
+    fulfillmentType: d.fulfillmentType,
+    trackInventory: d.trackInventory,
+    requiresDeliveryAddress: d.requiresDeliveryAddress,
+    accessUrl: d.accessUrl,
+    serviceBookingUrl: d.serviceBookingUrl,
+    fulfillmentInstructions: d.fulfillmentInstructions,
+    licenseKeyMode: d.licenseKeyMode,
+    licenseKeyPrefix: d.licenseKeyPrefix,
+    accessExpiresDays: d.accessExpiresDays ? parseInt(d.accessExpiresDays, 10) : null,
+    maxDownloads: d.maxDownloads ? parseInt(d.maxDownloads, 10) : null,
+    bookable: d.bookable,
+    bookingDurationMinutes: d.bookingDurationMinutes ? parseInt(d.bookingDurationMinutes, 10) : null,
+    licenseKeys: d.licenseKeys || undefined,
+    stock: Number.isNaN(parseInt(d.stock, 10)) ? 0 : parseInt(d.stock, 10),
+    image: files.image ?? undefined,
+    digitalFile: files.digital ?? undefined,
+  })
 
   // Handle create product — api-actions.createProduct → POST /api/company/products
-  const handleCreateProduct = useCallback(async () => {
-    if (!validateForm()) return
+  const handleCreateProduct = async (d: ProductFormFields, files: WizardFiles): Promise<{ ok: boolean; message?: string }> => {
+    if (Object.keys(validateProductFields(d)).length > 0) {
+      return { ok: false, message: 'Please complete the highlighted fields.' }
+    }
 
     setIsSubmitting(true)
     try {
-      const result = await createProduct({
-        name: formData.name,
-        description: formData.description,
-        metaTitle: formData.metaTitle || null,
-        metaDescription: formData.metaDescription || null,
-        slug: formData.slug || null,
-        price: parseFloat(formData.price),
-        compareAtPrice: formData.compareAtPrice.trim() === '' ? null : parseFloat(formData.compareAtPrice),
-        taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
-        category: formData.category,
-        productType: formData.productType,
-        fulfillmentType: formData.fulfillmentType,
-        trackInventory: formData.trackInventory,
-        requiresDeliveryAddress: formData.requiresDeliveryAddress,
-        accessUrl: formData.accessUrl,
-        serviceBookingUrl: formData.serviceBookingUrl,
-        fulfillmentInstructions: formData.fulfillmentInstructions,
-        licenseKeyMode: formData.licenseKeyMode,
-        licenseKeyPrefix: formData.licenseKeyPrefix,
-        accessExpiresDays: formData.accessExpiresDays ? parseInt(formData.accessExpiresDays, 10) : null,
-        maxDownloads: formData.maxDownloads ? parseInt(formData.maxDownloads, 10) : null,
-        bookable: formData.bookable,
-        bookingDurationMinutes: formData.bookingDurationMinutes ? parseInt(formData.bookingDurationMinutes, 10) : null,
-        licenseKeys: formData.licenseKeys || undefined,
-        stock: Number.isNaN(parseInt(formData.stock, 10)) ? 0 : parseInt(formData.stock, 10),
-        image: productImageFile ?? undefined,
-        digitalFile: digitalFile ?? undefined,
-      })
+      const result = await createProduct(buildPayload(d, files))
 
       if (result.success) {
         // Revalidate products data
         mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         setIsAddModalOpen(false)
         setFormData(initialFormData)
-        setFormErrors({})
-        setProductImageFile(null)
-        setDigitalFile(null)
-      } else {
-        setFormErrors((prev) => ({
-          ...prev,
-          general: result.message || 'Failed to create product. Please check form inputs.',
-        }))
+        return { ok: true }
       }
+      return { ok: false, message: result.message || 'Failed to create product. Please check form inputs.' }
     } catch (error) {
       console.error('Failed to create product:', error)
-      setFormErrors((prev) => ({ ...prev, general: 'An unexpected error occurred while creating product.' }))
+      return { ok: false, message: 'An unexpected error occurred while creating product.' }
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, mutate, categoryFilter, statusFilter, searchQuery, productImageFile, digitalFile])
+  }
 
   // Handle edit product — api-actions.updateProduct → PUT /api/company/products/:productId
-  const handleEditProduct = useCallback(async () => {
-    if (!selectedProduct || !validateForm()) return
+  const handleEditProduct = async (d: ProductFormFields, files: WizardFiles): Promise<{ ok: boolean; message?: string }> => {
+    if (!selectedProduct) return { ok: false }
+    if (Object.keys(validateProductFields(d)).length > 0) {
+      return { ok: false, message: 'Please complete the highlighted fields.' }
+    }
 
     setIsSubmitting(true)
     try {
-      const result = await updateProduct(selectedProduct.id, {
-        name: formData.name,
-        description: formData.description,
-        metaTitle: formData.metaTitle || null,
-        metaDescription: formData.metaDescription || null,
-        slug: formData.slug || null,
-        price: parseFloat(formData.price),
-        compareAtPrice: formData.compareAtPrice.trim() === '' ? null : parseFloat(formData.compareAtPrice),
-        taxRateId: formData.taxRateId === 'none' ? null : formData.taxRateId,
-        category: formData.category,
-        productType: formData.productType,
-        fulfillmentType: formData.fulfillmentType,
-        trackInventory: formData.trackInventory,
-        requiresDeliveryAddress: formData.requiresDeliveryAddress,
-        accessUrl: formData.accessUrl,
-        serviceBookingUrl: formData.serviceBookingUrl,
-        fulfillmentInstructions: formData.fulfillmentInstructions,
-        licenseKeyMode: formData.licenseKeyMode,
-        licenseKeyPrefix: formData.licenseKeyPrefix,
-        accessExpiresDays: formData.accessExpiresDays ? parseInt(formData.accessExpiresDays, 10) : null,
-        maxDownloads: formData.maxDownloads ? parseInt(formData.maxDownloads, 10) : null,
-        bookable: formData.bookable,
-        bookingDurationMinutes: formData.bookingDurationMinutes ? parseInt(formData.bookingDurationMinutes, 10) : null,
-        licenseKeys: formData.licenseKeys || undefined,
-        stock: Number.isNaN(parseInt(formData.stock, 10)) ? 0 : parseInt(formData.stock, 10),
-        image: productImageFile ?? undefined,
-        digitalFile: digitalFile ?? undefined,
-      })
+      const result = await updateProduct(selectedProduct.id, buildPayload(d, files))
 
       if (result.success) {
         await mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
         setIsEditModalOpen(false)
         setSelectedProduct(null)
         setFormData(initialFormData)
-        setFormErrors({})
-        setProductImageFile(null)
-        setDigitalFile(null)
-      } else {
-        setFormErrors((prev) => ({
-          ...prev,
-          general: result.message || 'Failed to update product. Please check form inputs.',
-        }))
+        return { ok: true }
       }
+      return { ok: false, message: result.message || 'Failed to update product. Please check form inputs.' }
     } catch (error) {
       console.error('Failed to update product:', error)
-      setFormErrors((prev) => ({ ...prev, general: 'An unexpected error occurred while updating product.' }))
+      return { ok: false, message: 'An unexpected error occurred while updating product.' }
     } finally {
       setIsSubmitting(false)
     }
-  }, [selectedProduct, formData, mutate, categoryFilter, statusFilter, searchQuery, productImageFile, digitalFile])
+  }
 
   // Handle delete product — api-actions.deleteProduct → DELETE /api/company/products/:productId
   const handleDeleteProduct = useCallback(async () => {
@@ -415,8 +302,6 @@ export default function ProductsPage() {
   // Open edit modal with product data
   const openEditModal = (product: Product) => {
     setSelectedProduct(product)
-    setProductImageFile(null)
-    setDigitalFile(null)
     setFormData({
       name: product.name,
       description: product.description,
@@ -443,8 +328,20 @@ export default function ProductsPage() {
       licenseKeys: '',
       stock: product.stock.toString(),
     })
-    setFormErrors({})
     setIsEditModalOpen(true)
+  }
+
+  // Remove the attached digital file (edit mode) — api-actions.updateProduct
+  const handleClearDigitalFile = async () => {
+    if (!selectedProduct) return
+    setIsSubmitting(true)
+    try {
+      await updateProduct(selectedProduct.id, { clearDigitalFile: true })
+      mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+      setSelectedProduct({ ...selectedProduct, digitalFileName: null, hasDigitalFile: false })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleExportProducts = async () => {
@@ -708,393 +605,6 @@ export default function ProductsPage() {
   ]
 
   // Product form fields (shared between add and edit)
-  const renderProductForm = () => (
-    <div className="space-y-4">
-      {formErrors.general && (
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
-          {formErrors.general}
-        </div>
-      )}
-      <InputField
-        label="Product Name"
-        name="name"
-        value={formData.name}
-        onChange={(value) => handleFieldChange('name', value)}
-        placeholder="Enter product name"
-        error={formErrors.name}
-        required
-      />
-
-      <InputField
-        label="Category"
-        name="category"
-        value={formData.category}
-        onChange={(value) => handleFieldChange('category', value)}
-        placeholder="e.g. Books, Coaching, Templates"
-        error={formErrors.category}
-        required
-      />
-
-      <div className="grid grid-cols-2 gap-4">
-        <SelectField
-          label="Item type"
-          name="productType"
-          value={formData.productType}
-          onChange={(value) => {
-            const nextType = value as ProductFormData['productType'];
-            setFormData((prev) => ({
-              ...prev,
-              productType: nextType,
-              fulfillmentType: nextType === 'physical' ? 'shipping' : (nextType === 'service' ? 'booking' : 'download'),
-              requiresDeliveryAddress: nextType === 'physical',
-              trackInventory: nextType === 'physical' ? prev.trackInventory : false,
-            }));
-          }}
-          options={[
-            { value: 'physical', label: 'Physical product' },
-            { value: 'digital', label: 'Digital good' },
-            { value: 'service', label: 'Service' },
-          ]}
-          required
-        />
-        <SelectField
-          label="Fulfillment"
-          name="fulfillmentType"
-          value={formData.fulfillmentType}
-          onChange={(value) => setFormData((prev) => ({ ...prev, fulfillmentType: value as ProductFormData['fulfillmentType'] }))}
-          options={[
-            { value: 'shipping', label: 'Shipping / delivery' },
-            { value: 'download', label: 'Download file' },
-            { value: 'link', label: 'Access link' },
-            { value: 'booking', label: 'Booking link' },
-            { value: 'manual', label: 'Manual instructions' },
-          ]}
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <InputField
-          label="Price"
-          name="price"
-          type="number"
-          value={formData.price}
-          onChange={(value) => handleFieldChange('price', value)}
-          placeholder="0.00"
-          error={formErrors.price}
-          required
-        />
-        <InputField
-          label="Compare-at price (sale)"
-          name="compareAtPrice"
-          type="number"
-          value={formData.compareAtPrice}
-          onChange={(value) => handleFieldChange('compareAtPrice', value)}
-          placeholder="Optional — was price"
-          description="If higher than Price, storefront shows a Sale badge and strikethrough."
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <InputField
-          label={formData.trackInventory ? 'Stock' : 'Stock'}
-          name="stock"
-          type="number"
-          value={formData.stock}
-          onChange={(value) => handleFieldChange('stock', value)}
-          placeholder="0"
-          error={formErrors.stock}
-          required
-        />
-        <div />
-      </div>
-
-      <SelectField
-        label="Tax rate"
-        name="taxRateId"
-        value={formData.taxRateId || 'none'}
-        onChange={(value) => handleFieldChange('taxRateId', value)}
-        options={[
-          { value: 'none', label: 'Company default / none' },
-          ...(taxRates ?? [])
-            .filter((r) => r.isActive)
-            .map((r) => ({
-              value: r.id,
-              label: `${r.name}${r.code ? ` (${r.code})` : ''} — ${r.rate}%`,
-            })),
-        ]}
-        description="Optional. Leave default to use the company default tax rate when tax is enabled."
-      />
-
-      <div className="grid grid-cols-2 gap-4 rounded-md border border-border/70 p-3">
-        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={formData.trackInventory}
-            onChange={(e) => setFormData((prev) => ({ ...prev, trackInventory: e.target.checked }))}
-          />
-          <span>Track inventory</span>
-        </label>
-        <label className="flex items-start gap-2 text-sm cursor-pointer select-none">
-          <input
-            type="checkbox"
-            className="mt-0.5"
-            checked={formData.requiresDeliveryAddress}
-            onChange={(e) => setFormData((prev) => ({ ...prev, requiresDeliveryAddress: e.target.checked }))}
-          />
-          <div>
-            <span>Ask for delivery address</span>
-            <span className="block text-xs text-muted-foreground font-normal">
-              {formData.requiresDeliveryAddress ? 'Prompt address at checkout' : 'Skip address at checkout'}
-            </span>
-          </div>
-        </label>
-      </div>
-
-      <TextareaField
-        label="Description"
-        name="description"
-        value={formData.description}
-        onChange={(value) => handleFieldChange('description', value)}
-        placeholder="Enter product description"
-        description="This will be shown to customers and used by AI for responses"
-      />
-
-      <InputField
-        label="URL slug"
-        name="slug"
-        value={formData.slug}
-        onChange={(value) => handleFieldChange('slug', value)}
-        placeholder="auto-from-name"
-        description="Optional. Used in the storefront product URL."
-      />
-      <InputField
-        label="SEO title"
-        name="metaTitle"
-        value={formData.metaTitle}
-        onChange={(value) => handleFieldChange('metaTitle', value)}
-        placeholder="Leave blank to use product name"
-        description="Recommended 50–60 characters for Google titles."
-      />
-      <TextareaField
-        label="SEO description"
-        name="metaDescription"
-        value={formData.metaDescription}
-        onChange={(value) => handleFieldChange('metaDescription', value)}
-        placeholder="Leave blank to use product description"
-        description="Recommended ~155 characters. Shown in search results."
-      />
-
-      {/* Live Product Search & Social Snippet Preview */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-900/50">
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Live Search &amp; WhatsApp Preview</p>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Google Result</span>
-            <span>·</span>
-            <span className="truncate">/p/{formData.slug || 'product-url'}</span>
-          </div>
-          <h5 className="mt-0.5 text-sm font-medium text-[#1a0dab] hover:underline dark:text-[#8ab4f8] line-clamp-1">
-            {formData.metaTitle || formData.name || 'Product Title'}
-          </h5>
-          <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300 line-clamp-2">
-            {formData.metaDescription || formData.description || 'Order online with fast WhatsApp checkout.'}
-          </p>
-        </div>
-      </div>
-
-      {(formData.productType === 'digital' || formData.productType === 'service') && (
-        <>
-          <InputField
-            label="Access link"
-            name="accessUrl"
-            value={formData.accessUrl}
-            onChange={(value) => handleFieldChange('accessUrl', value)}
-            placeholder="https://..."
-            description="For course portals, members-only links, Google Drive, Notion, Calendly, etc."
-          />
-          <InputField
-            label="Booking / secondary link"
-            name="serviceBookingUrl"
-            value={formData.serviceBookingUrl}
-            onChange={(value) => handleFieldChange('serviceBookingUrl', value)}
-            placeholder="https://..."
-          />
-          {formData.productType === 'digital' && (
-            <InputField
-              label="Maximum downloads"
-              name="maxDownloads"
-              type="number"
-              value={formData.maxDownloads}
-              onChange={(value) => handleFieldChange('maxDownloads', value)}
-              placeholder="Leave blank for unlimited"
-              description="Per purchased item"
-              error={formErrors.maxDownloads}
-            />
-          )}
-          {(formData.productType === 'service' || formData.fulfillmentType === 'booking') && (
-            <div className="space-y-3 rounded-md border border-border/70 p-3">
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={formData.bookable}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, bookable: e.target.checked }))}
-                />
-                Enable customer bookings
-              </label>
-              {formData.bookable && (
-                <InputField
-                  label="Meeting duration (minutes)"
-                  name="bookingDurationMinutes"
-                  type="number"
-                  value={formData.bookingDurationMinutes}
-                  onChange={(value) => handleFieldChange('bookingDurationMinutes', value)}
-                  placeholder="e.g. 30"
-                  description="Leave blank to use the booking default"
-                  error={formErrors.bookingDurationMinutes}
-                />
-              )}
-            </div>
-          )}
-          <TextareaField
-            label="Fulfillment instructions"
-            name="fulfillmentInstructions"
-            value={formData.fulfillmentInstructions}
-            onChange={(value) => handleFieldChange('fulfillmentInstructions', value)}
-            placeholder="Explain how the customer gets access after payment"
-            description="Sent after payment and shown in the receipt."
-          />
-          <div className="space-y-2 rounded-md border border-border/70 p-3">
-            <label className="text-sm font-medium text-foreground">Digital file / resource</label>
-            {selectedProduct?.digitalFileName && !digitalFile && (
-              <p className="text-xs text-muted-foreground">Current file: {selectedProduct.digitalFileName} (private — delivered via signed link after payment)</p>
-            )}
-            {digitalFile && <p className="text-xs text-muted-foreground">Selected: {digitalFile.name}</p>}
-            <input
-              type="file"
-              accept=".pdf,.epub,.txt,.csv,.zip,.doc,.docx"
-              onChange={(e) => setDigitalFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium"
-            />
-            {selectedProduct?.digitalFileName && !digitalFile && (
-              <button
-                type="button"
-                className="text-xs text-destructive underline"
-                onClick={async () => {
-                  if (!selectedProduct) return
-                  setIsSubmitting(true)
-                  try {
-                    await updateProduct(selectedProduct.id, { clearDigitalFile: true })
-                    mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
-                    setSelectedProduct({ ...selectedProduct, digitalFileName: null, hasDigitalFile: false })
-                  } finally {
-                    setIsSubmitting(false)
-                  }
-                }}
-              >
-                Remove current digital file
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <SelectField
-              label="License keys"
-              name="licenseKeyMode"
-              value={formData.licenseKeyMode}
-              onChange={(value) => setFormData((prev) => ({ ...prev, licenseKeyMode: value as ProductFormData['licenseKeyMode'] }))}
-              options={[
-                { value: 'none', label: 'None' },
-                { value: 'auto', label: 'Auto-generate' },
-                { value: 'pool', label: 'From key pool' },
-              ]}
-            />
-            <InputField
-              label="Access expires (days)"
-              name="accessExpiresDays"
-              type="number"
-              value={formData.accessExpiresDays}
-              onChange={(value) => handleFieldChange('accessExpiresDays', value)}
-              placeholder="Leave blank for no expiry"
-              description="Applies to signed download / portal links"
-            />
-          </div>
-          {formData.licenseKeyMode !== 'none' && (
-            <InputField
-              label="License key prefix"
-              name="licenseKeyPrefix"
-              value={formData.licenseKeyPrefix}
-              onChange={(value) => handleFieldChange('licenseKeyPrefix', value)}
-              placeholder="e.g. COURSE"
-              description="Used when auto-generating keys"
-            />
-          )}
-          {formData.licenseKeyMode === 'pool' && (
-            <>
-              {(selectedProduct?.licenseKeysAvailable ?? 0) === 0 && !formData.licenseKeys.trim() && (
-                <p className="text-xs text-amber-700">
-                  No keys in the pool yet. Import keys below before selling this product, or checkout will be blocked.
-                </p>
-              )}
-              <TextareaField
-                label="Import license keys"
-                name="licenseKeys"
-                value={formData.licenseKeys}
-                onChange={(value) => handleFieldChange('licenseKeys', value)}
-                placeholder={'KEY-001\nKEY-002\nKEY-003'}
-                description={
-                  selectedProduct?.licenseKeysAvailable != null
-                    ? `Add one key per line. Available in pool: ${selectedProduct.licenseKeysAvailable}`
-                    : 'Add one key per line (or comma-separated). Keys are assigned after payment.'
-                }
-              />
-            </>
-          )}
-        </>
-      )}
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Main product image</label>
-        {selectedProduct && productPrimaryDisplayImage(selectedProduct) && !productImageFile && (
-          <div className="h-20 w-20 overflow-hidden rounded-md border border-border">
-            <ProductThumbImg
-              src={productPrimaryDisplayImage(selectedProduct)!}
-              alt={selectedProduct.name}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        )}
-        {productImageFile && (
-          <p className="text-xs text-muted-foreground">Selected: {productImageFile.name}</p>
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setProductImageFile(e.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium"
-        />
-      </div>
-
-      {selectedProduct && (
-        <div className="space-y-2 rounded-md border border-border/70 p-3">
-          <p className="text-sm font-medium text-foreground">Add extra image variation</p>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handleUploadExtraProductImage(file)
-              e.currentTarget.value = ''
-            }}
-            disabled={productExtraImageUploading}
-            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium disabled:opacity-60"
-          />
-          <p className="text-xs text-muted-foreground">
-            Upload multiple image variations for this product.
-          </p>
-        </div>
-      )}
-    </div>
-  )
-
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -1170,9 +680,8 @@ export default function ProductsPage() {
           </Button>
           <Button onClick={() => {
             setFormData(initialFormData)
-            setFormErrors({})
-            setProductImageFile(null)
-            setDigitalFile(null)
+            setSelectedProduct(null)
+            setWizardKey(Date.now())
             setIsAddModalOpen(true)
           }} disabled={catalogFull} title={catalogFull ? "You've used all 20 Starter products — upgrade to Growth for 50" : undefined}>
             <Plus className="mr-2 h-4 w-4" />
@@ -1251,59 +760,56 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Add Product Modal */}
-      <FormModal
+      {/* Add Product Wizard */}
+      <ProductWizardModal
         open={isAddModalOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setProductImageFile(null)
-            setDigitalFile(null)
-          }
-          setIsAddModalOpen(open)
-        }}
-        title="Add New Product"
-        description="Add a new product to your catalog"
+        onOpenChange={setIsAddModalOpen}
+        mode="add"
+        initial={formData}
+        resetKey={wizardKey}
+        categories={existingCategories}
+        taxRates={taxRates ?? []}
+        currencyCode={catalogCurrency}
+        allowService={!starterCatalog}
+        isSubmitting={isSubmitting}
+        submitLabel="Add product"
         onSubmit={handleCreateProduct}
-        submitLabel="Add Product"
-        isLoading={isSubmitting}
-        isValid={
-          formData.name.trim() !== '' &&
-          formData.price !== '' &&
-          parseFloat(formData.price) >= 0 &&
-          !Number.isNaN(parseFloat(formData.price)) &&
-          formData.category !== ''
-        }
-      >
-        {renderProductForm()}
-      </FormModal>
+      />
 
-      {/* Edit Product Modal */}
-      <FormModal
+      {/* Edit Product Wizard */}
+      <ProductWizardModal
         open={isEditModalOpen}
         onOpenChange={(open) => {
           if (!open) {
             setSelectedProduct(null)
             setFormData(initialFormData)
-            setProductImageFile(null)
-            setDigitalFile(null)
           }
           setIsEditModalOpen(open)
         }}
-        title="Edit Product"
-        description="Update product details"
-        onSubmit={handleEditProduct}
-        submitLabel="Save Changes"
-        isLoading={isSubmitting}
-        isValid={
-          formData.name.trim() !== '' &&
-          formData.price !== '' &&
-          parseFloat(formData.price) >= 0 &&
-          !Number.isNaN(parseFloat(formData.price)) &&
-          formData.category !== ''
+        mode="edit"
+        initial={formData}
+        resetKey={selectedProduct?.id ?? 'edit'}
+        categories={existingCategories}
+        taxRates={taxRates ?? []}
+        currencyCode={catalogCurrency}
+        allowService={!starterCatalog}
+        editExtras={
+          selectedProduct
+            ? {
+                existingImageUrl: productPrimaryDisplayImage(selectedProduct),
+                digitalFileName: selectedProduct.digitalFileName,
+                licenseKeysAvailable: selectedProduct.licenseKeysAvailable,
+                onClearDigitalFile: () => void handleClearDigitalFile(),
+                clearingFile: isSubmitting,
+                onUploadExtraImage: (f) => void handleUploadExtraProductImage(f),
+                extraUploading: productExtraImageUploading,
+              }
+            : undefined
         }
-      >
-        {renderProductForm()}
-      </FormModal>
+        isSubmitting={isSubmitting}
+        submitLabel="Save changes"
+        onSubmit={handleEditProduct}
+      />
 
       <ProductVariantsModal
         product={variantsSheetProduct}
