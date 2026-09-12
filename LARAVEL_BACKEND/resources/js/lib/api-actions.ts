@@ -4499,3 +4499,34 @@ export async function deleteStorefrontCoupon(id: string): Promise<{ success: boo
     return handleApiError(e)
   }
 }
+
+export interface InviteTeamMemberData {
+  name: string
+  email: string
+  role?: 'agent' | 'company_admin'
+}
+
+export interface TeamMemberResult {
+  id: string
+  name: string
+  email: string
+  role: string
+  status: string
+}
+
+/**
+ * Invite a team member — creates the user and emails a temporary password.
+ * API: POST /api/company/team
+ */
+export async function inviteTeamMember(
+  data: InviteTeamMemberData
+): Promise<{ success: boolean; message?: string; member?: TeamMemberResult; temporaryPassword?: string; code?: string }> {
+  try {
+    return await apiRequest('/api/company/team', {
+      method: 'POST',
+      body: data,
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
