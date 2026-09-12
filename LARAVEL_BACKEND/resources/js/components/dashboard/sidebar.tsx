@@ -33,8 +33,21 @@ import {
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
-import { useCompanySettings } from "@/lib/api-hooks"
+import { useCompanySettings, useSubscription } from "@/lib/api-hooks"
+import { isStarterPlan } from "@/lib/use-plan"
 import type { LucideIcon } from "lucide-react"
+
+/** Nav destinations that require Growth/Custom (hidden on Starter to keep the workspace focused). */
+const GROWTH_ONLY_HREFS = new Set([
+  "/dashboard/growth",
+  "/dashboard/whatsapp/campaigns",
+  "/dashboard/business-intelligence",
+  "/dashboard/executive",
+  "/dashboard/cognitive",
+  "/dashboard/agent-ops",
+  "/dashboard/mission-control",
+  "/dashboard/marketplace",
+])
 
 export type DashboardNavItem = {
   name: string
@@ -181,6 +194,8 @@ export function DashboardNavLinks({
 }) {
   const pathname = usePathname()
   const { data: settings } = useCompanySettings()
+  const { data: subscription } = useSubscription()
+  const isStarter = isStarterPlan(subscription?.plan)
 
   const aiActive = useMemo(
     () =>
@@ -193,12 +208,20 @@ export function DashboardNavLinks({
   const aiOpen = userToggled !== null ? userToggled : aiActive
 
   const visibleGroups = useMemo(() => {
-    return dashboardNavGroups.map((group) => {
-      if (group.id !== "core" || !settings) {
-        return group
-      }
+    return dashboardNavGroups
+      .map((group) => {
+        let items = group.items
+        // Starter (KSh 0) is storefront + bookings + dine-in. Growth-only
+        // destinations (WhatsApp, Growth Engine, advanced AI…) stay hidden
+        // so the workspace matches the plan — the upsell card below teases them.
+        if (isStarter) {
+          items = items.filter((item) => !GROWTH_ONLY_HREFS.has(item.href))
+        }
+        if (group.id !== "core" || !settings) {
+          return { ...group, items }
+        }
 
-      const filteredItems = group.items.filter((item) => {
+      const filteredItems = items.filter((item) => {
         if (item.href === "/dashboard/dine-in") {
           const isDineInAllowed = settings.enableDineIn || settings.dineInEnabled || settings.businessMode === "restaurant"
           return isDineInAllowed || isNavActive(pathname, item.href)
@@ -212,7 +235,11 @@ export function DashboardNavLinks({
 
       return { ...group, items: filteredItems }
     })
-  }, [settings, pathname])
+    // Drop groups left empty by plan filtering (e.g. Advanced AI on Starter).
+    .filter((group) => group.items.length > 0 || group.id === "core")
+  }, [settings, pathname, isStarter])
+
+  const showUpsell = isStarter && !collapsed
 
   return (
     <nav className="flex flex-col gap-4 overflow-y-auto p-3 pb-6">
@@ -281,6 +308,24 @@ export function DashboardNavLinks({
           </div>
         )
       })}
+      {showUpsell && (
+        <div className="mt-2 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.08] to-transparent p-3">
+          <p className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            Unlock WhatsApp + more
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-sidebar-foreground/70">
+            Growth adds WhatsApp selling, campaigns, 50 products and 1,000 AI chats — KSh 2,000/mo.
+          </p>
+          <Link
+            href="/dashboard/subscription#plans"
+            onClick={onNavigate}
+            className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Compare plans
+          </Link>
+        </div>
+      )}
     </nav>
   )
 }

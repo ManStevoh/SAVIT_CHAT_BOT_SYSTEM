@@ -7,7 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DataTable, type Column } from '@/components/shared/data-table'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, SwitchField } from '@/components/shared/form-field'
-import { useDineInTables, useCompanySettings, type DineInTable } from '@/lib/api-hooks'
+import { useDineInTables, useCompanySettings, useSubscription, type DineInTable } from '@/lib/api-hooks'
+import { PlanLimitBar, UpgradePrompt } from '@/components/shared/upgrade-prompt'
+import { STARTER_LIMITS, isStarterPlan, isAtLimit, isNearLimit } from '@/lib/use-plan'
 import { createDineInTable, updateDineInTable, deleteDineInTable, updateSettings } from '@/lib/api-actions'
 import { Plus, Edit, Trash2, Copy, QrCode, MessageSquare, Globe, ExternalLink } from 'lucide-react'
 import { useSWRConfig } from 'swr'
@@ -31,8 +33,14 @@ const initialForm: TableFormData = {
 export default function DineInPage() {
   const { data, isLoading } = useDineInTables()
   const { data: settings } = useCompanySettings()
+  const { data: subscription } = useSubscription()
   const { mutate } = useSWRConfig()
   const tables = data?.tables ?? []
+  const starterTables = isStarterPlan(subscription?.plan)
+  // Starter (KSh 0) includes 5 tables; API already returns the plan max.
+  const tableLimit = data?.maxTables ?? (starterTables ? STARTER_LIMITS.tables : null)
+  const tablesFull = isAtLimit(tables.length, tableLimit)
+  const tablesNear = isNearLimit(tables.length, tableLimit)
 
   const [savingSettings, setSavingSettings] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
@@ -228,11 +236,23 @@ export default function DineInPage() {
             {data?.maxTables != null ? ` ${tables.length} of ${data.maxTables} tables used on your plan.` : ''}
           </p>
         </div>
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} disabled={tablesFull} title={tablesFull ? `You've used all ${tableLimit} Starter tables — Growth unlocks 20` : undefined}>
           <Plus className="mr-2 h-4 w-4" />
           Add table
         </Button>
       </div>
+      {(tablesNear || tablesFull) && tableLimit != null && (
+        <div className="max-w-xl space-y-3">
+          <PlanLimitBar used={tables.length} limit={tableLimit} label="Dine-in tables" unit="tables" />
+          {tablesFull && (
+            <UpgradePrompt
+              title="All your Starter tables are in use"
+              description="Growth expands you to 20 tables with the same QR ordering and M-Pesa checkout — plus WhatsApp table ordering."
+              compact
+            />
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

@@ -10,7 +10,9 @@ import { DataTable, type Column, type Filter } from '@/components/shared/data-ta
 import { StatusBadge } from '@/components/shared/status-badge'
 import { FormModal, ConfirmModal } from '@/components/shared/modal'
 import { InputField, TextareaField, SelectField } from '@/components/shared/form-field'
-import { useProducts, useCompanySettings, useTaxRates } from '@/lib/api-hooks'
+import { useProducts, useCompanySettings, useTaxRates, useSubscription } from '@/lib/api-hooks'
+import { PlanLimitBar, UpgradePrompt } from '@/components/shared/upgrade-prompt'
+import { STARTER_LIMITS, isStarterPlan, isAtLimit, isNearLimit } from '@/lib/use-plan'
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import {
   createProduct,
@@ -229,6 +231,13 @@ export default function ProductsPage() {
     lowStock: products?.filter((p) => p.stock > 0 && p.stock <= 10).length || 0,
     outOfStock: products?.filter((p) => p.stock === 0).length || 0,
   }
+
+  // Starter plan catalog cap (KSh 0: 20 physical or digital products).
+  const { data: subscription } = useSubscription()
+  const starterCatalog = isStarterPlan(subscription?.plan)
+  const productLimit = starterCatalog ? STARTER_LIMITS.products : null
+  const catalogFull = isAtLimit(stats.total, productLimit)
+  const catalogNear = isNearLimit(stats.total, productLimit)
 
   // Validate form
   const validateForm = (): boolean => {
@@ -1165,12 +1174,24 @@ export default function ProductsPage() {
             setProductImageFile(null)
             setDigitalFile(null)
             setIsAddModalOpen(true)
-          }}>
+          }} disabled={catalogFull} title={catalogFull ? "You've used all 20 Starter products — upgrade to Growth for 50" : undefined}>
             <Plus className="mr-2 h-4 w-4" />
             Add Product
           </Button>
         </div>
         </div>
+        {starterCatalog && (catalogNear || catalogFull) && (
+          <div className="max-w-xl space-y-3">
+            <PlanLimitBar used={stats.total} limit={productLimit} label="Catalog" unit="products" />
+            {catalogFull && (
+              <UpgradePrompt
+                title="You've filled your 20 Starter products"
+                description="Growth raises your catalog to 50 products with the same storefront, bookings, and dine-in — plus WhatsApp selling."
+                compact
+              />
+            )}
+          </div>
+        )}
         {importResult !== null && (
           <p className="text-sm text-muted-foreground">
             Imported {importResult.created} product(s).

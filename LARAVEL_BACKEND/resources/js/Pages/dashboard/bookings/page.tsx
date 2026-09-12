@@ -8,7 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { apiRequest } from '@/lib/api-client'
-import { Calendar, Copy, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
+import { PlanLimitBar, UpgradePrompt, LockedFeatureGate } from '@/components/shared/upgrade-prompt'
+import { isAtLimit } from '@/lib/use-plan'
+import { Calendar, CalendarClock, Copy, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 
 type AvailabilityRow = { weekday: number; startTime: string; endTime: string }
 
@@ -153,21 +155,17 @@ export default function BookingsPage() {
 
   if (blocked) {
     return (
-      <Card className="mx-auto max-w-xl">
-        <CardHeader>
-          <CardTitle>Bookings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">{blocked}</p>
-          <Button asChild>
-            <a href="/dashboard/subscription">Upgrade plan</a>
-          </Button>
-        </CardContent>
-      </Card>
+      <LockedFeatureGate
+        icon={CalendarClock}
+        title="Bookings aren't on your current plan"
+        description={blocked}
+      />
     )
   }
 
   if (!settings) return null
+
+  const bookingsAtLimit = isAtLimit(usage.used, usage.max)
 
   return (
     <div className="space-y-6">
@@ -201,6 +199,20 @@ export default function BookingsPage() {
               {usage.used}
               {usage.max != null ? ` / ${usage.max}` : ' · unlimited'}
             </p>
+            {usage.max != null && (
+              <div className="mt-3">
+                <PlanLimitBar used={usage.used} limit={usage.max} label="Monthly bookings" unit="bookings" />
+              </div>
+            )}
+            {bookingsAtLimit && (
+              <div className="mt-3">
+                <UpgradePrompt
+                  title="You've used this month's bookings"
+                  description="Starter includes 30 bookings a month. Growth raises you to 150 — same calendar, same public page, more customers."
+                  compact
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card className="md:col-span-2">

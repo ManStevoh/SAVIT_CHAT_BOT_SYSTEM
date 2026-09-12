@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Check, CreditCard, Download, MessageSquare, Package, Smartphone, Users, Zap } from "lucide-react"
+import { Check, CreditCard, Download, MessageSquare, Package, Smartphone, Users, Zap, CalendarDays, QrCode } from "lucide-react"
 import { useSubscription, useSubscriptionInvoices, useSubscriptionUsage, usePlans, type BillingInvoice } from "@/lib/api-hooks"
 import { createCheckoutSession, createBillingPortalSession, createMpesaCheckout, createPaystackCheckout, verifyPaystackCheckout, cancelSubscription, previewCoupon, apiRequest, submitManualPaymentProof } from "@/lib/api-actions"
 import { Input } from "@/components/ui/input"
@@ -270,17 +270,23 @@ function SubscriptionPageContent() {
   }
 
   const usage = (usageData?.items ?? [
-    { name: "Messages", used: 0, limit: 500 },
-    { name: "Products", used: 0, limit: 100 },
-    { name: "WhatsApp numbers", used: 0, limit: 1 },
+    { name: "AI conversations", used: 0, limit: 50 },
+    { name: "Products", used: 0, limit: 20 },
+    { name: "Bookings (this month)", used: 0, limit: 30 },
+    { name: "Dine-in tables", used: 0, limit: 5 },
+    { name: "WhatsApp numbers", used: 0, limit: 0 },
     { name: "Team members", used: 0, limit: 1 },
   ]).map((item) => ({
     ...item,
     icon:
-      item.name === "Messages"
+      item.name === "Messages" || item.name === "AI conversations"
         ? MessageSquare
         : item.name === "Products"
         ? Package
+        : item.name === "Bookings (this month)"
+        ? CalendarDays
+        : item.name === "Dine-in tables"
+        ? QrCode
         : item.name === "WhatsApp numbers"
         ? Smartphone
         : item.name === "Team members"

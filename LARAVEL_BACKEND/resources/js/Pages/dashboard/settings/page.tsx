@@ -56,6 +56,7 @@ import {
 } from "lucide-react"
 import { OnboardingInterviewPanel } from "@/components/agent/OnboardingInterviewPanel"
 import { BrandCustomizationCard } from "@/components/dashboard/BrandCustomizationCard"
+import { UpgradePrompt, LockedFeatureGate } from "@/components/shared/upgrade-prompt"
 import { useSearchParams } from "next/navigation"
 
 function isMasked(val: unknown): boolean {
@@ -1355,7 +1356,17 @@ export default function SettingsPage() {
         </TabsList>
 
         {/* Brand & Appearance Studio */}
-        <TabsContent value="branding">
+        <TabsContent value="branding" className="space-y-4">
+          {waPlanIsStarter && (
+            <p className="rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-[13px] text-muted-foreground">
+              Starter includes <span className="font-medium text-foreground">RelayIQ branding</span> on
+              your storefront — your logo, colors, and content are all yours.{" "}
+              <Link href="/dashboard/subscription#plans" className="font-medium text-primary hover:underline">
+                Growth removes RelayIQ branding
+              </Link>
+              .
+            </p>
+          )}
           <BrandCustomizationCard
             initialLogo={settings?.logo}
             initialTheme={settings?.storefrontTheme}
@@ -1765,6 +1776,15 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="whatsapp">
+          {waPlanIsStarter && !waStatus?.connected && !waLoading ? (
+            <LockedFeatureGate
+              icon={MessageSquare}
+              title="WhatsApp selling lives on Growth"
+              description="Your Starter plan covers the storefront, bookings, and dine-in with M-Pesa checkout. When you're ready to sell where customers already chat, Growth connects your WhatsApp number with AI replies, campaigns, and shared team inbox."
+              planLabel="Starter (KSh 0)"
+            />
+          ) : (
+          <>
           <Card>
             <CardHeader>
               <CardTitle>WhatsApp Business</CardTitle>
@@ -2640,6 +2660,8 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
+          </>
+          )}
         </TabsContent>
 
         {/* AI Settings — Unified Single Form with Clean Section Cards */}
@@ -3253,7 +3275,15 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* Staff Management */}
-        <TabsContent value="team">
+        <TabsContent value="team" className="space-y-4">
+          {waPlanIsStarter && (
+            <UpgradePrompt
+              title="Starter includes 1 seat — add your team on Growth"
+              description="Your Starter workspace covers one team member. Growth unlocks 3 seats with roles, so staff can share chats, orders, and the inbox."
+              highlights={["3 team members", "Roles & shared inbox", "WhatsApp number connection"]}
+              compact
+            />
+          )}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -3390,6 +3420,17 @@ export default function SettingsPage() {
 
         {/* Order Payments — cleanly separated payment methods with per-option save and check indicators */}
         <TabsContent value="order-payments" className="space-y-6">
+          {waPlanIsStarter && (
+            <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-[13px] leading-relaxed text-muted-foreground">
+              <span className="font-semibold text-foreground">M-Pesa is included on Starter</span> —
+              connect it below to collect payment on orders. Card payments (Paystack, Stripe),
+              bank transfer, and multi-gateway checkout unlock on{" "}
+              <Link href="/dashboard/subscription#plans" className="font-medium text-primary hover:underline">
+                Growth
+              </Link>
+              .
+            </div>
+          )}
           {/* Top Master Hero Card */}
           <Card className="shadow-sm">
             <CardContent className="p-6">

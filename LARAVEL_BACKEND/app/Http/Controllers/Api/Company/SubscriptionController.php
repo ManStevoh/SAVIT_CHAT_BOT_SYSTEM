@@ -209,14 +209,22 @@ class SubscriptionController extends Controller
         $teamCount = User::where('company_id', $companyId)->count();
         $productCount = \App\Models\Product::where('company_id', $companyId)->count();
         $waCount = \App\Models\WhatsAppAccount::where('company_id', $companyId)->where('status', 'active')->count();
+        $bookingCount = \App\Models\Booking::query()
+            ->where('company_id', $companyId)
+            ->where('status', '!=', \App\Models\Booking::STATUS_CANCELLED)
+            ->where('starts_at', '>=', now()->startOfMonth())
+            ->count();
+        $tableCount = \App\Models\DineInTable::where('company_id', $companyId)->count();
         $planLimits = PlanLimitService::getLimitsForPlan($plan);
 
         $growth = GrowthLimitService::usageSummary($company);
         $aiUsage = app(\App\Services\AI\AiBillingService::class)->usageSummary($company);
 
         $items = [
-            ['name' => 'Messages', 'used' => $messageCount, 'limit' => $planLimits['messages']],
+            ['name' => 'AI conversations', 'used' => $messageCount, 'limit' => $planLimits['messages']],
             ['name' => 'Products', 'used' => $productCount, 'limit' => $planLimits['max_products'] ?? null],
+            ['name' => 'Bookings (this month)', 'used' => $bookingCount, 'limit' => $planLimits['max_bookings_per_month'] ?? null],
+            ['name' => 'Dine-in tables', 'used' => $tableCount, 'limit' => $planLimits['max_tables'] ?? null],
             ['name' => 'WhatsApp numbers', 'used' => $waCount, 'limit' => $planLimits['whatsapp_numbers'] ?? 0],
             ['name' => 'Team members', 'used' => $teamCount, 'limit' => $planLimits['team']],
         ];
