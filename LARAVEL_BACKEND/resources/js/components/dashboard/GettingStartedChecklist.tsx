@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle2, Circle, ListChecks, X } from "lucide-react"
+import { CheckCircle2, ListChecks, X } from "lucide-react"
 import { useSetupStatus, SetupStatus } from "@/lib/api-hooks"
 import { dismissSetupChecklist } from "@/lib/api-actions"
 import { useState } from "react"
@@ -65,7 +65,7 @@ export function GettingStartedChecklist({ initialData }: Props) {
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {data.steps.map((step) => (
+        {data.steps.map((step, i) => (
           <div
             key={step.id}
             className="flex items-start gap-3 rounded-lg border bg-background/80 p-3"
@@ -73,7 +73,9 @@ export function GettingStartedChecklist({ initialData }: Props) {
             {step.done ? (
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             ) : (
-              <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
+                {i + 1}
+              </span>
             )}
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{step.title}</p>
@@ -81,7 +83,7 @@ export function GettingStartedChecklist({ initialData }: Props) {
             </div>
             {!step.done && (
               <Button asChild size="sm" variant="outline" className="shrink-0">
-                <Link href={step.href}>Start</Link>
+                <Link href={step.href}>Do it</Link>
               </Button>
             )}
           </div>

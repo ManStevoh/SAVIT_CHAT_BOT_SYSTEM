@@ -1,0 +1,1 @@
+import{j as t,H as o}from"./app-Chfm9vxC.js";import{A as r}from"./account-profile-panel-BXLVuYed.js";import"./card-Bv5DM9oM.js";import"./field-L99m3uiO.js";import"./label-xHyuDbou.js";import"./index-ZP_XrQXL.js";function m(){return t.jsxs(t.Fragment,{children:[t.jsx(o,{title:"My account"}),t.jsx(r,{title:"My account"})]})}export{m as default};
