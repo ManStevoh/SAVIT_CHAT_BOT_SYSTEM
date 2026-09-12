@@ -116,7 +116,7 @@ class SeoRoadmapTest extends TestCase
     {
         Plan::create([
             'name' => 'Starter',
-            'slug' => 'starter',
+            'slug' => 'free',
             'price_display' => '$29',
             'price_amount' => 29,
             'description' => 'Starter plan',

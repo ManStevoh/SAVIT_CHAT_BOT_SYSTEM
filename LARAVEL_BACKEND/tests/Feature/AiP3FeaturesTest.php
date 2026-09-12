@@ -22,7 +22,7 @@ class AiP3FeaturesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function companyUser(Company $company, string $plan = 'starter'): User
+    private function companyUser(Company $company, string $plan = 'free'): User
     {
         Subscription::create([
             'company_id' => $company->id,
@@ -107,7 +107,7 @@ class AiP3FeaturesTest extends TestCase
 
         $company = Company::create(['name' => 'Co', 'email' => 'c@test.local', 'status' => 'active']);
 
-        Sanctum::actingAs($this->companyUser($company, 'starter'));
+        Sanctum::actingAs($this->companyUser($company, 'free'));
 
         $this->putJson('/api/company/ai-providers/openai', [
             'apiKey' => 'sk-test-company-key',

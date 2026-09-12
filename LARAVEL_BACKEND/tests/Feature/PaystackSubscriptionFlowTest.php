@@ -56,7 +56,7 @@ class PaystackSubscriptionFlowTest extends TestCase
         ]);
         Subscription::create([
             'company_id' => $company->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'trial',
             'start_date' => now()->subDays(2),
             'end_date' => now()->addDays(12),
@@ -429,7 +429,7 @@ class PaystackSubscriptionFlowTest extends TestCase
         Subscription::where('company_id', $company->id)->update(['status' => 'cancelled']);
         Subscription::create([
             'company_id' => $company->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'active',
             'start_date' => now()->subDays(10),
             'end_date' => now()->addDays(20),

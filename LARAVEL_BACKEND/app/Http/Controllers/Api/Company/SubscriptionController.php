@@ -63,14 +63,14 @@ class SubscriptionController extends Controller
         $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
 
         if (! $subscription) {
-            $starter = Plan::where('slug', 'starter')->first();
+            $free = Plan::where('slug', 'free')->first();
 
             return response()->json([
                 'id' => '0',
                 'companyId' => (string) $companyId,
                 'companyName' => $company?->name ?? '',
-                'plan' => 'starter',
-                'planName' => $starter?->name ?? 'Starter',
+                'plan' => 'free',
+                'planName' => $free?->name ?? 'Starter',
                 'status' => 'trial',
                 'startDate' => now()->format('Y-m-d'),
                 'endDate' => now()->addDays(14)->format('Y-m-d'),
@@ -196,7 +196,7 @@ class SubscriptionController extends Controller
         }
 
         $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
-        $plan = $subscription?->plan ?? 'starter';
+        $plan = $subscription?->plan ?? 'free';
         $company = $request->user()->company;
         $messageCount = PlanLimitService::getMessagesUsedInCurrentPeriod($company);
         $teamCount = User::where('company_id', $companyId)->count();

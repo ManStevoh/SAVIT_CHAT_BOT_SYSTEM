@@ -18,9 +18,9 @@ final class GrowthLimitService
         }
 
         $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $config = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+        $config = config('growth.limits.'.$plan) ?? config('growth.limits.free');
 
-        return (int) ($config['ai_posts_per_month'] ?? 20);
+        return (int) ($config['ai_posts_per_month'] ?? 5);
     }
 
     public static function getAiImagesLimit(Company $company): int
@@ -31,9 +31,9 @@ final class GrowthLimitService
         }
 
         $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $config = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+        $config = config('growth.limits.'.$plan) ?? config('growth.limits.free');
 
-        return (int) ($config['ai_images_per_month'] ?? 10);
+        return (int) ($config['ai_images_per_month'] ?? 2);
     }
 
     public static function aiImagesUsedThisMonth(Company $company): int
@@ -59,7 +59,7 @@ final class GrowthLimitService
         }
 
         $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $config = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+        $config = config('growth.limits.'.$plan) ?? config('growth.limits.free');
 
         return (int) ($config['platforms'] ?? 1);
     }
@@ -112,9 +112,9 @@ final class GrowthLimitService
         }
 
         $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $config = config('growth.limits.'.$plan) ?? config('growth.limits.starter');
+        $config = config('growth.limits.'.$plan) ?? config('growth.limits.free');
 
-        return (bool) ($config['growth_enabled'] ?? true);
+        return (bool) ($config['growth_enabled'] ?? false);
     }
 
     /**

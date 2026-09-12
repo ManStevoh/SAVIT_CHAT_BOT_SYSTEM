@@ -73,7 +73,7 @@ function SubscriptionPageContent() {
   const [proofNote, setProofNote] = useState("")
   const [proofSubmitting, setProofSubmitting] = useState(false)
 
-  const planSlug = subscription?.plan ?? "starter"
+  const planSlug = subscription?.plan ?? "free"
   const status = subscription?.status ?? "active"
   const daysRemaining = subscription?.daysRemaining
   const isCommissionMerchant =
@@ -223,7 +223,7 @@ function SubscriptionPageContent() {
     plans.find((p) => p.slug === subscription?.plan)?.name ??
     (subscription?.plan === "professional"
       ? "Growth"
-      : subscription?.plan === "starter"
+      : subscription?.plan === "free"
         ? "Starter"
         : subscription?.plan === "enterprise"
           ? "Enterprise"

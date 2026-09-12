@@ -85,8 +85,8 @@ class RegistrationTrialAndConsentTest extends TestCase
     {
         $growth = Plan::where('slug', 'professional')->firstOrFail();
         $growth->update(['has_trial' => false, 'trial_days' => null]);
-        $starter = Plan::where('slug', 'starter')->firstOrFail();
-        $starter->update(['has_trial' => true, 'trial_days' => 14]);
+        $freePlan = Plan::where('slug', 'free')->firstOrFail();
+        $freePlan->update(['has_trial' => true, 'trial_days' => 14]);
 
         $this->postJson('/api/auth/register', [
             'companyName' => 'Pay Growth Co',

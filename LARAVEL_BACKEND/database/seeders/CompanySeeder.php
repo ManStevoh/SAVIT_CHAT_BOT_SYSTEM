@@ -38,7 +38,7 @@ class CompanySeeder extends Seeder
                 'name' => 'Acme Demo Store',
                 'email' => 'contact@acme-demo.local',
                 'phone' => '+1 555 0100',
-                'plan' => 'starter',
+                'plan' => 'free',
                 'status' => 'active',
                 'user' => [
                     'name' => 'Acme Owner',

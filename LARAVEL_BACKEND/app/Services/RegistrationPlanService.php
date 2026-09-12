@@ -18,7 +18,7 @@ final class RegistrationPlanService
             return $slug;
         }
 
-        return (string) config('subscription.default_plan_slug', 'starter');
+        return (string) config('subscription.default_plan_slug', 'free');
     }
 
     public function configuredDefault(): ?Plan

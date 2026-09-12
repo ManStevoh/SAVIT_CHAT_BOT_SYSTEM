@@ -97,7 +97,7 @@ class CommerceAgentPhase10Test extends TestCase
 
     public function test_starter_plan_cannot_install_professional_module(): void
     {
-        ['owner' => $owner] = $this->phase10Company('starter');
+        ['owner' => $owner] = $this->phase10Company('free');
         Sanctum::actingAs($owner);
 
         $this->postJson('/api/company/marketplace/modules/pharmacy/install')

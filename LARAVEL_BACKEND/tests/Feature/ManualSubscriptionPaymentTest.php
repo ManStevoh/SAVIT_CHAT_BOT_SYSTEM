@@ -63,7 +63,7 @@ class ManualSubscriptionPaymentTest extends TestCase
         ]);
         Subscription::create([
             'company_id' => $company->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'trial',
             'start_date' => now()->subDays(2),
             'end_date' => now()->addDays(12),

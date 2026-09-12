@@ -48,38 +48,6 @@ class PlanSeeder extends Seeder
                 'trial_elapsed_action' => null,
             ],
             [
-                'name' => 'Starter (legacy)',
-                'slug' => 'starter',
-                'price_display' => 'KSh 1,499',
-                'price_amount' => 1499,
-                'regional_prices' => [
-                    'USD' => 12,
-                    'KES' => 1499,
-                    'NGN' => 18000,
-                ],
-                'description' => 'Hidden grandfathered plan for existing paid Starter subscribers',
-                'features' => [
-                    '1 WhatsApp connection',
-                    '100 products',
-                    'AI sales agent',
-                    '500 AI conversations/month',
-                    'Online storefront & link-in-bio',
-                    'M-Pesa, Paystack & Stripe payments',
-                    'Bookings & appointments',
-                    '1 team member',
-                ],
-                'entitlements' => EntitlementService::DEFAULTS['starter'],
-                'popular' => false,
-                'is_public' => false,
-                'cta' => 'Start Free Trial',
-                'sort_order' => 99,
-                'stripe_price_id' => null,
-                'is_free' => false,
-                'has_trial' => true,
-                'trial_days' => 14,
-                'trial_elapsed_action' => 'downgrade',
-            ],
-            [
                 'name' => 'Growth',
                 'slug' => 'professional',
                 'price_display' => 'KSh 2,000',
@@ -149,9 +117,19 @@ class PlanSeeder extends Seeder
             );
         }
 
+        // Remove any legacy plans (e.g. grandfathered starter) so only
+        // free / professional / enterprise remain. Legacy subscribers are
+        // moved to the always-free plan before deletion to preserve FK-less refs.
+        $free = Plan::query()->where('slug', 'free')->first();
+        $legacyIds = Plan::query()->whereNotIn('slug', ['free', 'professional', 'enterprise'])->pluck('id')->all();
+        if ($free && $legacyIds !== []) {
+            \App\Models\Subscription::query()->whereNotIn('plan', ['free', 'professional', 'enterprise'])->update(['plan' => 'free']);
+            \App\Models\Company::query()->whereNotIn('plan', ['free', 'professional', 'enterprise'])->update(['plan' => 'free']);
+            \App\Models\User::query()->whereIn('selected_plan_id', $legacyIds)->update(['selected_plan_id' => $free->id]);
+        }
         Plan::query()
             ->whereNotIn('slug', ['free', 'professional', 'enterprise'])
-            ->update(['is_public' => false]);
+            ->delete();
 
         $this->deactivateLaunchCoupons();
         $this->seedRegistrationDefault();

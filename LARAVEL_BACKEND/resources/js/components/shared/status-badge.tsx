@@ -98,19 +98,19 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
 }
 
 interface PlanBadgeProps {
-  plan: 'starter' | 'professional' | 'enterprise' | string
+  plan: 'free' | 'professional' | 'enterprise' | string
   className?: string
 }
 
 const planStyles: Record<string, string> = {
-  starter: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  free: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
   professional: 'bg-blue-500/20 text-blue-500 border-blue-500/30',
   enterprise: 'bg-purple-500/20 text-purple-500 border-purple-500/30',
 }
 
 export function PlanBadge({ plan, className }: PlanBadgeProps) {
   const normalizedPlan = plan.toLowerCase()
-  const styles = planStyles[normalizedPlan] || planStyles.starter
+  const styles = planStyles[normalizedPlan] || planStyles.free
 
   return (
     <Badge

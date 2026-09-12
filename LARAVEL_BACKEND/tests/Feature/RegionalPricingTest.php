@@ -39,7 +39,7 @@ class RegionalPricingTest extends TestCase
 
         $free = collect($response->json('plans'))->firstWhere('slug', 'free');
         $growth = collect($response->json('plans'))->firstWhere('slug', 'professional');
-        $this->assertNull(collect($response->json('plans'))->firstWhere('slug', 'starter'));
+        $this->assertNotNull($free);
         $this->assertSame('$0', $free['price']);
         $this->assertSame('$15', $growth['price']);
         $this->assertSame(15.0, (float) $growth['priceAmount']);
@@ -57,11 +57,10 @@ class RegionalPricingTest extends TestCase
             ->assertJsonPath('source', 'cloudflare');
 
         $free = collect($response->json('plans'))->firstWhere('slug', 'free');
-        $starter = collect($response->json('plans'))->firstWhere('slug', 'starter');
         $growth = collect($response->json('plans'))->firstWhere('slug', 'professional');
         $custom = collect($response->json('plans'))->firstWhere('slug', 'enterprise');
 
-        $this->assertNull($starter);
+        $this->assertNotNull($free);
         $this->assertSame(0.0, (float) $free['priceAmount']);
         $this->assertSame('KSh 0', $free['price']);
         $this->assertSame(2000.0, (float) $growth['priceAmount']);
@@ -114,7 +113,7 @@ class RegionalPricingTest extends TestCase
 
     public function test_plan_regional_prices_override_config(): void
     {
-        $plan = Plan::where('slug', 'starter')->firstOrFail();
+        $plan = Plan::where('slug', 'free')->firstOrFail();
         $plan->update(['regional_prices' => ['KES' => 2500, 'USD' => 29]]);
 
         $amount = app(RegionalPricingService::class)->amountForPlan($plan->fresh(), 'KES');

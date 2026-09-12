@@ -8,7 +8,7 @@ return [
   'referral_prefix' => 'ref:',
 
   'limits' => [
-    'starter' => ['ai_posts_per_month' => 20, 'ai_images_per_month' => 10, 'platforms' => 1, 'growth_enabled' => true],
+    'free' => ['ai_posts_per_month' => 5, 'ai_images_per_month' => 2, 'platforms' => 1, 'growth_enabled' => false],
     'professional' => ['ai_posts_per_month' => 100, 'ai_images_per_month' => 50, 'platforms' => 3, 'growth_enabled' => true],
     'enterprise' => ['ai_posts_per_month' => 500, 'ai_images_per_month' => 200, 'platforms' => 10, 'growth_enabled' => true],
   ],

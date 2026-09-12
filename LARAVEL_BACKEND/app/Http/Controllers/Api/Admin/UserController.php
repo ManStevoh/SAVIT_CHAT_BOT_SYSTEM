@@ -94,4 +94,32 @@ class UserController extends Controller
             'message' => 'Password updated successfully.',
         ]);
     }
+
+    /**
+     * Delete a user (admin only). Cannot delete self or another admin.
+     */
+    public function destroy(Request $request, User $user): JsonResponse
+    {
+        if ($request->user()?->id === $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot delete your own account.',
+            ], 403);
+        }
+
+        if ($user->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot delete an admin user.',
+            ], 403);
+        }
+
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User deleted successfully.',
+        ]);
+    }
 }

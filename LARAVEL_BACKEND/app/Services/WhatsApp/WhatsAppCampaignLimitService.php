@@ -16,9 +16,9 @@ final class WhatsAppCampaignLimitService
         }
 
         $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $limits = config('whatsapp.campaign.limits.'.$plan) ?? config('whatsapp.campaign.limits.starter');
+        $limits = config('whatsapp.campaign.limits.'.$plan) ?? config('whatsapp.campaign.limits.free');
 
-        return (int) ($limits['campaigns_per_month'] ?? 2);
+        return (int) ($limits['campaigns_per_month'] ?? 0);
     }
 
     public static function getRecipientsLimit(Company $company): int
@@ -28,9 +28,9 @@ final class WhatsAppCampaignLimitService
         }
 
         $plan = PlanLimitService::getCurrentPlanSlug($company);
-        $limits = config('whatsapp.campaign.limits.'.$plan) ?? config('whatsapp.campaign.limits.starter');
+        $limits = config('whatsapp.campaign.limits.'.$plan) ?? config('whatsapp.campaign.limits.free');
 
-        return (int) ($limits['recipients_per_campaign'] ?? 100);
+        return (int) ($limits['recipients_per_campaign'] ?? 0);
     }
 
     public static function campaignsUsedThisMonth(Company $company): int

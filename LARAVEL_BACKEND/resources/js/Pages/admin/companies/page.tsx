@@ -54,10 +54,7 @@ import type { Company } from "@/lib/mock-data"
 
 const PLAN_OPTIONS = [
   { value: "free", label: "Free" },
-  { value: "starter", label: "Starter" },
-  { value: "growth", label: "Growth" },
   { value: "professional", label: "Growth (professional)" },
-  { value: "business", label: "Business" },
   { value: "enterprise", label: "Business (enterprise)" },
 ]
 const STATUS_OPTIONS: Company["status"][] = ["active", "suspended", "pending"]
@@ -73,7 +70,7 @@ export default function AdminCompaniesPage() {
     name: "",
     email: "",
     phone: "",
-    plan: "starter",
+    plan: "free",
     status: "active",
     isGrowthPilot: false,
     growthDemoMode: false,

@@ -27,7 +27,7 @@ class ProcessTrialTransitionsJob implements ShouldQueue
             $action = $plan?->trial_elapsed_action ?? 'downgrade';
 
             if ($action === 'downgrade') {
-                $subscription->update(['status' => 'expired', 'plan' => 'starter']);
+                $subscription->update(['status' => 'expired', 'plan' => 'free']);
             } else {
                 $subscription->update(['status' => 'expired']);
             }

@@ -38,13 +38,13 @@ class AdminPlanEntitlementsTest extends TestCase
         $this->getJson('/api/admin/plans')
             ->assertOk()
             ->assertJsonFragment(['slug' => 'free'])
-            ->assertJsonFragment(['slug' => 'starter']);
+            ->assertJsonFragment(['slug' => 'professional']);
     }
 
-    public function test_admin_can_update_starter_message_and_api_gates(): void
+    public function test_admin_can_update_free_message_and_api_gates(): void
     {
         $this->actingAdmin();
-        $plan = Plan::where('slug', 'starter')->firstOrFail();
+        $plan = Plan::where('slug', 'free')->firstOrFail();
 
         $this->putJson('/api/admin/plans/'.$plan->id, [
             'entitlements' => [
@@ -91,9 +91,9 @@ class AdminPlanEntitlementsTest extends TestCase
         $this->assertTrue($plan->entitlements['api_access']);
         $this->assertFalse($plan->entitlements['allow_digital']);
         $this->assertSame(25, $plan->entitlements['max_bookings_per_month']);
-        $this->assertSame(8000, PlanLimitService::getMessageLimitForPlan('starter'));
-        $this->assertSame(250, PlanLimitService::getMaxProductsForPlan('starter'));
-        $this->assertTrue(PlanLimitService::planHasApiAccess('starter'));
+        $this->assertSame(8000, PlanLimitService::getMessageLimitForPlan('free'));
+        $this->assertSame(250, PlanLimitService::getMaxProductsForPlan('free'));
+        $this->assertTrue(PlanLimitService::planHasApiAccess('free'));
     }
 
     public function test_admin_can_set_unlimited_messages(): void

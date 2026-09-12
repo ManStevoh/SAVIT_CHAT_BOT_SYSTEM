@@ -44,7 +44,7 @@ class CompanySetupStatusTest extends TestCase
 
         Subscription::create([
             'company_id' => $company->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'trial',
             'start_date' => now()->subDay(),
             'end_date' => now()->addDays(13),

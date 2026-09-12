@@ -79,11 +79,6 @@ return [
             'KES' => 0,
             'NGN' => 0,
         ],
-        'starter' => [
-            'USD' => 12,
-            'KES' => 1499,
-            'NGN' => 18000,
-        ],
         'professional' => [
             'USD' => 15,
             'KES' => 2000,

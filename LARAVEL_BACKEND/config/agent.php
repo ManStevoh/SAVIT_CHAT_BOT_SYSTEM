@@ -394,7 +394,7 @@ return [
             'get_shipping_quote',
         ],
         'plan_rank' => [
-            'starter' => 1,
+            'free' => 1,
             'professional' => 2,
             'enterprise' => 3,
         ],

@@ -142,11 +142,11 @@ class DashboardSummaryController extends Controller
             $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
             $planModel    = $subscription
                 ? Plan::where('slug', $subscription->plan)->first()
-                : Plan::where('slug', 'starter')->first();
+                : Plan::where('slug', 'free')->first();
 
             if (! $subscription) {
                 $subscriptionData = [
-                    'id' => '0', 'plan' => 'starter',
+                    'id' => '0', 'plan' => 'free',
                     'planName' => $planModel?->name ?? 'Starter',
                     'status' => 'trial', 'daysRemaining' => 14, 'isExpiringSoon' => false,
                 ];

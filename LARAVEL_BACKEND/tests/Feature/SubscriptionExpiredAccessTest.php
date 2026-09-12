@@ -27,7 +27,7 @@ class SubscriptionExpiredAccessTest extends TestCase
 
         Subscription::create([
             'company_id' => $company->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'expired',
             'start_date' => now()->subDays(40),
             'end_date' => now()->subDay(),

@@ -36,10 +36,10 @@ class AiPlanPolicyTest extends TestCase
 
     public function test_starter_clamps_to_auto_model_mode(): void
     {
-        $company = $this->companyOnPlan('starter');
+        $company = $this->companyOnPlan('free');
 
         $this->assertSame('auto', PlanLimitService::effectiveAiModelMode($company));
-        $this->assertFalse(PlanLimitService::planAllowsByok('starter'));
+        $this->assertFalse(PlanLimitService::planAllowsByok('free'));
         $this->assertSame('platform', PlanLimitService::effectiveCredentialMode($company));
     }
 

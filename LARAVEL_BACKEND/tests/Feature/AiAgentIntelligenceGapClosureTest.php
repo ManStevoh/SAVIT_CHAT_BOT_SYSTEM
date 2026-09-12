@@ -58,7 +58,7 @@ class AiAgentIntelligenceGapClosureTest extends TestCase
         ]);
         Subscription::create([
             'company_id' => $company->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'trial',
             'start_date' => now(),
             'end_date' => now()->addDays(14),

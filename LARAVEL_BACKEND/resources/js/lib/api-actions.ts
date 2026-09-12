@@ -2677,7 +2677,7 @@ export async function getAdminCompany(companyId: string): Promise<{ success: boo
         name: 'Demo Company',
         email: 'contact@demo.com',
         phone: '+1 555-0100',
-        plan: 'starter',
+        plan: 'free',
         status: 'active',
         totalChats: 0,
         totalOrders: 0,
@@ -2796,6 +2796,26 @@ export async function adminResetUserPassword(
     })
   } catch (e) {
     return { success: false, message: e instanceof Error ? e.message : 'Failed to reset password' }
+  }
+}
+
+/**
+ * Delete user (admin only)
+ * Laravel: DELETE /api/admin/users/:userId
+ */
+export async function adminDeleteUser(
+  userId: string
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true, message: 'User deleted successfully.' }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+    })
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Failed to delete user' }
   }
 }
 

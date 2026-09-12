@@ -17,7 +17,7 @@ class AdminAssignSubscriptionTest extends TestCase
     public function test_assigning_active_plan_sets_plan_price_not_trial_amount(): void
     {
         Plan::query()->updateOrCreate(
-            ['slug' => 'starter'],
+            ['slug' => 'free'],
             [
                 'name' => 'Starter',
                 'price_display' => '$29',
@@ -39,7 +39,7 @@ class AdminAssignSubscriptionTest extends TestCase
 
         $subscription = Subscription::create([
             'company_id' => $company->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'trial',
             'start_date' => now()->subDay(),
             'end_date' => now()->addDays(13),
@@ -56,7 +56,7 @@ class AdminAssignSubscriptionTest extends TestCase
         Sanctum::actingAs($admin);
 
         $this->patchJson("/api/admin/subscriptions/{$subscription->id}", [
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'active',
             'billingCycle' => 'monthly',
         ])->assertOk()

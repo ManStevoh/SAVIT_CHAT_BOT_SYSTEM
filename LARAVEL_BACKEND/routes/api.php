@@ -422,6 +422,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::get('users', [UserController::class, 'index']);
     Route::patch('users/{user}', [UserController::class, 'updateStatus']);
     Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
+    Route::delete('users/{user}', [UserController::class, 'destroy']);
     Route::get('subscriptions', [App\Http\Controllers\Api\Admin\SubscriptionController::class, 'index']);
     Route::patch('subscriptions/{subscription}', [App\Http\Controllers\Api\Admin\SubscriptionController::class, 'update']);
     Route::get('plans', [App\Http\Controllers\Api\Admin\PlanController::class, 'index']);

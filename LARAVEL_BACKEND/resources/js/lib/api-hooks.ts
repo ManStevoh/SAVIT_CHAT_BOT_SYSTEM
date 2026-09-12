@@ -136,33 +136,6 @@ export function usePlans(currency?: string | null) {
           checkoutAvailable: false,
         },
         {
-          id: '1',
-          name: 'Starter',
-          slug: 'starter',
-          price: currency === 'USD' ? '$12' : currency === 'NGN' ? '₦ 18,000' : 'KSh 1,499',
-          priceAmount: currency === 'USD' ? 12 : currency === 'NGN' ? 18000 : 1499,
-          currency: currency ?? 'KES',
-          description: 'Essential AI sales agent and commerce automation for solo sellers and small shops',
-          features: [
-            '1 WhatsApp connection',
-            '100 products',
-            'AI sales agent',
-            '500 AI conversations/month',
-            'Online storefront',
-            'M-Pesa + Paystack/Stripe',
-            'Bookings & appointments',
-            'Automated replies',
-            'Basic CRM & analytics',
-            '1 team member',
-            'Basic automations (20 posts/mo)',
-          ],
-          popular: false,
-          cta: 'Start Free Trial',
-          hasTrial: true,
-          trialDays: 14,
-          checkoutAvailable: true,
-        },
-        {
           id: '2',
           name: 'Growth',
           slug: 'professional',
@@ -793,7 +766,7 @@ export function useDashboardSummary(period?: string) {
         analytics: mockAnalytics,
         recentOrders: [],
         recentChats: [],
-        subscription: { id: '0', plan: 'starter', planName: 'Starter', status: 'trial', daysRemaining: 14, isExpiringSoon: false },
+        subscription: { id: '0', plan: 'free', planName: 'Starter', status: 'active', daysRemaining: 9999, isExpiringSoon: false },
         settings: { displayCurrency: 'USD', companyName: 'Demo Company' },
         setupStatus: { steps: [], completedCount: 0, totalCount: 0, percent: 0, dismissed: false, isComplete: false },
         period: period ?? '7d',
@@ -1508,7 +1481,7 @@ export function useAdminPlans() {
       }
       await delay(400)
       return [
-        { id: '1', name: 'Starter', slug: 'starter', priceDisplay: '$29', priceAmount: 29, description: 'Perfect for small businesses just getting started', features: ['1 WhatsApp number', '1,000 messages/month', 'Basic AI chatbot', 'Order management', 'Email support'], popular: false, cta: 'Start Free Trial', sortOrder: 0, stripePriceId: null },
+        { id: '0', name: 'Starter', slug: 'free', priceDisplay: 'KSh 0', priceAmount: 0, description: 'Always-free plan for businesses getting started', features: ['Storefront', 'Bookings', 'Dine-in'], popular: false, cta: 'Get started free', sortOrder: 0, stripePriceId: null },
         { id: '2', name: 'Growth', slug: 'professional', priceDisplay: '$99', priceAmount: 99, description: 'For growing businesses with higher volume', features: ['3 WhatsApp numbers', '10,000 messages/month', 'Advanced AI with GPT-4', 'Multi-agent inbox', 'Analytics dashboard', 'Priority support', 'API access'], popular: true, cta: 'Start Free Trial', sortOrder: 1, stripePriceId: null },
         { id: '3', name: 'Enterprise', slug: 'enterprise', priceDisplay: 'Custom', priceAmount: null, description: 'For large organizations with custom needs', features: ['Unlimited WhatsApp numbers', 'Unlimited messages', 'Custom AI training', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee', 'On-premise option'], popular: false, cta: 'Contact Sales', sortOrder: 2, stripePriceId: null },
       ]

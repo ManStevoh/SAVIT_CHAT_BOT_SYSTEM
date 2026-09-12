@@ -389,7 +389,7 @@ class StripeService
     {
         $existing = Subscription::where('stripe_subscription_id', $stripeSub->id)->first();
 
-        return $existing?->plan ?? 'starter';
+        return $existing?->plan ?? 'free';
     }
 
     /**

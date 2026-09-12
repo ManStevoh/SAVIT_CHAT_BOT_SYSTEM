@@ -110,7 +110,7 @@ class AuthSecurityTest extends TestCase
 
         Subscription::create([
             'company_id' => $company->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'active',
             'start_date' => now()->format('Y-m-d'),
             'end_date' => now()->addYear()->format('Y-m-d'),
@@ -165,7 +165,7 @@ class AuthSecurityTest extends TestCase
 
         Subscription::create([
             'company_id' => $companyA->id,
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'active',
             'start_date' => now()->format('Y-m-d'),
             'end_date' => now()->addYear()->format('Y-m-d'),

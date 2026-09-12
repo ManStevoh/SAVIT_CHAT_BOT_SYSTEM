@@ -39,9 +39,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, MoreVertical, Users, UserCheck, UserPlus, Shield, LogIn, KeyRound } from "lucide-react"
+import { Search, MoreVertical, Users, UserCheck, UserPlus, Shield, LogIn, KeyRound, Trash2 } from "lucide-react"
 import { useAdminUsers } from "@/lib/api-hooks"
-import { adminResetUserPassword, updateUserStatus, adminImpersonateUser } from "@/lib/api-actions"
+import { adminResetUserPassword, updateUserStatus, adminImpersonateUser, adminDeleteUser } from "@/lib/api-actions"
 import { setAuthCookie } from "@/lib/auth-cookie"
 import type { User } from "@/lib/mock-data"
 
@@ -72,6 +72,9 @@ export default function AdminUsersPage() {
   const [resetLoading, setResetLoading] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
   const [suspendTarget, setSuspendTarget] = useState<User | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [impersonateLoading, setImpersonateLoading] = useState<string | null>(null)
   const { data: users, error, isLoading, mutate } = useAdminUsers({
     search: searchQuery || undefined,
@@ -107,6 +110,20 @@ export default function AdminUsersPage() {
     mutate()
     setSuspendTarget(null)
   }, [suspendTarget, mutate])
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return
+    setDeleteLoading(true)
+    setDeleteError(null)
+    const res = await adminDeleteUser(deleteTarget.id)
+    setDeleteLoading(false)
+    if (res.success) {
+      setDeleteTarget(null)
+      mutate()
+    } else {
+      setDeleteError(res.message ?? "Failed to delete user")
+    }
+  }, [deleteTarget, mutate])
 
   const handleImpersonateUser = useCallback(
     async (user: User) => {
@@ -309,6 +326,17 @@ export default function AdminUsersPage() {
                           >
                             Suspend
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              setDeleteError(null)
+                              setDeleteTarget(user)
+                            }}
+                            disabled={user.role === "admin"}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -394,6 +422,28 @@ export default function AdminUsersPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmSuspend} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Suspend
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && !deleteLoading && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `"${deleteTarget.name}" (${deleteTarget.email}) will be permanently deleted. Their auth tokens will be revoked immediately. This action cannot be undone.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">{deleteError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleteLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteLoading ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

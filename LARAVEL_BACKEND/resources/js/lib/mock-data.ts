@@ -204,7 +204,7 @@ export interface Subscription {
   id: string
   companyId: string
   companyName: string
-  plan: 'starter' | 'professional' | 'enterprise' | 'commission' | string
+  plan: 'free' | 'professional' | 'enterprise' | 'commission' | string
   planName?: string
   status: 'active' | 'cancelled' | 'expired' | 'trial' | string
   startDate: string
@@ -322,7 +322,7 @@ export interface Company {
   email: string
   phone: string
   logo?: string
-  plan: 'free' | 'starter' | 'growth' | 'professional' | 'business' | 'enterprise' | string
+  plan: 'free' | 'professional' | 'enterprise' | string
   status: 'active' | 'suspended' | 'pending'
   totalChats: number
   totalOrders: number
@@ -661,11 +661,11 @@ export const mockSubscriptions: Subscription[] = [
     id: '2',
     companyId: '2',
     companyName: 'Fashion Hub',
-    plan: 'starter',
+    plan: 'free',
     status: 'active',
     startDate: '2024-01-10',
     endDate: '2024-02-10',
-    amount: 49,
+    amount: 0,
     billingCycle: 'monthly',
   },
   {
@@ -698,7 +698,7 @@ export const mockCompanies: Company[] = [
     name: 'Fashion Hub',
     email: 'info@fashionhub.com',
     phone: '+201098765432',
-    plan: 'starter',
+    plan: 'free',
     status: 'active',
     totalChats: 320,
     totalOrders: 85,
@@ -904,25 +904,6 @@ export const pricingPlans = [
       'Basic customer inbox',
       'M-Pesa payment integration',
       'RelayIQ branding',
-    ],
-    popular: false,
-  },
-  {
-    id: 'starter',
-    name: 'Starter',
-    description: 'Essential AI sales agent and commerce automation for solo sellers',
-    price: 12,
-    yearlyPrice: 10,
-    features: [
-      '1 WhatsApp connection',
-      '100 products',
-      'AI sales agent',
-      '500 AI conversations/month',
-      'Online storefront',
-      'M-Pesa + Paystack/Stripe',
-      'Bookings & appointments',
-      'Basic CRM & analytics',
-      '1 team member',
     ],
     popular: false,
   },

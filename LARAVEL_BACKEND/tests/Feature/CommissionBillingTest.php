@@ -182,7 +182,7 @@ class CommissionBillingTest extends TestCase
             'name' => 'Book Store',
             'email' => 'books@test.local',
             'status' => 'active',
-            'plan' => 'starter',
+            'plan' => 'free',
         ]);
 
         Sanctum::actingAs($this->admin());
@@ -190,7 +190,7 @@ class CommissionBillingTest extends TestCase
         $response = $this->putJson("/api/admin/companies/{$company->id}", [
             'name' => 'Book Store Updated',
             'email' => 'books@test.local',
-            'plan' => 'starter',
+            'plan' => 'free',
             'status' => 'active',
             'billingModel' => 'commission',
             'commissionRate' => 5.0,
