@@ -221,11 +221,10 @@ export function DashboardNavLinks({
           return { ...group, items }
         }
 
+      // Dine-in is a plan feature on every plan, so it always stays visible —
+      // hiding it behind capability flags is what made it vanish for owners.
+      // The dine-in page itself handles the switched-off state.
       const filteredItems = items.filter((item) => {
-        if (item.href === "/dashboard/dine-in") {
-          const isDineInAllowed = settings.enableDineIn || settings.dineInEnabled || settings.businessMode === "restaurant"
-          return isDineInAllowed || isNavActive(pathname, item.href)
-        }
         if (item.href === "/dashboard/bookings") {
           const isBookingsAllowed = settings.enableBookings ?? (settings.businessMode !== "retail")
           return isBookingsAllowed || isNavActive(pathname, item.href)
