@@ -374,13 +374,13 @@ export default function ChatsPage() {
         <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[#25D366]/15">
           <MessageSquare className="h-8 w-8 text-[#128C7E]" />
         </span>
-        <Badge className="mt-4" variant="outline">Starter plan · WhatsApp lives on Growth</Badge>
+        <Badge className="mt-4" variant="outline">Starter · WhatsApp inbox not included</Badge>
         <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Every customer message, one inbox
+          Customers are messaging you on WhatsApp. Nobody&apos;s answering.
         </h1>
         <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Right now there&apos;s nowhere for customers to reach you — WhatsApp isn&apos;t connected.
-          On Growth your number plugs in here, and the AI answers, sells, and hands over when a human is needed.
+          Growth connects your WhatsApp number straight to RelayIQ — AI replies in English or Kiswahili,
+          sells from your storefront, and hands off to you when a customer needs a real person.
         </p>
 
         {/* Chat teaser */}
@@ -391,7 +391,7 @@ export default function ChatsPage() {
           <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-md bg-primary px-3 py-2 shadow-sm">
             <p className="text-[13px] text-primary-foreground">Yes it is! Size M and L are in stock — want me to reserve one for you?</p>
           </div>
-          <p className="pt-1 text-center text-[11px] text-muted-foreground">AI replies instantly, even at 2am.</p>
+          <p className="pt-1 text-center text-[11px] text-muted-foreground">Answered instantly — even at 2am.</p>
         </div>
 
         <div className="mt-6 grid w-full max-w-md gap-2 text-left sm:grid-cols-2">
@@ -409,9 +409,9 @@ export default function ChatsPage() {
 
         <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row">
           <Button asChild size="lg">
-            <Link href="/dashboard/subscription#plans">Upgrade to Growth — KSh 2,000/mo</Link>
+            <Link href="/dashboard/subscription#plans">Connect WhatsApp — KSh 2,000/mo</Link>
           </Button>
-          <p className="text-xs text-muted-foreground">14-day free trial · keep everything on Starter</p>
+          <p className="text-xs text-muted-foreground">14-day free trial · your Starter storefront stays free</p>
         </div>
       </div>
     )
