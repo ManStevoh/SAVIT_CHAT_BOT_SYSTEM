@@ -20,6 +20,11 @@ final class VoiceOutboundService
         protected WhatsAppMessageSenderService $waSender,
     ) {}
 
+    /**
+     * Mirror the customer's channel: voice replies go out only when the
+     * inbound message was audio. Text inbound always gets text back
+     * (the mode then only decides audio+text vs audio-only for audio inbound).
+     */
     public function shouldReplyWithVoice(Company $company, bool $inboundWasAudio): bool
     {
         if (! config('agent.voice.enabled', true)) {
@@ -42,7 +47,7 @@ final class VoiceOutboundService
             return false;
         }
 
-        return true;
+        return $inboundWasAudio;
     }
 
     /**

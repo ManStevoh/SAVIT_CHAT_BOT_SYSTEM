@@ -424,7 +424,7 @@ export function AiAssistantSection() {
       <SettingSection title="Voice" description="Understand voice notes and answer with speech.">
         <SettingRow
           label="Voice note replies"
-          hint="Transcribe audio, reply with voice"
+          hint="Voice notes get a spoken reply; text messages get text"
           control={<Switch checked={agentVoiceReplyEnabled} onCheckedChange={setAgentVoiceReplyEnabled} />}
         />
         {agentVoiceReplyEnabled && (
