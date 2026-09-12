@@ -61,7 +61,7 @@ HTML,
 <li>Dine-in QR when guests are already at the table</li>
 </ul>
 <h2>Start simple, unlock more on Growth</h2>
-<p>Starter covers AI chat, physical &amp; digital catalog, and storefront. Growth adds bookings and dine-in when you are ready. <a href="/pricing">Compare plans</a>.</p>
+<p>Starter covers storefront, physical &amp; digital catalog, bookings, and dine-in. Growth adds WhatsApp and AI chat when you are ready. <a href="/pricing">Compare plans</a>.</p>
 HTML,
                 'cover_image' => $coverCatalog,
                 'meta_title' => 'WhatsApp + storefront + bookings + dine-in — RelayIQ',

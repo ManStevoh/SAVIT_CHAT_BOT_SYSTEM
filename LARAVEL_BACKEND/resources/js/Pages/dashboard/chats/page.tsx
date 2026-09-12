@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { useChats, useMessages, useProducts, useCompanySettings } from '@/lib/api-hooks'
+import { useChats, useMessages, useProducts, useCompanySettings, useSubscription } from '@/lib/api-hooks'
 import { sendMessage, handBackToBot, createOrderFromChat, previewOrderTotals, submitMessageLearningFeedback, downloadPromptLog, clearChatHistory } from '@/lib/api-actions'
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
 import type { Chat, Message, Customer } from '@/lib/mock-data'
@@ -87,6 +87,9 @@ export default function ChatsPage() {
   const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null)
   const [feedbackBusy, setFeedbackBusy] = useState<string | null>(null)
   const { data: companySettings } = useCompanySettings()
+  const { data: subscription } = useSubscription()
+  // Starter is a manual workspace: no AI conversations, so no AI actions.
+  const isStarter = (subscription?.plan ?? "free") === "free"
   const formatMoney = (value: number) =>
     formatCurrencyAmount(
       value,
@@ -291,8 +294,8 @@ export default function ChatsPage() {
     const lastCustomerIndex = messages.findIndex((m) => m.id === lastCustomerId)
     return !messages.slice(lastCustomerIndex + 1).some((m) => m.sender === 'bot' || m.sender === 'agent')
   })()
-  const showAskAi = isAgentHandling
-  const showRetryAi = !isAgentHandling && needsAiReply
+  const showAskAi = isAgentHandling && !isStarter
+  const showRetryAi = !isAgentHandling && needsAiReply && !isStarter
 
   const handleCreateOrder = useCallback(() => {
     if (!selectedChat) return
@@ -551,7 +554,12 @@ export default function ChatsPage() {
                     {selectedChat.customerName}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {!isAgentHandling ? (
+                    {isStarter ? (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        Manual inbox
+                      </div>
+                    ) : !isAgentHandling ? (
                       <div className="flex items-center gap-1 text-xs text-primary">
                         <Bot className="h-3 w-3" />
                         AI auto-reply

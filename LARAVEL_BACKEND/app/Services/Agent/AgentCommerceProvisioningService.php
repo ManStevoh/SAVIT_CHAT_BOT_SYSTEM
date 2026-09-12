@@ -7,8 +7,9 @@ use App\Models\CompanySetting;
 use App\Services\Platform\EntitlementService;
 
 /**
- * Keep company agent_commerce_enabled aligned with plan entitlements.
- * All plans entitle the conversational AI OS by default; sync enables it on upgrade/trial.
+ * Keep company agent flags aligned with plan entitlements.
+ * Plans without agent commerce (e.g. Starter) get AI fully switched off so the
+ * inbox stays manual; entitled plans are enabled on upgrade/trial.
  */
 final class AgentCommerceProvisioningService
 {
@@ -17,9 +18,9 @@ final class AgentCommerceProvisioningService
     ) {}
 
     /**
-     * Enable agent commerce when the plan entitles it (all paid plans by default).
-     * Does not force-disable an existing explicit on/off choice after first sync —
-     * but enables when entitled and currently off (upgrade / new trial).
+     * Enable agent commerce + auto-reply when the plan entitles it.
+     * Force-disable both when the plan does not (downgrade / Starter) so no AI
+     * path can fire for companies outside their allowance.
      */
     public function syncForCompany(Company $company): CompanySetting
     {
@@ -30,12 +31,29 @@ final class AgentCommerceProvisioningService
             ['company_id' => $company->id],
             [
                 'agent_commerce_enabled' => $entitled,
-                'auto_reply_enabled' => true,
+                'auto_reply_enabled' => $entitled,
             ]
         );
 
-        if ($entitled && ! $settings->agent_commerce_enabled) {
-            $settings->agent_commerce_enabled = true;
+        if ($entitled) {
+            if (! $settings->agent_commerce_enabled) {
+                $settings->agent_commerce_enabled = true;
+                $settings->save();
+            }
+
+            return $settings->fresh();
+        }
+
+        $changed = false;
+        if ($settings->agent_commerce_enabled) {
+            $settings->agent_commerce_enabled = false;
+            $changed = true;
+        }
+        if ($settings->auto_reply_enabled) {
+            $settings->auto_reply_enabled = false;
+            $changed = true;
+        }
+        if ($changed) {
             $settings->save();
         }
 

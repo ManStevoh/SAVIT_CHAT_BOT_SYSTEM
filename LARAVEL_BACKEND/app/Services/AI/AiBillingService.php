@@ -38,7 +38,7 @@ final class AiBillingService
         }
         $limit = (float) $limit;
         if ($limit <= 0) {
-            return true;
+            return false;
         }
 
         $spent = $this->platformBilledCostInCurrentPeriod($company);

@@ -9,7 +9,7 @@ export const STARTER_LIMITS = {
   products: 20,
   tables: 5,
   bookingsPerMonth: 30,
-  aiConversationsPerMonth: 50,
+  aiConversationsPerMonth: 0, // Starter is manual-only — AI lives on Growth
   whatsappNumbers: 0,
   teamMembers: 1,
 } as const

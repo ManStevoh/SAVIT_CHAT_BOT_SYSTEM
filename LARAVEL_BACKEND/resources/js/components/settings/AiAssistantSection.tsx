@@ -19,6 +19,7 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field"
 import { cn } from "@/lib/utils"
 import { useCompanySettings } from "@/lib/api-hooks"
+import { useSubscription } from "@/lib/api-hooks"
 import {
   updateSettings,
   getCompanyAiProviders,
@@ -30,6 +31,7 @@ import { apiRequest } from "@/lib/api-client"
 import { useSWRConfig } from "swr"
 import { OnboardingInterviewPanel } from "@/components/agent/OnboardingInterviewPanel"
 import { SettingSection, SettingRow, SaveBar, GrowthBadge } from "./shared"
+import { LockedFeatureGate } from "@/components/shared/upgrade-prompt"
 import type { BusinessDnaPreset, BusinessDnaSettings } from "@/lib/api-hooks"
 
 const TWIN_FIELDS = ["mission", "brand_voice", "sales_strategy", "pricing_rules", "competitors", "target_customers"] as const
@@ -37,6 +39,8 @@ const TWIN_FIELDS = ["mission", "brand_voice", "sales_strategy", "pricing_rules"
 export function AiAssistantSection() {
   const { mutate } = useSWRConfig()
   const { data: settings } = useCompanySettings()
+  const { data: subscription } = useSubscription()
+  const isStarter = (subscription?.plan ?? "free") === "free"
 
   const [aiGreeting, setAiGreeting] = useState("")
   const [aiTone, setAiTone] = useState("balanced")
@@ -258,6 +262,18 @@ export function AiAssistantSection() {
   }
 
   const allowedModes = aiPlanCapabilities?.allowedModelModes ?? ["auto", "platform_default", "specific"]
+
+  // Starter is a manual workspace — no AI conversations, no assistant to configure.
+  if (isStarter) {
+    return (
+      <LockedFeatureGate
+        icon={Bot}
+        title="The AI assistant lives on Growth"
+        description="On Starter you reply to customers yourself from the inbox. Growth adds the AI assistant — auto-replies, selling agent, voice notes, and brand voice — with 1,000 conversations a month."
+        planLabel="Starter (KSh 0)"
+      />
+    )
+  }
 
   return (
     <div className="space-y-4">

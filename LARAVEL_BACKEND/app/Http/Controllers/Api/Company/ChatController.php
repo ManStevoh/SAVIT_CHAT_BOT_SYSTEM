@@ -265,6 +265,15 @@ class ChatController extends Controller
             return response()->json(['message' => 'Chat not found.'], 404);
         }
 
+        $company = $request->user()->company;
+        if ($company && ! \App\Services\PlanLimitService::isWithinMessageLimit($company)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI replies are not included in your Starter plan. Upgrade to Growth for the AI assistant.',
+                'code' => 'ai_not_included',
+            ], 422);
+        }
+
         $chat->update(['agent_handling_at' => null]);
         $chat->load(['company.settings', 'company.whatsappAccount']);
 

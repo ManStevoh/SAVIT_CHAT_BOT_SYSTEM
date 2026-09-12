@@ -42,6 +42,13 @@ final class CommerceAgentReplyService
             return null;
         }
 
+        // Plan allowance exhausted (e.g. Starter has no AI conversations) — stay silent.
+        if (! \App\Services\PlanLimitService::isWithinMessageLimit($company)) {
+            \App\Services\WhatsApp\WhatsAppDebugLogger::info('COMMERCE_AGENT_OVER_PLAN_LIMIT', ['company_id' => $company->id]);
+
+            return null;
+        }
+
         \App\Services\WhatsApp\WhatsAppDebugLogger::info('COMMERCE_AGENT_START', [
             'company_id' => $company->id,
             'chat_id' => $chat->id,

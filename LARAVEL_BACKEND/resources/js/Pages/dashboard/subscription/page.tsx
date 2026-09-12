@@ -270,7 +270,7 @@ function SubscriptionPageContent() {
   }
 
   const usage = (usageData?.items ?? [
-    { name: "AI conversations", used: 0, limit: 50 },
+    { name: "AI conversations", used: 0, limit: 0 },
     { name: "Products", used: 0, limit: 20 },
     { name: "Bookings (this month)", used: 0, limit: 30 },
     { name: "Dine-in tables", used: 0, limit: 5 },
@@ -768,8 +768,9 @@ function SubscriptionPageContent() {
           <div className="space-y-6">
             {usage.map((item) => {
               const isUnlimited = item.limit == null
+              const notIncluded = !isUnlimited && item.limit === 0
               const pct = !isUnlimited && item.limit > 0 ? (item.used / item.limit) * 100 : 0
-              const nearLimit = !isUnlimited && pct >= 80
+              const nearLimit = !isUnlimited && !notIncluded && pct >= 80
               return (
               <div key={item.name} className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -777,11 +778,22 @@ function SubscriptionPageContent() {
                     <item.icon className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium text-foreground">{item.name}</span>
                   </div>
-                  <span className={`text-sm ${nearLimit ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
-                    {item.used.toLocaleString()} / {isUnlimited ? "Unlimited" : item.limit.toLocaleString()}
-                  </span>
+                  {notIncluded ? (
+                    <span className="text-sm">
+                      <span className="text-muted-foreground">Not included on Starter · </span>
+                      <Link href="/dashboard/subscription#plans" className="font-medium text-primary hover:underline">
+                        Unlock on Growth
+                      </Link>
+                    </span>
+                  ) : (
+                    <span className={`text-sm ${nearLimit ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
+                      {item.used.toLocaleString()} / {isUnlimited ? "Unlimited" : item.limit.toLocaleString()}
+                    </span>
+                  )}
                 </div>
-                <Progress value={isUnlimited ? 0 : Math.min(100, pct)} className={`h-2 ${nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
+                {!notIncluded && (
+                  <Progress value={isUnlimited ? 0 : Math.min(100, pct)} className={`h-2 ${nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
+                )}
               </div>
             )})}
           </div>

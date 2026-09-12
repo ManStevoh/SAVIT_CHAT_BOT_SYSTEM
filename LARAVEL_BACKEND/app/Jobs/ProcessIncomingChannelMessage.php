@@ -42,6 +42,11 @@ class ProcessIncomingChannelMessage implements ShouldQueue
             return;
         }
 
+        // No AI allowance left on this plan (Starter is manual-only) — keep the inbox human.
+        if (! \App\Services\PlanLimitService::isWithinMessageLimit($company)) {
+            return;
+        }
+
         $reply = app(CommerceAgentReplyService::class)->generate(
             $company,
             $chat,

@@ -77,7 +77,7 @@ function SettingsContent() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="w-full space-y-6">
       {/* Header: context + billing lives one click away */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -119,7 +119,7 @@ function SettingsContent() {
                 >
                   <s.icon className={cn("h-4 w-4", selected && "text-primary")} />
                   {s.label}
-                  {s.id === "whatsapp" && isStarter && (
+                  {(s.id === "whatsapp" || s.id === "ai") && isStarter && (
                     <span className="rounded bg-primary/10 px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">
                       Growth
                     </span>

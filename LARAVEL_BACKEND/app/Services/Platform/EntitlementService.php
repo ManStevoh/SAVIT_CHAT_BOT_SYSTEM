@@ -18,11 +18,11 @@ final class EntitlementService
     /** @var array<string, array<string, mixed>> */
     public const DEFAULTS = [
         'free' => [
-            'messages' => 50,
+            'messages' => 0, // Starter: manual inbox only, no AI conversations
             'max_products' => 20,
             'team' => 1,
             'whatsapp_numbers' => 0,
-            'ai_cost_usd' => 1.0,
+            'ai_cost_usd' => 0.0,
             'ai_model_modes' => ['auto'],
             'allow_byok' => false,
             'credential_modes' => ['platform'],
@@ -31,11 +31,11 @@ final class EntitlementService
             'analytics_level' => 'basic',
             'crm_level' => 'basic',
             'attribution' => false,
-            'ai_posts_per_month' => 5,
-            'ai_images_per_month' => 2,
+            'ai_posts_per_month' => 0,
+            'ai_images_per_month' => 0,
             'social_platforms' => 1,
             'growth_enabled' => false,
-            'agent_commerce' => true,
+            'agent_commerce' => false,
             'allow_physical' => true,
             'allow_digital' => true,
             'allow_service' => true,

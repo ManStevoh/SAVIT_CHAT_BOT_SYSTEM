@@ -636,7 +636,7 @@ class CmsPageSeeder extends Seeder
                                         'Physical & digital catalog (20)',
                                         'Bookings (30 / month)',
                                         'Dine-in tables (5)',
-                                        '50 AI conversations / month',
+                                        'Manual customer inbox',
                                         'M-Pesa',
                                         'RelayIQ branding',
                                         'WhatsApp on Growth & Custom',

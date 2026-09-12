@@ -117,7 +117,7 @@ class AiAgentEvalCommand extends Command
 
         // 8. Entitlements
         $ok = ($entitlements->limitsForPlanSlug('professional')['agent_commerce'] ?? false) === true
-            && ($entitlements->limitsForPlanSlug('free')['agent_commerce'] ?? false) === true;
+            && ($entitlements->limitsForPlanSlug('free')['agent_commerce'] ?? false) === false;
         $results[] = ['name' => 'entitlement_agent_commerce', 'pass' => $ok];
         $ok ? $passed++ : $failed++;
 
