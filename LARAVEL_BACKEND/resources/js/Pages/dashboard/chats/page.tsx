@@ -374,13 +374,13 @@ export default function ChatsPage() {
         <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[#25D366]/15">
           <MessageSquare className="h-8 w-8 text-[#128C7E]" />
         </span>
-        <Badge className="mt-4" variant="outline">Starter · AI assistant not included</Badge>
+        <Badge className="mt-4" variant="outline">Starter · WhatsApp & AI not included</Badge>
         <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Every question waits until you reply.
+          Your customers are on WhatsApp. Nobody&apos;s answering.
         </h1>
         <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Growth adds an AI assistant that answers in English or Kiswahili, sells from your storefront,
-          and hands off to you when a customer needs a real person — over your own WhatsApp number.
+          Growth connects your number and puts an AI assistant on it — replies in English or Kiswahili,
+          sells from your storefront, and hands off to you when a customer needs a real person.
         </p>
 
         {/* Chat teaser */}
@@ -396,10 +396,10 @@ export default function ChatsPage() {
 
         <div className="mt-6 grid w-full max-w-md gap-2 text-left sm:grid-cols-2">
           {[
+            'Your WhatsApp number, connected',
             'Replies in English or Kiswahili',
             'Sells from your storefront',
             'Hands off to a real person',
-            'Works day and night',
           ].map((f) => (
             <p key={f} className="flex items-center gap-2 text-[13px] text-muted-foreground">
               <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {f}
@@ -409,7 +409,7 @@ export default function ChatsPage() {
 
         <div className="mt-8 flex w-full max-w-md flex-col items-stretch gap-3">
           <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link href="/dashboard/subscription#plans">Get the AI assistant — KSh 2,000/mo</Link>
+            <Link href="/dashboard/subscription#plans">Get WhatsApp + AI — KSh 2,000/mo</Link>
           </Button>
           <p className="text-center text-xs text-muted-foreground">14-day free trial · your Starter storefront stays free</p>
         </div>
