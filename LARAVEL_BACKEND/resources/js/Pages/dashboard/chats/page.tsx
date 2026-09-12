@@ -44,7 +44,6 @@ import {
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
 import { FormModal } from '@/components/shared/modal'
-import { LockedFeatureGate } from '@/components/shared/upgrade-prompt'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -368,6 +367,56 @@ export default function ChatsPage() {
     }
   }, [selectedChatId, products, selectedProductId, orderQuantity, toast, mutate, statusFilter, searchQuery])
 
+  // Starter without WhatsApp: the whole inbox is the upgrade moment.
+  if (!chatsLoading && showWaGate) {
+    return (
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-4 py-10 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[#25D366]/15">
+          <MessageSquare className="h-8 w-8 text-[#128C7E]" />
+        </span>
+        <Badge className="mt-4" variant="outline">Starter plan · WhatsApp lives on Growth</Badge>
+        <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          Every customer message, one inbox
+        </h1>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+          Right now there&apos;s nowhere for customers to reach you — WhatsApp isn&apos;t connected.
+          On Growth your number plugs in here, and the AI answers, sells, and hands over when a human is needed.
+        </p>
+
+        {/* Chat teaser */}
+        <div className="mt-6 w-full max-w-sm space-y-2 rounded-2xl border border-border bg-muted/30 p-4 text-left">
+          <div className="max-w-[85%] rounded-2xl rounded-tl-md bg-background px-3 py-2 shadow-sm">
+            <p className="text-[13px] text-foreground">Hi! Is the red dress still available?</p>
+          </div>
+          <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-md bg-primary px-3 py-2 shadow-sm">
+            <p className="text-[13px] text-primary-foreground">Yes it is! Size M and L are in stock — want me to reserve one for you?</p>
+          </div>
+          <p className="pt-1 text-center text-[11px] text-muted-foreground">AI replies instantly, even at 2am.</p>
+        </div>
+
+        <div className="mt-6 grid w-full max-w-md gap-2 text-left sm:grid-cols-2">
+          {[
+            'Your WhatsApp number, connected',
+            'AI auto-replies day and night',
+            'Broadcasts & campaigns',
+            'Shared team inbox',
+          ].map((f) => (
+            <p key={f} className="flex items-center gap-2 text-[13px] text-muted-foreground">
+              <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {f}
+            </p>
+          ))}
+        </div>
+
+        <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row">
+          <Button asChild size="lg">
+            <Link href="/dashboard/subscription#plans">Upgrade to Growth — KSh 2,000/mo</Link>
+          </Button>
+          <p className="text-xs text-muted-foreground">14-day free trial · keep everything on Starter</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-[calc(100dvh-8rem)] min-h-0 flex-col gap-5 lg:h-[calc(100vh-8rem)]">
       <PageHeader
@@ -422,19 +471,6 @@ export default function ChatsPage() {
 
         <ScrollArea className="min-h-0 flex-1">
           <div className="p-2">
-            {showWaGate && !chatsLoading && chats && chats.length > 0 && (
-              <Link
-                href="/dashboard/subscription#plans"
-                className="mb-2 flex items-center gap-2.5 rounded-xl border border-primary/25 bg-primary/[0.05] px-3 py-2.5 transition-colors hover:bg-primary/[0.09]"
-              >
-                <MessageSquare className="h-4 w-4 shrink-0 text-primary" />
-                <span className="min-w-0 flex-1 text-xs leading-snug text-muted-foreground">
-                  <span className="font-semibold text-foreground">Get these chats on WhatsApp.</span>{' '}
-                  Growth connects your number with AI replies.
-                </span>
-                <span className="shrink-0 text-xs font-semibold text-primary">View plans →</span>
-              </Link>
-            )}
             {/* Loading State */}
             {chatsLoading && (
               <div className="space-y-2">
@@ -468,24 +504,13 @@ export default function ChatsPage() {
 
             {/* Empty State */}
             {!chatsLoading && !chatsError && (!chats || chats.length === 0) && (
-              showWaGate && !searchQuery ? (
-                <div className="p-4">
-                  <LockedFeatureGate
-                    icon={MessageSquare}
-                    title="Your customers are on WhatsApp"
-                    description="Your inbox is empty because Starter doesn't include WhatsApp. Connect your number on Growth and every customer message — with AI replies — lands here."
-                    planLabel="Starter (KSh 0)"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center">
-                  <MessageSquare className="h-10 w-10 text-muted-foreground/50" />
-                  <p className="mt-2 font-medium text-foreground">No conversations</p>
-                  <p className="text-sm text-muted-foreground">
-                    {searchQuery ? 'Try a different search' : 'Chats will appear here'}
-                  </p>
-                </div>
-              )
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <MessageSquare className="h-10 w-10 text-muted-foreground/50" />
+                <p className="mt-2 font-medium text-foreground">No conversations</p>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? 'Try a different search' : 'Chats will appear here'}
+                </p>
+              </div>
             )}
 
             {/* Chat List */}
