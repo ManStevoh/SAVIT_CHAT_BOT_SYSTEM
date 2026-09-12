@@ -148,15 +148,22 @@ class DashboardSummaryController extends Controller
                 $subscriptionData = [
                     'id' => '0', 'plan' => 'free',
                     'planName' => $planModel?->name ?? 'Starter',
-                    'status' => 'trial', 'daysRemaining' => 14, 'isExpiringSoon' => false,
+                    'status' => 'active', 'daysRemaining' => 9999, 'isExpiringSoon' => false,
                 ];
             } else {
+                // Defensive: free plan has no trial (see legacy-plan migration).
+                $status = ($subscription->plan === 'free' && $subscription->status === 'trial')
+                    ? 'active'
+                    : $subscription->status;
                 $daysRemaining = (int) now()->startOfDay()->diffInDays($subscription->end_date->copy()->startOfDay(), false);
+                if ($subscription->plan === 'free' && $status === 'active') {
+                    $daysRemaining = 9999;
+                }
                 $subscriptionData = [
                     'id' => (string) $subscription->id,
                     'plan' => $subscription->plan,
                     'planName' => $planModel?->name ?? ucfirst((string) $subscription->plan),
-                    'status' => $subscription->status,
+                    'status' => $status,
                     'daysRemaining' => $daysRemaining,
                     'isExpiringSoon' => $daysRemaining <= 7 && $daysRemaining >= 0,
                 ];

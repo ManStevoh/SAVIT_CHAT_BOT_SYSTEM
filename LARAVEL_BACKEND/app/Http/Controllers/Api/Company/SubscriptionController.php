@@ -63,6 +63,8 @@ class SubscriptionController extends Controller
         $subscription = Subscription::where('company_id', $companyId)->orderByDesc('end_date')->first();
 
         if (! $subscription) {
+            // No subscription row: company is on the always-free plan, which
+            // has no trial. Report active so no trial banners are shown.
             $free = Plan::where('slug', 'free')->first();
 
             return response()->json([
@@ -71,20 +73,25 @@ class SubscriptionController extends Controller
                 'companyName' => $company?->name ?? '',
                 'plan' => 'free',
                 'planName' => $free?->name ?? 'Starter',
-                'status' => 'trial',
+                'status' => 'active',
                 'startDate' => now()->format('Y-m-d'),
-                'endDate' => now()->addDays(14)->format('Y-m-d'),
+                'endDate' => now()->addYears(10)->format('Y-m-d'),
                 'amount' => 0,
                 'billingCycle' => 'monthly',
                 'paymentMethod' => null,
                 'currency' => null,
-                'daysRemaining' => 14,
+                'daysRemaining' => 9999,
                 'isExpiringSoon' => false,
-                'accessEndsLabel' => 'Trial ends',
+                'accessEndsLabel' => 'Active',
             ]);
         }
 
         $planModel = Plan::where('slug', $subscription->plan)->first();
+        // Defensive: the always-free plan has no trial. If a legacy row was
+        // migrated to free but still carries trial status, present it as active.
+        if ($subscription->plan === 'free' && $subscription->status === 'trial') {
+            $subscription->status = 'active';
+        }
         $daysRemaining = (int) now()->startOfDay()->diffInDays($subscription->end_date->copy()->startOfDay(), false);
         $status = $subscription->status;
         $accessEndsLabel = match (true) {

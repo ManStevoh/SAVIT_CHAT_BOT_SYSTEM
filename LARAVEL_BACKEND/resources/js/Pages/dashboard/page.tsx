@@ -69,7 +69,7 @@ function DashboardPageContent() {
 
   const showTrialBanner =
     trialStarted ||
-    (subscription?.status === 'trial' && (subscription.daysRemaining ?? 0) > 0)
+    (subscription?.status === 'trial' && subscription?.plan !== 'free' && (subscription.daysRemaining ?? 0) > 0)
 
   return (
     <div className="space-y-8">

@@ -81,6 +81,7 @@ function SubscriptionPageContent() {
   const expiredBanner = !isCommissionMerchant && searchParams.get("expired") === "1"
   const needsPaidActivation =
     !isCommissionMerchant &&
+    planSlug !== "free" &&
     (expiredBanner ||
       ["trial", "expired", "cancelled"].includes(status) ||
       (typeof daysRemaining === "number" && daysRemaining <= 0))
