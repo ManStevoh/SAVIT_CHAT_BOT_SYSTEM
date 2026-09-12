@@ -15,6 +15,8 @@ use App\Services\RecaptchaService;
 use App\Services\WhatsApp\WhatsAppDebugLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
@@ -167,23 +169,55 @@ class AuthController extends Controller
 
         $otp->update(['verified_at' => now()]);
 
-        $company = Company::create([
-            'name' => $validated['companyName'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
-            'status' => 'active',
-        ]);
+        $email = strtolower(trim($validated['email']));
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
-            'password' => Hash::make($validated['password']),
-            'role' => 'company_admin',
-            'company_id' => $company->id,
-            'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
+        try {
+            [$company, $user] = DB::transaction(function () use ($validated, $email) {
+                $company = Company::where('email', $email)->first();
+
+                if ($company) {
+                    if ($company->users()->exists() || User::where('email', $email)->exists()) {
+                        throw ValidationException::withMessages([
+                            'email' => ['An account with this email address already exists. Please sign in or reset your password.'],
+                        ]);
+                    }
+
+                    $company->update([
+                        'name' => $validated['companyName'],
+                        'phone' => $validated['phone'] ?? null,
+                        'status' => 'active',
+                    ]);
+                } else {
+                    $company = Company::create([
+                        'name' => $validated['companyName'],
+                        'email' => $email,
+                        'phone' => $validated['phone'] ?? null,
+                        'status' => 'active',
+                    ]);
+                }
+
+                $user = User::create([
+                    'name' => $validated['name'],
+                    'email' => $email,
+                    'phone' => $validated['phone'] ?? null,
+                    'password' => Hash::make($validated['password']),
+                    'role' => 'company_admin',
+                    'company_id' => $company->id,
+                    'status' => 'active',
+                    'email_verified_at' => now(),
+                ]);
+
+                return [$company, $user];
+            });
+        } catch (QueryException $e) {
+            if ($this->isDuplicateKeyError($e)) {
+                throw ValidationException::withMessages([
+                    'email' => ['An account with this email address already exists. Please sign in or reset your password.'],
+                ]);
+            }
+
+            throw $e;
+        }
 
         $user->load('company');
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -243,36 +277,76 @@ class AuthController extends Controller
             && (float) ($selectedPlan->price_amount ?? 0) > 0
             && ! $registrationPlans->shouldForceDefault();
 
-        $company = Company::create([
-            'name' => $validated['companyName'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'],
-            'status' => 'pending',
-        ]);
-
+        $email = strtolower(trim($validated['email']));
         $marketingConsent = (bool) ($validated['marketingConsent'] ?? false);
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'phone' => $validated['phone'],
-            'company_id' => $company->id,
-            'status' => 'active',
-            'terms_accepted_at' => now(),
-            'marketing_consent' => $marketingConsent,
-            'marketing_consent_at' => $marketingConsent ? now() : null,
-            'selected_plan_id' => $selectedPlan?->id,
-            'wants_immediate_payment' => $subscribeIntent,
-        ]);
-        $user->role = 'company_owner';
-        $user->save();
+        try {
+            [$company, $user, $trial] = DB::transaction(function () use ($validated, $email, $marketingConsent, $selectedPlan, $subscribeIntent) {
+                // companies.email has a UNIQUE constraint but request validation only
+                // checks users.email. A previous failed attempt can leave an orphan
+                // company row behind, which used to 500 on retry with a duplicate-key
+                // error. Reuse that orphan; if the email is genuinely taken, 422.
+                $company = Company::where('email', $email)->first();
 
-        $trial = $this->createTrialSubscriptionForRegistration($company, $selectedPlan);
-        if ($trial) {
-            $company->update(['plan' => $trial['plan_slug']]);
+                if ($company) {
+                    if ($company->users()->exists() || User::where('email', $email)->exists()) {
+                        throw ValidationException::withMessages([
+                            'email' => ['An account with this email address already exists. Please sign in or reset your password.'],
+                        ]);
+                    }
+
+                    $company->update([
+                        'name' => $validated['companyName'],
+                        'phone' => $validated['phone'],
+                        'status' => 'pending',
+                    ]);
+                } else {
+                    $company = Company::create([
+                        'name' => $validated['companyName'],
+                        'email' => $email,
+                        'phone' => $validated['phone'],
+                        'status' => 'pending',
+                    ]);
+                }
+
+                $user = User::create([
+                    'name' => $validated['name'],
+                    'email' => $email,
+                    'password' => Hash::make($validated['password']),
+                    'phone' => $validated['phone'],
+                    'company_id' => $company->id,
+                    'status' => 'active',
+                    'terms_accepted_at' => now(),
+                    'marketing_consent' => $marketingConsent,
+                    'marketing_consent_at' => $marketingConsent ? now() : null,
+                    'selected_plan_id' => $selectedPlan?->id,
+                    'wants_immediate_payment' => $subscribeIntent,
+                ]);
+                $user->role = 'company_owner';
+                $user->save();
+
+                $trial = $this->createTrialSubscriptionForRegistration($company, $selectedPlan);
+                if ($trial) {
+                    $company->update(['plan' => $trial['plan_slug']]);
+                }
+
+                return [$company, $user, $trial];
+            });
+        } catch (QueryException $e) {
+            if ($this->isDuplicateKeyError($e)) {
+                throw ValidationException::withMessages([
+                    'email' => ['An account with this email address already exists. Please sign in or reset your password.'],
+                ]);
+            }
+
+            throw $e;
         }
-        app(\App\Services\Agent\AgentCommerceProvisioningService::class)->syncForCompany($company);
+
+        try {
+            app(\App\Services\Agent\AgentCommerceProvisioningService::class)->syncForCompany($company);
+        } catch (\Throwable $e) {
+            Log::warning('Registration provisioning failed: '.$e->getMessage());
+        }
 
         $requiresPayment = $subscribeIntent || (
             $trial
@@ -578,6 +652,17 @@ class AuthController extends Controller
         $email = Str::transliterate(Str::lower((string) $request->email));
 
         return 'login:'.$email.'|'.$request->ip();
+    }
+
+    private function isDuplicateKeyError(QueryException $e): bool
+    {
+        $code = (string) $e->getCode();
+        $previousCode = (string) ($e->getPrevious()?->getCode() ?? '');
+        $message = strtolower($e->getMessage());
+
+        return in_array($code, ['23000', '1062'], true)
+            || in_array($previousCode, ['23000', '1062'], true)
+            || str_contains($message, 'duplicate entry');
     }
 
     private function userToArray(User $user): array

@@ -40,12 +40,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Search, MoreVertical, Building2, TrendingUp, UserPlus, AlertCircle, LogIn, Pencil } from "lucide-react"
+import { Search, MoreVertical, Building2, TrendingUp, UserPlus, AlertCircle, LogIn, Pencil, Trash2 } from "lucide-react"
 import { useAdminCompanies } from "@/lib/api-hooks"
 import {
   getAdminCompany,
   updateAdminCompany,
   updateCompanyStatus,
+  adminDeleteCompany,
   adminImpersonateCompany,
   type UpdateAdminCompanyData,
 } from "@/lib/api-actions"
@@ -83,6 +84,9 @@ export default function AdminCompaniesPage() {
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
   const [suspendTarget, setSuspendTarget] = useState<Company | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Company | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [impersonateLoading, setImpersonateLoading] = useState<string | null>(null)
   const { data: companies, error, isLoading, mutate } = useAdminCompanies({
     search: searchQuery || undefined,
@@ -162,6 +166,20 @@ export default function AdminCompaniesPage() {
     mutate()
     setSuspendTarget(null)
   }, [suspendTarget, mutate])
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return
+    setDeleteLoading(true)
+    setDeleteError(null)
+    const res = await adminDeleteCompany(deleteTarget.id)
+    setDeleteLoading(false)
+    if (res.success) {
+      mutate()
+      setDeleteTarget(null)
+    } else {
+      setDeleteError(res.message ?? "Failed to delete company")
+    }
+  }, [deleteTarget, mutate])
 
   const handleImpersonateCompany = useCallback(
     async (company: Company) => {
@@ -369,6 +387,16 @@ export default function AdminCompaniesPage() {
                             disabled={company.status === "suspended"}
                           >
                             Suspend
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              setDeleteError(null)
+                              setDeleteTarget(company)
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -584,6 +612,28 @@ export default function AdminCompaniesPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmSuspend} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Suspend
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && !deleteLoading && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete company?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `"${deleteTarget.name}" (${deleteTarget.email}) and all of its users, products, orders, chats, subscriptions and settings will be permanently deleted. Their auth tokens will be revoked immediately. This action cannot be undone.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">{deleteError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleteLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteLoading ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

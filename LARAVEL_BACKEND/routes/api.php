@@ -419,6 +419,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::get('companies/{company}', [CompanyController::class, 'show']);
     Route::put('companies/{company}', [CompanyController::class, 'update']);
     Route::patch('companies/{company}', [CompanyController::class, 'updateStatus']);
+    Route::delete('companies/{company}', [CompanyController::class, 'destroy']);
     Route::get('users', [UserController::class, 'index']);
     Route::patch('users/{user}', [UserController::class, 'updateStatus']);
     Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\User;
 use App\Models\WhatsAppAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CompanyController extends Controller
@@ -141,6 +143,46 @@ class CompanyController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Company status updated successfully',
+        ]);
+    }
+
+    /**
+     * Permanently delete a company and everything that belongs to it.
+     *
+     * Deleting only the user (admin users delete) leaves an orphan companies
+     * row behind, and companies.email is UNIQUE — so re-registering the same
+     * email 500s on Company::create with a duplicate-key error. A company
+     * delete must therefore remove the users first (users.company_id is only
+     * nullOnDelete, so otherwise orphan users would keep the email taken in
+     * users.email too) and then delete the company, letting FK cascades clean
+     * up settings/products/orders/subscriptions/etc.
+     */
+    public function destroy(Company $company): JsonResponse
+    {
+        $logo = $company->logo;
+
+        DB::transaction(function () use ($company) {
+            User::where('company_id', $company->id)->chunkById(100, function ($users) {
+                foreach ($users as $user) {
+                    $user->tokens()->delete();
+                    $user->delete();
+                }
+            });
+
+            $company->delete();
+        });
+
+        if ($logo) {
+            try {
+                Storage::disk('public')->delete($logo);
+            } catch (\Throwable) {
+                // File cleanup is best-effort; DB delete already succeeded.
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Company deleted successfully.',
         ]);
     }
 }

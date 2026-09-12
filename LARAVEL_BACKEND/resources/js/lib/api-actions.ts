@@ -2754,6 +2754,26 @@ export async function updateCompanyStatus(
 }
 
 /**
+ * Delete company and everything that belongs to it (admin only)
+ * Laravel: DELETE /api/admin/companies/:companyId
+ */
+export async function adminDeleteCompany(
+  companyId: string
+): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(600)
+    return { success: true, message: 'Company deleted successfully.' }
+  }
+  try {
+    return await apiRequest<{ success: boolean; message?: string }>(`/api/admin/companies/${companyId}`, {
+      method: 'DELETE',
+    })
+  } catch (e) {
+    return { success: false, message: e instanceof Error ? e.message : 'Failed to delete company' }
+  }
+}
+
+/**
  * Update user status (admin only)
  * Laravel: PATCH /api/admin/users/:userId
  */
