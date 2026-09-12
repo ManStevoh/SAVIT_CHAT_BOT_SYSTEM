@@ -38,4 +38,16 @@ class SetupStatusController extends Controller
             'setupChecklistDismissedAt' => $company->fresh()?->setup_checklist_dismissed_at?->toIso8601String(),
         ]);
     }
+
+    public function restore(Request $request): JsonResponse
+    {
+        $company = $request->user()?->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $company->forceFill(['setup_checklist_dismissed_at' => null])->save();
+
+        return response()->json(['success' => true, 'dismissed' => false]);
+    }
 }

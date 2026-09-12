@@ -304,7 +304,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::delete('settings/og-image', [SettingsController::class, 'destroyOgImage']);
     Route::get('setup-status', [SetupStatusController::class, 'show']);
     Route::post('setup-status/dismiss', [SetupStatusController::class, 'dismiss']);
-    Route::get('commerce-brief', [CommerceBriefController::class, 'today']);
+    Route::post('setup-status/restore', [SetupStatusController::class, 'restore']);    Route::get('commerce-brief', [CommerceBriefController::class, 'today']);
     Route::get('executive-ai/dashboard', [ExecutiveAiController::class, 'dashboard']);
     Route::get('executive-ai/opportunities', [ExecutiveAiController::class, 'opportunities']);
     Route::get('executive-ai/approvals', [ExecutiveAiController::class, 'pendingApprovals']);

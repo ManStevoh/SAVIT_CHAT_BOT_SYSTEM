@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { CheckCircle2, ListChecks, X } from "lucide-react"
 import { useSetupStatus, SetupStatus } from "@/lib/api-hooks"
-import { dismissSetupChecklist } from "@/lib/api-actions"
+import { dismissSetupChecklist, restoreSetupChecklist } from "@/lib/api-actions"
 import { useState } from "react"
+import { useSWRConfig } from "swr"
 import { toast } from "sonner"
 
 interface Props {
@@ -18,17 +19,54 @@ interface Props {
 
 export function GettingStartedChecklist({ initialData }: Props) {
   const { data, isLoading, mutate } = useSetupStatus(initialData)
+  const { mutate: globalMutate } = useSWRConfig()
   const [dismissing, setDismissing] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  // Local override: the hook's mutate is bound to a null key when initialData
+  // is seeded, so dismiss/restore must also flip local state to take effect.
+  const [localDismissed, setLocalDismissed] = useState<boolean | null>(null)
 
   if (isLoading || !data) return null
-  if (data.dismissed || data.isComplete) return null
+
+  const dismissed = localDismissed ?? data.dismissed
+  if (data.isComplete) return null
+
+  // Tiny footprint when dismissed: one muted line that brings it back.
+  if (dismissed) {
+    return (
+      <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+        <span>Setup guide hidden.</span>
+        <button
+          type="button"
+          className="font-medium text-primary underline-offset-2 hover:underline disabled:opacity-60"
+          disabled={restoring}
+          onClick={async () => {
+            setRestoring(true)
+            const result = await restoreSetupChecklist()
+            setRestoring(false)
+            if (result.success) {
+              setLocalDismissed(false)
+              await globalMutate("company-setup-status", data ? { ...data, dismissed: false } : undefined, false)
+              mutate()
+            } else {
+              toast.error(result.message ?? "Could not bring back the guide.")
+            }
+          }}
+        >
+          {restoring ? "…" : "Show again"}
+        </button>
+      </div>
+    )
+  }
 
   const handleDismiss = async () => {
     setDismissing(true)
     const result = await dismissSetupChecklist()
     setDismissing(false)
     if (result.success) {
-      await mutate({ ...data, dismissed: true }, false)
+      setLocalDismissed(true)
+      await globalMutate("company-setup-status", { ...data, dismissed: true }, false)
+      mutate()
     } else {
       toast.error(result.message ?? "Could not dismiss checklist.")
     }

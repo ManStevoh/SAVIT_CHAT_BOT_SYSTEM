@@ -1417,6 +1417,20 @@ export async function dismissSetupChecklist(): Promise<{ success: boolean; messa
   }
 }
 
+export async function restoreSetupChecklist(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(300)
+    return { success: true }
+  }
+  try {
+    return await apiRequest<{ success: boolean }>('/api/company/setup-status/restore', {
+      method: 'POST',
+    })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
 /** Payload for connecting WhatsApp via Meta Cloud API */
 export interface ConnectWhatsAppPayload {
   phoneNumberId: string
