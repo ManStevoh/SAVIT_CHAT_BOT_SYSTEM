@@ -7,6 +7,7 @@ use App\Services\Deploy\DeployAuthService;
 use App\Services\Store\AgentStoreService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class AgentStoreController extends Controller
@@ -52,10 +53,11 @@ class AgentStoreController extends Controller
                 'list_memories', 'memories' => $this->handleListMemories($request),
                 'clear_memories', 'delete_memories', 'purge_memories' => $this->handleClearMemories($request),
                 'upload_image', 'upload' => $this->handleUploadImage($request),
+                'upload_digital', 'upload_file', 'upload_ebook' => $this->handleUploadDigital($request),
                 'verify_email', 'verify_user' => $this->handleVerifyEmail($request),
                 default => response()->json([
                     'success' => false,
-                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, list_business_units, create_business_unit, update_business_unit, setup_booking_settings, add_product, update_product, update_store, assign_free_plan, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, verify_email.",
+                    'message' => "Unknown action '{$action}'. Valid actions: list_stores, list_products, list_business_units, create_business_unit, update_business_unit, setup_booking_settings, add_product, update_product, update_store, assign_free_plan, remove_product, bulk_import, clone_store, list_memories, clear_memories, upload_image, upload_digital, verify_email.",
                 ], 400),
             };
         } catch (Throwable $e) {
@@ -172,8 +174,21 @@ class AgentStoreController extends Controller
             $path = $request->file('image')->store('products/' . $company->id, 'public');
             $data['image'] = $path;
         } elseif ($request->hasFile('file')) {
-            $path = $request->file('file')->store('products/' . $company->id, 'public');
-            $data['image'] = $path;
+            $file = $request->file('file');
+            $mime = (string) $file->getMimeType();
+            if (str_starts_with($mime, 'image/')) {
+                $path = $file->store('products/' . $company->id, 'public');
+                $data['image'] = $path;
+            } else {
+                $stored = $this->storeDigitalFile($company->id, $file);
+                $data = array_merge($data, $stored);
+            }
+        }
+
+        if ($request->hasFile('digitalFile') || $request->hasFile('digital_file') || $request->hasFile('ebook')) {
+            $file = $request->file('digitalFile') ?: $request->file('digital_file') ?: $request->file('ebook');
+            $stored = $this->storeDigitalFile($company->id, $file);
+            $data = array_merge($data, $stored);
         }
 
         $result = $this->storeService->createProduct($company, $data);
@@ -202,6 +217,17 @@ class AgentStoreController extends Controller
         }
 
         $data = (array) ($request->input('updates') ?: $request->input('product') ?: $request->all());
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products/' . $company->id, 'public');
+            $data['image'] = $path;
+        }
+
+        if ($request->hasFile('digitalFile') || $request->hasFile('digital_file') || $request->hasFile('ebook')) {
+            $file = $request->file('digitalFile') ?: $request->file('digital_file') ?: $request->file('ebook');
+            $stored = $this->storeDigitalFile($company->id, $file);
+            $data = array_merge($data, $stored);
+        }
 
         $result = $this->storeService->updateProduct($company, $productId, $data);
 
@@ -363,8 +389,74 @@ class AgentStoreController extends Controller
             'success' => true,
             'company_id' => $company->id,
             'path' => $path,
-            'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($path),
+            'url' => Storage::disk('public')->url($path),
         ]);
+    }
+
+    private function handleUploadDigital(Request $request): JsonResponse
+    {
+        $storeId = $request->input('company_id') ?: $request->input('store');
+        $company = $this->storeService->resolveCompany($storeId);
+
+        if (! $company) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store '{$storeId}' not found. Specify a valid company_id or store_slug.",
+            ], 404);
+        }
+
+        $file = $request->file('digitalFile') ?: $request->file('digital_file') ?: $request->file('ebook') ?: $request->file('file') ?: $request->file('pdf');
+        if (! $file) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No digital file provided in request (expected digitalFile, digital_file, ebook, file, or pdf).',
+            ], 400);
+        }
+
+        $stored = $this->storeDigitalFile($company->id, $file);
+
+        $productId = $request->input('product_id') ?: $request->input('id') ?: $request->input('name') ?: $request->input('product');
+        if (! empty($productId)) {
+            try {
+                $updates = array_merge($stored, [
+                    'product_type' => 'digital',
+                    'fulfillment_type' => 'download',
+                    'requires_delivery_address' => false,
+                ]);
+                $result = $this->storeService->updateProduct($company, $productId, $updates);
+                return response()->json(array_merge([
+                    'success' => true,
+                    'company_id' => $company->id,
+                ], $stored, ['product' => $result['product'] ?? null]));
+            } catch (Throwable $e) {
+                return response()->json(array_merge([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], $stored), 422);
+            }
+        }
+
+        return response()->json(array_merge([
+            'success' => true,
+            'company_id' => $company->id,
+        ], $stored));
+    }
+
+    private function storeDigitalFile(int $companyId, $file): array
+    {
+        $path = $file->store('products/' . $companyId . '/digital', 'local');
+
+        return [
+            'digital_file_path' => $path,
+            'digital_path' => $path,
+            'digitalFilePath' => $path,
+            'digital_file_name' => $file->getClientOriginalName(),
+            'digitalFileName' => $file->getClientOriginalName(),
+            'digital_file_mime' => $file->getMimeType(),
+            'digitalFileMime' => $file->getMimeType(),
+            'digital_file_size' => $file->getSize(),
+            'digitalFileSize' => $file->getSize(),
+        ];
     }
 
     private function handleVerifyEmail(Request $request): JsonResponse

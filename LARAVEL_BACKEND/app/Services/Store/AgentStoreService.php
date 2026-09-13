@@ -421,6 +421,12 @@ class AgentStoreService
             'bookable'                 => (bool) ($data['bookable'] ?? ($productType === 'service' && $fulfillmentType === 'booking')),
             'booking_duration_minutes' => isset($data['booking_duration_minutes']) ? max(5, (int) $data['booking_duration_minutes']) : null,
             'service_booking_url'      => $data['service_booking_url'] ?? $data['serviceBookingUrl'] ?? null,
+            'digital_file_path'        => $data['digital_file_path'] ?? $data['digitalFilePath'] ?? null,
+            'digital_file_name'        => $data['digital_file_name'] ?? $data['digitalFileName'] ?? null,
+            'digital_file_mime'        => $data['digital_file_mime'] ?? $data['digitalFileMime'] ?? null,
+            'digital_file_size'        => isset($data['digital_file_size']) || isset($data['digitalFileSize']) ? (int) ($data['digital_file_size'] ?? $data['digitalFileSize']) : null,
+            'access_url'               => $data['access_url'] ?? $data['accessUrl'] ?? null,
+            'fulfillment_instructions' => $data['fulfillment_instructions'] ?? $data['fulfillmentInstructions'] ?? null,
         ]);
 
         if (! empty($imagePath)) {
@@ -496,6 +502,44 @@ class AgentStoreService
             if ($newImage) {
                 $fields['image'] = $newImage;
             }
+        }
+
+        if (! empty($data['image']) && is_string($data['image'])) {
+            $fields['image'] = trim($data['image']);
+        }
+
+        if (! empty($data['product_type']) || ! empty($data['productType'])) {
+            $pt = strtolower((string) ($data['product_type'] ?? $data['productType']));
+            if (in_array($pt, ['physical', 'digital', 'service'], true)) {
+                $fields['product_type'] = $pt;
+            }
+        }
+
+        if (! empty($data['fulfillment_type']) || ! empty($data['fulfillmentType'])) {
+            $ft = strtolower((string) ($data['fulfillment_type'] ?? $data['fulfillmentType']));
+            if (in_array($ft, ['shipping', 'download', 'link', 'booking', 'manual'], true)) {
+                $fields['fulfillment_type'] = $ft;
+            }
+        }
+
+        foreach ([
+            'digital_file_path' => ['digital_file_path', 'digitalFilePath'],
+            'digital_file_name' => ['digital_file_name', 'digitalFileName'],
+            'digital_file_mime' => ['digital_file_mime', 'digitalFileMime'],
+            'access_url' => ['access_url', 'accessUrl'],
+            'fulfillment_instructions' => ['fulfillment_instructions', 'fulfillmentInstructions'],
+        ] as $column => $keys) {
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $data)) {
+                    $fields[$column] = $data[$key];
+                    break;
+                }
+            }
+        }
+
+        if (array_key_exists('digital_file_size', $data) || array_key_exists('digitalFileSize', $data)) {
+            $size = $data['digital_file_size'] ?? $data['digitalFileSize'];
+            $fields['digital_file_size'] = $size !== null ? (int) $size : null;
         }
 
         if (array_key_exists('requires_delivery_address', $data) || array_key_exists('requiresDeliveryAddress', $data)) {
@@ -765,10 +809,15 @@ class AgentStoreService
             'category'         => $p->category,
             'status'                    => $p->status,
             'product_type'              => $p->product_type,
+            'fulfillment_type'          => $p->fulfillment_type,
             'requires_delivery_address' => (bool) ($p->requires_delivery_address ?? ($p->product_type === 'physical')),
             'requiresDeliveryAddress'   => (bool) ($p->requires_delivery_address ?? ($p->product_type === 'physical')),
             'image'                     => $p->image,
             'description'               => $p->description,
+            'hasDigitalFile'            => (bool) ($p->digital_file_path ?? null),
+            'digitalFileName'           => $p->digital_file_name ?? null,
+            'digitalFileMime'           => $p->digital_file_mime ?? null,
+            'digitalFileSize'           => $p->digital_file_size !== null ? (int) $p->digital_file_size : null,
         ];
     }
 
