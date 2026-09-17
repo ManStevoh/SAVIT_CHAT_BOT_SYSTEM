@@ -50,4 +50,18 @@ class SetupStatusController extends Controller
 
         return response()->json(['success' => true, 'dismissed' => false]);
     }
+
+    public function markStorefrontShared(Request $request, CompanySetupStatusService $setup): JsonResponse
+    {
+        $company = $request->user()?->company;
+        if (! $company) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        if ($company->storefront_link_shared_at === null) {
+            $company->forceFill(['storefront_link_shared_at' => now()])->save();
+        }
+
+        return response()->json($setup->status($company->fresh() ?? $company));
+    }
 }

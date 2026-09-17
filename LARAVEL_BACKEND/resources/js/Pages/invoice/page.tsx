@@ -55,7 +55,9 @@ export default function PublicInvoicePage({ order, company }: Props) {
           <div>
             <p className="font-medium text-slate-700">Fulfillment</p>
             <p className="capitalize text-slate-600">{order.fulfillmentType.replace('_', ' ')}</p>
-            {order.deliveryAddress && <p className="text-slate-600">{order.deliveryAddress}</p>}
+            {order.deliveryAddress && (order.fulfillmentType === 'delivery' || order.fulfillmentType === 'shipping') && (
+              <p className="text-slate-600">{order.deliveryAddress}</p>
+            )}
           </div>
         </div>
 

@@ -51,6 +51,9 @@ interface DataTableProps<T> {
   }
   emptyMessage?: string
   emptyDescription?: string
+  view?: 'list' | 'grid'
+  gridCell?: (item: T) => React.ReactNode
+  toolbarExtra?: React.ReactNode
 }
 
 export function DataTable<T extends { id: string }>({
@@ -66,6 +69,9 @@ export function DataTable<T extends { id: string }>({
   pagination,
   emptyMessage = 'No data found',
   emptyDescription = 'Try adjusting your search or filters',
+  view = 'list',
+  gridCell,
+  toolbarExtra,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -152,7 +158,7 @@ export function DataTable<T extends { id: string }>({
               </div>
             )}
             {filters && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {filters.map((filter) => (
                   <Select
                     key={filter.key}
@@ -171,8 +177,10 @@ export function DataTable<T extends { id: string }>({
                     </SelectContent>
                   </Select>
                 ))}
+                {toolbarExtra}
               </div>
             )}
+            {!filters && toolbarExtra}
           </div>
         )}
 
@@ -203,7 +211,7 @@ export function DataTable<T extends { id: string }>({
             </div>
           )}
           {filters && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {filters.map((filter) => (
                 <Select
                   key={filter.key}
@@ -222,12 +230,20 @@ export function DataTable<T extends { id: string }>({
                   </SelectContent>
                 </Select>
               ))}
+              {toolbarExtra}
             </div>
           )}
+          {!filters && toolbarExtra}
         </div>
       )}
 
-      {/* Table */}
+      {view === 'grid' && gridCell ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {data.map((item) => (
+            <div key={item.id}>{gridCell(item)}</div>
+          ))}
+        </div>
+      ) : (
       <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
         <Table>
           <TableHeader>
@@ -250,6 +266,7 @@ export function DataTable<T extends { id: string }>({
           </TableBody>
         </Table>
       </div>
+      )}
 
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (

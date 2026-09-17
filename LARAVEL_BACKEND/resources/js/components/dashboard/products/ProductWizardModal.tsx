@@ -93,15 +93,26 @@ export const emptyProductFields: ProductFormFields = {
   stock: '',
 }
 
-/** Delivery cards — one choice replaces the old item-type + fulfillment dropdowns. */
+/** How the customer receives it — shown after they pick physical / digital / service. */
 type CardId = 'delivered' | 'download' | 'link' | 'appointment' | 'manual'
 
-const CARDS: { id: CardId; title: string; desc: string; icon: typeof Truck }[] = [
-  { id: 'delivered', title: 'Delivered', desc: 'Shipped or handed over', icon: Truck },
-  { id: 'download', title: 'Download', desc: 'File after payment', icon: Download },
-  { id: 'link', title: 'Access link', desc: 'Course, portal, drive', icon: Link2 },
-  { id: 'appointment', title: 'Appointment', desc: 'Bookable service', icon: CalendarClock },
-  { id: 'manual', title: 'Manual', desc: 'You arrange delivery', icon: Handshake },
+const PRODUCT_TYPES: {
+  id: ProductFormFields['productType']
+  title: string
+  desc: string
+  icon: typeof Package
+}[] = [
+  { id: 'physical', title: 'Physical', desc: 'Needs delivery or pickup', icon: Package },
+  { id: 'digital', title: 'Digital', desc: 'File or access link', icon: Download },
+  { id: 'service', title: 'Service', desc: 'Appointment or session', icon: CalendarClock },
+]
+
+const CARDS: { id: CardId; title: string; desc: string; icon: typeof Truck; for: ProductFormFields['productType'] }[] = [
+  { id: 'delivered', title: 'Ship to customer', desc: 'Ask for a delivery address', icon: Truck, for: 'physical' },
+  { id: 'manual', title: 'Collect or arrange', desc: 'Pickup or you hand it over', icon: Handshake, for: 'physical' },
+  { id: 'download', title: 'File download', desc: 'PDF, ebook, zip after payment', icon: Download, for: 'digital' },
+  { id: 'link', title: 'Access link', desc: 'Course, drive, portal', icon: Link2, for: 'digital' },
+  { id: 'appointment', title: 'Appointment', desc: 'Book a time with you', icon: CalendarClock, for: 'service' },
 ]
 
 export function cardFor(productType: string, fulfillmentType: string): CardId {
@@ -223,7 +234,6 @@ export function ProductWizardModal({
   }
 
   const card = cardFor(data.productType, data.fulfillmentType)
-  const showAppointment = allowService || card === 'appointment'
 
   const applyCard = (id: CardId) => {
     setErrors((prev) => {
@@ -240,7 +250,7 @@ export function ProductWizardModal({
     } else if (id === 'appointment') {
       setData((p) => ({ ...p, productType: 'service', fulfillmentType: 'booking', trackInventory: false, requiresDeliveryAddress: false, stock: '0', bookable: true }))
     } else {
-      setData((p) => ({ ...p, productType: 'physical', fulfillmentType: 'manual', trackInventory: true, requiresDeliveryAddress: true }))
+      setData((p) => ({ ...p, productType: 'physical', fulfillmentType: 'manual', trackInventory: true, requiresDeliveryAddress: false }))
     }
   }
 
@@ -278,9 +288,18 @@ export function ProductWizardModal({
     return editExtras?.existingImageUrl ?? null
   }, [imageFile, editExtras?.existingImageUrl])
 
+  const applyType = (id: ProductFormFields['productType']) => {
+    if (id === 'physical') applyCard('delivered')
+    else if (id === 'digital') applyCard('download')
+    else applyCard('appointment')
+  }
+
+  const step2Label =
+    data.productType === 'digital' ? 'Access' : data.productType === 'service' ? 'Booking' : 'Delivery'
+
   const steps = [
     { n: 1, label: 'Basics' },
-    { n: 2, label: 'Delivery' },
+    { n: 2, label: step2Label },
     { n: 3, label: 'Finish' },
   ]
 
@@ -290,8 +309,10 @@ export function ProductWizardModal({
         <DialogHeader className="border-b px-5 pb-4 pt-5 sm:px-6">
           <DialogTitle>{mode === 'add' ? 'Add product' : 'Edit product'}</DialogTitle>
           <DialogDescription>
-            {step === 1 && 'Name it, price it, show it.'}
-            {step === 2 && 'How does the customer receive it?'}
+            {step === 1 && 'Name it, pick a category, and choose physical, digital, or service.'}
+            {step === 2 && data.productType === 'physical' && 'Delivery only applies to physical products.'}
+            {step === 2 && data.productType === 'digital' && 'File or link after payment — no shipping.'}
+            {step === 2 && data.productType === 'service' && 'Booking details — no shipping.'}
             {step === 3 && 'Everything else is optional.'}
           </DialogDescription>
           <ol className="mt-3 flex items-center gap-1.5">
@@ -416,19 +437,83 @@ export function ProductWizardModal({
 
               <div className="space-y-1.5">
                 <Label htmlFor="pw-category">Category</Label>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  {categories.length > 0
+                    ? 'Tap one below or type a new name. There is no separate category page — saving this product creates it.'
+                    : 'Type a name such as Books or Coffee. Saving this product creates the category. There is no separate category page.'}
+                </p>
                 <Input
                   id="pw-category"
                   list={datalistId}
                   value={data.category}
                   onChange={(e) => set('category', e.target.value)}
-                  placeholder="e.g. Coffee, Coaching, Templates"
+                  placeholder={categories[0] ? `e.g. ${categories[0]}` : 'e.g. Books'}
                 />
                 <datalist id={datalistId}>
                   {categories.map((c) => (
                     <option key={c} value={c} />
                   ))}
                 </datalist>
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {categories.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => set('category', c)}
+                        className={cn(
+                          'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
+                          data.category === c
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground'
+                        )}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <FieldError message={errors.category} />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Product type</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PRODUCT_TYPES.map((t) => {
+                    const locked = t.id === 'service' && !allowService && data.productType !== 'service'
+                    const active = data.productType === t.id
+                    if (locked) {
+                      return (
+                        <div
+                          key={t.id}
+                          title="Services are on Growth and above"
+                          className="flex cursor-not-allowed flex-col items-start gap-1 rounded-xl border border-border bg-muted/30 p-3 opacity-60"
+                        >
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-[13px] font-semibold text-muted-foreground">{t.title}</p>
+                          <p className="text-[11px] text-muted-foreground">Growth plan</p>
+                        </div>
+                      )
+                    }
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => applyType(t.id)}
+                        className={cn(
+                          'flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors',
+                          active ? 'border-primary bg-primary/[0.06]' : 'border-border hover:border-muted-foreground/40 hover:bg-muted/40'
+                        )}
+                      >
+                        <t.icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground')} />
+                        <p className="text-[13px] font-semibold text-foreground">{t.title}</p>
+                        <p className="text-[11px] text-muted-foreground">{t.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -444,43 +529,32 @@ export function ProductWizardModal({
             </div>
           )}
 
-          {/* STEP 2 — DELIVERY */}
+          {/* STEP 2 — type-specific fulfillment (delivery hidden unless physical) */}
           {step === 2 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {CARDS.map((c) => {
-                  if (c.id === 'appointment' && !showAppointment) {
+              {data.productType !== 'service' && (
+                <div className="grid grid-cols-2 gap-2">
+                  {CARDS.filter((c) => c.for === data.productType).map((c) => {
+                    const active = card === c.id
                     return (
-                      <div
+                      <button
                         key={c.id}
-                        title="Services are on Growth and above"
-                        className="flex cursor-not-allowed flex-col items-start gap-1 rounded-xl border border-border bg-muted/30 p-3 opacity-60"
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => applyCard(c.id)}
+                        className={cn(
+                          'flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors',
+                          active ? 'border-primary bg-primary/[0.06]' : 'border-border hover:border-muted-foreground/40 hover:bg-muted/40'
+                        )}
                       >
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-[13px] font-semibold text-muted-foreground">{c.title}</p>
-                        <p className="text-[11px] text-muted-foreground">Growth plan</p>
-                      </div>
+                        <c.icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground')} />
+                        <p className="text-[13px] font-semibold text-foreground">{c.title}</p>
+                        <p className="text-[11px] text-muted-foreground">{c.desc}</p>
+                      </button>
                     )
-                  }
-                  const active = card === c.id
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      disabled={isSubmitting}
-                      onClick={() => applyCard(c.id)}
-                      className={cn(
-                        'flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors',
-                        active ? 'border-primary bg-primary/[0.06]' : 'border-border hover:border-muted-foreground/40 hover:bg-muted/40'
-                      )}
-                    >
-                      <c.icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground')} />
-                      <p className="text-[13px] font-semibold text-foreground">{c.title}</p>
-                      <p className="text-[11px] text-muted-foreground">{c.desc}</p>
-                    </button>
-                  )
-                })}
-              </div>
+                  })}
+                </div>
+              )}
 
               {card === 'delivered' && (
                 <div className="space-y-3 rounded-xl bg-muted/40 p-4">
@@ -527,10 +601,24 @@ export function ProductWizardModal({
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium text-foreground">Ask for delivery address</p>
+                      <p className="text-sm font-medium text-foreground">Track stock</p>
+                      <p className="text-xs text-muted-foreground">Off means unlimited.</p>
                     </div>
-                    <Switch checked={data.requiresDeliveryAddress} onCheckedChange={(v) => set('requiresDeliveryAddress', v)} />
+                    <Switch checked={data.trackInventory} onCheckedChange={(v) => set('trackInventory', v)} />
                   </div>
+                  {data.trackInventory && (
+                    <div className="max-w-[200px] space-y-1.5">
+                      <Label>Stock on hand</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={data.stock}
+                        onChange={(e) => set('stock', e.target.value)}
+                        placeholder="0"
+                      />
+                      <FieldError message={errors.stock} />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -734,7 +822,8 @@ export function ProductWizardModal({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{data.name || 'Untitled product'}</p>
                   <p className="text-xs text-muted-foreground">
-                    {data.category || 'No category'} · {CARDS.find((c) => c.id === card)?.title}
+                    {data.category || 'No category'} · {PRODUCT_TYPES.find((t) => t.id === data.productType)?.title}
+                    {CARDS.find((c) => c.id === card) ? ` · ${CARDS.find((c) => c.id === card)?.title}` : ''}
                     {data.price !== '' ? ` · ${currencyCode ? `${currencyCode} ` : ''}${data.price}` : ''}
                   </p>
                 </div>
@@ -797,6 +886,14 @@ export function ProductWizardModal({
         </div>
 
         <div className="border-t px-5 py-4 sm:px-6">
+          <p className="mb-2 text-xs text-muted-foreground">
+            {step === 1 && !step1Valid && 'Add a name, price, and category to continue.'}
+            {step === 1 && step1Valid && 'Next: how they receive it — delivery only if this is physical.'}
+            {step === 2 && data.productType === 'physical' && 'Ship to an address, or they collect it from you.'}
+            {step === 2 && data.productType === 'digital' && 'Upload a file or paste an access link. No delivery address.'}
+            {step === 2 && data.productType === 'service' && 'Add booking details. No shipping.'}
+            {step === 3 && 'Tax and search extras are optional.'}
+          </p>
           <div className="flex items-center justify-between gap-3">
             <div>
               {step > 1 ? (
@@ -809,12 +906,6 @@ export function ProductWizardModal({
                 </Button>
               )}
             </div>
-            <p className="hidden text-xs text-muted-foreground sm:block">
-              {step === 1 && !step1Valid && 'Add a name, price and category to continue.'}
-              {step === 1 && step1Valid && 'Looking good — pick delivery next.'}
-              {step === 2 && 'Choose how the customer receives it.'}
-              {step === 3 && 'Tax and search extras are optional.'}
-            </p>
             <div>
               {step < 3 ? (
                 <Button type="button" size="sm" disabled={isSubmitting || (step === 1 && !step1Valid)} onClick={goNext}>

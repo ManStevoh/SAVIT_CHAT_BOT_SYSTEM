@@ -77,7 +77,8 @@ export interface Order {
   customerPhone: string
   customerEmail?: string | null
   deliveryAddress?: string | null
-  fulfillmentType?: 'delivery' | 'pickup' | 'dine_in' | string
+  fulfillmentType?: 'delivery' | 'pickup' | 'dine_in' | 'digital' | 'service' | string
+  needsShipping?: boolean
   dineInTableName?: string | null
   orderNotes?: string | null
   trackingNumber?: string | null
@@ -113,6 +114,9 @@ export interface OrderProduct {
   taxName?: string | null
   taxRate?: number | null
   taxInclusive?: boolean
+  productType?: 'physical' | 'digital' | 'service' | string
+  fulfillmentType?: string | null
+  needsShipping?: boolean
 }
 
 export interface Customer {
@@ -358,6 +362,8 @@ export interface User {
   marketingConsent?: boolean
   marketingConsentAt?: string | null
   selectedPlanId?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: string | null
 }
 
 export interface SystemLog {

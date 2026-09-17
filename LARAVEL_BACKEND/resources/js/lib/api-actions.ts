@@ -802,6 +802,28 @@ export async function updateProduct(
 }
 
 /**
+ * Rename a product category across the catalog.
+ * Laravel: POST /api/company/products/rename-category
+ */
+export async function renameProductCategory(
+  from: string,
+  to: string
+): Promise<{ success: boolean; updated?: number; category?: string; message?: string }> {
+  if (useMockApi()) {
+    await delay(400)
+    return { success: true, updated: 0, category: to }
+  }
+  try {
+    return await apiRequest<{ success: boolean; updated?: number; category?: string }>(
+      '/api/company/products/rename-category',
+      { method: 'POST', body: { from, to } }
+    )
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+/**
  * Delete product
  * Laravel: DELETE /api/company/products/:productId
  */
@@ -1426,6 +1448,21 @@ export async function restoreSetupChecklist(): Promise<{ success: boolean; messa
     return await apiRequest<{ success: boolean }>('/api/company/setup-status/restore', {
       method: 'POST',
     })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function markStorefrontLinkShared(): Promise<{ success: boolean; message?: string }> {
+  if (useMockApi()) {
+    await delay(200)
+    return { success: true }
+  }
+  try {
+    await apiRequest('/api/company/setup-status/share-storefront', {
+      method: 'POST',
+    })
+    return { success: true }
   } catch (e) {
     return handleApiError(e)
   }

@@ -71,7 +71,7 @@ class CompanySetupStatusTest extends TestCase
             ->assertJsonPath('dismissed', false)
             ->assertJsonPath('isComplete', false)
             ->assertJsonPath('completedCount', 0)
-            ->assertJsonPath('totalCount', 4)
+            ->assertJsonPath('totalCount', 5)
             ->assertJsonPath('steps.0.id', 'product')
             ->assertJsonPath('steps.0.done', false)
             ->assertJsonPath('steps.1.id', 'payments')
@@ -79,7 +79,9 @@ class CompanySetupStatusTest extends TestCase
             ->assertJsonPath('steps.2.id', 'business')
             ->assertJsonPath('steps.2.done', false)
             ->assertJsonPath('steps.3.id', 'storefront')
-            ->assertJsonPath('steps.3.done', false);
+            ->assertJsonPath('steps.3.done', false)
+            ->assertJsonPath('steps.4.id', 'share')
+            ->assertJsonPath('steps.4.done', false);
     }
 
     public function test_setup_steps_flip_when_configured(): void
@@ -110,19 +112,22 @@ class CompanySetupStatusTest extends TestCase
         $company->settings?->update([
             'orders_accept_mpesa' => true,
         ]);
+        $company->forceFill(['storefront_link_shared_at' => now()])->save();
 
         Sanctum::actingAs($owner);
 
         $this->getJson('/api/company/setup-status')
             ->assertOk()
             ->assertJsonPath('isComplete', true)
-            ->assertJsonPath('completedCount', 5)
+            ->assertJsonPath('completedCount', 6)
             ->assertJsonPath('percent', 100)
             ->assertJsonPath('steps.0.done', true)
             ->assertJsonPath('steps.1.done', true)
             ->assertJsonPath('steps.2.done', true)
             ->assertJsonPath('steps.3.done', true)
-            ->assertJsonPath('steps.4.done', true);
+            ->assertJsonPath('steps.4.done', true)
+            ->assertJsonPath('steps.5.id', 'share')
+            ->assertJsonPath('steps.5.done', true);
     }
 
     public function test_dismiss_setup_checklist(): void
@@ -138,5 +143,27 @@ class CompanySetupStatusTest extends TestCase
         $this->getJson('/api/company/setup-status')
             ->assertOk()
             ->assertJsonPath('dismissed', true);
+    }
+
+    public function test_sharing_storefront_link_completes_share_step(): void
+    {
+        ['company' => $company, 'owner' => $owner] = $this->freshCompany([
+            'storefront_enabled' => true,
+            'store_slug' => 'setup-co',
+        ]);
+        Sanctum::actingAs($owner);
+
+        $this->getJson('/api/company/setup-status')
+            ->assertOk()
+            ->assertJsonPath('steps.4.id', 'share')
+            ->assertJsonPath('steps.4.done', false)
+            ->assertJsonPath('steps.4.url', rtrim((string) config('app.url'), '/').'/s/setup-co');
+
+        $this->postJson('/api/company/setup-status/share-storefront')
+            ->assertOk()
+            ->assertJsonPath('steps.4.id', 'share')
+            ->assertJsonPath('steps.4.done', true);
+
+        $this->assertNotNull($company->fresh()?->storefront_link_shared_at);
     }
 }

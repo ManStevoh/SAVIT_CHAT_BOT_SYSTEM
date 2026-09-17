@@ -39,26 +39,28 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, MoreVertical, Users, UserCheck, UserPlus, Shield, LogIn, KeyRound, Trash2 } from "lucide-react"
+import { Search, MoreVertical, Users, Shield, LogIn, KeyRound, Trash2, MailCheck, MailX } from "lucide-react"
 import { useAdminUsers } from "@/lib/api-hooks"
 import { adminResetUserPassword, updateUserStatus, adminImpersonateUser, adminDeleteUser } from "@/lib/api-actions"
 import { setAuthCookie } from "@/lib/auth-cookie"
 import type { User } from "@/lib/mock-data"
 
 function formatRelativeTime(iso: string): string {
+  if (!iso) return "—"
   try {
     const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return "—"
     const now = new Date()
     const diffMs = now.getTime() - d.getTime()
     const diffMins = Math.floor(diffMs / 60000)
     if (diffMins < 1) return "Just now"
     if (diffMins < 60) return `${diffMins} min ago`
     const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24) return `${diffHours} hour ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`
     const diffDays = Math.floor(diffHours / 24)
-    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`
+    return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`
   } catch {
-    return iso
+    return "—"
   }
 }
 
@@ -66,6 +68,7 @@ export default function AdminUsersPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
+  const [emailFilter, setEmailFilter] = useState("all")
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -79,6 +82,7 @@ export default function AdminUsersPage() {
   const { data: users, error, isLoading, mutate } = useAdminUsers({
     search: searchQuery || undefined,
     role: roleFilter !== "all" ? roleFilter : undefined,
+    emailVerified: emailFilter !== "all" ? emailFilter : undefined,
   })
 
   const saveResetPassword = useCallback(async () => {
@@ -183,8 +187,8 @@ export default function AdminUsersPage() {
 
   const stats = [
     { name: "Total Users", value: list.length.toLocaleString(), icon: Users },
-    { name: "Active Today", value: "—", icon: UserCheck },
-    { name: "New This Week", value: "—", icon: UserPlus },
+    { name: "Email verified", value: list.filter((u) => u.emailVerified).length.toString(), icon: MailCheck },
+    { name: "Unverified", value: list.filter((u) => !u.emailVerified).length.toString(), icon: MailX },
     { name: "Admins", value: list.filter((u) => u.role === "admin").length.toString(), icon: Shield },
   ]
 
@@ -227,6 +231,15 @@ export default function AdminUsersPage() {
               <option value="company_owner">Company Owner</option>
               <option value="company_user">Company User</option>
             </select>
+            <select
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={emailFilter}
+              onChange={(e) => setEmailFilter(e.target.value)}
+            >
+              <option value="all">All emails</option>
+              <option value="verified">Verified email</option>
+              <option value="unverified">Unverified email</option>
+            </select>
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -248,6 +261,7 @@ export default function AdminUsersPage() {
                   <TableHead>User</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Consent</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Active</TableHead>
@@ -273,6 +287,19 @@ export default function AdminUsersPage() {
                       <Badge variant={user.role === "admin" ? "default" : "secondary"}>
                         {user.role.replace("_", " ")}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.emailVerified ? (
+                        <Badge className="gap-1 bg-emerald-600/15 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400">
+                          <MailCheck className="h-3 w-3" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="gap-1">
+                          <MailX className="h-3 w-3" />
+                          Unverified
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground space-y-1">
                       <div>

@@ -733,6 +733,9 @@ export interface DashboardSummaryData {
   settings: {
     displayCurrency: string
     companyName: string
+    storefrontEnabled?: boolean
+    storefrontUrl?: string | null
+    allowStorefront?: boolean
   }
   setupStatus: SetupStatus
   period: string
@@ -1028,6 +1031,7 @@ export type SetupStatusStep = {
   description: string
   href: string
   done: boolean
+  url?: string | null
 }
 
 export type SetupStatus = {
@@ -1089,9 +1093,16 @@ export function useSetupStatus(initialData?: SetupStatus) {
             href: '/dashboard/storefront',
             done: false,
           },
+          {
+            id: 'share',
+            title: 'Share your store link',
+            description: 'Copy the link and send it on WhatsApp, Instagram, or SMS so customers can find your shop.',
+            href: '/dashboard/storefront?tab=link',
+            done: false,
+          },
         ],
         completedCount: 0,
-        totalCount: 5,
+        totalCount: 6,
         percent: 0,
         dismissed: false,
         isComplete: false,
@@ -1319,7 +1330,7 @@ export function useAdminCompanies(filters?: { status?: string; plan?: string; se
  * Fetch all users (admin only)
  * API Endpoint: GET /api/admin/users
  */
-export function useAdminUsers(filters?: { role?: string; status?: string; search?: string }) {
+export function useAdminUsers(filters?: { role?: string; status?: string; search?: string; emailVerified?: string }) {
   return useSWR<User[]>(
     ['admin-users', filters],
     async () => {
@@ -1341,6 +1352,11 @@ export function useAdminUsers(filters?: { role?: string; status?: string; search
           user.name.toLowerCase().includes(filters.search!.toLowerCase()) ||
           user.email.toLowerCase().includes(filters.search!.toLowerCase())
         )
+      }
+      if (filters?.emailVerified === 'verified') {
+        data = data.filter(user => user.emailVerified)
+      } else if (filters?.emailVerified === 'unverified') {
+        data = data.filter(user => !user.emailVerified)
       }
       return data
     },

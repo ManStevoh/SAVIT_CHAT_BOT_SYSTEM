@@ -112,7 +112,7 @@ class OrderController extends Controller
             }
         }
 
-        if (! empty($order->delivery_address)) {
+        if ($order->needsPhysicalShipping() && ! empty($order->delivery_address)) {
             $lines[] = "Delivery address: {$order->delivery_address}";
         }
 
@@ -129,7 +129,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'No company.'], 403);
         }
 
-        $query = Order::with('orderProducts')->where('company_id', $companyId)->orderByDesc('created_at');
+        $query = Order::with(['orderProducts.product'])->where('company_id', $companyId)->orderByDesc('created_at');
 
         if ($request->filled('status') && $request->status !== 'all') {
             $status = $request->status;
@@ -144,7 +144,7 @@ class OrderController extends Controller
                           $sub->where('payment_status', 'paid')
                               ->whereNotIn('status', ['shipped', 'delivered', 'cancelled']);
                       });
-                });
+                })->whereNeedsPhysicalShipping();
             } elseif ($status === 'shipped_delivered' || $status === 'completed') {
                 $query->whereIn('status', ['shipped', 'delivered']);
             } elseif ($status === 'pending') {
@@ -182,46 +182,7 @@ class OrderController extends Controller
         $ordersData = $orders->map(function (Order $order) use ($posts) {
             $post = $order->social_post_id ? $posts->get($order->social_post_id) : null;
 
-            return [
-                'id' => (string) $order->id,
-                'orderNumber' => $order->order_number,
-                'customerName' => $order->customer_name,
-                'customerPhone' => $order->customer_phone,
-                'customerEmail' => $order->customer_email,
-                'deliveryAddress' => $order->delivery_address,
-                'fulfillmentType' => $order->fulfillment_type ?? 'delivery',
-                'dineInTableName' => $order->dine_in_table_name,
-                'orderNotes' => $order->order_notes,
-                'trackingNumber' => $order->tracking_number,
-                'courierName' => $order->courier_name,
-                'shippedAt' => $order->shipped_at?->toIso8601String(),
-                'deliveryFee' => (float) ($order->delivery_fee ?? 0),
-                'chatId' => $order->chat_id ? (string) $order->chat_id : null,
-                'products' => $order->orderProducts->map(fn ($p) => [
-                    'id' => (string) $p->id,
-                    'name' => $p->name,
-                    'quantity' => (int) $p->quantity,
-                    'price' => (float) $p->price,
-                    'taxAmount' => (float) ($p->tax_amount ?? 0),
-                    'lineSubtotal' => (float) ($p->line_subtotal ?? ((float) $p->price * (int) $p->quantity)),
-                    'taxName' => $p->tax_name,
-                    'taxRate' => $p->tax_rate !== null ? (float) $p->tax_rate : null,
-                    'taxInclusive' => (bool) ($p->tax_inclusive ?? false),
-                ])->values()->all(),
-                'subtotal' => (float) ($order->subtotal ?? $order->total),
-                'taxTotal' => (float) ($order->tax_total ?? 0),
-                'taxBreakdown' => is_array($order->tax_breakdown) ? $order->tax_breakdown : [],
-                'total' => (float) $order->total,
-                'status' => $order->status,
-                'paymentStatus' => $order->payment_status,
-                'attribution' => $post ? [
-                    'socialPostId' => (string) $post->id,
-                    'postTitle' => $post->title ?? Str::limit($post->content, 40),
-                    'platform' => $post->platform,
-                ] : null,
-                'createdAt' => $order->created_at->toIso8601String(),
-                'updatedAt' => $order->updated_at->toIso8601String(),
-            ];
+            return $this->serializeCompanyOrder($order, $post);
         });
 
         return response()->json([
@@ -239,43 +200,10 @@ class OrderController extends Controller
             return response()->json(['message' => 'Order not found.'], 404);
         }
 
-        $order->load('orderProducts');
+        $order->load(['orderProducts.product']);
 
         return response()->json([
-            'order' => [
-                'id' => (string) $order->id,
-                'orderNumber' => $order->order_number,
-                'customerName' => $order->customer_name,
-                'customerPhone' => $order->customer_phone,
-                'customerEmail' => $order->customer_email,
-                'deliveryAddress' => $order->delivery_address,
-                'fulfillmentType' => $order->fulfillment_type ?? 'delivery',
-                'dineInTableName' => $order->dine_in_table_name,
-                'orderNotes' => $order->order_notes,
-                'trackingNumber' => $order->tracking_number,
-                'courierName' => $order->courier_name,
-                'shippedAt' => $order->shipped_at?->toIso8601String(),
-                'deliveryFee' => (float) ($order->delivery_fee ?? 0),
-                'products' => $order->orderProducts->map(fn ($p) => [
-                    'id' => (string) $p->id,
-                    'name' => $p->name,
-                    'quantity' => (int) $p->quantity,
-                    'price' => (float) $p->price,
-                    'taxAmount' => (float) ($p->tax_amount ?? 0),
-                    'lineSubtotal' => (float) ($p->line_subtotal ?? ((float) $p->price * (int) $p->quantity)),
-                    'taxName' => $p->tax_name,
-                    'taxRate' => $p->tax_rate !== null ? (float) $p->tax_rate : null,
-                    'taxInclusive' => (bool) ($p->tax_inclusive ?? false),
-                ])->values()->all(),
-                'subtotal' => (float) ($order->subtotal ?? $order->total),
-                'taxTotal' => (float) ($order->tax_total ?? 0),
-                'taxBreakdown' => is_array($order->tax_breakdown) ? $order->tax_breakdown : [],
-                'total' => (float) $order->total,
-                'status' => $order->status,
-                'paymentStatus' => $order->payment_status,
-                'createdAt' => $order->created_at->toIso8601String(),
-                'updatedAt' => $order->updated_at->toIso8601String(),
-            ],
+            'order' => $this->serializeCompanyOrder($order),
         ]);
     }
 
@@ -625,5 +553,59 @@ class OrderController extends Controller
             'whatsappSent' => $whatsappSent || $markedPaidViaService,
             'whatsappError' => $whatsappError,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function serializeCompanyOrder(Order $order, ?SocialPost $post = null): array
+    {
+        $order->loadMissing('orderProducts.product');
+        $needsShipping = $order->needsPhysicalShipping();
+
+        return [
+            'id' => (string) $order->id,
+            'orderNumber' => $order->order_number,
+            'customerName' => $order->customer_name,
+            'customerPhone' => $order->customer_phone,
+            'customerEmail' => $order->customer_email,
+            'deliveryAddress' => $needsShipping ? $order->delivery_address : null,
+            'fulfillmentType' => $order->dashboardFulfillmentType(),
+            'needsShipping' => $needsShipping,
+            'dineInTableName' => $order->dine_in_table_name,
+            'orderNotes' => $order->order_notes,
+            'trackingNumber' => $order->tracking_number,
+            'courierName' => $order->courier_name,
+            'shippedAt' => $order->shipped_at?->toIso8601String(),
+            'deliveryFee' => $needsShipping ? (float) ($order->delivery_fee ?? 0) : 0.0,
+            'chatId' => $order->chat_id ? (string) $order->chat_id : null,
+            'products' => $order->orderProducts->map(fn (OrderProduct $p) => [
+                'id' => (string) $p->id,
+                'name' => $p->name,
+                'quantity' => (int) $p->quantity,
+                'price' => (float) $p->price,
+                'taxAmount' => (float) ($p->tax_amount ?? 0),
+                'lineSubtotal' => (float) ($p->line_subtotal ?? ((float) $p->price * (int) $p->quantity)),
+                'taxName' => $p->tax_name,
+                'taxRate' => $p->tax_rate !== null ? (float) $p->tax_rate : null,
+                'taxInclusive' => (bool) ($p->tax_inclusive ?? false),
+                'productType' => $p->catalogProductType(),
+                'fulfillmentType' => $p->catalogFulfillmentType() ?: null,
+                'needsShipping' => $p->needsPhysicalShipping(),
+            ])->values()->all(),
+            'subtotal' => (float) ($order->subtotal ?? $order->total),
+            'taxTotal' => (float) ($order->tax_total ?? 0),
+            'taxBreakdown' => is_array($order->tax_breakdown) ? $order->tax_breakdown : [],
+            'total' => (float) $order->total,
+            'status' => $order->status,
+            'paymentStatus' => $order->payment_status,
+            'attribution' => $post ? [
+                'socialPostId' => (string) $post->id,
+                'postTitle' => $post->title ?? Str::limit($post->content, 40),
+                'platform' => $post->platform,
+            ] : null,
+            'createdAt' => $order->created_at?->toIso8601String(),
+            'updatedAt' => $order->updated_at?->toIso8601String(),
+        ];
     }
 }

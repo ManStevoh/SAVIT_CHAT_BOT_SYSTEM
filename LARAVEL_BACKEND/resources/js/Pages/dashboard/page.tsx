@@ -14,6 +14,7 @@ import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSetting
 import { CHART_ACCENT, CHART_PRIMARY } from '@/lib/chart-colors'
 import { MessageSquare, ShoppingCart, Users, Bot, ArrowRight } from 'lucide-react'
 import { GettingStartedChecklist } from '@/components/dashboard/GettingStartedChecklist'
+import { StorefrontShareActions } from '@/components/dashboard/StorefrontShareActions'
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -95,7 +96,7 @@ function DashboardPageContent() {
         </div>
       )}
 
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -108,6 +109,17 @@ function DashboardPageContent() {
             Here&apos;s what&apos;s happening with your business today.
           </p>
         </div>
+        {companySettings?.allowStorefront && companySettings.storefrontUrl && (
+          <div className="flex min-w-0 flex-col items-stretch gap-2 sm:items-end">
+            <code className="max-w-full truncate rounded-lg border bg-muted/40 px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground">
+              {companySettings.storefrontUrl}
+            </code>
+            <StorefrontShareActions
+              url={companySettings.storefrontUrl}
+              companyName={companySettings.companyName}
+            />
+          </div>
+        )}
       </div>
 
       <StatsGrid columns={4}>

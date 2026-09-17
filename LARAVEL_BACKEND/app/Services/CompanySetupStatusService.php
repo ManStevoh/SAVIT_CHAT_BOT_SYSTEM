@@ -14,7 +14,7 @@ class CompanySetupStatusService
 {
     /**
      * @return array{
-     *   steps: list<array{id: string, title: string, description: string, href: string, done: bool}>,
+     *   steps: list<array{id: string, title: string, description: string, href: string, done: bool, url?: string|null}>,
      *   completedCount: int,
      *   totalCount: int,
      *   percent: int,
@@ -60,6 +60,11 @@ class CompanySetupStatusService
         $storefrontReady = (bool) $company->storefront_enabled
             && is_string($company->store_slug)
             && trim($company->store_slug) !== '';
+        $allowsStorefront = PlanLimitService::companyAllowsStorefront($company);
+        $storefrontUrl = (is_string($company->store_slug) && trim($company->store_slug) !== '')
+            ? rtrim((string) config('app.url'), '/').'/s/'.trim($company->store_slug)
+            : null;
+        $storefrontShared = $company->storefront_link_shared_at !== null;
 
         $steps = [];
         if ($planIncludesWhatsapp) {
@@ -99,6 +104,16 @@ class CompanySetupStatusService
             'href' => '/dashboard/storefront',
             'done' => $storefrontReady,
         ];
+        if ($allowsStorefront) {
+            $steps[] = [
+                'id' => 'share',
+                'title' => 'Share your store link',
+                'description' => 'Copy the link and send it on WhatsApp, Instagram, or SMS so customers can find your shop.',
+                'href' => '/dashboard/storefront?tab=link',
+                'done' => $storefrontShared,
+                'url' => $storefrontUrl,
+            ];
+        }
 
         $completed = count(array_filter($steps, static fn (array $s): bool => $s['done']));
         $total = count($steps);

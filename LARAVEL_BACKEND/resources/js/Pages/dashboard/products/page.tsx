@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { DataTable, type Column, type Filter } from '@/components/shared/data-table'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { ConfirmModal } from '@/components/shared/modal'
+import { ConfirmModal, Modal } from '@/components/shared/modal'
+import { parseProductsTab } from '@/components/dashboard/sidebar'
+import { cn } from '@/lib/utils'
 import { ProductWizardModal } from '@/components/dashboard/products/ProductWizardModal'
 import type { ProductFormFields, WizardFiles } from '@/components/dashboard/products/ProductWizardModal'
 import { emptyProductFields, validateProductFields } from '@/components/dashboard/products/ProductWizardModal'
@@ -27,6 +30,7 @@ import {
   deleteProductVariant,
   uploadProductImage,
   uploadVariantImage,
+  renameProductCategory,
 } from '@/lib/api-actions'
 import { ProductVariantsModal } from '@/components/dashboard/products/product-variants-modal'
 import { downloadFile, resolveBackendMediaUrl } from '@/lib/api-client'
@@ -44,6 +48,9 @@ import {
   Upload,
   Loader2,
   Layers,
+  LayoutGrid,
+  LayoutList,
+  Tags,
 } from 'lucide-react'
 import {
   Popover,
@@ -125,10 +132,19 @@ function ProductThumbImg({
 
 export default function ProductsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const activeTab = parseProductsTab(searchParams.get('tab'))
   const { mutate } = useSWRConfig()
   const [searchQuery, setSearchQuery] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [catalogView, setCatalogView] = useState<'list' | 'grid'>(() => {
+    if (typeof window === 'undefined') return 'list'
+    return window.localStorage.getItem('relayiq.products.view') === 'grid' ? 'grid' : 'list'
+  })
+  const [renameFrom, setRenameFrom] = useState<string | null>(null)
+  const [renameTo, setRenameTo] = useState('')
+  const [renaming, setRenaming] = useState(false)
   
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -155,10 +171,12 @@ export default function ProductsPage() {
 
   // API: GET /api/company/products (useProducts)
   const { data: products, isLoading, error } = useProducts({
-    category: categoryFilter,
-    status: statusFilter,
-    search: searchQuery,
+    category: activeTab === 'categories' ? 'all' : categoryFilter,
+    status: activeTab === 'categories' ? 'all' : statusFilter,
+    search: activeTab === 'categories' ? '' : searchQuery,
   })
+
+  const refreshProducts = () => mutate((key) => Array.isArray(key) && key[0] === 'products')
 
   useEffect(() => {
     if (!isEditModalOpen || !selectedProduct || !products) return
@@ -188,6 +206,23 @@ export default function ProductsPage() {
     }
     return [...set].sort()
   }, [products])
+
+  const categoryRows = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of products ?? []) {
+      const name = p.category?.trim()
+      if (!name) continue
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }))
+  }, [products])
+
+  const setCatalogViewPersist = (next: 'list' | 'grid') => {
+    setCatalogView(next)
+    if (typeof window !== 'undefined') window.localStorage.setItem('relayiq.products.view', next)
+  }
 
   // Starter plan catalog cap (KSh 0: 20 physical or digital products).
   const { data: subscription } = useSubscription()
@@ -238,7 +273,7 @@ export default function ProductsPage() {
 
       if (result.success) {
         // Revalidate products data
-        mutate(['products', { category: categoryFilter, status: statusFilter, search: searchQuery }])
+        refreshProducts()
         setIsAddModalOpen(false)
         setFormData(initialFormData)
         return { ok: true }
@@ -587,10 +622,7 @@ export default function ProductsPage() {
       label: 'Category',
       options: [
         { value: 'all', label: 'All Categories' },
-        { value: 'Phones', label: 'Phones' },
-        { value: 'Laptops', label: 'Laptops' },
-        { value: 'Tablets', label: 'Tablets' },
-        { value: 'Accessories', label: 'Accessories' },
+        ...existingCategories.map((c) => ({ value: c, label: c })),
       ],
     },
     {
@@ -604,6 +636,51 @@ export default function ProductsPage() {
     },
   ]
 
+  const handleRenameCategory = async () => {
+    if (!renameFrom) return
+    const next = renameTo.trim()
+    if (!next) return
+    setRenaming(true)
+    try {
+      const result = await renameProductCategory(renameFrom, next)
+      if (result.success) {
+        refreshProducts()
+        if (categoryFilter === renameFrom) setCategoryFilter(next)
+        setRenameFrom(null)
+        setRenameTo('')
+      }
+    } finally {
+      setRenaming(false)
+    }
+  }
+
+  const viewToggle = (
+    <div className="flex rounded-lg border border-border/60 p-0.5">
+      <Button
+        type="button"
+        variant={catalogView === 'list' ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        aria-label="List view"
+        aria-pressed={catalogView === 'list'}
+        onClick={() => setCatalogViewPersist('list')}
+      >
+        <LayoutList className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={catalogView === 'grid' ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        aria-label="Grid view"
+        aria-pressed={catalogView === 'grid'}
+        onClick={() => setCatalogViewPersist('grid')}
+      >
+        <LayoutGrid className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+
   // Product form fields (shared between add and edit)
   return (
     <div className="space-y-6">
@@ -612,7 +689,11 @@ export default function ProductsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Products</h1>
-            <p className="text-muted-foreground">Manage your product catalog</p>
+            <p className="text-muted-foreground">
+              {activeTab === 'categories'
+                ? 'Create and rename categories here, or type a new name when you add a product.'
+                : 'Switch list or grid. Categories live under Products in the left nav.'}
+            </p>
           </div>
         <div className="flex flex-wrap items-center gap-2">
           <TooltipProvider>
@@ -708,6 +789,77 @@ export default function ProductsPage() {
           </p>
         )}
         </div>
+      {activeTab === 'categories' ? (
+      <Card className="bg-card border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base font-medium">Categories</CardTitle>
+          <Button
+            size="sm"
+            onClick={() => {
+              setFormData({ ...initialFormData })
+              setSelectedProduct(null)
+              setWizardKey(Date.now())
+              setIsAddModalOpen(true)
+            }}
+            disabled={catalogFull}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add product in a category
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : categoryRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No categories yet. Add a product and type a category name — that creates it.
+            </p>
+          ) : (
+            <div className="divide-y divide-border/60 rounded-xl border border-border/60">
+              {categoryRows.map((row) => (
+                <div key={row.name} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Tags className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-foreground">{row.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {row.count} product{row.count === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCategoryFilter(row.name)
+                        router.push(`/dashboard/products?category=${encodeURIComponent(row.name)}`)
+                      }}
+                    >
+                      View products
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setRenameFrom(row.name)
+                        setRenameTo(row.name)
+                      }}
+                    >
+                      Rename
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      ) : (
+      <>
       <StatsGrid columns={4}>
         <StatsCard
           title="Total Products"
@@ -755,10 +907,48 @@ export default function ProductsPage() {
               if (key === 'status') setStatusFilter(value)
             }}
             emptyMessage="No products found"
-            emptyDescription="Add products to your catalog to get started"
+            emptyDescription="Add a product to start your catalog. Type a category name on the product — that creates it."
+            view={catalogView}
+            toolbarExtra={viewToggle}
+            gridCell={(product) => {
+              const thumb = productPrimaryDisplayImage(product)
+              return (
+                <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+                  <div className="relative aspect-[4/3] bg-muted/40">
+                    {thumb ? (
+                      <ProductThumbImg src={thumb} alt={product.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Package className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute right-2 top-2">
+                      {columns.find((c) => c.key === 'actions')?.cell(product)}
+                    </div>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1 p-3">
+                    <p className="line-clamp-2 text-sm font-semibold text-foreground">{product.name}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {product.category || 'Uncategorized'}
+                    </p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {product.variants && product.variants.length > 0
+                        ? `From ${formatCurrency(Math.min(...product.variants.map((v) => v.price)))}`
+                        : formatCurrency(product.price)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {(product.productType ?? 'physical')}
+                      {product.productType === 'physical' || product.trackInventory ? ` · ${product.stock} in stock` : ''}
+                    </p>
+                  </div>
+                </div>
+              )
+            }}
           />
         </CardContent>
       </Card>
+      </>
+      )}
 
       {/* Add Product Wizard */}
       <ProductWizardModal
@@ -827,6 +1017,47 @@ export default function ProductsPage() {
       />
 
       {/* Delete Confirmation Modal */}
+      <Modal
+        open={renameFrom !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenameFrom(null)
+            setRenameTo('')
+          }
+        }}
+        title="Rename category"
+        description="This updates the category name on every product that uses it."
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRenameFrom(null)
+                setRenameTo('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void handleRenameCategory()} disabled={renaming || !renameTo.trim()}>
+              {renaming ? 'Saving…' : 'Save name'}
+            </Button>
+          </>
+        }
+      >
+        <Input
+          value={renameTo}
+          onChange={(e) => setRenameTo(e.target.value)}
+          placeholder="Category name"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              void handleRenameCategory()
+            }
+          }}
+        />
+      </Modal>
+
       <ConfirmModal
         open={isDeleteModalOpen}
         onOpenChange={(open) => {

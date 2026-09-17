@@ -503,9 +503,9 @@ export default function StoreCheckoutPage({
                         <Download className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">Digital delivery</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Digital products</p>
                         <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                          This cart is digital only — no delivery address needed. After payment, files or license keys are sent to the email above.
+                          This cart is digital only — no shipping address needed. After payment, files or license keys are sent to the email above.
                         </p>
                       </div>
                     </div>

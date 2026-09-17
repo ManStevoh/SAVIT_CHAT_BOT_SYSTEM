@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Company extends Model
 {
@@ -30,6 +31,7 @@ class Company extends Model
         'plan',
         'status',
         'setup_checklist_dismissed_at',
+        'storefront_link_shared_at',
         'growth_pilot_at',
         'first_attributed_sale_at',
         'growth_demo_mode',
@@ -52,6 +54,7 @@ class Company extends Model
         'storefront_sections' => 'array',
         'custom_domain_verified_at' => 'datetime',
         'setup_checklist_dismissed_at' => 'datetime',
+        'storefront_link_shared_at' => 'datetime',
         'growth_pilot_at' => 'datetime',
         'first_attributed_sale_at' => 'datetime',
         'growth_demo_mode' => 'boolean',
@@ -175,5 +178,34 @@ class Company extends Model
         $this->loadMissing('settings');
 
         return $this->settings?->displayCurrencyCode() ?? 'KES';
+    }
+
+    /** Open the public shop and give it a unique /s/{slug} link. */
+    public function enablePublicStorefront(): void
+    {
+        $updates = ['storefront_enabled' => true];
+        if (! is_string($this->store_slug) || trim($this->store_slug) === '') {
+            $updates['store_slug'] = static::uniqueStoreSlugFromName((string) $this->name, $this->id);
+        }
+        $this->fill($updates);
+        $this->save();
+    }
+
+    public static function uniqueStoreSlugFromName(string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name) ?: 'store';
+        $slug = $base;
+        $suffix = 1;
+        while (
+            static::query()
+                ->where('store_slug', $slug)
+                ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $suffix++;
+            $slug = $base.'-'.$suffix;
+        }
+
+        return $slug;
     }
 }
