@@ -49,7 +49,7 @@ import {
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
-import { useCompanySettings, useSubscription } from "@/lib/api-hooks"
+import { useCompanySettings, useSubscription, useNavBadges, type NavBadges } from "@/lib/api-hooks"
 import { isStarterPlan } from "@/lib/use-plan"
 import type { LucideIcon } from "lucide-react"
 
@@ -344,28 +344,56 @@ function isNavActive(pathname: string, href: string, search = "") {
   return true
 }
 
+function badgeForHref(href: string, badges: NavBadges | undefined): number {
+  if (!badges) return 0
+  if (href === "/dashboard/chats") return badges.unreadChats
+  if (href === "/dashboard/orders") return badges.openOrders
+  if (href === "/dashboard/orders?status=pending") return badges.pendingOrders
+  if (href === "/dashboard/orders?status=waiting_shipping") return badges.readyToShip
+  return 0
+}
+
+function NavCount({ count, nested }: { count: number; nested?: boolean }) {
+  if (count <= 0) return null
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "ml-auto inline-flex shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground",
+        nested ? "h-4 min-w-4 px-1 text-[9px]" : "h-[18px] min-w-[18px] px-1 text-[10px]"
+      )}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  )
+}
+
 function NavItemLink({
   item,
   collapsed,
   onNavigate,
   nested = false,
   forceActive,
+  badges,
 }: {
   item: DashboardNavItem
   collapsed?: boolean
   onNavigate?: () => void
   nested?: boolean
   forceActive?: boolean
+  badges?: NavBadges
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const search = searchParams.toString()
   const isActive = forceActive ?? isNavActive(pathname, item.href, search)
+  const count = badgeForHref(item.href, badges)
 
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
+      aria-label={item.name}
       className={cn(
         "relative flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition-colors",
         nested ? "px-2.5 py-1.5 text-[12px]" : "px-2.5",
@@ -374,7 +402,7 @@ function NavItemLink({
           : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
         collapsed && "justify-center px-2"
       )}
-      title={collapsed ? item.name : undefined}
+      title={collapsed ? (count > 0 ? `${item.name} (${count})` : item.name) : undefined}
     >
       {isActive && (
         <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
@@ -383,7 +411,14 @@ function NavItemLink({
         className={cn("shrink-0", nested ? "h-3.5 w-3.5" : "h-4 w-4", isActive && "text-primary")}
         strokeWidth={isActive ? 2 : 1.75}
       />
-      {!collapsed && <span className="truncate">{item.name}</span>}
+      {!collapsed && <span className="min-w-0 truncate">{item.name}</span>}
+      {!collapsed && <NavCount count={count} nested={nested} />}
+      {collapsed && count > 0 && (
+        <span
+          aria-hidden
+          className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary"
+        />
+      )}
     </Link>
   )
 }
@@ -392,15 +427,18 @@ function ExpandableNavItem({
   item,
   collapsed,
   onNavigate,
+  badges,
 }: {
   item: DashboardNavItem
   collapsed?: boolean
   onNavigate?: () => void
+  badges?: NavBadges
 }) {
   const pathname = usePathname()
   const sectionActive = isPathActive(pathname, item.href)
   const [userToggled, setUserToggled] = useState<boolean | null>(null)
   const open = collapsed ? false : userToggled !== null ? userToggled : sectionActive
+  const count = badgeForHref(item.href, badges)
 
   if (collapsed) {
     return (
@@ -409,6 +447,7 @@ function ExpandableNavItem({
         collapsed
         onNavigate={onNavigate}
         forceActive={sectionActive}
+        badges={badges}
       />
     )
   }
@@ -423,6 +462,7 @@ function ExpandableNavItem({
           sectionActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/70"
         )}
         aria-expanded={open}
+        aria-label={item.name}
       >
         {sectionActive && (
           <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
@@ -432,6 +472,7 @@ function ExpandableNavItem({
           strokeWidth={sectionActive ? 2 : 1.75}
         />
         <span className="min-w-0 flex-1 truncate text-left">{item.name}</span>
+        <NavCount count={count} />
         <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-sidebar-foreground/50 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
@@ -442,6 +483,7 @@ function ExpandableNavItem({
               item={child}
               nested
               onNavigate={onNavigate}
+              badges={badges}
             />
           ))}
         </div>
@@ -450,7 +492,7 @@ function ExpandableNavItem({
   )
 }
 
-function renderNavItem(item: DashboardNavItem, collapsed: boolean, onNavigate?: () => void) {
+function renderNavItem(item: DashboardNavItem, collapsed: boolean, onNavigate?: () => void, badges?: NavBadges) {
   if (item.children?.length) {
     return (
       <ExpandableNavItem
@@ -458,6 +500,7 @@ function renderNavItem(item: DashboardNavItem, collapsed: boolean, onNavigate?: 
         item={item}
         collapsed={collapsed}
         onNavigate={onNavigate}
+        badges={badges}
       />
     )
   }
@@ -467,6 +510,7 @@ function renderNavItem(item: DashboardNavItem, collapsed: boolean, onNavigate?: 
       item={item}
       collapsed={collapsed}
       onNavigate={onNavigate}
+      badges={badges}
     />
   )
 }
@@ -481,6 +525,7 @@ export function DashboardNavLinks({
   const pathname = usePathname()
   const { data: settings } = useCompanySettings()
   const { data: subscription } = useSubscription()
+  const { data: badges } = useNavBadges()
   const isStarter = isStarterPlan(subscription?.plan)
 
   const aiActive = useMemo(
@@ -549,7 +594,7 @@ export function DashboardNavLinks({
                   aria-hidden
                 />
               )}
-              {open && group.items.map((item) => renderNavItem(item, collapsed, onNavigate))}
+              {open && group.items.map((item) => renderNavItem(item, collapsed, onNavigate, badges))}
             </div>
           )
         }
@@ -567,7 +612,7 @@ export function DashboardNavLinks({
                 aria-hidden
               />
             )}
-            {group.items.map((item) => renderNavItem(item, collapsed, onNavigate))}
+            {group.items.map((item) => renderNavItem(item, collapsed, onNavigate, badges))}
           </div>
         )
       })}

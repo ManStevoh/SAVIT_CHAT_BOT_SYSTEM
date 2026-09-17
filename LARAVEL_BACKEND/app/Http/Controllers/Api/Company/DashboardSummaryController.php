@@ -196,6 +196,48 @@ class DashboardSummaryController extends Controller
         ]);
     }
 
+    /**
+     * Lightweight counts for left-nav badges (unread chats + orders that still need action).
+     */
+    public function badges(Request $request): JsonResponse
+    {
+        $companyId = $request->user()?->company_id;
+        if (! $companyId) {
+            return response()->json(['message' => 'No company.'], 403);
+        }
+
+        $unreadChats = (int) Chat::where('company_id', $companyId)->sum('unread_count');
+
+        $pendingOrders = Order::where('company_id', $companyId)
+            ->whereNotIn('status', ['shipped', 'delivered', 'cancelled'])
+            ->where(function ($q) {
+                $q->where('status', 'pending')->orWhere('payment_status', 'pending');
+            })
+            ->count();
+
+        $readyToShip = Order::where('company_id', $companyId)
+            ->where(function ($q) {
+                $q->where('status', 'confirmed')
+                    ->orWhere(function ($sub) {
+                        $sub->where('payment_status', 'paid')
+                            ->whereNotIn('status', ['shipped', 'delivered', 'cancelled']);
+                    });
+            })
+            ->whereNeedsPhysicalShipping()
+            ->count();
+
+        $openOrders = Order::where('company_id', $companyId)
+            ->whereNotIn('status', ['shipped', 'delivered', 'cancelled'])
+            ->count();
+
+        return response()->json([
+            'unreadChats' => $unreadChats,
+            'pendingOrders' => $pendingOrders,
+            'readyToShip' => $readyToShip,
+            'openOrders' => $openOrders,
+        ]);
+    }
+
     private function seriesByDay($query, int $days): array
     {
         $labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
