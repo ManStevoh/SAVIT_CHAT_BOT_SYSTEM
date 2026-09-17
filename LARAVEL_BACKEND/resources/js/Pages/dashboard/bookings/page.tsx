@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { parseBookingsTab } from '@/components/dashboard/sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -26,7 +28,6 @@ import { isAtLimit } from '@/lib/use-plan'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
-  Calendar as CalendarIcon,
   CalendarClock,
   CalendarDays,
   Check,
@@ -34,14 +35,12 @@ import {
   ChevronRight,
   Copy,
   ExternalLink,
-  History,
   Link2,
   Loader2,
   Mail,
   MoreHorizontal,
   Phone,
   RefreshCw,
-  Settings2,
 } from 'lucide-react'
 
 type AvailabilityRow = { weekday: number; startTime: string; endTime: string }
@@ -119,8 +118,8 @@ function sameDay(a: Date, b: Date) {
 }
 
 export default function BookingsPage() {
-  const [tab, setTab] = useState<'schedule' | 'setup'>('schedule')
-  const [view, setView] = useState<'upcoming' | 'calendar' | 'past'>('upcoming')
+  const searchParams = useSearchParams()
+  const bookingsTab = parseBookingsTab(searchParams.get('tab'))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -339,55 +338,9 @@ export default function BookingsPage() {
         />
       )}
 
-      {/* Tabs */}
-      <div className="overflow-x-auto pb-1">
-        <div className="flex min-w-max gap-1 rounded-2xl border border-border bg-muted/50 p-1.5 sm:inline-flex sm:min-w-0">
-          {([
-            { id: 'schedule', label: 'Schedule', icon: CalendarDays },
-            { id: 'setup', label: 'Setup', icon: Settings2 },
-          ] as const).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={cn(
-                'flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-all',
-                tab === t.id ? 'bg-background text-foreground shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <t.icon className={cn('h-4 w-4', tab === t.id && 'text-primary')} />
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {tab === 'schedule' && (
+      {bookingsTab === 'calendar' && (
         <div className="space-y-4">
-          {/* View switch */}
-          <div className="flex gap-1 rounded-xl border border-border bg-muted/40 p-1 sm:w-fit">
-            {([
-              { id: 'upcoming', label: `Upcoming (${upcoming.length})`, icon: CalendarClock },
-              { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
-              { id: 'past', label: 'Past', icon: History },
-            ] as const).map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setView(v.id)}
-                className={cn(
-                  'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors sm:flex-none',
-                  view === v.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <v.icon className="h-3.5 w-3.5" />
-                {v.label}
-              </button>
-            ))}
-          </div>
-
-          {view === 'calendar' && (
-            <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+          <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
               <div className="rounded-2xl border border-border p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm font-semibold text-foreground">
@@ -454,38 +407,37 @@ export default function BookingsPage() {
                 )}
               </div>
             </div>
-          )}
+        </div>
+      )}
 
-          {view !== 'calendar' && (
-            <div className="space-y-2.5">
-              {(view === 'upcoming' ? upcoming : past).length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-10 text-center">
-                  <CalendarClock className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-2 text-sm font-semibold text-foreground">
-                    {view === 'upcoming' ? 'No upcoming bookings' : 'No past bookings'}
-                  </p>
-                  <p className="mx-auto mt-1 max-w-sm text-[13px] text-muted-foreground">
-                    {view === 'upcoming'
-                      ? 'Share your booking link and new appointments will land here for confirmation.'
-                      : 'Completed and cancelled bookings will appear here.'}
-                  </p>
-                  {view === 'upcoming' && (
-                    <Button variant="outline" size="sm" className="mt-3" onClick={() => void copy(publicUrl)}>
-                      <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy booking link
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                (view === 'upcoming' ? upcoming : past).map((b) => (
-                  <BookingCard key={b.id} booking={b} busy={actingId === b.id} onStatus={(s) => void setStatus(b.id, s)} />
-                ))
+      {(bookingsTab === 'upcoming' || bookingsTab === 'past') && (
+        <div className="space-y-2.5">
+          {(bookingsTab === 'upcoming' ? upcoming : past).length === 0 ? (
+            <div className="rounded-2xl border border-dashed p-10 text-center">
+              <CalendarClock className="mx-auto h-8 w-8 text-muted-foreground/50" />
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                {bookingsTab === 'upcoming' ? 'No upcoming bookings' : 'No past bookings'}
+              </p>
+              <p className="mx-auto mt-1 max-w-sm text-[13px] text-muted-foreground">
+                {bookingsTab === 'upcoming'
+                  ? 'Share your booking link and new appointments will land here for confirmation.'
+                  : 'Completed and cancelled bookings will appear here.'}
+              </p>
+              {bookingsTab === 'upcoming' && (
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => void copy(publicUrl)}>
+                  <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy booking link
+                </Button>
               )}
             </div>
+          ) : (
+            (bookingsTab === 'upcoming' ? upcoming : past).map((b) => (
+              <BookingCard key={b.id} booking={b} busy={actingId === b.id} onStatus={(s) => void setStatus(b.id, s)} />
+            ))
           )}
         </div>
       )}
 
-      {tab === 'setup' && settings && (
+      {bookingsTab === 'setup' && settings && (
         <div className="space-y-4">
           <SettingSection
             title="Booking page"

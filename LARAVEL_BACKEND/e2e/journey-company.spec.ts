@@ -35,19 +35,26 @@ test.describe('Full company user journey', () => {
     // Sidebar navigation
     await page.goto('/dashboard')
     const sidebar = page.locator('aside nav')
-    for (const item of [
-      'Chats',
-      'Customers',
-      'Orders',
-      'Products',
-      'FAQ Automation',
-      'Analytics',
-      'Growth Engine',
-      'Subscription',
-      'Settings',
-    ]) {
-      await sidebar.getByRole('link', { name: item }).click()
-      await expect(sidebar.getByRole('link', { name: item })).toBeVisible()
+    const sidebarNavItems: { label: string; childLink?: string }[] = [
+      { label: 'Chats' },
+      { label: 'Customers' },
+      { label: 'Orders', childLink: 'All Orders' },
+      { label: 'Products' },
+      { label: 'FAQ Automation', childLink: 'FAQ Responses' },
+      { label: 'Analytics', childLink: 'Messages' },
+      { label: 'Growth Engine' },
+      { label: 'Subscription' },
+      { label: 'Settings', childLink: 'Business' },
+    ]
+    for (const { label, childLink } of sidebarNavItems) {
+      if (childLink) {
+        await sidebar.getByRole('button', { name: label }).click()
+        await sidebar.getByRole('link', { name: childLink, exact: true }).click()
+        await expect(sidebar.getByRole('link', { name: childLink, exact: true })).toBeVisible()
+      } else {
+        await sidebar.getByRole('link', { name: label }).click()
+        await expect(sidebar.getByRole('link', { name: label })).toBeVisible()
+      }
     }
 
     await logoutFromApp(page)

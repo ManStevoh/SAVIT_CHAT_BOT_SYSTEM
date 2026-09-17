@@ -19,7 +19,7 @@ class OrderFulfillmentService
      */
     public function sendPaidFulfillment(Order $order): void
     {
-        $order->loadMissing('chat', 'company.whatsappAccount', 'orderProducts');
+        $order->loadMissing('chat', 'company.whatsappAccount', 'orderProducts.product');
 
         $chat = $order->chat;
         if (! $chat && $order->customer_phone) {
@@ -42,7 +42,7 @@ class OrderFulfillmentService
             $type = (string) ($data['productType'] ?? 'physical');
             $fulfillmentType = (string) ($data['fulfillmentType'] ?? 'shipping');
 
-            if ($type === 'physical') {
+            if (! $this->digitalAccess->isDigitalFulfillment($data, $line->product)) {
                 continue;
             }
 
@@ -74,7 +74,8 @@ class OrderFulfillmentService
 
             $documentUrl = trim((string) ($data['digitalFileUrl'] ?? ''));
             if ($documentUrl !== '') {
-                $lines[] = "  Download: {$documentUrl}";
+                $fileName = trim((string) ($data['digitalFileName'] ?? 'your file'));
+                $lines[] = "  Download: {$fileName}";
                 if ($primaryDownloadUrl === null) {
                     $primaryDownloadUrl = $documentUrl;
                 }

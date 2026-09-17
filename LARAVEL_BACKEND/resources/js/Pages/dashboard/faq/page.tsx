@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { parseFaqTab } from '@/components/dashboard/sidebar'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { DataTable, type Column, type Filter } from '@/components/shared/data-table'
 import { StatusBadge } from '@/components/shared/status-badge'
@@ -83,6 +85,8 @@ const initialBotSettings: BotSettings = {
 }
 
 export default function FAQAutomationPage() {
+  const searchParams = useSearchParams()
+  const activeTab = parseFaqTab(searchParams.get('tab'))
   const { mutate } = useSWRConfig()
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -478,77 +482,79 @@ export default function FAQAutomationPage() {
               Configure AI responses for common questions
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Popover open={exportOpen} onOpenChange={setExportOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Export
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64" align="end">
-                      <div className="space-y-3">
-                        <p className="text-sm font-medium">Export FAQs</p>
-                        <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'csv' | 'json')}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="csv">CSV (Excel)</SelectItem>
-                            <SelectItem value="json">JSON</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button size="sm" className="w-full" onClick={handleExportFaqs} disabled={exporting}>
-                          {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                          {exporting ? 'Exporting…' : 'Download'}
+          {activeTab === 'faqs' && (
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Download className="mr-2 h-4 w-4" />
+                          Export
                         </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  Download your FAQs as CSV or JSON for backup or editing.
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <input
-                      type="file"
-                      accept=".csv,.txt"
-                      className="hidden"
-                      ref={importInputRef}
-                      onChange={handleImportFaqs}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={importing}
-                      onClick={() => importInputRef.current?.click()}
-                    >
-                      {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                      {importing ? 'Importing…' : 'Import CSV'}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  Upload a CSV with columns: question, answer, category. Optional: keywords (comma-separated), is_active.
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Button variant="outline" size="sm" asChild>
-              <a href="/sample-data/faqs_sample.csv" download="faqs_sample.csv">Sample CSV</a>
-            </Button>
-            <Button onClick={() => {
-              setFormData(initialFormData)
-              setFormErrors({})
-              setIsAddModalOpen(true)
-            }}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add FAQ
-            </Button>
-          </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64" align="end">
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium">Export FAQs</p>
+                          <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'csv' | 'json')}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="csv">CSV (Excel)</SelectItem>
+                              <SelectItem value="json">JSON</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button size="sm" className="w-full" onClick={handleExportFaqs} disabled={exporting}>
+                            {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                            {exporting ? 'Exporting…' : 'Download'}
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    Download your FAQs as CSV or JSON for backup or editing.
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <input
+                        type="file"
+                        accept=".csv,.txt"
+                        className="hidden"
+                        ref={importInputRef}
+                        onChange={handleImportFaqs}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={importing}
+                        onClick={() => importInputRef.current?.click()}
+                      >
+                        {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                        {importing ? 'Importing…' : 'Import CSV'}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    Upload a CSV with columns: question, answer, category. Optional: keywords (comma-separated), is_active.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/sample-data/faqs_sample.csv" download="faqs_sample.csv">Sample CSV</a>
+              </Button>
+              <Button onClick={() => {
+                setFormData(initialFormData)
+                setFormErrors({})
+                setIsAddModalOpen(true)
+              }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add FAQ
+              </Button>
+            </div>
+          )}
         </div>
         {importResult !== null && (
           <p className="text-sm text-muted-foreground">
@@ -558,12 +564,7 @@ export default function FAQAutomationPage() {
         )}
       </div>
 
-      <Tabs defaultValue="faqs" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="faqs">FAQ Responses</TabsTrigger>
-          <TabsTrigger value="settings">Bot Settings</TabsTrigger>
-        </TabsList>
-
+      <Tabs value={activeTab} className="space-y-6">
         <TabsContent value="faqs" className="space-y-6">
           {/* Stats Grid - API Ready */}
           <StatsGrid columns={3}>

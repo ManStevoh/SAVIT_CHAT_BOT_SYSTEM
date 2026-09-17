@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { DataTable, type Column, type Filter } from '@/components/shared/data-table'
 import { StatusBadge } from '@/components/shared/status-badge'
@@ -58,8 +57,11 @@ import {
 import { useSWRConfig } from 'swr'
 import { useToast } from '@/hooks/use-toast'
 import { PageHeader } from '@/components/shared/page-header'
-
-type OrderTabFilter = 'all' | 'pending' | 'waiting_shipping' | 'shipped_delivered' | 'failed'
+import {
+  ordersHref,
+  parseOrderPipelineStatus,
+  type OrderPipelineStatus,
+} from '@/components/dashboard/sidebar'
 
 export default function OrdersPage() {
   const router = useRouter()
@@ -72,9 +74,21 @@ export default function OrdersPage() {
   const { toast } = useToast()
 
   const [searchQuery, setSearchQuery] = useState(initialSearch)
-  const [statusFilter, setStatusFilter] = useState<OrderTabFilter>('all')
+  const statusFilter = parseOrderPipelineStatus(searchParams.get('status'))
   const [attributedOnly, setAttributedOnly] = useState(false)
   const [page, setPage] = useState(1)
+
+  const setStatusFilter = useCallback(
+    (status: OrderPipelineStatus) => {
+      setPage(1)
+      router.push(ordersHref(status, searchQuery))
+    },
+    [router, searchQuery]
+  )
+
+  useEffect(() => {
+    setPage(1)
+  }, [statusFilter])
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -443,7 +457,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
       {/* Interactive Stats Grid - Click card to filter tabs */}
       <StatsGrid columns={5}>
         <div
-          onClick={() => { setStatusFilter('all'); setPage(1) }}
+          onClick={() => setStatusFilter('all')}
           className="cursor-pointer transition-transform hover:scale-[1.02]"
         >
           <StatsCard
@@ -455,7 +469,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
           />
         </div>
         <div
-          onClick={() => { setStatusFilter('pending'); setPage(1) }}
+          onClick={() => setStatusFilter('pending')}
           className="cursor-pointer transition-transform hover:scale-[1.02]"
         >
           <StatsCard
@@ -467,7 +481,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
           />
         </div>
         <div
-          onClick={() => { setStatusFilter('waiting_shipping'); setPage(1) }}
+          onClick={() => setStatusFilter('waiting_shipping')}
           className="cursor-pointer transition-transform hover:scale-[1.02]"
         >
           <StatsCard
@@ -479,7 +493,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
           />
         </div>
         <div
-          onClick={() => { setStatusFilter('shipped_delivered'); setPage(1) }}
+          onClick={() => setStatusFilter('shipped_delivered')}
           className="cursor-pointer transition-transform hover:scale-[1.02]"
         >
           <StatsCard
@@ -491,7 +505,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
           />
         </div>
         <div
-          onClick={() => { setStatusFilter('failed'); setPage(1) }}
+          onClick={() => setStatusFilter('failed')}
           className="cursor-pointer transition-transform hover:scale-[1.02]"
         >
           <StatsCard
@@ -504,107 +518,30 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
         </div>
       </StatsGrid>
 
-      {/* Order Category Filter Tabs Bar */}
-      <Card className="border-border/60 bg-card shadow-sm">
-        <CardHeader className="pb-3 border-b border-border/40">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <CardTitle className="text-base font-semibold">Orders Pipeline</CardTitle>
-              <p className="text-xs text-muted-foreground">Select a category tab to view separated orders</p>
-            </div>
-
-            {/* Quick Segmented Tabs */}
-            <div className="flex items-center gap-1 bg-secondary/50 p-1 rounded-lg border border-border/50 text-xs overflow-x-auto">
-              <button
-                type="button"
-                onClick={() => { setStatusFilter('all'); setPage(1) }}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${
-                  statusFilter === 'all'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                All Orders
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStatusFilter('pending'); setPage(1) }}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                  statusFilter === 'pending'
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Clock className="h-3.5 w-3.5" />
-                Pending
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStatusFilter('waiting_shipping'); setPage(1) }}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                  statusFilter === 'waiting_shipping'
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Truck className="h-3.5 w-3.5" />
-                Ready to Ship (Waiting Shipping)
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStatusFilter('shipped_delivered'); setPage(1) }}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                  statusFilter === 'shipped_delivered'
-                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <CheckCircle className="h-3.5 w-3.5" />
-                Shipped & Delivered
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStatusFilter('failed'); setPage(1) }}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                  statusFilter === 'failed'
-                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <XCircle className="h-3.5 w-3.5" />
-                Failed / Cancelled
-              </button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <DataTable
-            data={data?.orders}
-            columns={columns}
-            isLoading={isLoading}
-            error={error}
-            searchPlaceholder="Search order #, customer name, phone, address, or tracking..."
-            onSearch={setSearchQuery}
-            filters={filters}
-            filterValues={{ status: statusFilter }}
-            onFilterChange={(key, value) => {
-              if (key === 'status') setStatusFilter(value as OrderTabFilter)
-              setPage(1)
-            }}
-            pagination={
-              data
-                ? {
-                    page: data.page,
-                    totalPages: data.totalPages,
-                    onPageChange: setPage,
-                  }
-                : undefined
-            }
-            emptyMessage="No orders found in this category"
-            emptyDescription="Orders matching this status filter will appear here."
-          />
-        </CardContent>
-      </Card>
+      <DataTable
+        data={data?.orders}
+        columns={columns}
+        isLoading={isLoading}
+        error={error}
+        searchPlaceholder="Search order #, customer name, phone, address, or tracking..."
+        onSearch={setSearchQuery}
+        filters={filters}
+        filterValues={{ status: statusFilter }}
+        onFilterChange={(key, value) => {
+          if (key === 'status') setStatusFilter(value as OrderPipelineStatus)
+        }}
+        pagination={
+          data
+            ? {
+                page: data.page,
+                totalPages: data.totalPages,
+                onPageChange: setPage,
+              }
+            : undefined
+        }
+        emptyMessage="No orders found in this category"
+        emptyDescription="Orders matching this status filter will appear here."
+      />
 
       {/* Fast Shipping & Order Details Modal */}
       <FormModal

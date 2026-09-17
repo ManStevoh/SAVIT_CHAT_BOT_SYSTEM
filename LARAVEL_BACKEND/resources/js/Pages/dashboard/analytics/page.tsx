@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { parseAnalyticsTab } from "@/components/dashboard/sidebar"
 import {
   Select,
   SelectContent,
@@ -51,13 +52,9 @@ const tooltipStyle = {
 
 export default function AnalyticsPage() {
   const searchParams = useSearchParams()
-  const requestedTab = searchParams.get("tab") ?? "messages"
-  const initialTab = ["messages", "orders", "customers", "products"].includes(requestedTab)
-    ? requestedTab
-    : "messages"
+  const activeTab = parseAnalyticsTab(searchParams.get("tab"), searchParams.get("product"))
   const selectedProduct = searchParams.get("product")?.trim() ?? ""
   const [chartPeriod, setChartPeriod] = useState("7d")
-  const [activeTab, setActiveTab] = useState(initialTab)
 
   const { data: analytics, error, isLoading } = useAnalytics(chartPeriod)
   const { data: companySettings } = useCompanySettings()
@@ -177,22 +174,7 @@ export default function AnalyticsPage() {
         />
       </StatsGrid>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
-        <TabsList className="h-9 bg-muted/60 p-1">
-          <TabsTrigger value="messages" className="text-xs">
-            Messages
-          </TabsTrigger>
-          <TabsTrigger value="orders" className="text-xs">
-            Orders
-          </TabsTrigger>
-          <TabsTrigger value="customers" className="text-xs">
-            Customers
-          </TabsTrigger>
-          <TabsTrigger value="products" className="text-xs">
-            Products
-          </TabsTrigger>
-        </TabsList>
-
+      <Tabs value={activeTab} className="space-y-5">
         <TabsContent value="messages" className="space-y-5">
           <div className="grid gap-5 lg:grid-cols-2">
             <Card className="border-border/60 bg-card shadow-sm">

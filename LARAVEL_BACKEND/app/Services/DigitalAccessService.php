@@ -30,21 +30,26 @@ class DigitalAccessService
             $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
             $data = $this->hydrateFulfillmentData($data, $product);
 
-            $type = (string) ($data['productType'] ?? 'physical');
-            if ($type === 'physical') {
+            if (! $this->isDigitalFulfillment($data, $product)) {
                 if ($data !== ($line->fulfillment_data ?? [])) {
                     $line->update(['fulfillment_data' => $data ?: null]);
                 }
                 continue;
             }
 
-            // Never trust client-supplied file paths — only product or previously order-owned copies.
+            $data = $this->normalizeDigitalProductType($data, $product);
+
+            // Prefer the live catalog file, but keep an order snapshot path if the
+            // product row is missing/physical while fulfillment is still a download.
+            $existingPath = trim((string) ($data['digitalFilePath'] ?? ''));
             unset($data['digitalFilePath'], $data['digitalFileAbsolutePath']);
             if ($product?->digital_file_path) {
                 $data['digitalFilePath'] = $product->digital_file_path;
                 $data['digitalFileName'] = $product->digital_file_name;
                 $data['digitalFileMime'] = $product->digital_file_mime;
                 $data['digitalFileSize'] = $product->digital_file_size;
+            } elseif ($existingPath !== '' && $this->isAllowedDigitalPath($existingPath)) {
+                $data['digitalFilePath'] = $existingPath;
             }
 
             $expiresAt = $this->resolveExpiry($product, $data);
@@ -125,6 +130,52 @@ class DigitalAccessService
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
+    /**
+     * True when this order line (or live product) should deliver a file, link, key, or booking.
+     *
+     * Checkout/email copy already treats fulfillmentType=download|link as digital. Paid
+     * fulfillment must use the same rule — otherwise marking a manual payment as paid
+     * sends a "payment received" email with no download link.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function isDigitalFulfillment(array $data, ?Product $product = null): bool
+    {
+        $type = strtolower((string) ($data['productType'] ?? ''));
+        $fulfillment = strtolower((string) ($data['fulfillmentType'] ?? ''));
+        if (in_array($type, ['digital', 'service'], true)) {
+            return true;
+        }
+        if (in_array($fulfillment, ['download', 'link', 'booking'], true)) {
+            return true;
+        }
+        if (! empty($data['digitalFilePath']) || ! empty($data['digitalFileUrl']) || ! empty($data['accessUrl'])) {
+            return true;
+        }
+        if (! empty($data['licenseKeys']) && is_array($data['licenseKeys'])) {
+            return true;
+        }
+        if ($product) {
+            $pType = strtolower((string) ($product->product_type ?? ''));
+            $pFulfillment = strtolower((string) ($product->fulfillment_type ?? ''));
+            if (in_array($pType, ['digital', 'service'], true)) {
+                return true;
+            }
+            if (in_array($pFulfillment, ['download', 'link', 'booking'], true)) {
+                return true;
+            }
+            if (! empty($product->digital_file_path) || ! empty($product->access_url)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
     public function hydrateFulfillmentData(array $data, ?Product $product): array
     {
         if (! $product) {
@@ -132,12 +183,17 @@ class DigitalAccessService
         }
 
         $snapshot = $product->fulfillmentSnapshot();
-        $type = (string) ($data['productType'] ?? '');
-        if ($type === '' || $type === 'physical') {
-            // Prefer live product type when line looks physical/empty but catalog says otherwise.
-            if (($snapshot['productType'] ?? 'physical') !== 'physical') {
-                return array_merge($snapshot, array_filter($data, fn ($v) => $v !== null && $v !== ''));
+        if (! $this->isDigitalFulfillment($data) && $this->isDigitalFulfillment($snapshot, $product)) {
+            $lineExtras = array_filter($data, fn ($v) => $v !== null && $v !== '');
+            // Stale "physical" / "shipping" on the line must not clobber a digital catalog product.
+            if (strtolower((string) ($lineExtras['productType'] ?? '')) === 'physical') {
+                unset($lineExtras['productType']);
             }
+            if (strtolower((string) ($lineExtras['fulfillmentType'] ?? '')) === 'shipping') {
+                unset($lineExtras['fulfillmentType']);
+            }
+
+            return array_merge($snapshot, $lineExtras);
         }
 
         foreach (['accessUrl', 'serviceBookingUrl', 'fulfillmentInstructions', 'licenseKeyMode', 'accessExpiresDays'] as $key) {
@@ -153,6 +209,32 @@ class DigitalAccessService
         }
         if (empty($data['fulfillmentType'])) {
             $data['fulfillmentType'] = $snapshot['fulfillmentType'] ?? 'shipping';
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function normalizeDigitalProductType(array $data, ?Product $product): array
+    {
+        $type = strtolower((string) ($data['productType'] ?? 'physical'));
+        if ($type !== 'physical') {
+            return $data;
+        }
+
+        $fromProduct = strtolower((string) ($product?->product_type ?? ''));
+        $data['productType'] = in_array($fromProduct, ['digital', 'service'], true)
+            ? $fromProduct
+            : 'digital';
+
+        if (empty($data['fulfillmentType']) || strtolower((string) $data['fulfillmentType']) === 'shipping') {
+            $fromFulfillment = strtolower((string) ($product?->fulfillment_type ?? ''));
+            $data['fulfillmentType'] = in_array($fromFulfillment, ['download', 'link', 'booking', 'manual'], true)
+                ? $fromFulfillment
+                : 'download';
         }
 
         return $data;
@@ -183,13 +265,13 @@ class DigitalAccessService
 
     public function orderAccessIsExpired(Order $order): bool
     {
-        $order->loadMissing('orderProducts');
+        $order->loadMissing('orderProducts.product');
         $hasExpiring = false;
         $anyStillValid = false;
 
         foreach ($order->orderProducts as $line) {
             $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
-            if (($data['productType'] ?? 'physical') === 'physical') {
+            if (! $this->isDigitalFulfillment($data, $line->product)) {
                 continue;
             }
             if (empty($data['accessExpiresAt'])) {
@@ -396,12 +478,12 @@ class DigitalAccessService
 
     private function portalSignatureExpiry(Order $order): \Carbon\Carbon
     {
-        $order->loadMissing('orderProducts');
+        $order->loadMissing('orderProducts.product');
         $latest = null;
 
         foreach ($order->orderProducts as $line) {
             $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
-            if (($data['productType'] ?? 'physical') === 'physical') {
+            if (! $this->isDigitalFulfillment($data, $line->product)) {
                 continue;
             }
             if (empty($data['accessExpiresAt'])) {

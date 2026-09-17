@@ -20,8 +20,10 @@ LARAVEL_BACKEND/public/storage
 LARAVEL_BACKEND/bootstrap/cache/*.php
 LARAVEL_BACKEND/node_modules/
 
-# Cursor
-.cursor/
+# Cursor (commit shared project rules only)
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # Build artifacts, deployment zips, and scripts
 *.zip

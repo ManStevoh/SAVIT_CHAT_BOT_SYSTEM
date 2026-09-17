@@ -361,7 +361,7 @@ class MailService
     public function sendCustomerOrderConfirmationSafely(Order $order): void
     {
         try {
-            $this->sendCustomerOrderConfirmation($order->fresh(['company.settings', 'orderProducts']) ?? $order);
+            $this->sendCustomerOrderConfirmation($order->fresh(['company.settings', 'orderProducts.product']) ?? $order);
         } catch (\Throwable $e) {
             Log::warning('Failed to send customer order confirmation email', [
                 'order_id' => $order->id,
@@ -373,7 +373,7 @@ class MailService
     public function sendCustomerPaymentFulfillmentSafely(Order $order): void
     {
         try {
-            $this->sendCustomerPaymentFulfillment($order->fresh(['company.settings', 'orderProducts']) ?? $order);
+            $this->sendCustomerPaymentFulfillment($order->fresh(['company.settings', 'orderProducts.product']) ?? $order);
         } catch (\Throwable $e) {
             Log::warning('Failed to send customer payment / download email', [
                 'order_id' => $order->id,
@@ -431,7 +431,7 @@ class MailService
             return;
         }
 
-        $order->loadMissing(['company.settings', 'orderProducts']);
+        $order->loadMissing(['company.settings', 'orderProducts.product']);
         $store = trim((string) ($order->company?->name ?? '')) ?: 'the store';
         $name = trim((string) ($order->customer_name ?? '')) ?: 'there';
         $total = MoneyFormatter::formatFromSettings((float) $order->total, $order->company?->settings);
@@ -450,7 +450,7 @@ class MailService
             return;
         }
 
-        $order->loadMissing(['company.settings', 'orderProducts']);
+        $order->loadMissing(['company.settings', 'orderProducts.product']);
         $store = trim((string) ($order->company?->name ?? '')) ?: 'the store';
         $name = trim((string) ($order->customer_name ?? '')) ?: 'there';
         $total = MoneyFormatter::formatFromSettings((float) $order->total, $order->company?->settings);
@@ -527,11 +527,10 @@ class MailService
 
     private function orderHasDigitalItems(Order $order): bool
     {
+        $access = app(DigitalAccessService::class);
         foreach ($order->orderProducts as $line) {
             $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
-            $type = strtolower((string) ($data['productType'] ?? ''));
-            $fulfillment = strtolower((string) ($data['fulfillmentType'] ?? ''));
-            if ($type === 'digital' || in_array($fulfillment, ['download', 'link'], true)) {
+            if ($access->isDigitalFulfillment($data, $line->product)) {
                 return true;
             }
         }

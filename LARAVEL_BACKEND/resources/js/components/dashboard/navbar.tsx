@@ -22,7 +22,11 @@ import { Search, Bell, Moon, Sun, User, Settings, LogOut, Menu, Check } from "lu
 import { useSWRConfig } from "swr"
 import { useTheme } from "next-themes"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
-import { DashboardNavLinks } from "@/components/dashboard/sidebar"
+import {
+  DashboardNavLinks,
+  ordersHref,
+  parseOrderPipelineStatus,
+} from "@/components/dashboard/sidebar"
 
 type StoredUser = { name?: string; email?: string }
 
@@ -157,14 +161,19 @@ export function DashboardNavbar() {
           onSubmit={(e) => {
             e.preventDefault()
             const q = topSearch.trim()
-            const target = isAdmin
-              ? "/admin/companies"
-              : pathname?.startsWith("/dashboard/orders")
-                ? "/dashboard/orders"
-                : pathname?.startsWith("/dashboard/customers")
-                  ? "/dashboard/customers"
-                  : "/dashboard/chats"
-
+            if (isAdmin) {
+              router.push(q ? `/admin/companies?search=${encodeURIComponent(q)}` : "/admin/companies")
+              return
+            }
+            if (pathname?.startsWith("/dashboard/orders")) {
+              router.push(
+                ordersHref(parseOrderPipelineStatus(searchParams?.get("status")), q || undefined)
+              )
+              return
+            }
+            const target = pathname?.startsWith("/dashboard/customers")
+              ? "/dashboard/customers"
+              : "/dashboard/chats"
             router.push(q ? `${target}?search=${encodeURIComponent(q)}` : target)
           }}
         >
