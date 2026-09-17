@@ -215,6 +215,12 @@ class MailService
         $this->send($to, $subject, $html, strip_tags($html));
     }
 
+    public function sendMerchantLifecycleEmail(string $to, string $subject, string $htmlBody): void
+    {
+        $html = self::wrapEmailBody($htmlBody, self::getEmailLogoUrl());
+        $this->send($to, $subject, $html, strip_tags($htmlBody));
+    }
+
     /**
      * Welcome email after registration (includes free-trial details when applicable).
      */

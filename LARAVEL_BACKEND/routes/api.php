@@ -12,7 +12,10 @@ use App\Http\Controllers\Api\Admin\LogController;
 use App\Http\Controllers\Api\Admin\OverviewController;
 use App\Http\Controllers\Api\Admin\PaymentGatewayController;
 use App\Http\Controllers\Api\Admin\ManualBillingPaymentController;
+use App\Http\Controllers\Api\Admin\MerchantLifecycleController;
+use App\Http\Controllers\Api\Admin\PlatformMarketingController;
 use App\Http\Controllers\Api\Admin\PlatformSettingsController;
+use App\Http\Controllers\Api\Company\MarketingPopupController;
 use App\Http\Controllers\Api\Admin\RevenueController;
 use App\Http\Controllers\Api\Admin\TestimonialController;
 use App\Http\Controllers\Api\Admin\UserController;
@@ -179,7 +182,6 @@ Route::prefix('v1/company')->middleware('api.key')->group(function () {
 // Company (auth required; subscription must be active except for subscription/checkout routes)
 Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscription.active'])->group(function () {
     Route::get('dashboard-summary', [\App\Http\Controllers\Api\Company\DashboardSummaryController::class, 'index']);
-    Route::get('nav-badges', [\App\Http\Controllers\Api\Company\DashboardSummaryController::class, 'badges']);
     Route::get('chats', [ChatController::class, 'index']);
     Route::post('chats/start', [ChatController::class, 'start']);
     Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);
@@ -304,6 +306,8 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::post('settings', [SettingsController::class, 'update']); // multipart logo (PHP files require POST)
     Route::post('settings/og-image', [SettingsController::class, 'uploadOgImage']);
     Route::delete('settings/og-image', [SettingsController::class, 'destroyOgImage']);
+    Route::get('marketing-popups', [MarketingPopupController::class, 'index']);
+    Route::post('marketing-popups/{marketingMessage}/dismiss', [MarketingPopupController::class, 'dismiss']);
     Route::get('setup-status', [SetupStatusController::class, 'show']);
     Route::post('setup-status/dismiss', [SetupStatusController::class, 'dismiss']);
     Route::post('setup-status/restore', [SetupStatusController::class, 'restore']);
@@ -480,6 +484,14 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'user.active', 'admin'])->gr
     Route::post('contact-submissions/{contact_submission}/read', [ContactSubmissionController::class, 'markRead']);
     Route::post('contact-submissions/{contact_submission}/unread', [ContactSubmissionController::class, 'markUnread']);
     Route::delete('contact-submissions/{contact_submission}', [ContactSubmissionController::class, 'destroy']);
+    Route::get('marketing', [PlatformMarketingController::class, 'index']);
+    Route::post('marketing', [PlatformMarketingController::class, 'store']);
+    Route::get('marketing/sends', [PlatformMarketingController::class, 'sends']);
+    Route::get('merchant-lifecycle/sends', [MerchantLifecycleController::class, 'index']);
+    Route::put('marketing/{marketingMessage}', [PlatformMarketingController::class, 'update']);
+    Route::delete('marketing/{marketingMessage}', [PlatformMarketingController::class, 'destroy']);
+    Route::post('marketing/{marketingMessage}/send', [PlatformMarketingController::class, 'sendNow']);
+    Route::get('marketing/{marketingMessage}/sends', [PlatformMarketingController::class, 'sends']);
     Route::get('testimonials', [TestimonialController::class, 'index']);
     Route::post('testimonials', [TestimonialController::class, 'store']);
     Route::put('testimonials/{testimonial}', [TestimonialController::class, 'update']);

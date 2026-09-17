@@ -67,6 +67,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new \App\Jobs\Orders\ProcessCustomerRetentionJob)->dailyAt('09:30');
         $schedule->job(new \App\Jobs\Storefront\ProcessAbandonedCartJob)->hourly();
         $schedule->command('ai:health-check --notify')->dailyAt('07:30');
+        $schedule->job(new \App\Jobs\Platform\ProcessMerchantLifecycleJob)->hourly()->withoutOverlapping(50);
+        $schedule->job(new \App\Jobs\Platform\ProcessPlatformMarketingJob)->everyFiveMinutes()->withoutOverlapping(15);
 
         // Shared hosting: set AUTO_MIGRATE=true to apply pending migrations via cron.
         if (config('app.auto_migrate')) {
