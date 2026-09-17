@@ -63,6 +63,90 @@ import {
   type OrderPipelineStatus,
 } from '@/components/dashboard/sidebar'
 
+type OrderFulfillmentKind = 'delivery' | 'pickup' | 'dine_in' | 'digital' | 'service' | 'arrange'
+
+function orderFulfillmentKind(order: Order): OrderFulfillmentKind {
+  const t = (order.fulfillmentType || '').toLowerCase()
+  if (t === 'pickup') return 'pickup'
+  if (t === 'dine_in') return 'dine_in'
+
+  const lineTypes = (order.products ?? [])
+    .map((p) => (p.productType || '').toLowerCase())
+    .filter(Boolean)
+  const anyPhysical = (order.products ?? []).some((p) => p.needsShipping === true)
+    || lineTypes.some((type) => type === 'physical')
+  const allService = lineTypes.length > 0 && lineTypes.every((type) => type === 'service')
+  const allDigital = lineTypes.length > 0 && lineTypes.every((type) => type === 'digital')
+  const noPhysicalLines = lineTypes.length > 0 && !anyPhysical && lineTypes.every((type) => type === 'digital' || type === 'service')
+
+  if (order.needsShipping === false || noPhysicalLines) {
+    if (t === 'manual') return 'arrange'
+    if (t === 'service' || t === 'booking' || allService) return 'service'
+    return 'digital'
+  }
+
+  if (t === 'digital' || t === 'download' || t === 'link' || allDigital) return 'digital'
+  if (t === 'service' || t === 'booking' || allService) return 'service'
+  if (t === 'manual') return 'arrange'
+  if (t === 'delivery' || t === 'shipping') return 'delivery'
+  if (order.deliveryAddress?.trim()) return 'delivery'
+  return 'digital'
+}
+
+function orderNeedsShipping(order: Order): boolean {
+  if (typeof order.needsShipping === 'boolean') return order.needsShipping
+  if ((order.products ?? []).some((p) => p.needsShipping === true)) return true
+  const lineTypes = (order.products ?? []).map((p) => (p.productType || '').toLowerCase()).filter(Boolean)
+  if (lineTypes.length > 0 && lineTypes.every((type) => type === 'digital' || type === 'service')) {
+    return false
+  }
+  return orderFulfillmentKind(order) === 'delivery'
+}
+
+function FulfillmentBadge({ order }: { order: Order }) {
+  const kind = orderFulfillmentKind(order)
+  if (kind === 'pickup') {
+    return (
+      <Badge variant="secondary" className="border-blue-500/20 bg-blue-500/10 px-1.5 py-0 text-[10px] text-blue-600 dark:text-blue-400">
+        Pickup
+      </Badge>
+    )
+  }
+  if (kind === 'dine_in') {
+    return (
+      <Badge variant="secondary" className="border-purple-500/20 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-600 dark:text-purple-400">
+        Dine-in{order.dineInTableName ? ` (${order.dineInTableName})` : ''}
+      </Badge>
+    )
+  }
+  if (kind === 'digital') {
+    return (
+      <Badge variant="secondary" className="border-sky-500/20 bg-sky-500/10 px-1.5 py-0 text-[10px] text-sky-700 dark:text-sky-400">
+        Digital
+      </Badge>
+    )
+  }
+  if (kind === 'service') {
+    return (
+      <Badge variant="secondary" className="border-amber-500/20 bg-amber-500/10 px-1.5 py-0 text-[10px] text-amber-700 dark:text-amber-400">
+        Service
+      </Badge>
+    )
+  }
+  if (kind === 'arrange') {
+    return (
+      <Badge variant="secondary" className="border-border bg-muted px-1.5 py-0 text-[10px] text-muted-foreground">
+        Arrange
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="secondary" className="border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0 text-[10px] text-emerald-600 dark:text-emerald-400">
+      Delivery
+    </Badge>
+  )
+}
+
 export default function OrdersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -133,7 +217,7 @@ export default function OrdersPage() {
   const stats = {
     total: data?.total || 0,
     pending: data?.orders?.filter((o) => o.status === 'pending' || o.paymentStatus === 'pending').length || 0,
-    waitingShipping: data?.orders?.filter((o) => (o.status === 'confirmed' || o.paymentStatus === 'paid') && o.status !== 'shipped' && o.status !== 'delivered' && o.status !== 'cancelled').length || 0,
+    waitingShipping: data?.orders?.filter((o) => orderNeedsShipping(o) && (o.status === 'confirmed' || o.paymentStatus === 'paid') && o.status !== 'shipped' && o.status !== 'delivered' && o.status !== 'cancelled').length || 0,
     completed: data?.orders?.filter((o) => o.status === 'shipped' || o.status === 'delivered').length || 0,
     failed: data?.orders?.filter((o) => o.status === 'cancelled' || o.paymentStatus === 'refunded').length || 0,
   }
@@ -161,19 +245,20 @@ export default function OrdersPage() {
 
   const copyShippingSlip = (order: Order) => {
     const itemsText = order.products.map((p) => `• ${p.quantity}x ${p.name}`).join('\n')
-    const slip = `📦 DISPATCH SHIPPING SLIP
+    const kind = orderFulfillmentKind(order)
+    const slip = `${orderNeedsShipping(order) ? '📦 DISPATCH SHIPPING SLIP' : 'ORDER SLIP'}
 Order: #${order.orderNumber}
 Customer: ${order.customerName}
 Phone: ${order.customerPhone}
-Fulfillment: ${(order.fulfillmentType || 'delivery').toUpperCase()}
-Address: ${order.deliveryAddress || 'N/A'}
+Fulfillment: ${kind.toUpperCase()}
+${orderNeedsShipping(order) ? `Address: ${order.deliveryAddress || 'N/A'}` : 'No shipping address'}
 Items:
 ${itemsText}
 Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID' : 'COLLECT CASH / UNPAID'})`
     navigator.clipboard.writeText(slip)
     toast({
-      title: 'Shipping Slip Copied!',
-      description: `Full courier slip for #${order.orderNumber} copied to clipboard ready for dispatch.`,
+      title: orderNeedsShipping(order) ? 'Shipping slip copied' : 'Order slip copied',
+      description: `Details for #${order.orderNumber} are on the clipboard.`,
     })
   }
 
@@ -237,24 +322,11 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
       key: 'orderNumber',
       header: 'Order & Type',
       cell: (order) => {
-        const type = order.fulfillmentType || 'delivery'
         return (
           <div className="space-y-1">
             <span className="font-medium text-foreground">{order.orderNumber}</span>
             <div className="flex items-center gap-1">
-              {type === 'pickup' ? (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
-                  🏬 Pickup
-                </Badge>
-              ) : type === 'dine_in' ? (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20">
-                  🍽️ Dine-in {order.dineInTableName ? `(${order.dineInTableName})` : ''}
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                  🚚 Delivery
-                </Badge>
-              )}
+              <FulfillmentBadge order={order} />
             </div>
           </div>
         )
@@ -286,10 +358,23 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
     },
     {
       key: 'deliveryAddress',
-      header: 'Shipping Address',
+      header: 'Fulfillment',
       cell: (order) => {
+        const kind = orderFulfillmentKind(order)
+        if (kind === 'digital' || kind === 'service') {
+          return <span className="text-xs text-muted-foreground">No shipping</span>
+        }
+        if (kind === 'pickup') {
+          return <span className="text-xs text-muted-foreground">Customer collects</span>
+        }
+        if (kind === 'dine_in') {
+          return <span className="text-xs text-muted-foreground">{order.dineInTableName ? `Table ${order.dineInTableName}` : 'Dine-in'}</span>
+        }
+        if (kind === 'arrange') {
+          return <span className="text-xs text-muted-foreground">You arrange handover</span>
+        }
         if (!order.deliveryAddress) {
-          return <span className="text-xs text-muted-foreground italic">No address (Self-pickup / Dine-in)</span>
+          return <span className="text-xs italic text-muted-foreground">Address needed</span>
         }
         return (
           <div className="max-w-[200px] text-xs space-y-1">
@@ -337,7 +422,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
     },
     {
       key: 'status',
-      header: 'Status & Shipping',
+      header: 'Status',
       cell: (order) => (
         <div className="space-y-1">
           <StatusBadge status={order.status} />
@@ -359,7 +444,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
       key: 'actions',
       header: '',
       cell: (order) => {
-        const isReadyToShip = (order.status === 'confirmed' || order.paymentStatus === 'paid') && order.status !== 'shipped' && order.status !== 'delivered' && order.status !== 'cancelled'
+        const isReadyToShip = orderNeedsShipping(order) && (order.status === 'confirmed' || order.paymentStatus === 'paid') && order.status !== 'shipped' && order.status !== 'delivered' && order.status !== 'cancelled'
         return (
           <div className="flex items-center gap-1.5">
             {isReadyToShip ? (
@@ -405,8 +490,8 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Orders & Shipping Center"
-        description="Track customer orders, separate pending/failed orders, and dispatch fast shipping."
+        title="Orders"
+        description="Track sales, complete digital and service orders, and dispatch physical ones."
         actions={
           <>
             <Button
@@ -540,7 +625,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
             : undefined
         }
         emptyMessage="No orders found in this category"
-        emptyDescription="Orders matching this status filter will appear here."
+        emptyDescription={statusFilter === 'waiting_shipping' ? 'Only paid physical orders that still need dispatch appear here. Digital and service orders stay in All Orders.' : 'Orders matching this status filter will appear here.'}
       />
 
       {/* Fast Shipping & Order Details Modal */}
@@ -551,8 +636,8 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
             setSelectedOrder(null)
           }
         }}
-        title={`Order ${selectedOrder?.orderNumber} Details & Dispatch`}
-        description="Manage fulfillment, fast shipping dispatch, and order status"
+        title={`Order ${selectedOrder?.orderNumber}`}
+        description={selectedOrder && orderNeedsShipping(selectedOrder) ? 'Update status, address, and courier details.' : 'Update status and payment. This order does not need shipping.'}
         onSubmit={handleUpdateStatus}
         submitLabel="Save & Update Customer"
         isLoading={isUpdating}
@@ -581,7 +666,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                     onClick={() => copyShippingSlip(selectedOrder)}
                   >
                     <FileText className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                    Copy Shipping Slip
+                    {orderNeedsShipping(selectedOrder) ? 'Copy shipping slip' : 'Copy order slip'}
                   </Button>
                   {selectedOrder.customerPhone && (
                     <a
@@ -598,18 +683,18 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                 </div>
               </div>
 
-              {/* Delivery / Shipping Address Box */}
+              {orderNeedsShipping(selectedOrder) ? (
               <div>
-                <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-1">
+                <div className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 text-emerald-600" />
-                    Fulfillment & Shipping Destination:
+                    Delivery address
                   </span>
                   {selectedOrder.deliveryAddress && (
                     <button
                       type="button"
                       onClick={() => copyToClipboard(selectedOrder.deliveryAddress!, 'Shipping Address')}
-                      className="text-primary hover:underline inline-flex items-center gap-1"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
                     >
                       <Copy className="h-3 w-3" /> Copy Address
                     </button>
@@ -619,7 +704,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
                   placeholder="Street address, building, city, zip code..."
-                  className="bg-background text-foreground text-xs"
+                  className="bg-background text-xs text-foreground"
                 />
                 {selectedOrder.deliveryAddress && (
                   <div className="mt-1.5">
@@ -627,13 +712,19 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrder.deliveryAddress)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
                     >
-                      <ExternalLink className="h-3 w-3" /> Open in Google Maps for Rider Directions
+                      <ExternalLink className="h-3 w-3" /> Open in Google Maps
                     </a>
                   </div>
                 )}
               </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <FulfillmentBadge order={selectedOrder} />
+                  <span>No delivery address needed.</span>
+                </div>
+              )}
             </div>
 
             {/* Order Line Items */}
@@ -644,6 +735,11 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                   <div key={item.id} className="flex items-center justify-between text-sm">
                     <span className="text-foreground">
                       <strong className="text-primary">{item.quantity}x</strong> {item.name}
+                      {item.productType && item.productType !== 'physical' ? (
+                        <span className="ml-1.5 text-[11px] font-normal capitalize text-muted-foreground">
+                          · {item.productType}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="font-medium text-foreground">
                       {formatCurrency(item.price * item.quantity)}
@@ -657,7 +753,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                       <span>{formatCurrency(selectedOrder.subtotal)}</span>
                     </div>
                   )}
-                  {selectedOrder.deliveryFee ? (
+                  {selectedOrder.deliveryFee && orderNeedsShipping(selectedOrder) ? (
                     <div className="flex justify-between text-muted-foreground">
                       <span>Delivery Fee</span>
                       <span>{formatCurrency(selectedOrder.deliveryFee)}</span>
@@ -677,21 +773,22 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
               </div>
             </div>
 
-            {/* Fast Shipping Dispatch Form */}
-            <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <div className="space-y-4 rounded-xl border border-border/60 bg-muted/30 p-4">
+              {orderNeedsShipping(selectedOrder) && (
+              <>
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-foreground flex items-center gap-2">
+                <h4 className="flex items-center gap-2 font-semibold text-foreground">
                   <Truck className="h-4 w-4 text-primary" />
-                  Fast Shipping & Courier Info
+                  Courier
                 </h4>
                 <Badge variant="outline" className="text-xs">
-                  Sends WhatsApp notification automatically
+                  Sends WhatsApp when you save
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="text-xs font-medium text-foreground mb-1 block">Courier / Carrier Name</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Courier / Carrier Name</label>
                   <Input
                     value={courierName}
                     onChange={(e) => setCourierName(e.target.value)}
@@ -700,7 +797,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-foreground mb-1 block">Tracking Number / Reference</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Tracking Number / Reference</label>
                   <Input
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
@@ -709,22 +806,32 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                   />
                 </div>
               </div>
+              </>
+              )}
 
-              {/* Status Selectors */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <SelectField
                   label="Order Status"
                   name="status"
                   value={newStatus}
                   onChange={setNewStatus}
-                  options={[
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'confirmed', label: 'Confirmed (Preparing)' },
-                    { value: 'shipped', label: 'Shipped (Out for Delivery)' },
-                    { value: 'delivered', label: 'Delivered (Completed)' },
-                    { value: 'cancelled', label: 'Cancelled' },
-                  ]}
-                  description="Setting to 'Shipped' attaches courier info & notifies customer"
+                  options={
+                    orderNeedsShipping(selectedOrder)
+                      ? [
+                          { value: 'pending', label: 'Pending' },
+                          { value: 'confirmed', label: 'Confirmed (Preparing)' },
+                          { value: 'shipped', label: 'Shipped (Out for Delivery)' },
+                          { value: 'delivered', label: 'Delivered (Completed)' },
+                          { value: 'cancelled', label: 'Cancelled' },
+                        ]
+                      : [
+                          { value: 'pending', label: 'Pending' },
+                          { value: 'confirmed', label: 'Confirmed' },
+                          { value: 'delivered', label: 'Completed' },
+                          { value: 'cancelled', label: 'Cancelled' },
+                        ]
+                  }
+                  description={orderNeedsShipping(selectedOrder) ? "Setting to 'Shipped' notifies the customer" : 'Mark completed when the file, link, or appointment is done'}
                 />
 
                 <SelectField

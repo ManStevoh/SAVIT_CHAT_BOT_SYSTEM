@@ -29,6 +29,13 @@ class UserController extends Controller
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
+        if ($request->filled('emailVerified') && $request->emailVerified !== 'all') {
+            if ($request->emailVerified === 'verified') {
+                $query->whereNotNull('email_verified_at');
+            } elseif ($request->emailVerified === 'unverified') {
+                $query->whereNull('email_verified_at');
+            }
+        }
 
         $users = $query->orderBy('name')->get();
         $data = $users->map(fn (User $u) => [
@@ -46,6 +53,8 @@ class UserController extends Controller
             'marketingConsent' => (bool) $u->marketing_consent,
             'marketingConsentAt' => $u->marketing_consent_at?->toIso8601String(),
             'selectedPlanId' => $u->selected_plan_id ? (string) $u->selected_plan_id : null,
+            'emailVerified' => $u->email_verified_at !== null,
+            'emailVerifiedAt' => $u->email_verified_at?->toIso8601String(),
         ]);
 
         return response()->json($data->values()->all());

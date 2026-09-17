@@ -208,6 +208,56 @@ class Order extends Model
             ->all();
     }
 
+    public function needsPhysicalShipping(): bool
+    {
+        $this->loadMissing('orderProducts.product');
+        if ($this->orderProducts->isEmpty()) {
+            $t = strtolower((string) ($this->fulfillment_type ?? ''));
+
+            return in_array($t, ['delivery', 'shipping', ''], true) && filled($this->delivery_address);
+        }
+
+        return $this->orderProducts->contains(fn (OrderProduct $line) => $line->needsPhysicalShipping());
+    }
+
+    /**
+     * Paid/confirmed orders that still contain at least one shippable physical line.
+     */
+    public function scopeWhereNeedsPhysicalShipping($query)
+    {
+        return $query->whereHas('orderProducts', function ($lines) {
+            $lines->whereNeedsPhysicalShipping();
+        });
+    }
+
+    public function dashboardFulfillmentType(): string
+    {
+        $this->loadMissing('orderProducts.product');
+        $raw = strtolower((string) ($this->fulfillment_type ?? ''));
+        if (in_array($raw, ['pickup', 'dine_in'], true)) {
+            return $raw;
+        }
+        if ($this->needsPhysicalShipping()) {
+            return in_array($raw, ['delivery', 'shipping'], true) ? $raw : 'delivery';
+        }
+
+        $types = $this->orderProducts
+            ->map(fn (OrderProduct $line) => $line->catalogProductType())
+            ->unique()
+            ->values();
+        if ($types->isNotEmpty() && $types->every(fn (string $type) => $type === 'service')) {
+            return 'service';
+        }
+        if (in_array($raw, ['service', 'booking'], true)) {
+            return 'service';
+        }
+        if ($raw === 'manual') {
+            return 'manual';
+        }
+
+        return 'digital';
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Order $order) {

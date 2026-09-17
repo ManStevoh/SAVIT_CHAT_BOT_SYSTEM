@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { StorefrontCouponsCard } from '@/components/dashboard/StorefrontCouponsCard'
 import { BrandCustomizationCard } from '@/components/dashboard/BrandCustomizationCard'
+import { StorefrontShareActions } from '@/components/dashboard/StorefrontShareActions'
 import type { BrandTheme } from '@/lib/theme-utils'
 
 type BioLink = { label: string; url: string }
@@ -111,7 +112,6 @@ export default function DashboardStorefrontPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-  const [copiedUrl, setCopiedUrl] = useState(false)
 
   const [companyName, setCompanyName] = useState('My Brand')
   const [companyLogo, setCompanyLogo] = useState<string | null>(null)
@@ -352,8 +352,6 @@ export default function DashboardStorefrontPage() {
   const copy = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value)
-      setCopiedUrl(true)
-      setTimeout(() => setCopiedUrl(false), 2000)
     } catch {
       /* ignore */
     }
@@ -428,14 +426,11 @@ export default function DashboardStorefrontPage() {
           </div>
         </div>
         {storefrontUrl && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <code className="max-w-[16rem] truncate rounded-lg border bg-background px-2.5 py-1.5 font-mono text-xs">
               {storefrontUrl}
             </code>
-            <Button variant="outline" size="sm" onClick={() => void copy(storefrontUrl)} className="h-8 gap-1">
-              {copiedUrl ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copiedUrl ? 'Copied' : 'Copy'}
-            </Button>
+            <StorefrontShareActions url={storefrontUrl} companyName={companyName} />
           </div>
         )}
       </div>

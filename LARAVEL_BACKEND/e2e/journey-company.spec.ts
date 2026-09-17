@@ -39,7 +39,7 @@ test.describe('Full company user journey', () => {
       { label: 'Chats' },
       { label: 'Customers' },
       { label: 'Orders', childLink: 'All Orders' },
-      { label: 'Products' },
+      { label: 'Products', childLink: 'All products' },
       { label: 'FAQ Automation', childLink: 'FAQ Responses' },
       { label: 'Analytics', childLink: 'Messages' },
       { label: 'Growth Engine' },

@@ -9,6 +9,7 @@ import {
   Users,
   ShoppingCart,
   Package,
+  Tags,
   HelpCircle,
   BarChart3,
   Rocket,
@@ -94,6 +95,17 @@ export function parseOrderPipelineStatus(value: string | null | undefined): Orde
     return value
   }
   return "all"
+}
+
+export type ProductsTab = "catalog" | "categories"
+
+export const productsNavItems: DashboardNavItem[] = [
+  { name: "All products", href: "/dashboard/products", icon: Package },
+  { name: "Categories", href: "/dashboard/products?tab=categories", icon: Tags },
+]
+
+export function parseProductsTab(value: string | null | undefined): ProductsTab {
+  return value === "categories" ? "categories" : "catalog"
 }
 
 export type StorefrontTab = "design" | "link" | "advanced"
@@ -198,6 +210,7 @@ export function parseSettingsTab(value: string | null | undefined): SettingsTab 
 
 const defaultQueryByPath: Record<string, { key: string; emptyValues: string[] }> = {
   "/dashboard/orders": { key: "status", emptyValues: ["", "all"] },
+  "/dashboard/products": { key: "tab", emptyValues: ["", "catalog", "all"] },
   "/dashboard/storefront": { key: "tab", emptyValues: ["", "design"] },
   "/dashboard/bookings": { key: "tab", emptyValues: ["", "upcoming", "schedule"] },
   "/dashboard/dine-in": { key: "tab", emptyValues: ["", "tables"] },
@@ -249,7 +262,7 @@ export const dashboardNavGroups: DashboardNavGroup[] = [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Chats", href: "/dashboard/chats", icon: MessageSquare },
       { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart, children: orderPipelineItems },
-      { name: "Products", href: "/dashboard/products", icon: Package },
+      { name: "Products", href: "/dashboard/products", icon: Package, children: productsNavItems },
       { name: "Storefront", href: "/dashboard/storefront", icon: Store, children: storefrontNavItems },
       { name: "Delivery", href: "/dashboard/delivery", icon: Truck },
       { name: "Taxes", href: "/dashboard/taxes", icon: Percent },
@@ -507,7 +520,7 @@ export function DashboardNavLinks({
   const showUpsell = isStarter && !collapsed
 
   return (
-    <nav className="flex flex-col gap-4 overflow-y-auto p-3 pb-6">
+    <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 pb-6">
       {visibleGroups.map((group) => {
         if (group.collapsible) {
           const open = collapsed ? aiActive : aiOpen
@@ -596,11 +609,11 @@ export function DashboardSidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 hidden h-screen border-r border-sidebar-border bg-sidebar transition-all duration-300 md:block",
+        "fixed left-0 top-0 z-40 hidden h-screen flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-all duration-300 md:block",
         collapsed ? "w-[4.5rem]" : "w-60"
       )}
     >
-      <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-3">
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-3">
         {!collapsed ? (
           <Link href="/dashboard" className="min-w-0 pl-1">
             <AppLogoAndName variant="sidebar" />

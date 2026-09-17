@@ -198,6 +198,7 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('customers/stats', [CustomerController::class, 'stats']);
     Route::get('customers', [CustomerController::class, 'index']);
     Route::get('products', [ProductController::class, 'index']);
+    Route::post('products/rename-category', [ProductController::class, 'renameCategory']);
     Route::post('products/{product}/variants', [ProductController::class, 'storeVariant']);
     Route::put('product-variants/{productVariant}', [ProductController::class, 'updateVariant']);
     Route::delete('product-variants/{productVariant}', [ProductController::class, 'destroyVariant']);
@@ -304,7 +305,9 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::delete('settings/og-image', [SettingsController::class, 'destroyOgImage']);
     Route::get('setup-status', [SetupStatusController::class, 'show']);
     Route::post('setup-status/dismiss', [SetupStatusController::class, 'dismiss']);
-    Route::post('setup-status/restore', [SetupStatusController::class, 'restore']);    Route::get('commerce-brief', [CommerceBriefController::class, 'today']);
+    Route::post('setup-status/restore', [SetupStatusController::class, 'restore']);
+    Route::post('setup-status/share-storefront', [SetupStatusController::class, 'markStorefrontShared']);
+    Route::get('commerce-brief', [CommerceBriefController::class, 'today']);
     Route::get('executive-ai/dashboard', [ExecutiveAiController::class, 'dashboard']);
     Route::get('executive-ai/opportunities', [ExecutiveAiController::class, 'opportunities']);
     Route::get('executive-ai/approvals', [ExecutiveAiController::class, 'pendingApprovals']);

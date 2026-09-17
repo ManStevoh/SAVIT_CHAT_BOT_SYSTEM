@@ -175,6 +175,11 @@ class DashboardSummaryController extends Controller
         $settingsData    = [
             'displayCurrency' => $companySettings?->display_currency ?? 'KES',
             'companyName'     => $company->name,
+            'storefrontEnabled' => (bool) $company->storefront_enabled,
+            'storefrontUrl'     => $company->store_slug
+                ? rtrim((string) config('app.url'), '/').'/s/'.$company->store_slug
+                : null,
+            'allowStorefront'   => PlanLimitService::companyAllowsStorefront($company),
         ];
 
         // ── Setup Status ──────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import { dismissSetupChecklist, restoreSetupChecklist } from "@/lib/api-actions"
 import { useState } from "react"
 import { useSWRConfig } from "swr"
 import { toast } from "sonner"
+import { StorefrontShareActions } from "@/components/dashboard/StorefrontShareActions"
 
 interface Props {
   /** Pre-seeded data from the dashboard-summary combined fetch. When provided,
@@ -119,11 +120,29 @@ export function GettingStartedChecklist({ initialData }: Props) {
               <p className="text-sm font-medium">{step.title}</p>
               <p className="text-xs text-muted-foreground">{step.description}</p>
             </div>
-            {!step.done && (
+            {step.id === "share" && step.url ? (
+              <StorefrontShareActions
+                url={step.url}
+                onShared={() => {
+                  void globalMutate(
+                    "company-setup-status",
+                    {
+                      ...data,
+                      steps: data.steps.map((s) => (s.id === "share" ? { ...s, done: true } : s)),
+                      completedCount: step.done
+                        ? data.completedCount
+                        : Math.min(data.totalCount, data.completedCount + 1),
+                    },
+                    false
+                  )
+                  mutate()
+                }}
+              />
+            ) : !step.done ? (
               <Button asChild size="sm" variant="outline" className="shrink-0">
                 <Link href={step.href}>Do it</Link>
               </Button>
-            )}
+            ) : null}
           </div>
         ))}
         <p className="pt-1 text-center text-xs text-muted-foreground">

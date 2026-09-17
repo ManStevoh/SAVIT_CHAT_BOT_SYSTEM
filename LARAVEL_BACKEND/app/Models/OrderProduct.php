@@ -54,4 +54,68 @@ class OrderProduct extends Model
     {
         return $this->belongsTo(TaxRate::class);
     }
+
+    public function catalogProductType(): string
+    {
+        $data = is_array($this->fulfillment_data) ? $this->fulfillment_data : [];
+        $type = strtolower((string) ($data['productType'] ?? $this->product?->product_type ?? ''));
+        if (in_array($type, ['physical', 'digital', 'service'], true)) {
+            return $type;
+        }
+        $fulfillment = strtolower((string) ($data['fulfillmentType'] ?? $this->product?->fulfillment_type ?? ''));
+        if (in_array($fulfillment, ['download', 'link'], true)) {
+            return 'digital';
+        }
+        if ($fulfillment === 'booking') {
+            return 'service';
+        }
+
+        return 'physical';
+    }
+
+    public function catalogFulfillmentType(): string
+    {
+        $data = is_array($this->fulfillment_data) ? $this->fulfillment_data : [];
+
+        return strtolower((string) ($data['fulfillmentType'] ?? $this->product?->fulfillment_type ?? ''));
+    }
+
+    public function needsPhysicalShipping(): bool
+    {
+        $type = $this->catalogProductType();
+        $fulfillment = $this->catalogFulfillmentType();
+        if (in_array($type, ['digital', 'service'], true)) {
+            return false;
+        }
+        if (in_array($fulfillment, ['download', 'link', 'booking'], true)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function scopeWhereNeedsPhysicalShipping($query)
+    {
+        return $query->where(function ($line) {
+            $line->where(function ($jsonType) {
+                $jsonType->whereNull('fulfillment_data')
+                    ->orWhereNull('fulfillment_data->productType')
+                    ->orWhereNotIn('fulfillment_data->productType', ['digital', 'service']);
+            })->where(function ($jsonFulfill) {
+                $jsonFulfill->whereNull('fulfillment_data')
+                    ->orWhereNull('fulfillment_data->fulfillmentType')
+                    ->orWhereNotIn('fulfillment_data->fulfillmentType', ['download', 'link', 'booking']);
+            })->where(function ($catalog) {
+                $catalog->whereDoesntHave('product')
+                    ->orWhereHas('product', function ($p) {
+                        $p->where(function ($t) {
+                            $t->whereNull('product_type')->orWhere('product_type', 'physical');
+                        })->where(function ($f) {
+                            $f->whereNull('fulfillment_type')
+                                ->orWhereNotIn('fulfillment_type', ['download', 'link', 'booking']);
+                        });
+                    });
+            });
+        });
+    }
 }

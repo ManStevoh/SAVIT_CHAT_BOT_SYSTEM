@@ -76,6 +76,35 @@ class ProductController extends Controller
         return response()->json($data->values()->all());
     }
 
+    public function renameCategory(Request $request): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        if (! $companyId) {
+            return response()->json(['success' => false, 'message' => 'No company.'], 403);
+        }
+
+        $validated = $request->validate([
+            'from' => 'required|string|max:255',
+            'to' => 'required|string|max:255',
+        ]);
+
+        $from = trim($validated['from']);
+        $to = trim($validated['to']);
+        if ($from === '' || $to === '') {
+            return response()->json(['success' => false, 'message' => 'Category name is required.'], 422);
+        }
+
+        $updated = Product::where('company_id', $companyId)
+            ->where('category', $from)
+            ->update(['category' => $to]);
+
+        return response()->json([
+            'success' => true,
+            'updated' => $updated,
+            'category' => $to,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;

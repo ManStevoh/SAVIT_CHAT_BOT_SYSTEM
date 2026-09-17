@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\CompanyNotification;
 use App\Models\Plan;
 use App\Models\PlatformSetting;
@@ -200,11 +201,22 @@ class RegistrationTrialAndConsentTest extends TestCase
         ]);
         Sanctum::actingAs($admin);
 
+        $unverified = User::factory()->create([
+            'role' => 'company_user',
+            'email' => 'unverified@test.local',
+            'email_verified_at' => null,
+        ]);
+
         $this->getJson('/api/admin/users')
             ->assertOk()
             ->assertJsonFragment([
                 'email' => 'consent@test.local',
                 'marketingConsent' => true,
+                'emailVerified' => true,
+            ])
+            ->assertJsonFragment([
+                'email' => 'unverified@test.local',
+                'emailVerified' => false,
             ]);
     }
 
@@ -235,6 +247,24 @@ class RegistrationTrialAndConsentTest extends TestCase
             'status' => 'active',
         ]);
         $this->assertSame('free', $user->company?->plan);
+    }
+
+    public function test_register_opens_storefront_by_default(): void
+    {
+        $this->postJson('/api/auth/register', [
+            'companyName' => 'Open Shop Co',
+            'name' => 'Owner',
+            'email' => 'open-shop@test.local',
+            'phone' => '254700000022',
+            'password' => 'Password1!',
+            'password_confirmation' => 'Password1!',
+            'acceptTerms' => true,
+        ])->assertOk();
+
+        $company = Company::where('email', 'open-shop@test.local')->firstOrFail();
+        $this->assertTrue($company->storefront_enabled);
+        $this->assertNotEmpty($company->store_slug);
+        $this->assertSame('open-shop-co', $company->store_slug);
     }
 
     public function test_force_default_plan_overrides_selected_paid_trial(): void

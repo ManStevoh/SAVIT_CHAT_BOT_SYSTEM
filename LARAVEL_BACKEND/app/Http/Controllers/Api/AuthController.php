@@ -10,6 +10,7 @@ use App\Models\PlatformSetting;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\MailService;
+use App\Services\PlanLimitService;
 use App\Services\Platform\NotificationDispatcher;
 use App\Services\RecaptchaService;
 use App\Services\WhatsApp\WhatsAppDebugLogger;
@@ -207,6 +208,8 @@ class AuthController extends Controller
                     'email_verified_at' => now(),
                 ]);
 
+                $this->openStorefrontOnRegister($company);
+
                 return [$company, $user];
             });
         } catch (QueryException $e) {
@@ -328,7 +331,9 @@ class AuthController extends Controller
                 $trial = $this->createTrialSubscriptionForRegistration($company, $selectedPlan);
                 if ($trial) {
                     $company->update(['plan' => $trial['plan_slug']]);
+                    $company->refresh();
                 }
+                $this->openStorefrontOnRegister($company);
 
                 return [$company, $user, $trial];
             });
@@ -652,6 +657,14 @@ class AuthController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Registration welcome failed: '.$e->getMessage());
         }
+    }
+
+    private function openStorefrontOnRegister(Company $company): void
+    {
+        if (! PlanLimitService::companyAllowsStorefront($company)) {
+            return;
+        }
+        $company->enablePublicStorefront();
     }
 
     private function loginThrottleKey(Request $request): string
