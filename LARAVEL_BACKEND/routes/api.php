@@ -179,6 +179,7 @@ Route::prefix('v1/company')->middleware('api.key')->group(function () {
 // Company (auth required; subscription must be active except for subscription/checkout routes)
 Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscription.active'])->group(function () {
     Route::get('dashboard-summary', [\App\Http\Controllers\Api\Company\DashboardSummaryController::class, 'index']);
+    Route::get('nav-badges', [\App\Http\Controllers\Api\Company\DashboardSummaryController::class, 'badges']);
     Route::get('chats', [ChatController::class, 'index']);
     Route::post('chats/start', [ChatController::class, 'start']);
     Route::post('chats/{chatId}/hand-back', [ChatController::class, 'handBack']);

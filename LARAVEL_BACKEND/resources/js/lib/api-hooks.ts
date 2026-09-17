@@ -747,6 +747,51 @@ export interface DashboardSummaryData {
  * company-settings, and notifications so those hooks never fire separately.
  * API Endpoint: GET /api/company/dashboard-summary?period=7d
  */
+export type NavBadges = {
+  unreadChats: number
+  pendingOrders: number
+  readyToShip: number
+  openOrders: number
+}
+
+const emptyNavBadges: NavBadges = {
+  unreadChats: 0,
+  pendingOrders: 0,
+  readyToShip: 0,
+  openOrders: 0,
+}
+
+/**
+ * Left-nav counts. API: GET /api/company/nav-badges
+ */
+export function useNavBadges() {
+  return useSWR<NavBadges>(
+    'company-nav-badges',
+    async () => {
+      if (!useMockApi()) {
+        try {
+          const data = await apiRequest<NavBadges>('/api/company/nav-badges')
+          return {
+            unreadChats: Number(data?.unreadChats) || 0,
+            pendingOrders: Number(data?.pendingOrders) || 0,
+            readyToShip: Number(data?.readyToShip) || 0,
+            openOrders: Number(data?.openOrders) || 0,
+          }
+        } catch {
+          return emptyNavBadges
+        }
+      }
+      return emptyNavBadges
+    },
+    {
+      refreshInterval: 20000,
+      revalidateOnFocus: true,
+      dedupingInterval: 10000,
+      shouldRetryOnError: false,
+    }
+  )
+}
+
 export function useDashboardSummary(period?: string) {
   return useSWR<DashboardSummaryData>(
     ['dashboard-summary', period],
@@ -760,7 +805,6 @@ export function useDashboardSummary(period?: string) {
         mutate('company-setup-status', data.setupStatus, false)
         mutate('subscription', data.subscription, false)
         mutate('company-settings', { displayCurrency: data.settings.displayCurrency, companyName: data.settings.companyName }, false)
-        mutate('company-notifications', { items: [], unreadCount: 0 }, false)
         return data
       }
       await delay(800)
