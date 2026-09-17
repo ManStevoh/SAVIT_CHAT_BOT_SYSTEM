@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { parseStorefrontTab } from '@/components/dashboard/sidebar'
 import { apiRequest } from '@/lib/api-client'
 import {
   Bot,
@@ -20,16 +22,13 @@ import {
   Eye,
   Gift,
   Globe,
-  Link2,
   Loader2,
   MessageSquare,
-  Palette,
   Plus,
   Search,
   Share2,
   ShieldCheck,
   ShoppingCart,
-  SlidersHorizontal,
   Sparkles,
   Store,
   Trash2,
@@ -105,12 +104,14 @@ function AutomationRow({
 }
 
 export default function DashboardStorefrontPage() {
+  const searchParams = useSearchParams()
+  const activeTab = parseStorefrontTab(searchParams.get('tab'))
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
-  const [activeTab, setActiveTab] = useState('design')
 
   const [companyName, setCompanyName] = useState('My Brand')
   const [companyLogo, setCompanyLogo] = useState<string | null>(null)
@@ -439,22 +440,7 @@ export default function DashboardStorefrontPage() {
         )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="inline-flex h-auto max-w-full gap-1 overflow-x-auto rounded-2xl border border-border bg-muted/50 p-1.5">
-          <TabsTrigger value="design" className="gap-2 rounded-xl px-4 py-2 text-[13px] font-medium">
-            <Palette className="h-4 w-4" />
-            Design
-          </TabsTrigger>
-          <TabsTrigger value="link" className="gap-2 rounded-xl px-4 py-2 text-[13px] font-medium">
-            <Link2 className="h-4 w-4" />
-            Store link & settings
-          </TabsTrigger>
-          <TabsTrigger value="advanced" className="gap-2 rounded-xl px-4 py-2 text-[13px] font-medium">
-            <SlidersHorizontal className="h-4 w-4" />
-            Advanced settings
-          </TabsTrigger>
-        </TabsList>
-
+      <Tabs value={activeTab} className="space-y-6">
         {/* TAB 1: how it looks */}
         <TabsContent value="design" className="space-y-4 outline-none">
           <BrandCustomizationCard

@@ -1,6 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { parseDineInTab, type DineInTab } from '@/components/dashboard/sidebar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,11 +35,30 @@ const initialForm: TableFormData = {
 
 const STEPS = [
   { n: 1, title: 'Name your tables', desc: 'Table 1, Patio 2 — whatever staff shout across the room.' },
-  { n: 2, title: 'Pick scan behavior', desc: 'Web menu, WhatsApp chat, or let the guest choose. Below.' },
+  { n: 2, title: 'Pick scan behavior', desc: 'Web menu, WhatsApp chat, or let the guest choose.' },
   { n: 3, title: 'Print & place the QRs', desc: 'One tent card per table. Print all runs off a single button.' },
 ]
 
+const TAB_META: Record<DineInTab, { title: string; desc: string }> = {
+  tables: {
+    title: 'Dine-in tables',
+    desc: 'Guests scan, order from their seats, pay or run a tab.',
+  },
+  scan: {
+    title: 'Scan behavior',
+    desc: 'Choose what happens when a guest scans a table QR and how bills get settled.',
+  },
+  print: {
+    title: 'Print QRs',
+    desc: 'Print tent cards for every table, or copy order links to share digitally.',
+  },
+}
+
 export default function DineInPage() {
+  const searchParams = useSearchParams()
+  const activeTab = parseDineInTab(searchParams.get('tab'))
+  const tabMeta = TAB_META[activeTab]
+
   const { data, isLoading } = useDineInTables()
   const { data: settings } = useCompanySettings()
   const { data: subscription } = useSubscription()
@@ -313,27 +334,29 @@ export default function DineInPage() {
     <div className="w-full space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Dine-in tables</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{tabMeta.title}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Guests scan, order from their seats, pay or run a tab.
-            {tableLimit != null ? ` ${tables.length} of ${tableLimit} tables used.` : ''}
+            {tabMeta.desc}
+            {activeTab === 'tables' && tableLimit != null ? ` ${tables.length} of ${tableLimit} tables used.` : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {tables.length > 0 && (
+          {activeTab === 'print' && tables.length > 0 && (
             <Button variant="outline" size="sm" onClick={() => printTables()} disabled={printing}>
               <Printer className="mr-1.5 h-3.5 w-3.5" />
               Print all QRs
             </Button>
           )}
-          <Button size="sm" onClick={openCreate} disabled={tablesFull} title={tablesFull ? `All ${tableLimit} tables in use — Growth unlocks 20` : undefined}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Add table
-          </Button>
+          {activeTab === 'tables' && (
+            <Button size="sm" onClick={openCreate} disabled={tablesFull} title={tablesFull ? `All ${tableLimit} tables in use — Growth unlocks 20` : undefined}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add table
+            </Button>
+          )}
         </div>
       </div>
 
-      {(tablesNear || tablesFull) && tableLimit != null && (
+      {activeTab === 'tables' && (tablesNear || tablesFull) && tableLimit != null && (
         <div className="max-w-xl space-y-3">
           <PlanLimitBar used={tables.length} limit={tableLimit} label="Dine-in tables" unit="tables" />
           {tablesFull && (
@@ -365,107 +388,169 @@ export default function DineInPage() {
         </div>
       )}
 
-      {tables.length === 0 && !isLoading ? (
-        <Card>
-          <CardContent className="p-6 sm:p-8">
-            <p className="text-base font-semibold text-foreground">Set up dine-in in three steps</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Five minutes, then every table orders for itself.
-            </p>
-            <ol className="mt-5 space-y-4">
-              {STEPS.map((s) => (
-                <li key={s.n} className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                    {s.n}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground">{s.title}</p>
-                    <p className="text-[13px] text-muted-foreground">{s.desc}</p>
-                    {s.n === 1 && (
-                      <Button size="sm" className="mt-2" onClick={openCreate} disabled={tablesFull}>
-                        <Plus className="mr-1.5 h-3.5 w-3.5" /> Add your first table
-                      </Button>
-                    )}
-                    {s.n === 3 && (
-                      <p className="mt-2 text-[13px] text-muted-foreground">
-                        The <span className="font-medium text-foreground">Print all QRs</span> button appears up top once tables exist.
-                      </p>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <QrCode className="h-4 w-4" />
-              Tables
-            </CardTitle>
-            <CardDescription>
-              Tap the QR icon on any row for a printable code. Scanning connects the table to the order automatically.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              columns={columns}
-              data={tables}
-              isLoading={isLoading}
-              emptyMessage="No dine-in tables yet. Add your first table to generate a QR order link."
-            />
-          </CardContent>
-        </Card>
+      {activeTab === 'tables' && (
+        <>
+          {tables.length === 0 && !isLoading ? (
+            <Card>
+              <CardContent className="p-6 sm:p-8">
+                <p className="text-base font-semibold text-foreground">Set up dine-in in three steps</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Five minutes, then every table orders for itself. Use the sidebar to move through each step.
+                </p>
+                <ol className="mt-5 space-y-4">
+                  {STEPS.map((s) => (
+                    <li key={s.n} className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                        {s.n}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-foreground">{s.title}</p>
+                        <p className="text-[13px] text-muted-foreground">{s.desc}</p>
+                        {s.n === 1 && (
+                          <Button size="sm" className="mt-2" onClick={openCreate} disabled={tablesFull}>
+                            <Plus className="mr-1.5 h-3.5 w-3.5" /> Add your first table
+                          </Button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <QrCode className="h-4 w-4" />
+                  Tables
+                </CardTitle>
+                <CardDescription>
+                  Tap the QR icon on any row for a printable code. Scanning connects the table to the order automatically.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={columns}
+                  data={tables}
+                  isLoading={isLoading}
+                  emptyMessage="No dine-in tables yet. Add your first table to generate a QR order link."
+                />
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <Settings2 className="h-4 w-4 text-primary" /> What the scan does
-            </CardTitle>
-            <CardDescription className="text-xs">
-              What happens when a guest scans your table QR.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <select
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={settings?.dineInQrTarget ?? 'web_menu'}
-              disabled={savingSettings}
-              onChange={(e) => handleUpdateDineInOptions('dineInQrTarget', e.target.value)}
-            >
-              <option value="web_menu">Digital menu (table pre-tagged)</option>
-              <option value="whatsapp_chat">WhatsApp chat (prefilled greeting)</option>
-              <option value="dual_choice">Guest chooses menu or WhatsApp</option>
-            </select>
-          </CardContent>
-        </Card>
+      {activeTab === 'scan' && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Settings2 className="h-4 w-4 text-primary" /> What the scan does
+              </CardTitle>
+              <CardDescription className="text-xs">
+                What happens when a guest scans your table QR.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={settings?.dineInQrTarget ?? 'web_menu'}
+                disabled={savingSettings}
+                onChange={(e) => handleUpdateDineInOptions('dineInQrTarget', e.target.value)}
+              >
+                <option value="web_menu">Digital menu (table pre-tagged)</option>
+                <option value="whatsapp_chat">WhatsApp chat (prefilled greeting)</option>
+                <option value="dual_choice">Guest chooses menu or WhatsApp</option>
+              </select>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <Settings2 className="h-4 w-4 text-primary" /> How tables pay
-            </CardTitle>
-            <CardDescription className="text-xs">
-              How table bills get settled.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <select
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={settings?.dineInPaymentTiming ?? 'pay_upfront'}
-              disabled={savingSettings}
-              onChange={(e) => handleUpdateDineInOptions('dineInPaymentTiming', e.target.value)}
-            >
-              <option value="pay_upfront">Pay now (M-Pesa / card per order)</option>
-              <option value="open_tab">Open tab (pay staff after dining)</option>
-              <option value="customer_choice">Guest chooses</option>
-            </select>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Settings2 className="h-4 w-4 text-primary" /> How tables pay
+              </CardTitle>
+              <CardDescription className="text-xs">
+                How table bills get settled.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={settings?.dineInPaymentTiming ?? 'pay_upfront'}
+                disabled={savingSettings}
+                onChange={(e) => handleUpdateDineInOptions('dineInPaymentTiming', e.target.value)}
+              >
+                <option value="pay_upfront">Pay now (M-Pesa / card per order)</option>
+                <option value="open_tab">Open tab (pay staff after dining)</option>
+                <option value="customer_choice">Guest chooses</option>
+              </select>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'print' && (
+        <>
+          {tables.length === 0 && !isLoading ? (
+            <Card>
+              <CardContent className="p-6 text-center sm:p-8">
+                <Printer className="mx-auto h-8 w-8 text-muted-foreground" />
+                <p className="mt-3 text-sm font-semibold text-foreground">No tables to print yet</p>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  Add tables under <span className="font-medium text-foreground">Tables</span>, then come back to print tent cards.
+                </p>
+                <Button size="sm" className="mt-4" onClick={openCreate} disabled={tablesFull}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" /> Add table
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {tables.map((t) => (
+                <Card key={t.id}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">{t.name}</CardTitle>
+                    {t.code ? <CardDescription>{t.code}</CardDescription> : null}
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="mx-auto w-fit rounded-xl border bg-white p-3">
+                      <QRCodeSVG value={t.orderUrl} size={160} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <code className="min-w-0 flex-1 truncate text-[11px]">{t.orderUrl}</code>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => copyUrl(t.orderUrl)} title="Copy web menu link">
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      {t.whatsappOrderUrl && (
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <MessageSquare className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                          <code className="min-w-0 flex-1 truncate text-[11px]">{t.whatsappOrderUrl}</code>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => copyUrl(t.whatsappOrderUrl!)} title="Copy WhatsApp link">
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" className="flex-1" onClick={() => printTables([t])} disabled={printing}>
+                        <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setQrTarget(t)}>
+                        <QrCode className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Hidden QR render targets for printing (SVGs serialized, never shown) */}
       <div aria-hidden className="hidden">
