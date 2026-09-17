@@ -4,9 +4,9 @@ Welcome! Before you perform tasks in this repository, please observe the followi
 
 ---
 
-## 🔴 SHIP THROUGH MAIN (EVERY PUSH)
+## 🔴 SHIP THROUGH THE CI/CD PIPELINE
 
-Every completed change that should go live MUST pull latest `main`, open a PR to `main`, merge it, and deploy production. Do not stop at an unmerged PR.
+Production ships only through GitHub Actions. Merge to `main` triggers **Deploy to production** (tests, then cPanel). Do not use `POST /deploy/agent` as the primary path. If CI fails, fix the failures and push again until the pipeline is green.
 
 ### Standard pipeline:
 1. **Pull `origin/main`**: `git fetch origin main` and merge/rebase onto it before pushing.
@@ -19,8 +19,7 @@ Every completed change that should go live MUST pull latest `main`, open a PR to
    git add -A && git commit -m "..." && git push origin <branch>
    ```
    Open a PR targeting `main`, then merge it.
-4. **Deploy production (`main`)**:
-   Trigger via `POST https://relayiq.app/deploy/agent` with `X-Deploy-Agent-Key: <DEPLOY_SECRET>` from `LARAVEL_BACKEND/.env` and `{"branch": "main"}`.
+4. **Watch GitHub Actions**. If tests or deploy fail, fix and push again. Do not leave red checks.
 
 Default deploy branch is always `main`. Only use a different branch if the developer names one.
 

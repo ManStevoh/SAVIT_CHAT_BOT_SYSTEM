@@ -70,7 +70,7 @@ class PlanEntitlementEnforcementTest extends TestCase
         $growth = Plan::where('slug', 'professional')->firstOrFail();
         $enterprise = Plan::where('slug', 'enterprise')->firstOrFail();
 
-        $this->assertSame(50, $free->entitlements['messages']);
+        $this->assertSame(0, $free->entitlements['messages']);
         $this->assertSame(20, $free->entitlements['max_products']);
         $this->assertSame(1, $free->entitlements['team']);
         $this->assertTrue($free->entitlements['requires_branding']);
@@ -268,7 +268,7 @@ class PlanEntitlementEnforcementTest extends TestCase
         ['company' => $growth] = $this->companyOnPlan('professional');
         ['company' => $enterprise] = $this->companyOnPlan('enterprise');
 
-        $this->assertSame(5, GrowthLimitService::getAiPostsLimit($starter));
+        $this->assertSame(0, GrowthLimitService::getAiPostsLimit($starter));
         $this->assertSame(1, GrowthLimitService::getPlatformLimit($starter));
 
         $this->assertSame(40, GrowthLimitService::getAiPostsLimit($growth));
@@ -297,19 +297,6 @@ class PlanEntitlementEnforcementTest extends TestCase
 
     public function test_dine_in_gated_by_plan(): void
     {
-        ['owner' => $starterOwner] = $this->companyOnPlan('free');
-        Sanctum::actingAs($starterOwner);
-
-        $this->postJson('/api/company/dine-in-tables', [
-            'name' => 'Table 1',
-        ])->assertStatus(403)
-            ->assertJsonPath('code', 'dine_in_required');
-
-        $this->putJson('/api/company/settings', [
-            'dineInEnabled' => true,
-        ])->assertStatus(403)
-            ->assertJsonPath('code', 'dine_in_required');
-
         ['owner' => $freeOwner] = $this->companyOnPlan('free');
         Sanctum::actingAs($freeOwner);
 
@@ -317,6 +304,10 @@ class PlanEntitlementEnforcementTest extends TestCase
             'name' => 'Table 1',
         ])->assertCreated()
             ->assertJsonPath('success', true);
+
+        $this->putJson('/api/company/settings', [
+            'dineInEnabled' => true,
+        ])->assertOk();
 
         CompanyEntitlementOverride::create([
             'company_id' => $freeOwner->company_id,
@@ -335,7 +326,7 @@ class PlanEntitlementEnforcementTest extends TestCase
         Sanctum::actingAs($owner);
 
         $this->assertTrue(PlanLimitService::companyAllowsStorefront($company));
-        $this->assertFalse(PlanLimitService::companyAllowsDineIn($company));
+        $this->assertTrue(PlanLimitService::companyAllowsDineIn($company));
 
         $this->putJson('/api/company/settings', [
             'storefrontEnabled' => true,

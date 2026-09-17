@@ -399,7 +399,7 @@ class PublicStorefrontController extends Controller
         $cart = $this->storefront->cartSummary($company, $session);
         $hasDigitalItems = (bool) ($cart['hasDigitalItems'] ?? false);
         $digitalOnly = (bool) ($cart['digitalOnly'] ?? false);
-        $emailRequired = true;
+        $emailRequired = $hasDigitalItems;
 
         $validated = $request->validate([
             'customerName' => 'required|string|max:255',

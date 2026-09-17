@@ -30,6 +30,33 @@ class OrderCommission extends Model
         'settled_at' => 'datetime',
     ];
 
+    /**
+     * Public API alias for collection_mode (tests and admin JSON).
+     */
+    public function getDeductionMethodAttribute(): ?string
+    {
+        $mode = $this->attributes['collection_mode'] ?? null;
+
+        return match ($mode) {
+            'automatic_split', 'gateway_split' => 'gateway_split',
+            'manual_direct', 'accrual' => 'accrual',
+            default => $mode,
+        };
+    }
+
+    /**
+     * Public API alias for settlement_status.
+     */
+    public function getStatusAttribute(): ?string
+    {
+        $status = $this->attributes['settlement_status'] ?? null;
+
+        return match ($status) {
+            'accrued' => 'pending',
+            default => $status,
+        };
+    }
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

@@ -53,9 +53,14 @@ class BillingResolutionService
 
         $isCommissionActive = in_array(strtolower($model), ['commission', 'hybrid'], true);
 
+        $source = ! empty($company->billing_model)
+            ? 'tenant_override'
+            : 'platform_default';
+
         return [
             'model'                  => strtolower($model),
             'billing_model'          => strtolower($model),
+            'source'                 => $source,
             'is_commission_active'   => $isCommissionActive,
             'rate'                   => max(0.0, round($rate, 2)),
             'commission_rate'        => max(0.0, round($rate, 2)),

@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\AiRequestLog;
 use App\Models\Company;
 use App\Models\PlatformSetting;
+use App\Models\Subscription;
 use App\Services\AI\OpenAiClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -25,6 +26,16 @@ class OpenAiClientTest extends TestCase
         $company = Company::create([
             'name' => 'Test Shop',
             'email' => 'shop@example.test',
+        ]);
+
+        Subscription::create([
+            'company_id' => $company->id,
+            'plan' => 'professional',
+            'status' => 'active',
+            'start_date' => now()->subMonth(),
+            'end_date' => now()->addMonth(),
+            'amount' => 99,
+            'billing_cycle' => 'monthly',
         ]);
 
         Http::fake([
