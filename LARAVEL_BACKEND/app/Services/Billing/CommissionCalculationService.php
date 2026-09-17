@@ -50,7 +50,7 @@ class CommissionCalculationService
 
         // Determine collection mode based on payment method
         $paymentMethod = strtolower((string) ($order->payment_method ?? 'manual'));
-        $isAutomaticGateway = in_array($paymentMethod, ['stripe_split', 'paystack_split', 'flutterwave_split'], true);
+        $isAutomaticGateway = $this->isGatewaySplitPayment($paymentMethod);
 
         $collectionMode = $isAutomaticGateway ? 'automatic_split' : 'manual_direct';
         $settlementStatus = $isAutomaticGateway ? 'settled' : 'accrued';
@@ -88,5 +88,25 @@ class CommissionCalculationService
 
             return $commission;
         });
+    }
+
+    private function isGatewaySplitPayment(string $paymentMethod): bool
+    {
+        if ($paymentMethod === '' || $paymentMethod === 'manual') {
+            return false;
+        }
+
+        if (str_ends_with($paymentMethod, '_split')) {
+            return true;
+        }
+
+        return in_array($paymentMethod, [
+            'stripe',
+            'paystack',
+            'flutterwave',
+            'pesapal',
+            'mpesa',
+            'card',
+        ], true);
     }
 }

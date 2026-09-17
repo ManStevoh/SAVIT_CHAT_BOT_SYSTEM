@@ -85,9 +85,6 @@ class RegistrationTrialAndConsentTest extends TestCase
     {
         $growth = Plan::where('slug', 'professional')->firstOrFail();
         $growth->update(['has_trial' => false, 'trial_days' => null]);
-        $freePlan = Plan::where('slug', 'free')->firstOrFail();
-        $freePlan->update(['has_trial' => true, 'trial_days' => 14]);
-
         $this->postJson('/api/auth/register', [
             'companyName' => 'Pay Growth Co',
             'name' => 'Owner',
@@ -100,7 +97,8 @@ class RegistrationTrialAndConsentTest extends TestCase
             'planId' => (string) $growth->id,
         ])->assertOk()
             ->assertJsonPath('requiresPayment', false)
-            ->assertJsonPath('trialPlan', 'free');
+            ->assertJsonPath('trialStarted', false)
+            ->assertJsonPath('trialPlan', null);
 
         $user = User::where('email', 'pay-growth@test.local')->firstOrFail();
         $this->assertFalse($user->marketing_consent);
@@ -226,7 +224,8 @@ class RegistrationTrialAndConsentTest extends TestCase
             'password_confirmation' => 'Password1!',
             'acceptTerms' => true,
         ])->assertOk()
-            ->assertJsonPath('trialPlan', 'free')
+            ->assertJsonPath('trialStarted', false)
+            ->assertJsonPath('trialPlan', null)
             ->assertJsonPath('requiresPayment', false);
 
         $user = User::where('email', 'free-default@test.local')->firstOrFail();
@@ -258,9 +257,10 @@ class RegistrationTrialAndConsentTest extends TestCase
             'planId' => (string) $growth->id,
             'intent' => 'subscribe',
         ])->assertOk()
-            ->assertJsonPath('trialPlan', 'free')
+            ->assertJsonPath('trialStarted', false)
+            ->assertJsonPath('trialPlan', null)
             ->assertJsonPath('requiresPayment', false)
-            ->assertJsonPath('postLoginPath', '/dashboard?trial_started=1');
+            ->assertJsonPath('postLoginPath', '/dashboard');
 
         $user = User::where('email', 'forced-free@test.local')->firstOrFail();
         $this->assertFalse($user->wants_immediate_payment);

@@ -71,17 +71,15 @@ class CompanySetupStatusTest extends TestCase
             ->assertJsonPath('dismissed', false)
             ->assertJsonPath('isComplete', false)
             ->assertJsonPath('completedCount', 0)
-            ->assertJsonPath('totalCount', 5)
-            ->assertJsonPath('steps.0.id', 'whatsapp')
+            ->assertJsonPath('totalCount', 4)
+            ->assertJsonPath('steps.0.id', 'product')
             ->assertJsonPath('steps.0.done', false)
-            ->assertJsonPath('steps.1.id', 'product')
+            ->assertJsonPath('steps.1.id', 'payments')
             ->assertJsonPath('steps.1.done', false)
-            ->assertJsonPath('steps.2.id', 'payments')
+            ->assertJsonPath('steps.2.id', 'business')
             ->assertJsonPath('steps.2.done', false)
-            ->assertJsonPath('steps.3.id', 'business')
-            ->assertJsonPath('steps.3.done', false)
-            ->assertJsonPath('steps.4.id', 'storefront')
-            ->assertJsonPath('steps.4.done', false);
+            ->assertJsonPath('steps.3.id', 'storefront')
+            ->assertJsonPath('steps.3.done', false);
     }
 
     public function test_setup_steps_flip_when_configured(): void

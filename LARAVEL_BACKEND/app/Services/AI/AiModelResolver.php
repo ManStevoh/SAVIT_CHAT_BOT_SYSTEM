@@ -249,12 +249,7 @@ class AiModelResolver
             ['name' => 'OpenAI', 'is_enabled' => true, 'sort_order' => 0]
         );
 
-        if ($company) {
-            $cred = $this->credentials->resolve($company, $provider);
-            if ($cred['key'] === null) {
-                return null;
-            }
-        } else {
+        if (! $company) {
             $platform = PlatformSetting::first();
             $apiKey = $platform?->openai_api_key ?? config('openai.api_key');
             if (! $apiKey) {

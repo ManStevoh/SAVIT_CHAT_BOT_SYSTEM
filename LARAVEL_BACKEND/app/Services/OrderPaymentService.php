@@ -469,13 +469,32 @@ class OrderPaymentService
 
     /**
      * Mark order as paid and send WhatsApp confirmation to the customer.
+     *
+     * @param  array<string, mixed>  $metadata
      */
-    public function markOrderPaid(Order $order): void
-    {
-        $order->update([
+    public function markOrderPaid(
+        Order $order,
+        ?float $amountPaid = null,
+        ?string $paymentMethod = null,
+        ?string $paymentReference = null,
+        array $metadata = [],
+    ): Order {
+        $updates = [
             'payment_status' => 'paid',
             'status' => 'confirmed',
-        ]);
+        ];
+
+        if ($paymentMethod !== null && $paymentMethod !== '') {
+            $updates['payment_method'] = $paymentMethod;
+        }
+
+        if ($paymentReference !== null && $paymentReference !== '') {
+            if (in_array('payment_reference', $order->getFillable(), true)) {
+                $updates['payment_reference'] = $paymentReference;
+            }
+        }
+
+        $order->update($updates);
 
         $fresh = $order->fresh(['orderProducts', 'chat', 'company.whatsappAccount']);
         app(DigitalAccessService::class)->preparePaidOrder($fresh);
@@ -489,10 +508,12 @@ class OrderPaymentService
         $this->provisionPaidCustomerAccountSafely($fresh->fresh(['company']));
 
         try {
-            app(\App\Services\Billing\CommissionCalculationService::class)->recordOrderCommission($order);
+            app(\App\Services\Billing\CommissionCalculationService::class)->recordOrderCommission($order->fresh());
         } catch (\Throwable $e) {
             Log::warning('Failed to record order commission: '.$e->getMessage());
         }
+
+        return $order->fresh();
     }
 
     private function recordExperimentConversionIfAssigned(Order $order): void

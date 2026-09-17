@@ -6,10 +6,10 @@
 ---
 
 > [!CAUTION]
-> ### 🔴 SHIP THROUGH MAIN
-> Every completed change that should go live MUST pull latest `origin/main`, push, open a PR to `main`, merge it, and deploy production (`main`). Do not stop at an unmerged PR.
+> ### 🔴 SHIP THROUGH THE CI/CD PIPELINE
+> Pull latest `origin/main`, push, open a PR to `main`, and merge it. GitHub Actions **Deploy to production** runs tests then deploys. If CI fails, fix the failures and push again until green.
 >
-> Default deploy branch is always `main`. Only use a different branch if the developer names one.
+> Do not use `POST /deploy/agent` as the primary path. Default branch is `main`.
 
 ---
 
@@ -28,7 +28,7 @@ sequenceDiagram
 
     Agent->>Agent: 1. Compile client assets (npm run build)
     Agent->>Git: 2. Pull main, push, PR to main, merge
-    Agent->>Server: 3. Trigger deployment (POST /deploy/agent branch=main)
+    Git->>Git: 3. GitHub Actions: tests then deploy to relayiq.app
     Server->>Script: 5. Invoke server deploy pipeline
     Script->>Git: Git fetch & reset --hard origin/main
     Script->>Server: Run migrations (migrate --force)
@@ -71,25 +71,10 @@ git add -A
 git commit -m "feat(scope): descriptive commit message"
 git push origin <branch>
 ```
-Open a PR targeting `main` and merge it. Production deploys from `origin/main` only.
+Open a PR targeting `main` and merge it. Production deploys from `origin/main` via GitHub Actions (**Deploy to production**). If CI fails, fix and push again.
 
-### Step 3: Trigger Live Agent Deployment Stream
-After the PR is merged into `main`, trigger the deployment endpoint using the secret stored in `LARAVEL_BACKEND/.env`. Default branch is `main`.
-
-```bash
-# Extract secret and URL from .env
-DEPLOY_KEY=$(grep -E '^DEPLOY_SECRET=' LARAVEL_BACKEND/.env | cut -d '=' -f2-)
-REMOTE_URL=$(grep -E '^DEPLOY_REMOTE_URL=' LARAVEL_BACKEND/.env | cut -d '=' -f2-)
-[ -z "$REMOTE_URL" ] && REMOTE_URL="https://relayiq.app"
-[[ ! "$REMOTE_URL" =~ ^https?:// ]] && REMOTE_URL="https://${REMOTE_URL}"
-
-# Execute streaming trigger for main (production)
-curl -N -s -X POST "${REMOTE_URL}/deploy/agent" \
-  -H "X-Deploy-Agent-Key: ${DEPLOY_KEY}" \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -d '{"branch": "main"}'
-```
+### Step 3: Confirm the pipeline
+Watch the **Deploy to production** workflow. If it fails, fix the failures and push again until green. Do not call `POST /deploy/agent` unless the developer explicitly asks for a manual deploy.
 
 ---
 
@@ -181,9 +166,7 @@ data: {"type":"done","success":true,"status":"complete","duration":6.61,"message
 ```markdown
 - [ ] 1. Make code changes in LARAVEL_BACKEND (PHP/React/CSS).
 - [ ] 2. If frontend changes: Run `cd LARAVEL_BACKEND && npm run build`.
-- [ ] 3. Commit and push: `git add -A && git commit -m "..." && git push origin <branch>`.
-- [ ] 4. 🔴 MANDATORY: Ask & confirm with the developer: "Which branch would you like me to deploy to the server (e.g. main)?"
-- [ ] 5. Read `DEPLOY_SECRET` from `LARAVEL_BACKEND/.env`.
-- [ ] 6. Trigger `curl -N -s -X POST "https://relayiq.app/deploy/agent" -H "X-Deploy-Agent-Key: <secret>" -H "Accept: text/event-stream" -H "Content-Type: application/json" -d '{"branch":"<confirmed_branch>"}'`.
-- [ ] 7. Inspect streaming logs for `[SUCCESS] Deployment completed`.
+- [ ] 3. Commit, push, and open a PR to `main`.
+- [ ] 4. Merge the PR. GitHub Actions **Deploy to production** runs tests then deploys.
+- [ ] 5. If CI fails: fix the failures and push again until green.
 ```

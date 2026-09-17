@@ -114,21 +114,23 @@ class SeoRoadmapTest extends TestCase
 
     public function test_software_application_offers_use_plan_prices(): void
     {
-        Plan::create([
-            'name' => 'Starter',
-            'slug' => 'free',
-            'price_display' => '$29',
-            'price_amount' => 29,
-            'description' => 'Starter plan',
-            'features' => [],
-            'entitlements' => [],
-            'popular' => false,
-            'cta' => 'Start',
-            'sort_order' => 1,
-            'is_free' => false,
-            'has_trial' => true,
-            'trial_days' => 14,
-        ]);
+        Plan::updateOrCreate(
+            ['slug' => 'free'],
+            [
+                'name' => 'Starter',
+                'price_display' => '$29',
+                'price_amount' => 29,
+                'description' => 'Starter plan',
+                'features' => [],
+                'entitlements' => [],
+                'popular' => false,
+                'cta' => 'Start',
+                'sort_order' => 1,
+                'is_free' => false,
+                'has_trial' => true,
+                'trial_days' => 14,
+            ]
+        );
 
         CmsPage::create([
             'slug' => 'pricing',

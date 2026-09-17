@@ -978,7 +978,7 @@ class StorefrontService
                 'chat_id' => $chatId,
                 'order_number' => $orderNumber,
                 'customer_name' => $customerName,
-                'customer_phone' => $customerPhone ?: null,
+                'customer_phone' => $customerPhone !== '' ? $customerPhone : '',
                 'customer_email' => $customerEmail,
                 'delivery_address' => $deliveryAddress,
                 'fulfillment_type' => $fulfillmentType,

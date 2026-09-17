@@ -49,7 +49,7 @@ class AiAgentIntelligenceGapClosureTest extends TestCase
         $this->assertTrue($settings->agent_commerce_enabled);
     }
 
-    public function test_starter_plan_entitles_and_provisions_agent_commerce(): void
+    public function test_starter_plan_does_not_entitle_agent_commerce(): void
     {
         $company = Company::create([
             'name' => 'Starter AI Co',
@@ -66,9 +66,10 @@ class AiAgentIntelligenceGapClosureTest extends TestCase
             'billing_cycle' => 'monthly',
         ]);
 
-        $this->assertTrue(app(EntitlementService::class)->limitsForCompany($company)['agent_commerce']);
+        $this->assertFalse(app(EntitlementService::class)->limitsForCompany($company)['agent_commerce']);
         $settings = app(AgentCommerceProvisioningService::class)->syncForCompany($company);
-        $this->assertTrue((bool) $settings->agent_commerce_enabled);
+        $this->assertFalse((bool) $settings->agent_commerce_enabled);
+        $this->assertFalse((bool) $settings->auto_reply_enabled);
     }
 
     public function test_reply_guard_and_self_critique_evals(): void
