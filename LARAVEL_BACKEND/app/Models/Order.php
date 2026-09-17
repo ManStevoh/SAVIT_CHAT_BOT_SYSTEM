@@ -158,16 +158,16 @@ class Order extends Model
      */
     public function receiptFulfillmentItems(): array
     {
-        $this->loadMissing('orderProducts');
+        $this->loadMissing('orderProducts.product');
         $access = app(\App\Services\DigitalAccessService::class);
 
         return $this->orderProducts
             ->map(function (OrderProduct $line) use ($access): ?array {
                 $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
-                $type = (string) ($data['productType'] ?? 'physical');
-                if ($type === 'physical') {
+                if (! $access->isDigitalFulfillment($data, $line->product)) {
                     return null;
                 }
+                $type = (string) ($data['productType'] ?? 'digital');
 
                 $expired = $access->lineAccessIsExpired($data);
                 $keys = [];
