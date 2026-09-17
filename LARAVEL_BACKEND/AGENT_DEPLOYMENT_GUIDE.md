@@ -6,16 +6,10 @@
 ---
 
 > [!CAUTION]
-> ### 🔴 MANDATORY DEVELOPER CONFIRMATION RULE
-> **An AI agent MUST ALWAYS explicitly ask and confirm with the developer which branch to deploy BEFORE triggering any deployment to the server.**
+> ### 🔴 SHIP THROUGH MAIN
+> Every completed change that should go live MUST pull latest `origin/main`, push, open a PR to `main`, merge it, and deploy production (`main`). Do not stop at an unmerged PR.
 >
-> Under no circumstances should an agent unilaterally initiate a server deployment without developer confirmation.
->
-> **Required Agent Interaction Pattern:**
-> 1. Complete code changes, build assets, and push to GitHub.
-> 2. Ask the developer:  
->    > *"I have compiled the build assets and pushed the changes to GitHub. Which branch should I deploy to the server? (e.g. `main`)*"
-> 3. Only after the developer responds with confirmation/branch name, proceed to trigger the deployment.
+> Default deploy branch is always `main`. Only use a different branch if the developer names one.
 
 ---
 
@@ -33,12 +27,8 @@ sequenceDiagram
     participant Script as /home/qkbghwib/deploy
 
     Agent->>Agent: 1. Compile client assets (npm run build)
-    Agent->>Git: 2. Commit & push code + build files
-    rect rgb(255, 235, 235)
-    Agent->>Dev: 3. MANDATORY: Confirm target branch with developer
-    Dev-->>Agent: Confirmed branch: main
-    end
-    Agent->>Server: 4. Trigger deployment (POST /deploy/agent)
+    Agent->>Git: 2. Pull main, push, PR to main, merge
+    Agent->>Server: 3. Trigger deployment (POST /deploy/agent branch=main)
     Server->>Script: 5. Invoke server deploy pipeline
     Script->>Git: Git fetch & reset --hard origin/main
     Script->>Server: Run migrations (migrate --force)
@@ -72,21 +62,19 @@ npm run build
 ```
 *(Verify that `npm run build` exits with code 0).*
 
-### Step 2: Commit and Push to GitHub
+### Step 2: Commit, Push, and PR to `main`
 ```bash
 cd /path/to/project/root
+git fetch origin main
+git merge origin/main
 git add -A
 git commit -m "feat(scope): descriptive commit message"
 git push origin <branch>
 ```
-*(Verify that the push succeeded and the commit is on GitHub).*
+Open a PR targeting `main` and merge it. Production deploys from `origin/main` only.
 
-### Step 3: 🔴 Confirm Target Branch with Developer
-Before triggering deployment, ask the developer for confirmation:
-> *"Assets have been compiled and pushed. Please confirm if you want me to deploy to branch `[branch_name]` on `https://relayiq.app`."*
-
-### Step 4: Trigger Live Agent Deployment Stream
-Once the developer confirms, trigger the deployment endpoint using the secret stored in `LARAVEL_BACKEND/.env`:
+### Step 3: Trigger Live Agent Deployment Stream
+After the PR is merged into `main`, trigger the deployment endpoint using the secret stored in `LARAVEL_BACKEND/.env`. Default branch is `main`.
 
 ```bash
 # Extract secret and URL from .env
@@ -95,12 +83,12 @@ REMOTE_URL=$(grep -E '^DEPLOY_REMOTE_URL=' LARAVEL_BACKEND/.env | cut -d '=' -f2
 [ -z "$REMOTE_URL" ] && REMOTE_URL="https://relayiq.app"
 [[ ! "$REMOTE_URL" =~ ^https?:// ]] && REMOTE_URL="https://${REMOTE_URL}"
 
-# Execute streaming trigger for the confirmed branch
+# Execute streaming trigger for main (production)
 curl -N -s -X POST "${REMOTE_URL}/deploy/agent" \
   -H "X-Deploy-Agent-Key: ${DEPLOY_KEY}" \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
-  -d "{\"branch\": \"${CONFIRMED_BRANCH}\"}"
+  -d '{"branch": "main"}'
 ```
 
 ---

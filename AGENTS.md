@@ -4,25 +4,25 @@ Welcome! Before you perform tasks in this repository, please observe the followi
 
 ---
 
-## 🔴 MANDATORY DEPLOYMENT RULE
+## 🔴 SHIP THROUGH MAIN (EVERY PUSH)
 
-**BEFORE TRIGGERING ANY SERVER DEPLOYMENT, YOU MUST ALWAYS ASK AND CONFIRM WITH THE DEVELOPER WHICH BRANCH TO USE.**
+Every completed change that should go live MUST pull latest `main`, open a PR to `main`, merge it, and deploy production. Do not stop at an unmerged PR.
 
-Under no circumstances should an agent trigger a deployment unilaterally without explicit confirmation of the target branch (e.g. `main`, `staging`, `feature/...`).
-
-### Standard 4-Step Protocol:
-1. **Build Client Assets**: If changes touch `LARAVEL_BACKEND/resources/` (React/CSS/TypeScript), run:
+### Standard pipeline:
+1. **Pull `origin/main`**: `git fetch origin main` and merge/rebase onto it before pushing.
+2. **Build Client Assets**: If changes touch `LARAVEL_BACKEND/resources/` (React/CSS/TypeScript), run:
    ```bash
    cd LARAVEL_BACKEND && npm run build
    ```
-2. **Commit & Push to GitHub**:
+3. **Commit, Push, and PR to `main`**:
    ```bash
    git add -A && git commit -m "..." && git push origin <branch>
    ```
-3. **Ask Developer for Confirmation**:
-   > *"I have compiled the build assets and pushed to GitHub. Which branch should I deploy to the server? (e.g. `main`)*"
-4. **Trigger Deployment Stream (Only after confirmation)**:
-   Trigger via `POST https://relayiq.app/deploy/agent` with `X-Deploy-Agent-Key: <DEPLOY_SECRET>` from `LARAVEL_BACKEND/.env`.
+   Open a PR targeting `main`, then merge it.
+4. **Deploy production (`main`)**:
+   Trigger via `POST https://relayiq.app/deploy/agent` with `X-Deploy-Agent-Key: <DEPLOY_SECRET>` from `LARAVEL_BACKEND/.env` and `{"branch": "main"}`.
+
+Default deploy branch is always `main`. Only use a different branch if the developer names one.
 
 ---
 

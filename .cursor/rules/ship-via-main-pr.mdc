@@ -1,0 +1,16 @@
+---
+description: Always pull main, PR to main, merge, and deploy production on every ship
+alwaysApply: true
+---
+
+# Ship through main
+
+Every completed change that should go live follows this pipeline. Do not stop at push or an open PR.
+
+1. `git fetch origin main` and merge/rebase onto latest `origin/main` before pushing.
+2. If `LARAVEL_BACKEND/resources/` changed, run `cd LARAVEL_BACKEND && npm run build` and commit `public/build`.
+3. Push the feature branch and open a PR targeting `main`.
+4. Merge the PR into `main`.
+5. Deploy production branch `main` via `POST https://relayiq.app/deploy/agent` with `X-Deploy-Agent-Key` from `LARAVEL_BACKEND/.env`.
+
+Default deploy target is always `main`. Only skip the deploy step if the developer named a different branch or said not to deploy.
