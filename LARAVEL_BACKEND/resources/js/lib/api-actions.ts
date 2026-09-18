@@ -4740,7 +4740,9 @@ export async function listPlatformMarketing(): Promise<{ success: boolean; messa
   return apiRequest('/api/admin/marketing')
 }
 
-export async function createPlatformMarketing(data: PlatformMarketingPayload): Promise<{ success: boolean; message?: PlatformMarketingMessage }> {
+export async function createPlatformMarketing(
+  data: PlatformMarketingPayload
+): Promise<{ success: boolean; message?: PlatformMarketingMessage | string }> {
   try {
     return await apiRequest('/api/admin/marketing', { method: 'POST', body: data })
   } catch (e) {
@@ -4748,7 +4750,10 @@ export async function createPlatformMarketing(data: PlatformMarketingPayload): P
   }
 }
 
-export async function updatePlatformMarketing(id: number, data: Partial<PlatformMarketingPayload>): Promise<{ success: boolean; message?: PlatformMarketingMessage }> {
+export async function updatePlatformMarketing(
+  id: number,
+  data: Partial<PlatformMarketingPayload>
+): Promise<{ success: boolean; message?: PlatformMarketingMessage | string }> {
   try {
     return await apiRequest(`/api/admin/marketing/${id}`, { method: 'PUT', body: data })
   } catch (e) {
