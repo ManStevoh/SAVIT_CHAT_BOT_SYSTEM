@@ -75,13 +75,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->withoutOverlapping(10)
                 ->appendOutputTo(storage_path('logs/migrate-cron.log'));
         }
-
-        // TEMP one-off remediation (remove after it runs once): reverts Jostina
-        // test orders + commissions. Idempotent and marker-guarded.
-        $schedule->command('orders:revert-test-commissions')
-            ->everyMinute()
-            ->withoutOverlapping(5)
-            ->appendOutputTo(storage_path('logs/revert-test-orders.log'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Convert ModelNotFoundException → 404 instead of 500 (Laravel 12 compatible)
