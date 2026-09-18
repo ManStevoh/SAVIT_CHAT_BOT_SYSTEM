@@ -4,6 +4,7 @@ namespace App\Services\PaymentGateways;
 
 use App\Models\Company;
 use App\Services\PaymentGateways\Contracts\PaymentGatewayDriverInterface;
+use App\Services\PaymentGateways\Drivers\BankTransferGatewayDriver;
 use App\Services\PaymentGateways\Drivers\CodGatewayDriver;
 use App\Services\PaymentGateways\Drivers\FlutterwaveGatewayDriver;
 use App\Services\PaymentGateways\Drivers\ManualGatewayDriver;
@@ -27,6 +28,7 @@ class PaymentGatewayRegistry
         $this->registerDriver(new FlutterwaveGatewayDriver());
         $this->registerDriver(new PayPalGatewayDriver());
         $this->registerDriver(new CodGatewayDriver());
+        $this->registerDriver(new BankTransferGatewayDriver());
         $this->registerDriver(new ManualGatewayDriver());
     }
 

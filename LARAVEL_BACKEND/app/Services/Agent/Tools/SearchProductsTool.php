@@ -70,7 +70,7 @@ final class SearchProductsTool implements AgentTool
         $products = Product::query()
             ->where('company_id', $companyId)
             ->whereIn('id', array_slice($ids, 0, $limit))
-            ->get(['id', 'name', 'price', 'compare_at_price', 'stock', 'description', 'product_type', 'fulfillment_type', 'bookable', 'booking_duration_minutes', 'service_booking_url']);
+            ->get(['id', 'name', 'price', 'compare_at_price', 'stock', 'description', 'product_type', 'fulfillment_type', 'bookable', 'booking_duration_minutes', 'service_booking_url', 'access_url']);
 
         return [
             'products' => $products->map(function (Product $p) use ($settings) {
@@ -90,6 +90,11 @@ final class SearchProductsTool implements AgentTool
                     'serviceBookingUrl' => $p->service_booking_url,
                     'onSale' => $onSale,
                 ];
+                if ($p->isEvent()) {
+                    $row['isEvent'] = true;
+                    $row['registrationUrl'] = $p->access_url;
+                    $row['note'] = 'Event ticket — send the registration link rather than adding to a product cart.';
+                }
                 if ($onSale) {
                     $row['compareAtPrice'] = MoneyFormatter::formatFromSettings($compare, $settings);
                     $row['discountPercent'] = (int) round((1 - ($price / $compare)) * 100);

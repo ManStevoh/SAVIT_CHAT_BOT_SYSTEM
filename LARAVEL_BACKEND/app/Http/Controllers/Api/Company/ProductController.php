@@ -18,9 +18,9 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-    private const PRODUCT_TYPES = ['physical', 'digital', 'service'];
+    private const PRODUCT_TYPES = ['physical', 'digital', 'service', 'event'];
 
-    private const FULFILLMENT_TYPES = ['shipping', 'download', 'link', 'booking', 'manual'];
+    private const FULFILLMENT_TYPES = ['shipping', 'download', 'link', 'booking', 'manual', 'ticket'];
 
     private const LICENSE_KEY_MODES = ['none', 'auto', 'pool'];
 
@@ -134,8 +134,8 @@ class ProductController extends Controller
             'compareAtPrice' => 'nullable|numeric|min:0',
             'taxRateId' => 'nullable|integer|exists:tax_rates,id',
             'category' => 'nullable|string|max:255',
-            'productType' => 'nullable|in:physical,digital,service',
-            'fulfillmentType' => 'nullable|in:shipping,download,link,booking,manual',
+            'productType' => 'nullable|in:physical,digital,service,event',
+            'fulfillmentType' => 'nullable|in:shipping,download,link,booking,manual,ticket',
             'trackInventory' => 'sometimes|boolean',
             'requiresDeliveryAddress' => 'sometimes|boolean',
             'requires_delivery_address' => 'sometimes|boolean',
@@ -339,8 +339,8 @@ class ProductController extends Controller
             'compareAtPrice' => 'nullable|numeric|min:0',
             'taxRateId' => 'nullable|integer|exists:tax_rates,id',
             'category' => 'nullable|string|max:255',
-            'productType' => 'sometimes|in:physical,digital,service',
-            'fulfillmentType' => 'sometimes|in:shipping,download,link,booking,manual',
+            'productType' => 'sometimes|in:physical,digital,service,event',
+            'fulfillmentType' => 'sometimes|in:shipping,download,link,booking,manual,ticket',
             'trackInventory' => 'sometimes|boolean',
             'requiresDeliveryAddress' => 'sometimes|boolean',
             'requires_delivery_address' => 'sometimes|boolean',

@@ -17,6 +17,7 @@ export function StorefrontFooter({ slug, company }: { slug: string; company: Sto
   const theme = company.theme ?? {}
   const links = [
     { href: `/s/${slug}/about`, label: 'About' },
+    { href: `/s/${slug}/events`, label: 'Events' },
     { href: `/s/${slug}/wishlist`, label: 'Favorites', icon: Heart },
     { href: `/s/${slug}/track`, label: 'Track order' },
     { href: company.termsUrl || `/s/${slug}/terms`, label: 'Terms' },

@@ -1314,6 +1314,8 @@ export interface UpdateSettingsData {
   ordersAcceptFlutterwave?: boolean
   ordersAcceptPayPal?: boolean
   ordersAcceptCod?: boolean
+  ordersAcceptBankTransfer?: boolean
+  bankTransferInstructions?: string | null
   attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
   orderPaymentManualInstructions?: string | null
@@ -1365,6 +1367,8 @@ export interface UpdateSettingsData {
   businessMode?: 'retail' | 'services' | 'restaurant' | 'hybrid'
   enableProductsCatalog?: boolean
   enableBookings?: boolean
+  enableEvents?: boolean
+  eventReminderHours?: number
   enableDineIn?: boolean
   storeSlug?: string | null
   storefrontEnabled?: boolean
