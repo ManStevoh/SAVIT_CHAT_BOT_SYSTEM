@@ -381,12 +381,12 @@ class AgentStoreService
             ? strtolower((string) ($data['status'] ?? 'active'))
             : 'active';
 
-        $productType = in_array(strtolower((string) ($data['product_type'] ?? $data['productType'] ?? 'physical')), ['physical', 'digital', 'service'], true)
+        $productType = in_array(strtolower((string) ($data['product_type'] ?? $data['productType'] ?? 'physical')), ['physical', 'digital', 'service', 'event'], true)
             ? strtolower((string) ($data['product_type'] ?? $data['productType'] ?? 'physical'))
             : 'physical';
 
-        $defaultFulfillment = $productType === 'service' ? 'booking' : ($productType === 'digital' ? 'download' : 'manual');
-        $fulfillmentType = in_array(strtolower((string) ($data['fulfillment_type'] ?? $data['fulfillmentType'] ?? $defaultFulfillment)), ['shipping', 'download', 'link', 'booking', 'manual'], true)
+        $defaultFulfillment = $productType === 'event' ? 'ticket' : ($productType === 'service' ? 'booking' : ($productType === 'digital' ? 'download' : 'manual'));
+        $fulfillmentType = in_array(strtolower((string) ($data['fulfillment_type'] ?? $data['fulfillmentType'] ?? $defaultFulfillment)), ['shipping', 'download', 'link', 'booking', 'manual', 'ticket'], true)
             ? strtolower((string) ($data['fulfillment_type'] ?? $data['fulfillmentType'] ?? $defaultFulfillment))
             : $defaultFulfillment;
 

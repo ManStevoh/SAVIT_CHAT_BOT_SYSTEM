@@ -498,6 +498,13 @@ class OrderPaymentService
 
         $fresh = $order->fresh(['orderProducts', 'chat', 'company.whatsappAccount']);
         app(DigitalAccessService::class)->preparePaidOrder($fresh);
+        try {
+            app(\App\Services\Events\EventRegistrationService::class)->confirmPaidOrder($fresh);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to confirm event tickets for paid order: '.$e->getMessage(), [
+                'order_id' => $order->id,
+            ]);
+        }
 
         $this->recordExperimentConversionIfAssigned($order);
         $this->sendPaymentConfirmationToCustomer($fresh->fresh(['orderProducts', 'chat', 'company.whatsappAccount']));

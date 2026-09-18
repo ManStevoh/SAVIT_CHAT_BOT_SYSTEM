@@ -125,17 +125,46 @@ class Product extends Model
 
     public function isPhysical(): bool
     {
-        return $this->product_type === 'physical';
+        return ! $this->isDigital() && ! $this->isService();
     }
 
     public function isDigital(): bool
     {
-        return $this->product_type === 'digital';
+        if ($this->isEvent()) {
+            return false;
+        }
+
+        $type = strtolower((string) ($this->product_type ?? ''));
+        $fulfillment = strtolower((string) ($this->fulfillment_type ?? ''));
+
+        return $type === 'digital'
+            || in_array($fulfillment, ['download', 'link'], true)
+            || filled($this->digital_file_path)
+            || filled($this->access_url);
     }
 
     public function isService(): bool
     {
-        return $this->product_type === 'service';
+        return strtolower((string) ($this->product_type ?? '')) === 'service'
+            || strtolower((string) ($this->fulfillment_type ?? '')) === 'booking'
+            || $this->isEvent();
+    }
+
+    public function isEvent(): bool
+    {
+        $type = strtolower((string) ($this->product_type ?? ''));
+        $fulfillment = strtolower((string) ($this->fulfillment_type ?? ''));
+
+        return $type === 'event' || $fulfillment === 'ticket';
+    }
+
+    public function scopeNotEvent($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('product_type')->orWhere('product_type', '!=', 'event');
+        })->where(function ($q) {
+            $q->whereNull('fulfillment_type')->orWhere('fulfillment_type', '!=', 'ticket');
+        });
     }
 
     public function isBundle(): bool
@@ -156,10 +185,16 @@ class Product extends Model
     public function fulfillmentSnapshot(?ProductVariant $variant = null): array
     {
         return [
-            'productType' => $this->product_type ?: 'physical',
-            'fulfillmentType' => $this->fulfillment_type ?: 'shipping',
+            'productType' => $this->isDigital() ? 'digital' : ($this->isEvent() ? 'event' : ($this->isService() ? 'service' : ($this->product_type ?: 'physical'))),
+            'fulfillmentType' => $this->isDigital()
+                ? ($this->fulfillment_type ?: 'download')
+                : ($this->isEvent()
+                    ? ($this->fulfillment_type ?: 'ticket')
+                    : ($this->isService() ? ($this->fulfillment_type ?: 'booking') : ($this->fulfillment_type ?: 'shipping'))),
             'trackInventory' => (bool) $this->track_inventory,
-            'requiresDeliveryAddress' => (bool) $this->requires_delivery_address,
+            'requiresDeliveryAddress' => $this->isDigital() || $this->isService()
+                ? false
+                : (bool) ($this->requires_delivery_address ?? true),
             'accessUrl' => $this->access_url,
             'serviceBookingUrl' => $this->service_booking_url,
             'fulfillmentInstructions' => $this->fulfillment_instructions,

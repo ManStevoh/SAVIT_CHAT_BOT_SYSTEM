@@ -30,6 +30,7 @@ type OrderPayload = {
   paymentStatus: string
   paymentMethod?: string | null
   invoiceToken?: string | null
+  tickets?: { ticketCode: string; ticketUrl: string; name: string }[]
   items: { name: string; quantity: number; lineSubtotal: number }[]
 }
 
@@ -266,6 +267,21 @@ export default function PublicPayPage({
                 </div>
               ))}
             </div>
+
+            {(order.tickets ?? []).length > 0 && (
+              <div className="space-y-2 text-left">
+                {(order.tickets ?? []).map((ticket) => (
+                  <a
+                    key={ticket.ticketCode}
+                    href={ticket.ticketUrl}
+                    className="flex items-center justify-between rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
+                  >
+                    Ticket {ticket.ticketCode}
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                ))}
+              </div>
+            )}
 
             {/* Navigation Action Buttons */}
             <div className="flex flex-col gap-2 pt-2">
@@ -636,7 +652,7 @@ export default function PublicPayPage({
             >
               {submitting
                 ? 'Submitting Details…'
-                : method === 'manual'
+                : method === 'manual' || method === 'bank_transfer'
                   ? 'I Have Sent the Payment'
                   : method === 'mpesa'
                     ? 'Send M-Pesa Prompt'

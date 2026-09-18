@@ -994,6 +994,8 @@ export interface CompanySettings {
   businessMode?: 'retail' | 'services' | 'restaurant' | 'hybrid'
   enableProductsCatalog?: boolean
   enableBookings?: boolean
+  enableEvents?: boolean
+  eventReminderHours?: number
   enableDineIn?: boolean
   dineInQrTarget?: 'web_menu' | 'whatsapp_chat' | 'dual_choice'
   dineInPaymentTiming?: 'pay_upfront' | 'open_tab' | 'customer_choice'

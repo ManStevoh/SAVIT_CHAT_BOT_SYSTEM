@@ -716,6 +716,11 @@ class PublicStorefrontController extends Controller
 
                         return redirect()->to(url("/pay/{$token}"))->with('status', 'Manual payment instructions shown below.');
 
+                    case 'bank_transfer':
+                        $order->update(['payment_method' => 'bank_transfer']);
+
+                        return redirect()->to(url("/pay/{$token}"))->with('status', 'Bank transfer details shown below.');
+
                     case 'mpesa':
                         if (! empty($order->customer_phone)) {
                             $result = $this->orderPayment->sendStkPushForOrder($order, $order->customer_phone);
@@ -760,7 +765,7 @@ class PublicStorefrontController extends Controller
         $order->ensurePublicTokens();
 
         $validated = $request->validate([
-            'method' => 'required|string|in:cod,stripe,paystack,mpesa,pesapal,flutterwave,paypal,manual',
+            'method' => 'required|string|in:cod,stripe,paystack,mpesa,pesapal,flutterwave,paypal,manual,bank_transfer',
             'phone' => 'nullable|string|max:40',
             'email' => 'nullable|email|max:255',
             'transaction_code' => 'nullable|string|max:100',
@@ -851,10 +856,11 @@ class PublicStorefrontController extends Controller
                 return back()->withErrors(['method' => $result['error'] ?? 'Could not send M-Pesa prompt.']);
 
             case 'manual':
+            case 'bank_transfer':
                 $txnCode = strtoupper(trim((string) ($validated['transaction_code'] ?? $request->input('code') ?? $request->input('reference') ?? '')));
                 $payingPhone = trim((string) ($validated['phone'] ?? ''));
 
-                $updateData = ['payment_method' => 'manual'];
+                $updateData = ['payment_method' => $validated['method']];
                 $notes = [];
                 if ($txnCode !== '') {
                     $notes[] = "M-Pesa Ref: {$txnCode}";
@@ -988,6 +994,7 @@ class PublicStorefrontController extends Controller
                 'name' => $authCustomer->name,
                 'email' => $authCustomer->email,
             ] : null,
+            'eventsUrl' => '/s/'.$company->store_slug.'/events',
             'termsUrl' => '/s/'.$company->store_slug.'/terms',
             'aboutUrl' => '/s/'.$company->store_slug.'/about',
             'hasCustomTerms' => filled($theme['terms_body'] ?? ''),
@@ -1365,6 +1372,16 @@ class PublicStorefrontController extends Controller
                 'price' => (float) $line->price,
                 'lineSubtotal' => (float) $line->line_subtotal,
             ])->values()->all(),
+            'tickets' => \App\Models\EventAttendee::query()
+                ->whereHas('registration', fn ($q) => $q->where('order_id', $order->id)->where('status', 'confirmed'))
+                ->get()
+                ->map(fn ($a) => [
+                    'ticketCode' => $a->ticket_code,
+                    'ticketUrl' => $a->publicUrl(),
+                    'name' => $a->name,
+                ])
+                ->values()
+                ->all(),
         ];
     }
 

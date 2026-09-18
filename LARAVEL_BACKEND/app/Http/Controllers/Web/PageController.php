@@ -268,6 +268,11 @@ class PageController extends Controller
         return Inertia::render('dashboard/bookings/page');
     }
 
+    public function dashboardEvents(): Response
+    {
+        return Inertia::render('dashboard/events/page');
+    }
+
     public function dashboardSettings(): Response
     {
         return Inertia::render('dashboard/settings/page');

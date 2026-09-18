@@ -82,6 +82,7 @@ class StorefrontService
     {
         return Product::where('company_id', $company->id)
             ->where('status', 'active')
+            ->notEvent()
             ->with(['activeVariants', 'images'])
             ->orderBy('name')
             ->get();
@@ -96,6 +97,7 @@ class StorefrontService
 
         $query = Product::where('company_id', $company->id)
             ->where('status', 'active')
+            ->notEvent()
             ->with(['activeVariants', 'images', 'businessUnit']);
 
         if (ctype_digit($identifier)) {
@@ -123,6 +125,7 @@ class StorefrontService
     {
         $query = Product::where('company_id', $company->id)
             ->where('status', 'active')
+            ->notEvent()
             ->with(['activeVariants', 'images']);
 
         $q = trim((string) ($filters['q'] ?? ''));
@@ -669,10 +672,14 @@ class StorefrontService
                 'price' => $price,
                 'quantity' => $qty,
                 'image' => $this->firstImageUrl($product),
-                'productType' => $product->product_type ?: 'physical',
+                'productType' => $this->productIsDigital($product)
+                    ? 'digital'
+                    : ($this->productIsService($product) ? 'service' : ($product->product_type ?: 'physical')),
                 'isDigital' => $this->productIsDigital($product),
                 'isService' => $this->productIsService($product),
-                'requiresDeliveryAddress' => (bool) $product->requires_delivery_address,
+                'requiresDeliveryAddress' => $this->productIsDigital($product) || $this->productIsService($product)
+                    ? false
+                    : (bool) ($product->requires_delivery_address ?? true),
                 'bookable' => (bool) $product->bookable,
             ];
 
@@ -745,16 +752,12 @@ class StorefrontService
 
     public function productIsDigital(Product $product): bool
     {
-        $type = strtolower((string) ($product->product_type ?? 'physical'));
-        $fulfillment = strtolower((string) ($product->fulfillment_type ?? ''));
-
-        return $type === 'digital' || in_array($fulfillment, ['download', 'link'], true);
+        return $product->isDigital();
     }
 
     public function productIsService(Product $product): bool
     {
-        return strtolower((string) ($product->product_type ?? '')) === 'service'
-            || strtolower((string) ($product->fulfillment_type ?? '')) === 'booking';
+        return $product->isService();
     }
 
     protected function firstImageUrl(Product $product): ?string

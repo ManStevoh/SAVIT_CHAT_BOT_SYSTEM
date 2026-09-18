@@ -80,6 +80,7 @@ Route::get('/dashboard/orders', [PageController::class, 'dashboardOrders'])->nam
 Route::get('/dashboard/products', [PageController::class, 'dashboardProducts'])->name('dashboard.products');
 Route::get('/dashboard/taxes', [PageController::class, 'dashboardTaxes'])->name('dashboard.taxes');
 Route::get('/dashboard/bookings', [PageController::class, 'dashboardBookings'])->name('dashboard.bookings');
+Route::get('/dashboard/events', [PageController::class, 'dashboardEvents'])->name('dashboard.events');
 Route::get('/dashboard/settings', [PageController::class, 'dashboardSettings'])->name('dashboard.settings');
 Route::get('/dashboard/subscription', [PageController::class, 'dashboardSubscription'])->name('dashboard.subscription');
 Route::get('/dashboard/storefront', [PageController::class, 'dashboardStorefront'])->name('dashboard.storefront');
@@ -195,6 +196,12 @@ Route::get('/book/{slug}/calendar.ics', [PublicBookingController::class, 'calend
 Route::get('/bookings/{booking}/ics', [PublicBookingController::class, 'bookingIcs'])->name('bookings.ics');
 
 // Public storefront (Take App-style catalog + cart + checkout)
+Route::get('/s/{slug}/events', [\App\Http\Controllers\Web\PublicEventController::class, 'index'])->name('storefront.events');
+Route::get('/s/{slug}/e/{eventSlug}', [\App\Http\Controllers\Web\PublicEventController::class, 'show'])->name('storefront.event');
+Route::post('/s/{slug}/e/{eventSlug}/register', [\App\Http\Controllers\Web\PublicEventController::class, 'register'])->name('storefront.event.register');
+Route::get('/ticket/{ticketCode}', [\App\Http\Controllers\Web\PublicEventController::class, 'ticket'])->name('events.ticket');
+Route::get('/ticket/{ticketCode}/ics', [\App\Http\Controllers\Web\PublicEventController::class, 'ticketIcs'])->name('events.ticket.ics');
+
 Route::get('/s/{slug}', [PublicStorefrontController::class, 'show'])->name('storefront.show');
 Route::get('/s/{slug}/p/{product}', [PublicStorefrontController::class, 'product'])->name('storefront.product');
 Route::get('/s/{slug}/cart', [PublicStorefrontController::class, 'cart'])->name('storefront.cart');
