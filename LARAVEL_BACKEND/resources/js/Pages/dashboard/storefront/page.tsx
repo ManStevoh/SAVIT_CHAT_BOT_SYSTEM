@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { parseStorefrontTab } from '@/components/dashboard/sidebar'
 import { apiRequest } from '@/lib/api-client'
@@ -197,6 +196,22 @@ export default function DashboardStorefrontPage() {
 
   const isDirty = initialSnapshot !== '' && initialSnapshot !== currentSnapshot
 
+  const tabMeta =
+    activeTab === 'design'
+      ? {
+          title: 'Shop look',
+          hint: 'Pick a logo and colours. The phone preview updates as you go — then tap Save look.',
+        }
+      : activeTab === 'link'
+        ? {
+            title: 'Shop link',
+            hint: 'Set the public URL, how it appears when shared, then copy it to Instagram or WhatsApp.',
+          }
+        : {
+            title: 'Messages',
+            hint: 'WhatsApp follow-ups after checkout, extra SEO, and order spam limits.',
+          }
+
   const applyData = (data: SettingsResponse) => {
     setCompanyName(data.companyName || 'My Brand')
     setCompanyLogo(data.logo || null)
@@ -368,31 +383,25 @@ export default function DashboardStorefrontPage() {
 
   return (
     <div className="w-full space-y-6 pb-28">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Storefront</h1>
-            <Badge variant={storefrontEnabled ? 'default' : 'secondary'}>
-              {storefrontEnabled ? 'Live' : 'Paused'}
-            </Badge>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            How your shop looks, where it lives, and what happens after checkout.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{tabMeta.title}</h1>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">{tabMeta.hint}</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          {storefrontUrl && storefrontEnabled && (
+          {storefrontUrl ? (
             <Button variant="outline" size="sm" asChild className="gap-1.5">
               <a href={storefrontUrl} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" /> Visit store
+                <ExternalLink className="h-3.5 w-3.5" /> Visit shop
               </a>
             </Button>
-          )}
-          <Button onClick={() => void save()} disabled={saving} size="sm" className="gap-1.5">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Save changes
-          </Button>
+          ) : null}
+          {activeTab !== 'design' ? (
+            <Button onClick={() => void save()} disabled={saving} size="sm" className="gap-1.5">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Save
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -403,36 +412,30 @@ export default function DashboardStorefrontPage() {
       )}
       {saved && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-          <Check className="h-4 w-4" /> Storefront saved.
+          <Check className="h-4 w-4" /> Saved.
         </div>
       )}
 
-      {/* Status strip */}
-      <div className="flex flex-col gap-3 rounded-2xl border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-background text-primary">
-            <Store className="h-4 w-4" />
+      <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex min-w-0 cursor-pointer items-center gap-3">
+          <Switch checked={storefrontEnabled} onCheckedChange={setStorefrontEnabled} />
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-foreground">
+              {storefrontEnabled ? 'Taking orders' : 'Not taking orders'}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {storefrontEnabled ? 'Customers can browse and buy.' : 'Turn on when you are ready to sell.'}
+            </span>
           </span>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <p className="text-sm font-semibold text-foreground">
-                {storefrontEnabled ? `${companyName} is open` : `${companyName} is paused`}
-              </p>
-              <Switch checked={storefrontEnabled} onCheckedChange={setStorefrontEnabled} />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {storefrontEnabled ? 'Customers can browse and order.' : 'Turn on to start receiving orders.'}
-            </p>
-          </div>
-        </div>
-        {storefrontUrl && (
-          <div className="flex flex-wrap items-center gap-2">
-            <code className="max-w-[16rem] truncate rounded-lg border bg-background px-2.5 py-1.5 font-mono text-xs">
+        </label>
+        {activeTab === 'link' && storefrontUrl ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+            <code className="max-w-full truncate rounded-md bg-muted px-2 py-1 font-mono text-[11px] text-muted-foreground">
               {storefrontUrl}
             </code>
             <StorefrontShareActions url={storefrontUrl} companyName={companyName} />
           </div>
-        )}
+        ) : null}
       </div>
 
       <Tabs value={activeTab} className="space-y-6">
@@ -447,115 +450,6 @@ export default function DashboardStorefrontPage() {
             storeSlug={storeSlug}
             onSaved={load}
           />
-
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Share2 className="h-5 w-5 text-primary" />
-                  <div>
-                    <CardTitle className="text-base">Link-in-bio page</CardTitle>
-                    <CardDescription>One link for Instagram, TikTok and WhatsApp</CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Enabled</span>
-                  <Switch checked={linkInBioEnabled} onCheckedChange={setLinkInBioEnabled} />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {linkInBioUrl && (
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 p-3">
-                  <Input value={linkInBioUrl} readOnly className="h-8 max-w-md flex-1 font-mono text-xs" />
-                  <Button variant="outline" size="sm" onClick={() => void copy(linkInBioUrl)} className="h-8 gap-1">
-                    <Copy className="h-3.5 w-3.5" /> Copy
-                  </Button>
-                  <Button variant="outline" size="sm" asChild className="h-8 gap-1">
-                    <a href={linkInBioUrl} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5" /> Open
-                    </a>
-                  </Button>
-                </div>
-              )}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="bioHeadline">Headline</Label>
-                  <Input
-                    id="bioHeadline"
-                    value={linkInBioHeadline}
-                    onChange={(e) => setLinkInBioHeadline(e.target.value)}
-                    placeholder={companyName}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bioText">Tagline</Label>
-                  <Textarea
-                    id="bioText"
-                    value={linkInBioBio}
-                    onChange={(e) => setLinkInBioBio(e.target.value)}
-                    rows={2}
-                    placeholder="Tap below to shop, chat, or view offers."
-                  />
-                </div>
-              </div>
-              <div className="space-y-3 border-t pt-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Links</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLinkInBioLinks((prev) => [...prev, { label: '', url: '' }])}
-                    className="h-8 gap-1 text-xs"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Add link
-                  </Button>
-                </div>
-                {linkInBioLinks.length === 0 ? (
-                  <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">
-                    No links yet — highlight best sellers, support chat, or your menu.
-                  </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    {linkInBioLinks.map((link, idx) => (
-                      <div key={idx} className="flex items-center gap-2 rounded-xl border p-2.5">
-                        <Input
-                          value={link.label}
-                          placeholder="Button label"
-                          onChange={(e) => {
-                            const next = [...linkInBioLinks]
-                            next[idx] = { ...link, label: e.target.value }
-                            setLinkInBioLinks(next)
-                          }}
-                          className="h-9 flex-1 text-xs"
-                        />
-                        <Input
-                          value={link.url}
-                          placeholder="https://…"
-                          onChange={(e) => {
-                            const next = [...linkInBioLinks]
-                            next[idx] = { ...link, url: e.target.value }
-                            setLinkInBioLinks(next)
-                          }}
-                          className="h-9 flex-1 font-mono text-xs"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setLinkInBioLinks(linkInBioLinks.filter((_, i) => i !== idx))}
-                          className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* TAB 2: address, findability, offers */}
@@ -565,8 +459,8 @@ export default function DashboardStorefrontPage() {
               <div className="flex items-center gap-2">
                 <Globe className="h-5 w-5 text-primary" />
                 <div>
-                  <CardTitle className="text-base">Store address & Google</CardTitle>
-                  <CardDescription>Your link, and how it shows up on search and social</CardDescription>
+                  <CardTitle className="text-base">Shop URL</CardTitle>
+                  <CardDescription>The address customers open. Copy it from the bar above.</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -645,7 +539,7 @@ export default function DashboardStorefrontPage() {
                         <img src={storefrontOgImage || companyLogo || ''} alt="Preview" className="h-28 w-full bg-slate-100 object-cover" />
                       ) : (
                         <div className="flex h-20 w-full items-center justify-center bg-slate-100 text-xs text-slate-400">
-                          Add a share image in Advanced settings
+                          Add a share image under Messages
                         </div>
                       )}
                       <div className="p-2.5">
@@ -665,6 +559,118 @@ export default function DashboardStorefrontPage() {
 
           <StorefrontCouponsCard />
 
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Share2 className="h-5 w-5 shrink-0 text-primary" />
+                  <div>
+                    <CardTitle className="text-base">Instagram bio page</CardTitle>
+                    <CardDescription>Optional. A one-page list of buttons — separate from the shop.</CardDescription>
+                  </div>
+                </div>
+                <Switch checked={linkInBioEnabled} onCheckedChange={setLinkInBioEnabled} />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!linkInBioEnabled ? (
+                <p className="text-xs text-muted-foreground">Turn this on if you want a simple link-in-bio page besides the shop.</p>
+              ) : (
+                <>
+              {linkInBioUrl && (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 p-3">
+                  <Input value={linkInBioUrl} readOnly className="h-8 max-w-md flex-1 font-mono text-xs" />
+                  <Button variant="outline" size="sm" onClick={() => void copy(linkInBioUrl)} className="h-8 gap-1">
+                    <Copy className="h-3.5 w-3.5" /> Copy
+                  </Button>
+                  <Button variant="outline" size="sm" asChild className="h-8 gap-1">
+                    <a href={linkInBioUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-3.5 w-3.5" /> Open
+                    </a>
+                  </Button>
+                </div>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="bioHeadline">Headline</Label>
+                  <Input
+                    id="bioHeadline"
+                    value={linkInBioHeadline}
+                    onChange={(e) => setLinkInBioHeadline(e.target.value)}
+                    placeholder={companyName}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bioText">Tagline</Label>
+                  <Textarea
+                    id="bioText"
+                    value={linkInBioBio}
+                    onChange={(e) => setLinkInBioBio(e.target.value)}
+                    rows={2}
+                    placeholder="Tap below to shop, chat, or view offers."
+                  />
+                </div>
+              </div>
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Buttons</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLinkInBioLinks((prev) => [...prev, { label: '', url: '' }])}
+                    className="h-8 gap-1 text-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add
+                  </Button>
+                </div>
+                {linkInBioLinks.length === 0 ? (
+                  <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">
+                    Add buttons for your shop, WhatsApp, or menu.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {linkInBioLinks.map((link, idx) => (
+                      <div key={idx} className="flex items-center gap-2 rounded-xl border p-2.5">
+                        <Input
+                          value={link.label}
+                          placeholder="Button label"
+                          onChange={(e) => {
+                            const next = [...linkInBioLinks]
+                            next[idx] = { ...link, label: e.target.value }
+                            setLinkInBioLinks(next)
+                          }}
+                          className="h-9 flex-1 text-xs"
+                        />
+                        <Input
+                          value={link.url}
+                          placeholder="https://…"
+                          onChange={(e) => {
+                            const next = [...linkInBioLinks]
+                            next[idx] = { ...link, url: e.target.value }
+                            setLinkInBioLinks(next)
+                          }}
+                          className="h-9 flex-1 font-mono text-xs"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setLinkInBioLinks(linkInBioLinks.filter((_, i) => i !== idx))}
+                          className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           <Link
             href="/dashboard/settings?tab=order-payments"
             className="flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-colors hover:bg-muted/40"
@@ -681,58 +687,6 @@ export default function DashboardStorefrontPage() {
 
         {/* TAB 3: power tools */}
         <TabsContent value="advanced" className="space-y-4 outline-none">
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <Search className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle className="text-base">Discoverability extras</CardTitle>
-                  <CardDescription>For when basic SEO isn't enough</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="businessType">Business type</Label>
-                  <select
-                    id="businessType"
-                    value={storefrontBusinessType}
-                    onChange={(e) => setStorefrontBusinessType(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                  >
-                    <option value="OnlineStore">Online store</option>
-                    <option value="LocalBusiness">Local business</option>
-                    <option value="Restaurant">Restaurant / food</option>
-                    <option value="HealthAndBeautyBusiness">Health, salon & beauty</option>
-                    <option value="ProfessionalService">Professional services</option>
-                  </select>
-                  <p className="text-[11px] text-muted-foreground">Helps Google categorize you for local search.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ogImage">Share image URL</Label>
-                  <Input
-                    id="ogImage"
-                    value={storefrontOgImage}
-                    onChange={(e) => setStorefrontOgImage(e.target.value)}
-                    placeholder="https://…/banner-1200x630.jpg"
-                  />
-                  <p className="text-[11px] text-muted-foreground">1200×630 works best on WhatsApp and socials.</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gVerify">Google verification <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input
-                  id="gVerify"
-                  value={storefrontGoogleSiteVerification}
-                  onChange={(e) => setStorefrontGoogleSiteVerification(e.target.value)}
-                  placeholder="Token from Search Console"
-                  className="max-w-md"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
@@ -877,6 +831,58 @@ export default function DashboardStorefrontPage() {
                   </div>
                 </div>
               </AutomationRow>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Search className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base">Search extras</CardTitle>
+                  <CardDescription>Optional. Share image, Google verification, business type.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="businessType">Business type</Label>
+                  <select
+                    id="businessType"
+                    value={storefrontBusinessType}
+                    onChange={(e) => setStorefrontBusinessType(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                  >
+                    <option value="OnlineStore">Online store</option>
+                    <option value="LocalBusiness">Local business</option>
+                    <option value="Restaurant">Restaurant / food</option>
+                    <option value="HealthAndBeautyBusiness">Health, salon & beauty</option>
+                    <option value="ProfessionalService">Professional services</option>
+                  </select>
+                  <p className="text-[11px] text-muted-foreground">Helps Google categorize you for local search.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ogImage">Share image URL</Label>
+                  <Input
+                    id="ogImage"
+                    value={storefrontOgImage}
+                    onChange={(e) => setStorefrontOgImage(e.target.value)}
+                    placeholder="https://…/banner-1200x630.jpg"
+                  />
+                  <p className="text-[11px] text-muted-foreground">1200×630 works best on WhatsApp and socials.</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gVerify">Google verification <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Input
+                  id="gVerify"
+                  value={storefrontGoogleSiteVerification}
+                  onChange={(e) => setStorefrontGoogleSiteVerification(e.target.value)}
+                  placeholder="Token from Search Console"
+                  className="max-w-md"
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

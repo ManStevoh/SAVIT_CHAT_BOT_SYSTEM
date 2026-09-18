@@ -60,6 +60,7 @@ export function DashboardNavbar() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [user, setUser] = useState<StoredUser | null>(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [topSearch, setTopSearch] = useState("")
   const pathname = usePathname()
   const router = useRouter()
@@ -126,26 +127,27 @@ export function DashboardNavbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 px-6 backdrop-blur-xl backdrop-saturate-150">
-      <div className="flex items-center gap-4 flex-1">
+    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-xl backdrop-saturate-150">
+      <div className="flex h-14 items-center gap-2 px-3 sm:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         {!isAdmin && (
           <Drawer open={mobileNavOpen} onOpenChange={setMobileNavOpen} direction="left">
             <DrawerTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden text-muted-foreground hover:text-foreground"
+                className="shrink-0 md:hidden text-muted-foreground hover:text-foreground"
                 aria-label="Open navigation"
               >
                 <Menu className="h-5 w-5" />
               </Button>
             </DrawerTrigger>
-            <DrawerContent className="p-0">
-              <div className="flex h-16 items-center border-b border-border px-4">
+            <DrawerContent className="h-dvh max-h-dvh p-0">
+              <div className="flex h-16 shrink-0 items-center border-b border-border px-4">
                 <AppLogoAndName variant="sidebar" />
               </div>
               <DashboardNavLinks onNavigate={() => setMobileNavOpen(false)} />
-              <div className="p-2">
+              <div className="shrink-0 p-2">
                 <DrawerClose asChild>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">
                     Close
@@ -157,7 +159,7 @@ export function DashboardNavbar() {
         )}
 
         <form
-          className="relative w-full max-w-md"
+          className="relative hidden min-w-0 w-full max-w-md md:block"
           onSubmit={(e) => {
             e.preventDefault()
             const q = topSearch.trim()
@@ -187,7 +189,17 @@ export function DashboardNavbar() {
         </form>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-foreground md:hidden"
+          aria-label="Search"
+          aria-expanded={mobileSearchOpen}
+          onClick={() => setMobileSearchOpen((open) => !open)}
+        >
+          <Search className="h-5 w-5" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
@@ -216,7 +228,7 @@ export function DashboardNavbar() {
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
+          <DropdownMenuContent align="end" className="w-[min(20rem,calc(100vw-1.5rem))] p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
             <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
               <span className="text-sm font-semibold text-foreground">Notifications</span>
               <Button
@@ -277,16 +289,16 @@ export function DashboardNavbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground sm:h-9 sm:w-auto sm:px-3 sm:gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
                 {getInitials(user)}
               </div>
-              <span className="hidden text-sm font-medium text-foreground sm:inline">
+              <span className="hidden text-sm font-medium text-foreground lg:inline">
                 {user?.name ?? user?.email ?? "Account"}
               </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-[min(14rem,calc(100vw-1.5rem))]">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -325,6 +337,40 @@ export function DashboardNavbar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      </div>
+      {mobileSearchOpen ? (
+        <form
+          className="relative border-t border-border/60 px-3 py-2 md:hidden"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const q = topSearch.trim()
+            if (isAdmin) {
+              router.push(q ? `/admin/companies?search=${encodeURIComponent(q)}` : "/admin/companies")
+              return
+            }
+            if (pathname?.startsWith("/dashboard/orders")) {
+              router.push(
+                ordersHref(parseOrderPipelineStatus(searchParams?.get("status")), q || undefined)
+              )
+              return
+            }
+            const target = pathname?.startsWith("/dashboard/customers")
+              ? "/dashboard/customers"
+              : "/dashboard/chats"
+            router.push(q ? `${target}?search=${encodeURIComponent(q)}` : target)
+            setMobileSearchOpen(false)
+          }}
+        >
+          <Search className="absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            autoFocus
+            placeholder={isAdmin ? "Search companies..." : "Search conversations, orders..."}
+            className="pl-10"
+            value={topSearch}
+            onChange={(e) => setTopSearch(e.target.value)}
+          />
+        </form>
+      ) : null}
     </header>
   )
 }
