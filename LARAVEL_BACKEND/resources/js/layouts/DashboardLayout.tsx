@@ -2,6 +2,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardNavbar } from '@/components/dashboard/navbar'
 import { DashboardSidebar } from '@/components/dashboard/sidebar'
 import { MerchantMarketingPopup } from '@/components/dashboard/MerchantMarketingPopup'
+import { StarterGrowthRouteGate } from '@/components/shared/upgrade-prompt'
 import { Loader2 } from 'lucide-react'
 import { Suspense, type ReactNode } from 'react'
 
@@ -23,7 +24,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <DashboardNavbar />
           </Suspense>
           <main className="min-h-[calc(100vh-3.5rem)] min-w-0 max-w-full overflow-x-hidden p-4 sm:p-6 lg:p-8">
-            <Suspense fallback={<DashboardFallback />}>{children}</Suspense>
+            <Suspense fallback={<DashboardFallback />}>
+              <StarterGrowthRouteGate>{children}</StarterGrowthRouteGate>
+            </Suspense>
           </main>
           <MerchantMarketingPopup />
         </div>

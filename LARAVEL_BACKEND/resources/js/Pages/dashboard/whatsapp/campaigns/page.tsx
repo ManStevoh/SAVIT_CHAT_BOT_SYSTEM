@@ -46,6 +46,9 @@ import {
   Send,
   Sparkles,
 } from "lucide-react"
+import { useSubscription } from "@/lib/api-hooks"
+import { isStarterPlan } from "@/lib/use-plan"
+import { LockedFeatureGate } from "@/components/shared/upgrade-prompt"
 
 const STEPS = ["Creative", "Audience", "Template", "Send"] as const
 const SEGMENTS: { id: WhatsAppCampaignSegment; label: string }[] = [
@@ -56,6 +59,8 @@ const SEGMENTS: { id: WhatsAppCampaignSegment; label: string }[] = [
 ]
 
 export default function WhatsAppCampaignsPage() {
+  const { data: subscription, isLoading: subscriptionLoading } = useSubscription()
+  const isStarter = isStarterPlan(subscription?.plan)
   const [step, setStep] = useState(0)
   const [waConnected, setWaConnected] = useState(false)
   const [limits, setLimits] = useState({ campaignsUsed: 0, campaignsLimit: 2, recipientsLimit: 100 })
@@ -102,14 +107,20 @@ export default function WhatsAppCampaignsPage() {
   }, [])
 
   useEffect(() => {
-    loadInitial()
-  }, [loadInitial])
+    if (subscriptionLoading) return
+    if (isStarter) {
+      setLoading(false)
+      return
+    }
+    void loadInitial()
+  }, [loadInitial, isStarter, subscriptionLoading])
 
   useEffect(() => {
+    if (subscriptionLoading || isStarter) return
     getWhatsAppCampaignAudience(segment)
       .then((a) => setAudienceCount(a.uniqueCustomers))
       .catch(() => setAudienceCount(0))
-  }, [segment])
+  }, [segment, isStarter, subscriptionLoading])
 
   const ensureDraft = async (): Promise<WhatsAppCampaignRecord | null> => {
     if (campaign) return campaign
@@ -213,7 +224,18 @@ export default function WhatsAppCampaignsPage() {
 
   const posterSrc = campaign?.posterUrl ? resolveBackendMediaUrl(campaign.posterUrl) ?? campaign.posterUrl : null
 
-  if (loading) {
+  if (isStarter && !subscriptionLoading) {
+    return (
+      <LockedFeatureGate
+        icon={Megaphone}
+        title="WhatsApp campaigns live on Growth"
+        description="Broadcast posters and templates to customers from your connected number. Choose a plan below to unlock campaigns."
+        planLabel={subscription?.planName ?? "Starter"}
+      />
+    )
+  }
+
+  if (loading || subscriptionLoading) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground">
         <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading campaigns…

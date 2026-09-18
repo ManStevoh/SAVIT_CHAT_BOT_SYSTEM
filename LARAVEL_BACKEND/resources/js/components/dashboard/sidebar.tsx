@@ -51,19 +51,8 @@ import { useEffect, useMemo, useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { useCompanySettings, useSubscription, useNavBadges, type NavBadges } from "@/lib/api-hooks"
 import { isStarterPlan } from "@/lib/use-plan"
+import { GROWTH_ONLY_HREFS } from "@/lib/growth-routes"
 import type { LucideIcon } from "lucide-react"
-
-/** Nav destinations that require Growth/Custom (hidden on Starter to keep the workspace focused). */
-const GROWTH_ONLY_HREFS = new Set([
-  "/dashboard/growth",
-  "/dashboard/whatsapp/campaigns",
-  "/dashboard/business-intelligence",
-  "/dashboard/executive",
-  "/dashboard/cognitive",
-  "/dashboard/agent-ops",
-  "/dashboard/mission-control",
-  "/dashboard/marketplace",
-])
 
 export type DashboardNavItem = {
   name: string

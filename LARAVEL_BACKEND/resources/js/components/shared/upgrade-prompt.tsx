@@ -1,13 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Lock, Sparkles } from "lucide-react"
+import { ArrowRight, Lock, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { GROWTH_HIGHLIGHTS, limitPercent } from "@/lib/use-plan"
+import { GROWTH_HIGHLIGHTS, isStarterPlan, limitPercent } from "@/lib/use-plan"
 import { cn } from "@/lib/utils"
+import { DashboardPlansPicker } from "@/components/billing/DashboardPlansPicker"
+import { GROWTH_ONLY_HREFS } from "@/lib/growth-routes"
+import { usePathname } from "next/navigation"
+import { useSubscription } from "@/lib/api-hooks"
 
 /**
  * Professional, non-pushy upgrade nudge.
@@ -82,27 +85,88 @@ export function LockedFeatureGate({
   planLabel?: string
 }) {
   return (
-    <Card className="mx-auto max-w-xl">
-      <CardHeader className="text-center">
+    <div className="mx-auto w-full max-w-6xl space-y-8">
+      <div className="mx-auto max-w-2xl text-center">
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
           <Icon className="h-6 w-6 text-primary" />
         </span>
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <CardTitle>{title}</CardTitle>
-        </div>
-        <CardDescription>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           Included on Growth &amp; Custom · Your current plan: {planLabel}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-center text-sm leading-relaxed text-muted-foreground">{description}</p>
-        <UpgradePrompt
-          title="Upgrade to Growth when you're ready"
-          description="Keep everything you have on Starter, plus WhatsApp selling, higher limits, and campaigns — KSh 2,000/month with a 14-day free trial."
-          compact
-        />
-      </CardContent>
-    </Card>
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+      <DashboardPlansPicker
+        title="Choose a plan"
+        description="Compare every plan and upgrade here. Checkout uses the same payment methods as Subscription."
+      />
+    </div>
+  )
+}
+
+const GROWTH_ROUTE_COPY: Record<string, { title: string; description: string }> = {
+  "/dashboard/growth": {
+    title: "Growth Engine lives on Growth",
+    description: "AI content, social publishing, and ads live on plans that include the Growth Engine. Choose a plan below to unlock it.",
+  },
+  "/dashboard/whatsapp/campaigns": {
+    title: "WhatsApp campaigns live on Growth",
+    description: "Broadcast posters and templates to customers from your connected number. Choose a plan below to unlock campaigns.",
+  },
+  "/dashboard/business-intelligence": {
+    title: "Business intelligence lives on Growth",
+    description: "Deeper reporting and insights are included on Growth and Custom. Choose a plan below to unlock this area.",
+  },
+  "/dashboard/executive": {
+    title: "Executive dashboard lives on Growth",
+    description: "Company-wide executive views are included on Growth and Custom. Choose a plan below to unlock this area.",
+  },
+  "/dashboard/cognitive": {
+    title: "Cognitive insights live on Growth",
+    description: "Reasoning and investigation tools are included on Growth and Custom. Choose a plan below to unlock this area.",
+  },
+  "/dashboard/agent-ops": {
+    title: "Agent ops lives on Growth",
+    description: "Agent operations and monitoring are included on Growth and Custom. Choose a plan below to unlock this area.",
+  },
+  "/dashboard/mission-control": {
+    title: "Mission Control lives on Growth",
+    description: "Mission Control is included on Growth and Custom. Choose a plan below to unlock this area.",
+  },
+  "/dashboard/marketplace": {
+    title: "Marketplace lives on Growth",
+    description: "Marketplace tools are included on Growth and Custom. Choose a plan below to unlock this area.",
+  },
+}
+
+/** Replaces Growth-only dashboard routes with the live plans comparison for Starter merchants. */
+export function StarterGrowthRouteGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const path = pathname.split("?")[0]
+  const { data: subscription, isLoading } = useSubscription()
+  const gated = GROWTH_ONLY_HREFS.has(path)
+
+  if (!gated) return children
+  if (isLoading && !subscription) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+  if (!isStarterPlan(subscription?.plan)) return children
+
+  const copy = GROWTH_ROUTE_COPY[path] ?? {
+    title: "This area lives on Growth",
+    description: "Your current plan does not include this feature. Choose a plan below to unlock it.",
+  }
+
+  return (
+    <LockedFeatureGate
+      title={copy.title}
+      description={copy.description}
+      planLabel={subscription?.planName ?? "Starter"}
+    />
   )
 }
 
