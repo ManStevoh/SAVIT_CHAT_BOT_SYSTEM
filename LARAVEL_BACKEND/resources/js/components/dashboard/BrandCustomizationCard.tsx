@@ -18,16 +18,13 @@ import {
   Trash2,
   Check,
   Sparkles,
-  Smartphone,
   Store,
   MessageSquare,
   Loader2,
   RefreshCw,
   Eye,
   Type,
-  Maximize2,
   ShoppingBag,
-  ExternalLink,
   ChevronDown,
 } from 'lucide-react'
 import { apiRequest } from '@/lib/api-client'
@@ -76,7 +73,6 @@ export function BrandCustomizationCard({
   const [heroCtaLabel, setHeroCtaLabel] = useState(initialTheme?.hero_cta_label || 'Shop Catalog')
   const [heroCtaHref, setHeroCtaHref] = useState(initialTheme?.hero_cta_href || '#catalog')
 
-  const [previewTab, setPreviewTab] = useState<'storefront' | 'bio' | 'widget'>('storefront')
   const [customColorsOpen, setCustomColorsOpen] = useState(false)
   const [customBannerOpen, setCustomBannerOpen] = useState(false)
   const [finePrintOpen, setFinePrintOpen] = useState(false)
@@ -290,30 +286,7 @@ export function BrandCustomizationCard({
   const activeRadius = selectedRadius?.radius || '12px'
 
   return (
-    <div className="space-y-8">
-      {/* Header and Controls */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Make it yours</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Logo, colors and style — watch the phone preview update as you go.
-          </p>
-        </div>
-
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          {storeSlug && (
-            <Button variant="outline" size="sm" asChild className="w-full gap-1.5 sm:w-auto">
-              <a href={`/s/${storeSlug}`} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" /> View store
-              </a>
-            </Button>
-          )}
-          <Button onClick={handleSave} disabled={saving} className="w-full gap-2 sm:w-auto">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Save design
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-6">
 
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
@@ -323,13 +296,13 @@ export function BrandCustomizationCard({
 
       {success && (
         <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-600 font-medium flex items-center gap-2">
-          <Check className="h-4 w-4" /> Brand customization saved successfully! All customer surfaces have been updated.
+          <Check className="h-4 w-4" /> Brand customization saved. The live shop now uses this look.
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Customization Controls (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+        {/* Controls */}
+        <div className="order-2 space-y-6 lg:order-1 lg:col-span-7">
           {/* Logo */}
           <Card>
             <CardHeader className="pb-4">
@@ -557,20 +530,20 @@ export function BrandCustomizationCard({
             </CardContent>
           </Card>
 
-          {/* Announcement bar — one field, colors automatic unless customized */}
+          {/* Banners */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle className="text-base">Top banner</CardTitle>
-                  <CardDescription>A message across the top of your store — sales, offers, notices</CardDescription>
+                  <CardTitle className="text-base">Banners</CardTitle>
+                  <CardDescription>Optional strip at the top, and a welcome block on the homepage</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="announcementBar">Banner text</Label>
+                <Label htmlFor="announcementBar">Top strip</Label>
                 <Input
                   id="announcementBar"
                   value={announcementBar}
@@ -578,9 +551,7 @@ export function BrandCustomizationCard({
                   placeholder="e.g. Free delivery this weekend!"
                   maxLength={200}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Empty = no banner. Colors follow your look automatically.
-                </p>
+                <p className="text-xs text-muted-foreground">Empty = hidden. Colors follow your look unless you override them.</p>
               </div>
 
               <div className="rounded-xl border border-border">
@@ -589,7 +560,7 @@ export function BrandCustomizationCard({
                   onClick={() => setCustomBannerOpen((v) => !v)}
                   className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[13px] font-medium"
                 >
-                  Custom banner colors
+                  Custom strip colors
                   <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${customBannerOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {customBannerOpen && (
@@ -598,7 +569,7 @@ export function BrandCustomizationCard({
                       <div className="space-y-1.5">
                         <Label className="text-xs">Background</Label>
                         <div className="flex items-center gap-2">
-                          <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden">
+                          <div className="relative h-9 w-10 shrink-0 overflow-hidden rounded-lg border">
                             <input
                               type="color"
                               value={announcementBg || accentColor}
@@ -610,14 +581,14 @@ export function BrandCustomizationCard({
                             value={announcementBg}
                             onChange={(e) => setAnnouncementBg(e.target.value)}
                             placeholder="Auto"
-                            className="font-mono text-xs h-9"
+                            className="h-9 font-mono text-xs"
                           />
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Text color</Label>
                         <div className="flex items-center gap-2">
-                          <div className="relative h-9 w-10 shrink-0 rounded-lg border overflow-hidden">
+                          <div className="relative h-9 w-10 shrink-0 overflow-hidden rounded-lg border">
                             <input
                               type="color"
                               value={announcementText || '#ffffff'}
@@ -629,7 +600,7 @@ export function BrandCustomizationCard({
                             value={announcementText}
                             onChange={(e) => setAnnouncementText(e.target.value)}
                             placeholder="Auto (white)"
-                            className="font-mono text-xs h-9"
+                            className="h-9 font-mono text-xs"
                           />
                         </div>
                       </div>
@@ -651,63 +622,51 @@ export function BrandCustomizationCard({
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Welcome banner */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <Store className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <CardTitle className="text-base">Welcome banner</CardTitle>
-                  <CardDescription>A headline greeting at the top of your store</CardDescription>
-                </div>
+              <div className="space-y-3 border-t pt-5">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={heroEnabled}
+                    onChange={(e) => setHeroEnabled(e.target.checked)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  Homepage welcome block
+                </label>
+
+                {heroEnabled && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Headline</Label>
+                      <Input
+                        value={heroHeadline}
+                        onChange={(e) => setHeroHeadline(e.target.value)}
+                        placeholder={`Welcome to ${businessName}`}
+                        maxLength={120}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Subheading</Label>
+                      <Input
+                        value={heroSubhead}
+                        onChange={(e) => setHeroSubhead(e.target.value)}
+                        placeholder="Browse our collection and order in seconds."
+                        maxLength={255}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Button text</Label>
+                      <Input
+                        value={heroCtaLabel}
+                        onChange={(e) => setHeroCtaLabel(e.target.value)}
+                        placeholder="Shop now"
+                        maxLength={64}
+                        className="max-w-xs"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={heroEnabled}
-                  onChange={(e) => setHeroEnabled(e.target.checked)}
-                  className="h-4 w-4 rounded border-input"
-                />
-                Show welcome banner
-              </label>
-
-              {heroEnabled && (
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Headline</Label>
-                    <Input
-                      value={heroHeadline}
-                      onChange={(e) => setHeroHeadline(e.target.value)}
-                      placeholder={`Welcome to ${businessName}`}
-                      maxLength={120}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Subheading</Label>
-                    <Input
-                      value={heroSubhead}
-                      onChange={(e) => setHeroSubhead(e.target.value)}
-                      placeholder="Browse our collection and order in seconds."
-                      maxLength={255}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Button text</Label>
-                    <Input
-                      value={heroCtaLabel}
-                      onChange={(e) => setHeroCtaLabel(e.target.value)}
-                      placeholder="Shop now"
-                      maxLength={64}
-                      className="max-w-xs"
-                    />
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -759,50 +718,19 @@ export function BrandCustomizationCard({
           </Card>
         </div>
 
-        {/* Right Column: Real-Time Live Preview (5 cols) */}
-        <div className="lg:col-span-5 sticky top-6 space-y-4">
+        {/* Phone preview — first on mobile so edits have a target */}
+        <div className="order-1 space-y-3 lg:sticky lg:top-6 lg:order-2 lg:col-span-5">
           <Card className="overflow-hidden border-2 shadow-md">
-            <CardHeader className="bg-muted/40 pb-3 border-b">
-              <div className="flex items-center justify-between">
+            <CardHeader className="border-b bg-muted/40 pb-3">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Eye className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Preview</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Phone preview</CardTitle>
                 </div>
-                <div className="flex items-center rounded-lg border bg-background p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewTab('storefront')}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                      previewTab === 'storefront'
-                        ? 'bg-primary text-primary-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Store className="h-3 w-3" /> Store
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewTab('bio')}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                      previewTab === 'bio'
-                        ? 'bg-primary text-primary-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Smartphone className="h-3 w-3" /> Bio
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewTab('widget')}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                      previewTab === 'widget'
-                        ? 'bg-primary text-primary-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <MessageSquare className="h-3 w-3" /> Widget
-                  </button>
-                </div>
+                <Button onClick={handleSave} disabled={saving} size="sm" className="h-8 gap-1.5">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  Save look
+                </Button>
               </div>
             </CardHeader>
 
@@ -812,9 +740,8 @@ export function BrandCustomizationCard({
                 <div className="flex justify-center bg-white pb-1.5 pt-2 dark:bg-slate-950">
                   <div className="h-4 w-24 rounded-full bg-slate-900 dark:bg-slate-700" />
                 </div>
-              {/* Storefront Mockup Preview */}
-              {previewTab === 'storefront' && (
-                <div
+              {/* Storefront mockup */}
+              <div
                   className="p-4 space-y-3 bg-white text-slate-900 transition-all text-xs"
                   style={{ fontFamily: activeFontFamily }}
                 >
@@ -948,123 +875,6 @@ export function BrandCustomizationCard({
                     {footerText || `Powered by ${businessName}`}
                   </div>
                 </div>
-              )}
-
-              {/* Link-in-Bio Mockup Preview */}
-              {previewTab === 'bio' && (
-                <div
-                  className="p-6 bg-gradient-to-b from-slate-50 to-white text-center space-y-4"
-                  style={{ fontFamily: activeFontFamily }}
-                >
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden border-2 shadow-sm" style={{ borderRadius: activeRadius }}>
-                    {logoUrl ? (
-                      <img src={logoUrl} alt="Logo" className="h-full w-full object-contain" />
-                    ) : (
-                      <div
-                        className="flex h-full w-full items-center justify-center font-bold text-xl text-white"
-                        style={{ background: primaryColor }}
-                      >
-                        {businessName.charAt(0)}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <h3 className="font-bold text-sm text-slate-900">{businessName}</h3>
-                    <p className="text-[11px] text-slate-500">Official catalog, ordering &amp; links</p>
-                  </div>
-
-                  <div className="space-y-2 max-w-xs mx-auto">
-                    <div
-                      className="p-2.5 text-xs font-semibold text-white shadow-xs flex items-center justify-center gap-2"
-                      style={{ background: primaryColor, borderRadius: activeRadius }}
-                    >
-                      <Store className="h-3.5 w-3.5" /> Visit Online Store
-                    </div>
-
-                    <div
-                      className="p-2.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 shadow-xs flex items-center justify-center gap-2"
-                      style={{ borderRadius: activeRadius }}
-                    >
-                      <MessageSquare className="h-3.5 w-3.5 text-emerald-600" /> Order on WhatsApp
-                    </div>
-
-                    <div
-                      className="p-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 shadow-xs"
-                      style={{ borderRadius: activeRadius }}
-                    >
-                      Special Promotions &amp; Discounts
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Chatbot Widget Preview */}
-              {previewTab === 'widget' && (
-                <div
-                  className="p-4 bg-slate-100 flex flex-col items-end gap-3 min-h-[300px] justify-end"
-                  style={{ fontFamily: activeFontFamily }}
-                >
-                  {/* Chat Panel Mockup */}
-                  <div
-                    className="w-full max-w-[280px] bg-white border border-slate-200 shadow-lg overflow-hidden space-y-2 text-xs"
-                    style={{ borderRadius: activeRadius }}
-                  >
-                    {/* Header */}
-                    <div
-                      className="p-3 text-white font-semibold flex items-center gap-2 shadow-xs"
-                      style={{ background: primaryColor }}
-                    >
-                      {logoUrl ? (
-                        <img src={logoUrl} alt="Logo" className="h-5 w-5 rounded-full object-cover bg-white" />
-                      ) : (
-                        <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">
-                          {businessName.charAt(0)}
-                        </div>
-                      )}
-                      <span className="truncate">{businessName} Support</span>
-                    </div>
-
-                    {/* Chat Messages */}
-                    <div className="p-3 space-y-2 bg-slate-50/50 min-h-[120px]">
-                      <div
-                        className="bg-white border text-slate-800 p-2 text-[11px] shadow-2xs max-w-[85%]"
-                        style={{ borderRadius: activeRadius }}
-                      >
-                        Hello! Welcome to {businessName}. How can we assist you today?
-                      </div>
-
-                      <div
-                        className="text-white p-2 text-[11px] shadow-2xs max-w-[85%] ml-auto"
-                        style={{ background: primaryColor, borderRadius: activeRadius }}
-                      >
-                        I want to view your top products
-                      </div>
-                    </div>
-
-                    {/* Input Mockup */}
-                    <div className="p-2 border-t flex gap-1 bg-white">
-                      <div className="flex-1 bg-slate-100 rounded-md px-2 py-1 text-[11px] text-slate-400">
-                        Type a message...
-                      </div>
-                      <div
-                        className="px-2 py-1 text-white font-medium text-[10px] flex items-center justify-center"
-                        style={{ background: primaryColor, borderRadius: activeRadius }}
-                      >
-                        Send
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Launcher Bubble */}
-                  <div
-                    className="h-11 w-11 rounded-full text-white shadow-lg flex items-center justify-center text-lg font-bold"
-                    style={{ background: primaryColor }}
-                  >
-                    💬
-                  </div>
-                </div>
-              )}
               </div>
             </CardContent>
           </Card>
@@ -1080,7 +890,7 @@ export function BrandCustomizationCard({
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500"></span>
               </span>
               <span className="text-xs font-semibold leading-snug text-slate-200">
-                You have unsaved brand &amp; design changes
+                You have unsaved look changes
               </span>
             </div>
 
@@ -1103,7 +913,7 @@ export function BrandCustomizationCard({
                 className="h-9 flex-1 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-md transition-all hover:opacity-95 sm:h-8 sm:flex-none"
               >
                 {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
-                Save Brand Settings
+                Save look
               </Button>
             </div>
           </div>

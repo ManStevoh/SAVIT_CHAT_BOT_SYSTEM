@@ -131,6 +131,10 @@ class PlatformSettingsController extends Controller
                 AiLearningConfig::defaults(),
                 is_array($aiLearning) ? $aiLearning : []
             ),
+            'lifecycleWhatsappEnabled' => (bool) ($data['lifecycle_whatsapp_enabled'] ?? true),
+            'lifecycleWhatsappPhoneNumberId' => $data['lifecycle_whatsapp_phone_number_id'] ?? null,
+            'lifecycleWhatsappAccessToken' => $this->maskSecret($settings, 'lifecycle_whatsapp_access_token'),
+            'lifecycleWhatsappTemplateLang' => $data['lifecycle_whatsapp_template_lang'] ?? 'en',
         ];
 
         return response()->json($out);
@@ -256,6 +260,10 @@ class PlatformSettingsController extends Controller
             'aiLearningConfig.autoDetectLanguage' => 'sometimes|boolean',
             'aiLearningConfig.fallbackLanguage' => 'sometimes|string|max:10',
             'aiLearningConfig.aiCostMarkupPercent' => 'sometimes|numeric|min:0|max:100',
+            'lifecycleWhatsappEnabled' => 'sometimes|boolean',
+            'lifecycleWhatsappPhoneNumberId' => 'nullable|string|max:80',
+            'lifecycleWhatsappAccessToken' => 'nullable|string|max:2000',
+            'lifecycleWhatsappTemplateLang' => 'nullable|string|max:12',
         ]);
 
         $settings = PlatformSetting::firstOrNew([]);
@@ -322,6 +330,10 @@ class PlatformSettingsController extends Controller
             'recaptchaSiteKey' => 'recaptcha_site_key',
             'recaptchaSecretKey' => 'recaptcha_secret_key',
             'devModeEnabled' => 'dev_mode_enabled',
+            'lifecycleWhatsappEnabled' => 'lifecycle_whatsapp_enabled',
+            'lifecycleWhatsappPhoneNumberId' => 'lifecycle_whatsapp_phone_number_id',
+            'lifecycleWhatsappAccessToken' => 'lifecycle_whatsapp_access_token',
+            'lifecycleWhatsappTemplateLang' => 'lifecycle_whatsapp_template_lang',
         ];
         $before = $settings->exists ? $settings->only(array_values($map)) : [];
         // Never persist UI mask placeholders — those fields are returned as ******** on GET.
@@ -333,6 +345,7 @@ class PlatformSettingsController extends Controller
             'whatsapp_credit_sharing_system_token',
             'openai_api_key',
             'recaptcha_secret_key',
+            'lifecycle_whatsapp_access_token',
         ];
         foreach ($validated as $key => $value) {
             if ($key === 'logo' || $key === 'favicon') {

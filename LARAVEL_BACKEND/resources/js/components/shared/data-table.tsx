@@ -20,12 +20,14 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export interface Column<T> {
   key: string
   header: string
   cell: (item: T) => React.ReactNode
   sortable?: boolean
+  className?: string
 }
 
 export interface Filter {
@@ -54,6 +56,9 @@ interface DataTableProps<T> {
   view?: 'list' | 'grid'
   gridCell?: (item: T) => React.ReactNode
   toolbarExtra?: React.ReactNode
+  onRowClick?: (item: T) => void
+  tableClassName?: string
+  framed?: boolean
 }
 
 export function DataTable<T extends { id: string }>({
@@ -72,6 +77,9 @@ export function DataTable<T extends { id: string }>({
   view = 'list',
   gridCell,
   toolbarExtra,
+  onRowClick,
+  tableClassName,
+  framed = true,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -238,18 +246,63 @@ export function DataTable<T extends { id: string }>({
       )}
 
       {view === 'grid' && gridCell ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {data.map((item) => (
             <div key={item.id}>{gridCell(item)}</div>
           ))}
         </div>
       ) : (
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
-        <Table>
+      <>
+      <div className="space-y-3 md:hidden">
+        {data.map((item) => {
+          const actionCol = columns.find((column) => column.key === 'actions')
+          const primaryCol = columns.find((column) => column.key !== 'actions') ?? columns[0]
+          const detailCols = columns.filter((column) => column !== primaryCol && column !== actionCol)
+          return (
+            <div
+              key={item.id}
+              className={cn(
+                'min-w-0 rounded-xl border border-border/50 bg-card p-3 shadow-sm',
+                onRowClick && 'cursor-pointer'
+              )}
+              onClick={onRowClick ? () => onRowClick(item) : undefined}
+            >
+              {primaryCol ? <div className="min-w-0">{primaryCol.cell(item)}</div> : null}
+              {detailCols.length > 0 ? (
+                <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/40 pt-3">
+                  {detailCols.map((column) => (
+                    <div key={column.key} className="min-w-0">
+                      {column.header ? (
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {column.header}
+                        </p>
+                      ) : null}
+                      <div className="mt-0.5 text-sm">{column.cell(item)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {actionCol ? (
+                <div
+                  className="mt-3 flex flex-wrap justify-end gap-2"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {actionCol.cell(item)}
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+      <div className={cn('hidden md:block', framed ? 'overflow-hidden rounded-2xl border border-border/50 bg-card/80 shadow-sm' : 'overflow-hidden rounded-xl border border-border/40')}>
+        <Table className={tableClassName}>
           <TableHeader>
-            <TableRow className="border-border/60 bg-muted/30 hover:bg-muted/30">
+            <TableRow className="border-border/50 bg-muted/20 hover:bg-muted/20">
               {columns.map((column) => (
-                <TableHead key={column.key} className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <TableHead
+                  key={column.key}
+                  className={`px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground ${column.className ?? ''}`}
+                >
                   {column.header}
                 </TableHead>
               ))}
@@ -257,20 +310,31 @@ export function DataTable<T extends { id: string }>({
           </TableHeader>
           <TableBody>
             {data.map((item) => (
-              <TableRow key={item.id} className="border-border/60 hover:bg-muted/30">
+              <TableRow
+                key={item.id}
+                className={`border-border/40 hover:bg-muted/20${onRowClick ? ' cursor-pointer' : ''}`}
+                onClick={onRowClick ? () => onRowClick(item) : undefined}
+              >
                 {columns.map((column) => (
-                  <TableCell key={column.key}>{column.cell(item)}</TableCell>
+                  <TableCell
+                    key={column.key}
+                    className={`px-4 py-3.5 ${column.className ?? ''}`}
+                    onClick={column.key === 'actions' ? (e) => e.stopPropagation() : undefined}
+                  >
+                    {column.cell(item)}
+                  </TableCell>
                 ))}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+      </>
       )}
 
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
             Page {pagination.page} of {pagination.totalPages}
           </p>
@@ -282,8 +346,8 @@ export function DataTable<T extends { id: string }>({
               disabled={pagination.page <= 1}
               className="border-border/50"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Previous
+              <ChevronLeft className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Previous</span>
             </Button>
             <Button
               variant="outline"
@@ -292,8 +356,8 @@ export function DataTable<T extends { id: string }>({
               disabled={pagination.page >= pagination.totalPages}
               className="border-border/50"
             >
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight className="h-4 w-4 sm:ml-1" />
             </Button>
           </div>
         </div>

@@ -3064,6 +3064,10 @@ export interface PlatformSettings {
   recaptchaSiteKey?: string | null
   recaptchaSecretKey?: string | null
   aiLearningConfig?: AiLearningConfig
+  lifecycleWhatsappEnabled?: boolean
+  lifecycleWhatsappPhoneNumberId?: string | null
+  lifecycleWhatsappAccessToken?: string | null
+  lifecycleWhatsappTemplateLang?: string | null
 }
 
 export interface UpdatePlatformSettingsData {
@@ -3132,6 +3136,10 @@ export interface UpdatePlatformSettingsData {
   recaptchaSiteKey?: string
   recaptchaSecretKey?: string
   aiLearningConfig?: AiLearningConfig
+  lifecycleWhatsappEnabled?: boolean
+  lifecycleWhatsappPhoneNumberId?: string
+  lifecycleWhatsappAccessToken?: string
+  lifecycleWhatsappTemplateLang?: string
 }
 
 /** Public app branding (name, logo, colors) for theme/invoices. GET /api/app-branding */
@@ -4678,6 +4686,121 @@ export async function markCommissionInvoicePaid(
 ): Promise<{ success: boolean; message?: string }> {
   try {
     return await apiRequest(`/api/admin/commissions/invoices/${id}/mark-paid`, { method: 'POST', body: data ?? {} })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export interface PlatformMarketingMessage {
+  id: number
+  name: string
+  title: string
+  bodyHtml?: string | null
+  bodyText: string
+  ctaLabel?: string | null
+  ctaUrl?: string | null
+  channelEmail: boolean
+  channelWhatsapp: boolean
+  channelPopup: boolean
+  audience: string
+  status: string
+  sendMode: string
+  scheduledAt?: string | null
+  recurringInterval?: string | null
+  trigger?: string | null
+  triggerDelaySeconds: number
+  popupOnce: boolean
+  lastRunAt?: string | null
+  sendsCount: number
+  audienceCount: number
+  createdAt?: string | null
+}
+
+export interface PlatformMarketingPayload {
+  name: string
+  title: string
+  bodyText: string
+  bodyHtml?: string
+  ctaLabel?: string
+  ctaUrl?: string
+  channelEmail: boolean
+  channelWhatsapp: boolean
+  channelPopup: boolean
+  audience: string
+  status: string
+  sendMode: string
+  scheduledAt?: string | null
+  recurringInterval?: string | null
+  trigger?: string | null
+  triggerDelaySeconds?: number
+  popupOnce: boolean
+}
+
+export async function listPlatformMarketing(): Promise<{ success: boolean; messages: PlatformMarketingMessage[] }> {
+  return apiRequest('/api/admin/marketing')
+}
+
+export async function createPlatformMarketing(
+  data: PlatformMarketingPayload
+): Promise<{ success: boolean; message?: PlatformMarketingMessage | string }> {
+  try {
+    return await apiRequest('/api/admin/marketing', { method: 'POST', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function updatePlatformMarketing(
+  id: number,
+  data: Partial<PlatformMarketingPayload>
+): Promise<{ success: boolean; message?: PlatformMarketingMessage | string }> {
+  try {
+    return await apiRequest(`/api/admin/marketing/${id}`, { method: 'PUT', body: data })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function deletePlatformMarketing(id: number): Promise<{ success: boolean }> {
+  try {
+    return await apiRequest(`/api/admin/marketing/${id}`, { method: 'DELETE' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function sendPlatformMarketingNow(id: number): Promise<{ success: boolean; sent?: number; message?: string }> {
+  try {
+    return await apiRequest(`/api/admin/marketing/${id}/send`, { method: 'POST' })
+  } catch (e) {
+    return handleApiError(e)
+  }
+}
+
+export async function listPlatformMarketingSends(messageId?: number): Promise<{ success: boolean; sends: Array<Record<string, unknown>> }> {
+  const path = messageId ? `/api/admin/marketing/${messageId}/sends` : '/api/admin/marketing/sends'
+  return apiRequest(path)
+}
+
+export async function listMerchantLifecycleSends(): Promise<{ success: boolean; sends: Array<Record<string, unknown>> }> {
+  return apiRequest('/api/admin/merchant-lifecycle/sends')
+}
+
+export interface MerchantMarketingPopup {
+  id: number
+  title: string
+  body: string
+  ctaLabel?: string | null
+  ctaUrl?: string | null
+}
+
+export async function getMerchantMarketingPopups(): Promise<{ success: boolean; popups: MerchantMarketingPopup[] }> {
+  return apiRequest('/api/company/marketing-popups')
+}
+
+export async function dismissMerchantMarketingPopup(id: number): Promise<{ success: boolean }> {
+  try {
+    return await apiRequest(`/api/company/marketing-popups/${id}/dismiss`, { method: 'POST' })
   } catch (e) {
     return handleApiError(e)
   }

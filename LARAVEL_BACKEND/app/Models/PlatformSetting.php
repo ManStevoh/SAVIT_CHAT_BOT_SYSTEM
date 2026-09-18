@@ -73,6 +73,10 @@ class PlatformSetting extends Model
         'recaptcha_site_key',
         'recaptcha_secret_key',
         'dev_mode_enabled',
+        'lifecycle_whatsapp_enabled',
+        'lifecycle_whatsapp_phone_number_id',
+        'lifecycle_whatsapp_access_token',
+        'lifecycle_whatsapp_template_lang',
     ];
 
     protected $casts = [
@@ -102,6 +106,7 @@ class PlatformSetting extends Model
         'allow_public_commission_signup' => 'boolean',
         'default_commission_threshold' => 'decimal:2',
         'commission_grace_period_days' => 'integer',
+        'lifecycle_whatsapp_enabled' => 'boolean',
     ];
 
     /** Hide secrets when serializing (e.g. for API GET); controller returns masked values. */
@@ -112,6 +117,7 @@ class PlatformSetting extends Model
         'whatsapp_credit_sharing_system_token',
         'openai_api_key',
         'recaptcha_secret_key',
+        'lifecycle_whatsapp_access_token',
     ];
 
     /** Whether SMTP is configured enough to send mail. */

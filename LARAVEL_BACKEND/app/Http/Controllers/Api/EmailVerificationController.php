@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\MerchantLifecycleService;
+use App\Services\PlatformMarketingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Handles GET /api/auth/verify-email (signed URL from welcome email).
@@ -29,8 +32,16 @@ class EmailVerificationController extends Controller
             return $this->redirectToFrontend('/login', ['error' => 'invalid_hash']);
         }
 
-        if (! $user->hasVerifiedEmail()) {
+        $firstVerify = ! $user->hasVerifiedEmail();
+        if ($firstVerify) {
             $user->markEmailAsVerified();
+            try {
+                $fresh = $user->fresh(['company.settings']) ?? $user;
+                app(MerchantLifecycleService::class)->onVerified($fresh);
+                app(PlatformMarketingService::class)->onVerified($fresh);
+            } catch (\Throwable $e) {
+                Log::warning('Post-verify merchant messaging failed: '.$e->getMessage());
+            }
         }
 
         return $this->redirectToFrontend('/login', $this->postVerifyQuery($request, $user));

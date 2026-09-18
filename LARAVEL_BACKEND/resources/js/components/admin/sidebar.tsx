@@ -23,6 +23,7 @@ import {
   Tag,
   Mail,
   Percent,
+  Megaphone,
 } from "lucide-react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 
@@ -51,6 +52,7 @@ const navigationOther = [
   { name: "Blog", href: "/admin/blog", icon: Newspaper },
   { name: "Testimonials", href: "/admin/testimonials", icon: Quote },
   { name: "Landing FAQ", href: "/admin/landing-faqs", icon: HelpCircle },
+  { name: "Merchant marketing", href: "/admin/marketing", icon: Megaphone },
   { name: "AI Usage", href: "/admin/ai-usage", icon: Bot },
   { name: "AI Learning", href: "/admin/ai-learning", icon: Bot },
   { name: "System Logs", href: "/admin/logs", icon: FileText },

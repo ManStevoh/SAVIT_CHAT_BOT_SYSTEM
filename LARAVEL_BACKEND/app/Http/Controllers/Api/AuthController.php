@@ -10,8 +10,10 @@ use App\Models\PlatformSetting;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\MailService;
+use App\Services\MerchantLifecycleService;
 use App\Services\PlanLimitService;
 use App\Services\Platform\NotificationDispatcher;
+use App\Services\PlatformMarketingService;
 use App\Services\RecaptchaService;
 use App\Services\WhatsApp\WhatsAppDebugLogger;
 use Illuminate\Http\JsonResponse;
@@ -87,6 +89,11 @@ class AuthController extends Controller
         $token = $user->createToken('auth')->plainTextToken;
 
         $user->load('company');
+        try {
+            app(PlatformMarketingService::class)->onLogin($user);
+        } catch (\Throwable $e) {
+            Log::warning('Marketing login trigger failed: '.$e->getMessage());
+        }
         $userData = $this->userToArray($user);
 
         return response()->json([
@@ -151,9 +158,11 @@ class AuthController extends Controller
             'companyName' => 'required|string|max:255',
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'phone' => 'nullable|string|max:50',
+            'phone' => 'required|string|max:50',
             'password' => ['required', 'string'],
             'code' => 'required|string',
+            'acceptTerms' => 'accepted',
+            'marketingConsent' => 'sometimes|boolean',
         ]);
 
         $otp = EmailOtp::where('email', $validated['email'])
@@ -171,9 +180,10 @@ class AuthController extends Controller
         $otp->update(['verified_at' => now()]);
 
         $email = strtolower(trim($validated['email']));
+        $marketingConsent = (bool) ($validated['marketingConsent'] ?? false);
 
         try {
-            [$company, $user] = DB::transaction(function () use ($validated, $email) {
+            [$company, $user, $trial] = DB::transaction(function () use ($validated, $email, $marketingConsent) {
                 $company = Company::where('email', $email)->first();
 
                 if ($company) {
@@ -200,17 +210,25 @@ class AuthController extends Controller
                 $user = User::create([
                     'name' => $validated['name'],
                     'email' => $email,
-                    'phone' => $validated['phone'] ?? null,
+                    'phone' => $validated['phone'],
                     'password' => Hash::make($validated['password']),
-                    'role' => 'company_admin',
+                    'role' => 'company_owner',
                     'company_id' => $company->id,
                     'status' => 'active',
                     'email_verified_at' => now(),
+                    'terms_accepted_at' => now(),
+                    'marketing_consent' => $marketingConsent,
+                    'marketing_consent_at' => $marketingConsent ? now() : null,
                 ]);
 
+                $trial = $this->createTrialSubscriptionForRegistration($company, null);
+                if ($trial) {
+                    $company->update(['plan' => $trial['plan_slug']]);
+                    $company->refresh();
+                }
                 $this->openStorefrontOnRegister($company);
 
-                return [$company, $user];
+                return [$company, $user, $trial];
             });
         } catch (QueryException $e) {
             if ($this->isDuplicateKeyError($e)) {
@@ -221,6 +239,14 @@ class AuthController extends Controller
 
             throw $e;
         }
+
+        try {
+            app(\App\Services\Agent\AgentCommerceProvisioningService::class)->syncForCompany($company);
+        } catch (\Throwable $e) {
+            Log::warning('OTP registration provisioning failed: '.$e->getMessage());
+        }
+
+        $this->sendRegistrationWelcome($user, $company, $trial);
 
         $user->load('company');
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -635,16 +661,12 @@ class AuthController extends Controller
         // paid trials get trial messaging (email subject is already gated by $isTrial).
         $isRealTrial = ! empty($trial) && empty($trial['is_free']);
         try {
-            if ($user->email) {
-                app(MailService::class)->sendWelcomeTrialEmail(
-                    $user->email,
-                    $user->name,
-                    $trial['plan_name'] ?? 'Starter',
-                    $trial['days'] ?? (int) config('subscription.default_trial_days', 14),
-                    $trial['end_date'] ?? now()->addDays(14)->format('F j, Y'),
-                    $isRealTrial
-                );
-            }
+            app(MerchantLifecycleService::class)->onRegistered(
+                $user->fresh(['company.settings']) ?? $user,
+                sendWelcomeEmail: true,
+                trial: $trial
+            );
+            app(PlatformMarketingService::class)->onRegistered($user->fresh(['company.settings']) ?? $user);
 
             if ($isRealTrial) {
                 app(NotificationDispatcher::class)->dispatch($company, 'subscription.trial_started', [

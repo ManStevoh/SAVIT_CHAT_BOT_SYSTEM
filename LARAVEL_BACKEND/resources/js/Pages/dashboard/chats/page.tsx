@@ -58,6 +58,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { PageHeader } from '@/components/shared/page-header'
+import { LockedFeatureGate } from '@/components/shared/upgrade-prompt'
 
 export default function ChatsPage() {
   const { toast } = useToast()
@@ -367,53 +368,15 @@ export default function ChatsPage() {
     }
   }, [selectedChatId, products, selectedProductId, orderQuantity, toast, mutate, statusFilter, searchQuery])
 
-  // Starter without WhatsApp: the whole inbox is the upgrade moment.
+  // Starter without WhatsApp: show live plans instead of a marketing teaser.
   if (!chatsLoading && showWaGate) {
     return (
-      <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-4 py-10 text-center">
-        <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[#25D366]/15">
-          <MessageSquare className="h-8 w-8 text-[#128C7E]" />
-        </span>
-        <Badge className="mt-4" variant="outline">Starter · WhatsApp & AI not included</Badge>
-        <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Your customers are on WhatsApp. Nobody&apos;s answering.
-        </h1>
-        <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Growth connects your number and puts an AI assistant on it — replies in English or Kiswahili,
-          sells from your storefront, and hands off to you when a customer needs a real person.
-        </p>
-
-        {/* Chat teaser */}
-        <div className="mt-6 w-full max-w-sm space-y-2 rounded-2xl border border-border bg-muted/30 p-4 text-left">
-          <div className="max-w-[85%] rounded-2xl rounded-tl-md bg-background px-3 py-2 shadow-sm">
-            <p className="text-[13px] text-foreground">Hi! Is the red dress still available?</p>
-          </div>
-          <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-md bg-primary px-3 py-2 shadow-sm">
-            <p className="text-[13px] text-primary-foreground">Yes it is! Size M and L are in stock — want me to reserve one for you?</p>
-          </div>
-          <p className="pt-1 text-center text-[11px] text-muted-foreground">Answered instantly — even at 2am.</p>
-        </div>
-
-        <div className="mt-6 grid w-full max-w-md gap-2 text-left sm:grid-cols-2">
-          {[
-            'Your WhatsApp number, connected',
-            'Replies in English or Kiswahili',
-            'Sells from your storefront',
-            'Hands off to a real person',
-          ].map((f) => (
-            <p key={f} className="flex items-center gap-2 text-[13px] text-muted-foreground">
-              <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {f}
-            </p>
-          ))}
-        </div>
-
-        <div className="mt-8 flex w-full max-w-md flex-col items-stretch gap-3">
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link href="/dashboard/subscription#plans">Get WhatsApp + AI — KSh 2,000/mo</Link>
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">14-day free trial · your Starter storefront stays free</p>
-        </div>
-      </div>
+      <LockedFeatureGate
+        icon={MessageSquare}
+        title="WhatsApp inbox lives on Growth"
+        description="Connect your number, reply in English or Kiswahili, sell from your storefront, and hand off to a person when needed. Pick a plan below to unlock chats."
+        planLabel={subscription?.planName ?? 'Starter'}
+      />
     )
   }
 

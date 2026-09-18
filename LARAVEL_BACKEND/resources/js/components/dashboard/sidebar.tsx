@@ -51,19 +51,8 @@ import { useEffect, useMemo, useState } from "react"
 import { AppLogoAndName } from "@/components/branding/AppLogoAndName"
 import { useCompanySettings, useSubscription, useNavBadges, type NavBadges } from "@/lib/api-hooks"
 import { isStarterPlan } from "@/lib/use-plan"
+import { GROWTH_ONLY_HREFS } from "@/lib/growth-routes"
 import type { LucideIcon } from "lucide-react"
-
-/** Nav destinations that require Growth/Custom (hidden on Starter to keep the workspace focused). */
-const GROWTH_ONLY_HREFS = new Set([
-  "/dashboard/growth",
-  "/dashboard/whatsapp/campaigns",
-  "/dashboard/business-intelligence",
-  "/dashboard/executive",
-  "/dashboard/cognitive",
-  "/dashboard/agent-ops",
-  "/dashboard/mission-control",
-  "/dashboard/marketplace",
-])
 
 export type DashboardNavItem = {
   name: string
@@ -111,9 +100,9 @@ export function parseProductsTab(value: string | null | undefined): ProductsTab 
 export type StorefrontTab = "design" | "link" | "advanced"
 
 export const storefrontNavItems: DashboardNavItem[] = [
-  { name: "Design", href: "/dashboard/storefront", icon: Palette },
-  { name: "Store link & settings", href: "/dashboard/storefront?tab=link", icon: Link2 },
-  { name: "Advanced settings", href: "/dashboard/storefront?tab=advanced", icon: SlidersHorizontal },
+  { name: "Look", href: "/dashboard/storefront", icon: Palette },
+  { name: "Shop link", href: "/dashboard/storefront?tab=link", icon: Link2 },
+  { name: "Messages", href: "/dashboard/storefront?tab=advanced", icon: SlidersHorizontal },
 ]
 
 export function parseStorefrontTab(value: string | null | undefined): StorefrontTab {
@@ -565,7 +554,7 @@ export function DashboardNavLinks({
   const showUpsell = isStarter && !collapsed
 
   return (
-    <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 pb-6">
+    <nav className="flex h-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-3 pb-6">
       {visibleGroups.map((group) => {
         if (group.collapsible) {
           const open = collapsed ? aiActive : aiOpen
@@ -654,7 +643,7 @@ export function DashboardSidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 hidden h-screen flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-all duration-300 md:block",
+        "fixed left-0 top-0 z-40 hidden h-dvh flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-all duration-300 md:flex",
         collapsed ? "w-[4.5rem]" : "w-60"
       )}
     >

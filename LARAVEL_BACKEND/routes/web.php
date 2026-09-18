@@ -14,6 +14,7 @@ use App\Http\Controllers\Web\StorefrontAuthController;
 use App\Http\Controllers\Web\AgentLogController;
 use App\Http\Controllers\Web\AgentStoreController;
 use App\Http\Controllers\Web\WebDeployController;
+use App\Http\Controllers\Web\MarketingUnsubscribeController;
 use App\Http\Controllers\Web\WebManifestController;
 use App\Models\Booking;
 use App\Models\Order;
@@ -110,6 +111,8 @@ Route::get('/admin/whatsapp', [PageController::class, 'adminWhatsApp'])->name('a
 Route::get('/admin/subscriptions', [PageController::class, 'adminSubscriptions'])->name('admin.subscriptions');
 Route::get('/admin/testimonials', [PageController::class, 'adminTestimonials'])->name('admin.testimonials');
 Route::get('/admin/users', [PageController::class, 'adminUsers'])->name('admin.users');
+Route::get('/admin/marketing', [PageController::class, 'adminMarketing'])->name('admin.marketing');
+Route::get('/marketing/unsubscribe/{user}', MarketingUnsubscribeController::class)->name('marketing.unsubscribe')->middleware('signed');
 
 // Attribution short links
 Route::get('/g/{slug}', [GrowthRedirectController::class, 'redirect'])->name('growth.redirect');

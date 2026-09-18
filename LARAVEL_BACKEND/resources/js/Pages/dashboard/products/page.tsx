@@ -10,6 +10,7 @@ import { StatsCard, StatsGrid } from '@/components/shared/stats-card'
 import { DataTable, type Column, type Filter } from '@/components/shared/data-table'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { ConfirmModal, Modal } from '@/components/shared/modal'
+import { PageHeader } from '@/components/shared/page-header'
 import { parseProductsTab } from '@/components/dashboard/sidebar'
 import { cn } from '@/lib/utils'
 import { ProductWizardModal } from '@/components/dashboard/products/ProductWizardModal'
@@ -51,6 +52,8 @@ import {
   LayoutGrid,
   LayoutList,
   Tags,
+  ExternalLink,
+  Eye,
 } from 'lucide-react'
 import {
   Popover,
@@ -506,24 +509,25 @@ export default function ProductsPage() {
     {
       key: 'name',
       header: 'Product',
+      className: 'w-[46%] max-w-0 overflow-hidden',
       cell: (product) => {
         const thumb = productPrimaryDisplayImage(product)
+        const typeLabel = (product.productType ?? 'physical').replace(/^./, (c) => c.toUpperCase())
         return (
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted ring-1 ring-inset ring-border/70">
               {thumb ? (
-                <ProductThumbImg src={thumb} alt={product.name} />
+                <ProductThumbImg src={thumb} alt="" className="h-full w-full object-cover" />
               ) : (
-                <Package className="h-5 w-5 text-primary" />
+                <div className="flex h-full w-full items-center justify-center">
+                  <Package className="h-5 w-5 text-muted-foreground" />
+                </div>
               )}
             </div>
-            <div>
-              <span className="font-medium text-foreground">{product.name}</span>
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {product.description}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {(product.productType ?? 'physical')} · {(product.fulfillmentType ?? 'shipping')}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold tracking-tight text-foreground">{product.name}</p>
+              <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
+                {product.category || 'Uncategorized'} · {typeLabel}
               </p>
             </div>
           </div>
@@ -531,89 +535,129 @@ export default function ProductsPage() {
       },
     },
     {
-      key: 'category',
-      header: 'Category',
-      cell: (product) => (
-        <span className="text-muted-foreground">{product.category}</span>
-      ),
-    },
-    {
       key: 'price',
       header: 'Price',
+      className: 'w-[14%]',
       cell: (product) => (
-        <div className="flex flex-col">
-          <span className="font-medium text-foreground">
+        <div className="tabular-nums">
+          <p className="font-semibold text-foreground">
             {product.variants && product.variants.length > 0
               ? `From ${formatCurrency(Math.min(...product.variants.map((v) => v.price)))}`
               : formatCurrency(product.price)}
-          </span>
-          {product.variants && product.variants.length > 0 && (
-            <span className="text-xs text-muted-foreground">{product.variants.length} option(s)</span>
-          )}
+          </p>
+          {product.variants && product.variants.length > 0 ? (
+            <p className="text-[11px] text-muted-foreground">{product.variants.length} options</p>
+          ) : null}
         </div>
       ),
     },
     {
       key: 'stock',
       header: 'Stock',
+      className: 'w-[12%]',
       cell: (product) => (
-        <div className="flex items-center gap-2">
-          <span className="text-foreground">{product.stock}</span>
-          {product.stock <= 10 && product.stock > 0 && (
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
-          )}
-        </div>
+        <span className="tabular-nums text-sm text-foreground">
+          {product.productType === 'physical' || product.trackInventory ? product.stock : '—'}
+        </span>
       ),
     },
     {
       key: 'status',
       header: 'Status',
+      className: 'w-[12%]',
       cell: (product) => <StatusBadge status={product.status} />,
     },
     {
       key: 'actions',
       header: '',
+      className: 'w-[16%] text-right',
       cell: (product) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => openEditModal(product)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Product
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setVariantsSheetProduct(product)}>
-              <Layers className="mr-2 h-4 w-4" />
-              Options / variants
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                router.push(
-                  `/dashboard/analytics?tab=products&product=${encodeURIComponent(product.name)}`
-                )
-              }
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              View Analytics
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => {
-                setSelectedProduct(product)
-                setIsDeleteModalOpen(true)
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2.5 text-xs font-medium"
+            onClick={(e) => {
+              e.stopPropagation()
+              openEditModal(product)
+            }}
+          >
+            View more
+          </Button>
+          {productActionsMenu(product)}
+        </div>
       ),
     },
   ]
+
+  const productStoreUrl = (product: Product) => {
+    const storeSlug = companySettings?.storeSlug?.trim()
+    if (!storeSlug) return null
+    const path = product.slug?.trim() || product.id
+    return `/s/${storeSlug}/p/${encodeURIComponent(path)}`
+  }
+
+  const productActionsMenu = (product: Product) => {
+    const storeUrl = productStoreUrl(product)
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 shrink-0 border border-border/70 bg-background/95 shadow-sm"
+            aria-label={`More actions for ${product.name}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuItem onClick={() => openEditModal(product)}>
+            <Eye className="mr-2 h-4 w-4" />
+            View details
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openEditModal(product)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit product
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setVariantsSheetProduct(product)}>
+            <Layers className="mr-2 h-4 w-4" />
+            Options / variants
+          </DropdownMenuItem>
+          {storeUrl ? (
+            <DropdownMenuItem asChild>
+              <a href={storeUrl} target="_blank" rel="noreferrer">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                View on storefront
+              </a>
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem
+            onClick={() =>
+              router.push(
+                `/dashboard/analytics?tab=products&product=${encodeURIComponent(product.name)}`
+              )
+            }
+          >
+            <BarChart3 className="mr-2 h-4 w-4" />
+            View analytics
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-destructive"
+            onClick={() => {
+              setSelectedProduct(product)
+              setIsDeleteModalOpen(true)
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
 
   // Filter options
   const filters: Filter[] = [
@@ -684,24 +728,36 @@ export default function ProductsPage() {
   // Product form fields (shared between add and edit)
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Products</h1>
-            <p className="text-muted-foreground">
-              {activeTab === 'categories'
-                ? 'Create and rename categories here, or type a new name when you add a product.'
-                : 'Switch list or grid. Categories live under Products in the left nav.'}
-            </p>
-          </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        title="Products"
+        description={
+          activeTab === 'categories'
+            ? 'Create and rename categories, or type a new name when you add a product.'
+            : 'A clean catalog of titles, prices, and stock. Open a product to read the full description.'
+        }
+        actions={
+          <>
+            <Button
+              className="w-full sm:order-last sm:w-auto"
+              onClick={() => {
+                setFormData(initialFormData)
+                setSelectedProduct(null)
+                setWizardKey(Date.now())
+                setIsAddModalOpen(true)
+              }}
+              disabled={catalogFull}
+              title={catalogFull ? "You've used all 20 Starter products — upgrade to Growth for 50" : undefined}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+            <div className="flex flex-wrap items-center gap-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Popover open={exportOpen} onOpenChange={setExportOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
                       <Download className="mr-2 h-4 w-4" />
                       Export
                     </Button>
@@ -730,7 +786,7 @@ export default function ProductsPage() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span>
+                <span className="flex-1 sm:flex-none">
                   <input
                     type="file"
                     accept=".csv,.txt"
@@ -741,6 +797,7 @@ export default function ProductsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full"
                     disabled={importing}
                     onClick={() => importInputRef.current?.click()}
                   >
@@ -754,22 +811,16 @@ export default function ProductsPage() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none" asChild>
             <a href="/sample-data/products_sample.csv" download="products_sample.csv">
               Sample CSV
             </a>
           </Button>
-          <Button onClick={() => {
-            setFormData(initialFormData)
-            setSelectedProduct(null)
-            setWizardKey(Date.now())
-            setIsAddModalOpen(true)
-          }} disabled={catalogFull} title={catalogFull ? "You've used all 20 Starter products — upgrade to Growth for 50" : undefined}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
-        </div>
-        </div>
+            </div>
+          </>
+        }
+      />
+      <div className="space-y-3">
         {starterCatalog && (catalogNear || catalogFull) && (
           <div className="max-w-xl space-y-3">
             <PlanLimitBar used={stats.total} limit={productLimit} label="Catalog" unit="products" />
@@ -788,13 +839,14 @@ export default function ProductsPage() {
             {importResult.errors?.length ? ` ${importResult.errors.length} row(s) had errors.` : ''}
           </p>
         )}
-        </div>
+      </div>
       {activeTab === 'categories' ? (
       <Card className="bg-card border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex flex-col items-stretch gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-medium">Categories</CardTitle>
           <Button
             size="sm"
+            className="w-full sm:w-auto"
             onClick={() => {
               setFormData({ ...initialFormData })
               setSelectedProduct(null)
@@ -820,19 +872,20 @@ export default function ProductsPage() {
           ) : (
             <div className="divide-y divide-border/60 rounded-xl border border-border/60">
               {categoryRows.map((row) => (
-                <div key={row.name} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Tags className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-foreground">{row.name}</span>
-                    <span className="text-xs text-muted-foreground">
+                <div key={row.name} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Tags className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 truncate font-medium text-foreground">{row.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
                       {row.count} product{row.count === 1 ? '' : 's'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
+                      className="flex-1 sm:flex-none"
                       onClick={() => {
                         setCategoryFilter(row.name)
                         router.push(`/dashboard/products?category=${encodeURIComponent(row.name)}`)
@@ -888,11 +941,7 @@ export default function ProductsPage() {
       </StatsGrid>
 
       {/* Products Table - API Ready */}
-      <Card className="bg-card border-border/50">
-        <CardHeader>
-          <CardTitle className="text-base font-medium">All Products</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="overflow-hidden rounded-2xl border border-border/50 bg-card/80 p-4 shadow-sm sm:p-5">
           <DataTable
             data={products}
             columns={columns}
@@ -910,43 +959,58 @@ export default function ProductsPage() {
             emptyDescription="Add a product to start your catalog. Type a category name on the product — that creates it."
             view={catalogView}
             toolbarExtra={viewToggle}
+            onRowClick={openEditModal}
+            tableClassName="table-fixed"
+            framed={false}
             gridCell={(product) => {
               const thumb = productPrimaryDisplayImage(product)
               return (
-                <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
-                  <div className="relative aspect-[4/3] bg-muted/40">
-                    {thumb ? (
-                      <ProductThumbImg src={thumb} alt={product.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <Package className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="absolute right-2 top-2">
-                      {columns.find((c) => c.key === 'actions')?.cell(product)}
+                <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-background shadow-sm transition-colors hover:border-primary/30">
+                  <button
+                    type="button"
+                    className="flex min-h-0 flex-1 flex-col text-left"
+                    onClick={() => openEditModal(product)}
+                  >
+                    <div className="relative aspect-[3/4] bg-muted/40 sm:aspect-[4/5]">
+                      {thumb ? (
+                        <ProductThumbImg src={thumb} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Package className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex flex-1 flex-col gap-1 p-3">
-                    <p className="line-clamp-2 text-sm font-semibold text-foreground">{product.name}</p>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      {product.category || 'Uncategorized'}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {product.variants && product.variants.length > 0
-                        ? `From ${formatCurrency(Math.min(...product.variants.map((v) => v.price)))}`
-                        : formatCurrency(product.price)}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {(product.productType ?? 'physical')}
-                      {product.productType === 'physical' || product.trackInventory ? ` · ${product.stock} in stock` : ''}
-                    </p>
+                    <div className="flex flex-1 flex-col gap-1 px-3.5 pb-2 pt-3">
+                      <p className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug tracking-tight text-foreground">
+                        {product.name}
+                      </p>
+                      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        {product.category || 'Uncategorized'}
+                      </p>
+                      <p className="pt-1 text-sm font-semibold tabular-nums text-foreground">
+                        {product.variants && product.variants.length > 0
+                          ? `From ${formatCurrency(Math.min(...product.variants.map((v) => v.price)))}`
+                          : formatCurrency(product.price)}
+                      </p>
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-2 border-t border-border/50 p-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="min-w-0 flex-1"
+                      onClick={() => openEditModal(product)}
+                    >
+                      View more
+                    </Button>
+                    {productActionsMenu(product)}
                   </div>
                 </div>
               )
             }}
           />
-        </CardContent>
-      </Card>
+      </div>
       </>
       )}
 

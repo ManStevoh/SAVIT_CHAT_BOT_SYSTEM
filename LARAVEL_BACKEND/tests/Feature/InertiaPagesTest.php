@@ -64,6 +64,7 @@ class InertiaPagesTest extends TestCase
             'admin whatsapp' => ['/admin/whatsapp'],
             'admin subscriptions' => ['/admin/subscriptions'],
             'admin testimonials' => ['/admin/testimonials'],
+            'admin marketing' => ['/admin/marketing'],
             'admin users' => ['/admin/users'],
         ];
     }

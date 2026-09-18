@@ -397,4 +397,9 @@ class PageController extends Controller
     {
         return Inertia::render('admin/users/page');
     }
+
+    public function adminMarketing(): Response
+    {
+        return Inertia::render('admin/marketing/page');
+    }
 }

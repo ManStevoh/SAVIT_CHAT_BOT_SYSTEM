@@ -316,6 +316,13 @@ export default function AdminSettingsPage() {
         openaiMaxTokens: settings.openaiMaxTokens ?? undefined,
         devModeEnabled: settings.devModeEnabled ?? false,
         aiLearningConfig: settings.aiLearningConfig ?? undefined,
+        lifecycleWhatsappEnabled: settings.lifecycleWhatsappEnabled ?? true,
+        lifecycleWhatsappPhoneNumberId: settings.lifecycleWhatsappPhoneNumberId ?? undefined,
+        lifecycleWhatsappAccessToken:
+          settings.lifecycleWhatsappAccessToken && settings.lifecycleWhatsappAccessToken !== "********"
+            ? settings.lifecycleWhatsappAccessToken
+            : undefined,
+        lifecycleWhatsappTemplateLang: settings.lifecycleWhatsappTemplateLang ?? undefined,
       })
       if (res.success) {
         toast({ title: res.message ?? "Integrations saved" })
@@ -1352,6 +1359,56 @@ export default function AdminSettingsPage() {
                   />
                 </Field>
               </FieldGroup>
+
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-4">
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">Merchant welcome &amp; marketing WhatsApp</p>
+                  <p className="text-sm text-muted-foreground">
+                    Platform number used to message merchants (welcome, onboarding, Super Admin campaigns). Email still sends without this. Companies connecting their own WhatsApp is separate.
+                  </p>
+                </div>
+                <Field orientation="horizontal" className="items-center justify-between gap-4 rounded-lg border p-4">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <FieldLabel>Send merchant WhatsApp from this number</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Turn off to keep email and login popups only.</p>
+                  </div>
+                  <Switch
+                    checked={settings?.lifecycleWhatsappEnabled ?? true}
+                    onCheckedChange={(v) => updateSetting("lifecycleWhatsappEnabled", v)}
+                  />
+                </Field>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="lifecycleWhatsappPhoneNumberId">Phone number ID</FieldLabel>
+                    <Input
+                      id="lifecycleWhatsappPhoneNumberId"
+                      value={settings?.lifecycleWhatsappPhoneNumberId ?? ""}
+                      onChange={(e) => updateSetting("lifecycleWhatsappPhoneNumberId", e.target.value)}
+                      placeholder="Meta Cloud API phone number ID"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="lifecycleWhatsappAccessToken">Access token</FieldLabel>
+                    <Input
+                      id="lifecycleWhatsappAccessToken"
+                      type="password"
+                      value={settings?.lifecycleWhatsappAccessToken ?? ""}
+                      onChange={(e) => updateSetting("lifecycleWhatsappAccessToken", e.target.value)}
+                      placeholder="Leave blank to keep existing"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="lifecycleWhatsappTemplateLang">Template language</FieldLabel>
+                    <Input
+                      id="lifecycleWhatsappTemplateLang"
+                      value={settings?.lifecycleWhatsappTemplateLang ?? "en"}
+                      onChange={(e) => updateSetting("lifecycleWhatsappTemplateLang", e.target.value)}
+                      placeholder="en"
+                    />
+                  </Field>
+                </FieldGroup>
+              </div>
+
               {metaTestResult && (
                 <div
                   className={`rounded-lg border p-4 space-y-3 ${

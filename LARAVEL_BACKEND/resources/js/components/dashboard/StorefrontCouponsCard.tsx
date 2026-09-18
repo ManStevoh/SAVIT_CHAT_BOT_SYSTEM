@@ -81,10 +81,8 @@ export function StorefrontCouponsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sales coupons</CardTitle>
-        <CardDescription>
-          Create Black Friday / promo codes for storefront checkout. WhatsApp AI can mention active codes.
-        </CardDescription>
+        <CardTitle className="text-base">Coupons</CardTitle>
+        <CardDescription>Optional discount codes for checkout. WhatsApp can mention active ones.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <p className="text-sm text-destructive">{error}</p>}
