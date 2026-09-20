@@ -197,8 +197,10 @@ Route::prefix('company')->middleware(['auth:sanctum', 'user.active', 'subscripti
     Route::get('orders/{order}', [OrderController::class, 'show']);
     Route::post('orders', [OrderController::class, 'store']);
     Route::patch('orders/{order}', [OrderController::class, 'updateStatus']);
+    Route::post('orders/{order}/resend-fulfillment', [OrderController::class, 'resendFulfillment']);
     Route::get('customers/stats', [CustomerController::class, 'stats']);
     Route::get('customers', [CustomerController::class, 'index']);
+    Route::post('customers/resend-digital', [CustomerController::class, 'resendDigital']);
     Route::get('products', [ProductController::class, 'index']);
     Route::post('products/rename-category', [ProductController::class, 'renameCategory']);
     Route::post('products/{product}/variants', [ProductController::class, 'storeVariant']);

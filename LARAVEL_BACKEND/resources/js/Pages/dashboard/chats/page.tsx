@@ -78,6 +78,7 @@ export default function ChatsPage() {
   const [createOrderOpen, setCreateOrderOpen] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState('')
   const [orderQuantity, setOrderQuantity] = useState('1')
+  const [orderCustomerEmail, setOrderCustomerEmail] = useState('')
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [orderPreview, setOrderPreview] = useState<{
     subtotal: number
@@ -94,6 +95,7 @@ export default function ChatsPage() {
   const { data: whatsappNumbers = [] } = useWhatsAppNumbers()
   // No WhatsApp on Starter → empty inbox becomes the upgrade moment.
   const waConnected = whatsappNumbers.some((n) => n.status === "active") || whatsappNumbers.length > 0
+  const waActive = whatsappNumbers.some((n) => n.status === "active")
   const showWaGate = isStarter && !waConnected
   const formatMoney = (value: number) =>
     formatCurrencyAmount(
@@ -306,6 +308,7 @@ export default function ChatsPage() {
     if (!selectedChat) return
     setSelectedProductId('')
     setOrderQuantity('1')
+    setOrderCustomerEmail('')
     setCreateOrderOpen(true)
   }, [selectedChat])
 
@@ -338,13 +341,19 @@ export default function ChatsPage() {
           price: Number(selectedProduct.price) || 0,
         }],
         sendWhatsApp: true,
+        customerEmail: orderCustomerEmail.trim() || undefined,
       })
       if (result.success) {
         setCreateOrderOpen(false)
+        const notified = result.whatsappSent || result.emailSent
         toast({
           title: result.message ?? 'Order created',
-          description: result.whatsappSent === false ? (result.whatsappError ?? 'WhatsApp delivery failed.') : 'Customer received invoice and payment prompt on WhatsApp.',
-          variant: result.whatsappSent === false ? 'destructive' : 'default',
+          description: result.whatsappSent
+            ? 'Customer received invoice and payment prompt on WhatsApp.'
+            : result.emailSent
+              ? 'WhatsApp isn’t connected, so the invoice was sent by email.'
+              : 'Couldn’t notify the customer. Add an email or connect WhatsApp.',
+          variant: notified ? 'default' : 'destructive',
         })
         mutate(['orders', { status: 'all', search: '', page: 1, limit: 10 }])
         mutate(['messages', selectedChatId])
@@ -365,7 +374,7 @@ export default function ChatsPage() {
     } finally {
       setIsCreatingOrder(false)
     }
-  }, [selectedChatId, products, selectedProductId, orderQuantity, toast, mutate, statusFilter, searchQuery])
+  }, [selectedChatId, products, selectedProductId, orderQuantity, orderCustomerEmail, toast, mutate, statusFilter, searchQuery])
 
   // Starter without WhatsApp: the whole inbox is the upgrade moment.
   if (!chatsLoading && showWaGate) {
@@ -1110,17 +1119,44 @@ export default function ChatsPage() {
         open={createOrderOpen}
         onOpenChange={setCreateOrderOpen}
         title="Create Order"
-        description={selectedChat ? `Create order for ${selectedChat.customerName}. Invoice is sent immediately on WhatsApp.` : 'Create order'}
+        description={
+          selectedChat
+            ? waActive
+              ? `Create order for ${selectedChat.customerName}. Invoice is sent on WhatsApp, or by email if WhatsApp isn’t connected.`
+              : `WhatsApp isn’t connected. We’ll email the invoice to ${selectedChat.customerName}. Digital PDFs are attached.`
+            : 'Create order'
+        }
         onSubmit={handleSubmitCreateOrder}
-        submitLabel="Create & Send Invoice"
+        submitLabel={waActive ? 'Create & Send Invoice' : 'Create & Email Invoice'}
         isLoading={isCreatingOrder}
-        isValid={selectedProductId.length > 0 && Number.parseInt(orderQuantity, 10) > 0 && products.length > 0}
+        isValid={
+          selectedProductId.length > 0
+          && Number.parseInt(orderQuantity, 10) > 0
+          && products.length > 0
+          && (waActive || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(orderCustomerEmail.trim()))
+        }
       >
         <div className="space-y-3">
           <div>
             <p className="mb-1 text-xs text-muted-foreground">Customer</p>
             <p className="text-sm font-medium text-foreground">{selectedChat?.customerName}</p>
             <p className="text-xs text-muted-foreground">{selectedChat?.customerPhone}</p>
+          </div>
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">
+              Email {waActive ? '(used if WhatsApp isn’t connected)' : '(required)'}
+            </p>
+            <Input
+              type="email"
+              placeholder="customer@email.com"
+              value={orderCustomerEmail}
+              onChange={(e) => setOrderCustomerEmail(e.target.value)}
+            />
+            {!waActive && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Digital products with a PDF are attached to this email.
+              </p>
+            )}
           </div>
           <div>
             <p className="mb-1 text-xs text-muted-foreground">Product</p>

@@ -12,7 +12,7 @@ import { FormModal } from '@/components/shared/modal'
 import { SelectField } from '@/components/shared/form-field'
 import { useOrders, useOrder, useCompanySettings } from '@/lib/api-hooks'
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
-import { updateOrderStatus } from '@/lib/api-actions'
+import { updateOrderStatus, resendOrderFulfillment } from '@/lib/api-actions'
 import type { Order } from '@/lib/mock-data'
 import {
   Search,
@@ -177,6 +177,8 @@ export default function OrdersPage() {
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const [resendEmail, setResendEmail] = useState('')
   const [newStatus, setNewStatus] = useState<string>('')
   const [newPaymentStatus, setNewPaymentStatus] = useState<Order['paymentStatus']>('pending')
   const [courierName, setCourierName] = useState<string>('')
@@ -212,6 +214,7 @@ export default function OrdersPage() {
     setCourierName(order.courierName || '')
     setTrackingNumber(order.trackingNumber || '')
     setDeliveryAddress(order.deliveryAddress || '')
+    setResendEmail(order.customerEmail || '')
   }
 
   // Calculate stats from total & items
@@ -304,6 +307,28 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
       setIsUpdating(false)
     }
   }, [selectedOrder, newStatus, newPaymentStatus, courierName, trackingNumber, deliveryAddress, mutate, statusFilter, searchQuery, page, toast])
+
+  const handleResendFulfillment = useCallback(async (order: Order, emailOverride?: string) => {
+    setIsResending(true)
+    try {
+      const email = (emailOverride ?? resendEmail).trim()
+      const result = await resendOrderFulfillment(order.id, email || order.customerEmail || null)
+      if (result.success) {
+        toast({
+          title: result.pdfAttached ? 'Book sent' : 'Files resent',
+          description: result.message ?? 'The customer received the digital files again.',
+        })
+        return
+      }
+      toast({
+        title: result.needsEmail ? 'Email needed' : 'Could not resend',
+        description: result.message ?? 'Add the customer email and try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsResending(false)
+    }
+  }, [resendEmail, toast])
 
   const handleExportOrders = async () => {
     setExporting(true)
@@ -468,6 +493,29 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
               <Eye className="h-3.5 w-3.5 mr-1" />
               View
             </Button>
+            {orderFulfillmentKind(order) === 'digital' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs px-2"
+                disabled={isResending}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (!order.customerEmail) {
+                    openOrderModal(order)
+                    toast({
+                      title: 'Email needed',
+                      description: 'Add the customer email in the order, then resend the book.',
+                    })
+                    return
+                  }
+                  void handleResendFulfillment(order, order.customerEmail)
+                }}
+              >
+                <Send className="h-3.5 w-3.5 mr-1" />
+                Resend
+              </Button>
+            ) : null}
           </div>
         )
       },
@@ -757,6 +805,31 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                         ? 'No shipping address. Confirm the appointment with the customer, then mark the order completed.'
                         : 'No shipping address. After payment, send the file, download link, or license key to the customer email.'}
                     </p>
+                    {orderFulfillmentKind(selectedOrder) === 'digital' ? (
+                      <div className="mt-3 space-y-2">
+                        <Input
+                          type="email"
+                          value={resendEmail}
+                          onChange={(e) => setResendEmail(e.target.value)}
+                          placeholder="Customer email for the PDF"
+                          className="bg-background text-xs"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 text-xs"
+                          disabled={isResending}
+                          onClick={() => void handleResendFulfillment(selectedOrder)}
+                        >
+                          {isResending ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="mr-1.5 h-3.5 w-3.5" />
+                          )}
+                          {isResending ? 'Sending…' : 'Resend book / PDF'}
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               )}
