@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { cn } from '@/lib/utils'
 
 interface ModalProps {
   open: boolean
@@ -111,6 +112,7 @@ interface FormModalProps {
   cancelLabel?: string
   isLoading?: boolean
   isValid?: boolean
+  className?: string
 }
 
 export function FormModal({
@@ -124,6 +126,7 @@ export function FormModal({
   cancelLabel = 'Cancel',
   isLoading,
   isValid = true,
+  className,
 }: FormModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -132,7 +135,7 @@ export function FormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden bg-card border-border/50 sm:max-w-lg">
+      <DialogContent className={cn('flex max-h-[90vh] flex-col gap-0 overflow-hidden bg-card border-border/50 sm:max-w-lg', className)}>
         <form
           onSubmit={handleSubmit}
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
