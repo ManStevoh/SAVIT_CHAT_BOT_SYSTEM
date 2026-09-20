@@ -42,6 +42,7 @@ class InertiaPagesTest extends TestCase
             'dashboard dine-in' => ['/dashboard/dine-in'],
             'dashboard taxes' => ['/dashboard/taxes'],
             'dashboard bookings' => ['/dashboard/bookings'],
+            'dashboard events' => ['/dashboard/events'],
             'dashboard settings' => ['/dashboard/settings'],
             'dashboard subscription' => ['/dashboard/subscription'],
             'admin account' => ['/admin/account'],

@@ -23,7 +23,9 @@ use App\Services\Agent\Tools\SearchFaqTool;
 use App\Services\Agent\Tools\SearchKnowledgeTool;
 use App\Services\Agent\Tools\SearchOrdersTool;
 use App\Services\Agent\Tools\SearchProductsTool;
+use App\Services\Agent\Tools\SendEventTicketTool;
 use App\Services\Agent\Tools\SendOrderInvoiceTool;
+use App\Services\Agent\Tools\ShareEventLinkTool;
 use App\Services\Agent\Tools\SharePaymentDetailsTool;
 use App\Services\Agent\Tools\SendWhatsAppCampaignTool;
 use App\Services\Agent\Tools\TraceCustomerGraphTool;
@@ -52,6 +54,8 @@ class AppServiceProvider extends ServiceProvider
                 ProcessOrderMessageTool::class,
                 SendOrderInvoiceTool::class,
                 SharePaymentDetailsTool::class,
+                ShareEventLinkTool::class,
+                SendEventTicketTool::class,
                 TransferToHumanTool::class,
                 RememberCustomerTool::class,
                 GetBusinessInfoTool::class,

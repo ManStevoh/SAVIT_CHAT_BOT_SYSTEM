@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderProduct;
 use App\Models\Product;
 use App\Models\SocialPost;
+use App\Services\OrderFulfillmentService;
 use App\Services\OrderPaymentService;
 use App\Services\Orders\TaxCalculationService;
 use App\Services\WhatsAppMessageSenderService;
@@ -263,6 +264,7 @@ class OrderController extends Controller
             'items.*.price' => 'required|numeric|min:0',
             'items.*.fulfillmentData' => 'nullable|array',
             'sendWhatsApp' => 'sometimes|boolean',
+            'customerEmail' => 'sometimes|nullable|email|max:255',
         ]);
 
         $companyId = $request->user()->company_id;
@@ -293,12 +295,20 @@ class OrderController extends Controller
             $orderNumber = 'ORD-'.strtoupper(Str::random(8));
         }
 
+        $mail = app(\App\Services\MailService::class);
+        $customerEmail = $mail->resolveNotifyEmail(
+            $company,
+            $chat->customer_phone,
+            $validated['customerEmail'] ?? null
+        );
+
         $order = Order::create([
             'company_id' => $companyId,
             'chat_id' => $chat->id,
             'order_number' => $orderNumber,
             'customer_name' => $chat->customer_name ?: 'Customer',
             'customer_phone' => $chat->customer_phone ?: '',
+            'customer_email' => $customerEmail,
             'subtotal' => $calc['subtotal'],
             'tax_total' => $calc['tax_total'],
             'tax_breakdown' => $calc['tax_breakdown'] !== [] ? $calc['tax_breakdown'] : null,
@@ -369,8 +379,6 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
-        app(\App\Services\MailService::class)->sendCustomerOrderConfirmationSafely($order);
-
         $whatsappSent = false;
         $whatsappError = null;
         $invoiceMessage = null;
@@ -415,28 +423,39 @@ class OrderController extends Controller
                     'status' => $whatsappSent ? 'sent' : 'failed',
                     'whatsapp_message_id' => $result['message_id'] ?? null,
                 ]);
-
-                $chat->update([
-                    'last_message' => $invoiceMessage,
-                    'last_message_at' => now(),
-                    // Don't lock the chat to agent handling; customer reply should be handled by the bot checkout flow.
-                    'agent_handling_at' => null,
-                    // Put chat into an explicit "existing order" flow so replies like "1" are not treated as "Prices".
-                    'conversation_step' => \App\Enums\CheckoutStep::EXISTING_ORDER_PROMPT->value,
-                    'order_draft' => ['order_id' => $order->id],
-                ]);
             }
+        }
+
+        $emailSent = false;
+        if (! $whatsappSent) {
+            $emailSent = $mail->sendCustomerOrderConfirmationSafely($order->fresh() ?? $order, true);
+        }
+
+        $chat->update([
+            'last_message' => $invoiceMessage ?: $chat->last_message,
+            'last_message_at' => $invoiceMessage ? now() : $chat->last_message_at,
+            'agent_handling_at' => null,
+            'conversation_step' => \App\Enums\CheckoutStep::EXISTING_ORDER_PROMPT->value,
+            'order_draft' => ['order_id' => $order->id],
+        ]);
+
+        $message = 'Order created.';
+        if ($whatsappSent) {
+            $message = 'Order created and invoice sent via WhatsApp.';
+        } elseif ($emailSent) {
+            $message = 'Order created and invoice sent by email.';
         }
 
         return response()->json([
             'success' => true,
-            'message' => $whatsappSent ? 'Order created and invoice sent via WhatsApp.' : 'Order created.',
+            'message' => $message,
             'order' => [
                 'id' => (string) $order->id,
                 'orderNumber' => $order->order_number,
             ],
             'whatsappSent' => $whatsappSent,
-            'whatsappError' => $whatsappError,
+            'whatsappError' => ($whatsappSent || $emailSent) ? null : $whatsappError,
+            'emailSent' => $emailSent,
         ], 201);
     }
 
@@ -553,6 +572,21 @@ class OrderController extends Controller
             'whatsappSent' => $whatsappSent || $markedPaidViaService,
             'whatsappError' => $whatsappError,
         ]);
+    }
+
+    public function resendFulfillment(Request $request, Order $order, OrderFulfillmentService $fulfillment): JsonResponse
+    {
+        if ($order->company_id !== $request->user()->company_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $validated = $request->validate([
+            'customerEmail' => 'sometimes|nullable|email|max:255',
+        ]);
+
+        $result = $fulfillment->resendDigitalToCustomer($order, $validated['customerEmail'] ?? null);
+
+        return response()->json($result, ($result['success'] ?? false) ? 200 : 422);
     }
 
     /**

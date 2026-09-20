@@ -500,7 +500,7 @@ final class EntitlementService
         $key = match ($type) {
             'physical' => 'allow_physical',
             'digital' => 'allow_digital',
-            'service' => 'allow_service',
+            'service', 'event' => 'allow_service',
             default => null,
         };
 

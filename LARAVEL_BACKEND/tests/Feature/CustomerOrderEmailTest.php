@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Chat;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\Order;
@@ -22,9 +23,9 @@ class RecordingMailService extends MailService
     /** @var list<array{to: string, subject: string, htmlBody: string}> */
     public array $sent = [];
 
-    public function send(string $to, string $subject, string $htmlBody, ?string $textBody = null): void
+    public function send(string $to, string $subject, string $htmlBody, ?string $textBody = null, array $attachments = []): void
     {
-        $this->sent[] = compact('to', 'subject', 'htmlBody');
+        $this->sent[] = compact('to', 'subject', 'htmlBody') + ['attachments' => $attachments];
     }
 }
 
@@ -305,6 +306,257 @@ class CustomerOrderEmailTest extends TestCase
         ]);
         $resRegister->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_chat_order_emails_invoice_when_whatsapp_is_down(): void
+    {
+        $mail = $this->bindRecordingMail();
+        [$company, $ebook] = $this->seedDigitalStore();
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 'company_owner',
+            'email_verified_at' => now(),
+        ]);
+        Sanctum::actingAs($owner);
+
+        $chat = Chat::create([
+            'company_id' => $company->id,
+            'customer_name' => 'Brenda Katana',
+            'customer_phone' => '25474023429',
+            'status' => 'active',
+        ]);
+
+        $this->postJson('/api/company/orders', [
+            'chatId' => $chat->id,
+            'items' => [[
+                'productId' => $ebook->id,
+                'name' => $ebook->name,
+                'quantity' => 1,
+                'price' => 25,
+            ]],
+            'sendWhatsApp' => true,
+            'customerEmail' => 'brenda@example.com',
+        ])->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('whatsappSent', false)
+            ->assertJsonPath('emailSent', true)
+            ->assertJsonPath('message', 'Order created and invoice sent by email.');
+
+        $order = Order::where('company_id', $company->id)->latest('id')->first();
+        $this->assertSame('brenda@example.com', $order?->customer_email);
+        $this->assertTrue($this->mailContains($mail, 'brenda@example.com', (string) $order?->order_number));
+    }
+
+    public function test_chat_order_attaches_digital_pdf_when_emailing(): void
+    {
+        Storage::fake('local');
+        $mail = $this->bindRecordingMail();
+        [$company, $ebook] = $this->seedDigitalStore();
+        $path = 'products/'.$company->id.'/digital/guide.pdf';
+        Storage::disk('local')->put($path, 'PDF-BYTES');
+        $ebook->update([
+            'digital_file_path' => $path,
+            'digital_file_name' => 'guide.pdf',
+            'digital_file_mime' => 'application/pdf',
+            'digital_file_size' => 9,
+        ]);
+
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 'company_owner',
+            'email_verified_at' => now(),
+        ]);
+        Sanctum::actingAs($owner);
+
+        $chat = Chat::create([
+            'company_id' => $company->id,
+            'customer_name' => 'Pat Buyer',
+            'customer_phone' => '254711888000',
+            'status' => 'active',
+        ]);
+
+        $this->postJson('/api/company/orders', [
+            'chatId' => $chat->id,
+            'items' => [[
+                'productId' => $ebook->id,
+                'name' => $ebook->name,
+                'quantity' => 1,
+                'price' => 25,
+            ]],
+            'customerEmail' => 'pat@example.com',
+        ])->assertCreated()->assertJsonPath('emailSent', true);
+
+        $this->assertTrue($this->mailContains($mail, 'pat@example.com', 'PDF is attached'));
+        $attached = [];
+        foreach ($mail->sent as $message) {
+            if ($message['to'] === 'pat@example.com') {
+                $attached = $message['attachments'] ?? [];
+            }
+        }
+        $this->assertNotEmpty($attached, 'Digital PDF should be attached to the fallback email.');
+        $this->assertSame('guide.pdf', $attached[0]['name'] ?? null);
+    }
+
+    public function test_paid_digital_order_attaches_pdf_on_fulfillment_email(): void
+    {
+        Storage::fake('local');
+        $mail = $this->bindRecordingMail();
+        [$company, $ebook] = $this->seedDigitalStore();
+        $path = 'products/'.$company->id.'/digital/guide.pdf';
+        Storage::disk('local')->put($path, 'PDF-BYTES');
+        $ebook->update([
+            'digital_file_path' => $path,
+            'digital_file_name' => 'guide.pdf',
+            'digital_file_mime' => 'application/pdf',
+            'digital_file_size' => 9,
+        ]);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'order_number' => 'ORD-MAIL-PDF',
+            'customer_name' => 'Pat Buyer',
+            'customer_email' => 'pat@example.com',
+            'customer_phone' => '254711888000',
+            'total' => 25,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+        ]);
+        OrderProduct::create([
+            'order_id' => $order->id,
+            'product_id' => $ebook->id,
+            'name' => $ebook->name,
+            'quantity' => 1,
+            'price' => 25,
+            'fulfillment_data' => $ebook->fresh()->fulfillmentSnapshot(),
+        ]);
+
+        $mail->sent = [];
+        app(OrderPaymentService::class)->markOrderPaid($order->fresh());
+
+        $fulfillment = collect($mail->sent)->first(
+            fn (array $message): bool => $message['to'] === 'pat@example.com'
+                && str_contains($message['subject'].' '.$message['htmlBody'], 'Payment received')
+        );
+        $this->assertNotNull($fulfillment);
+        $names = array_column($fulfillment['attachments'] ?? [], 'name');
+        $this->assertContains('guide.pdf', $names);
+        $this->assertTrue($this->mailContains($mail, 'pat@example.com', 'attached to this email'));
+    }
+
+    public function test_merchant_can_resend_paid_digital_pdf_by_order(): void
+    {
+        Storage::fake('local');
+        $mail = $this->bindRecordingMail();
+        [$company, $ebook] = $this->seedDigitalStore();
+        $path = 'products/'.$company->id.'/digital/guide.pdf';
+        Storage::disk('local')->put($path, 'PDF-BYTES');
+        $ebook->update([
+            'digital_file_path' => $path,
+            'digital_file_name' => 'guide.pdf',
+            'digital_file_mime' => 'application/pdf',
+            'digital_file_size' => 9,
+        ]);
+
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 'company_owner',
+            'email_verified_at' => now(),
+        ]);
+        Sanctum::actingAs($owner);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'order_number' => 'ORD-RESEND-1',
+            'customer_name' => 'Brenda Katana',
+            'customer_email' => 'brenda@example.com',
+            'customer_phone' => '25474023429',
+            'total' => 700,
+            'status' => 'confirmed',
+            'payment_status' => 'paid',
+        ]);
+        OrderProduct::create([
+            'order_id' => $order->id,
+            'product_id' => $ebook->id,
+            'name' => $ebook->name,
+            'quantity' => 1,
+            'price' => 700,
+            'fulfillment_data' => $ebook->fresh()->fulfillmentSnapshot(),
+        ]);
+
+        $mail->sent = [];
+        $this->postJson('/api/company/orders/'.$order->id.'/resend-fulfillment')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('emailSent', true)
+            ->assertJsonPath('pdfAttached', true);
+
+        $resent = collect($mail->sent)->first(
+            fn (array $message): bool => $message['to'] === 'brenda@example.com'
+        );
+        $this->assertNotNull($resent);
+        $names = array_column($resent['attachments'] ?? [], 'name');
+        $this->assertContains('guide.pdf', $names);
+    }
+
+    public function test_merchant_can_resend_digital_pdf_from_customer_phone(): void
+    {
+        Storage::fake('local');
+        $mail = $this->bindRecordingMail();
+        [$company, $ebook] = $this->seedDigitalStore();
+        $path = 'products/'.$company->id.'/digital/guide.pdf';
+        Storage::disk('local')->put($path, 'PDF-BYTES');
+        $ebook->update([
+            'digital_file_path' => $path,
+            'digital_file_name' => 'guide.pdf',
+            'digital_file_mime' => 'application/pdf',
+            'digital_file_size' => 9,
+        ]);
+
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 'company_owner',
+            'email_verified_at' => now(),
+        ]);
+        Sanctum::actingAs($owner);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'order_number' => 'ORD-RESEND-CUST',
+            'customer_name' => 'Brenda Katana',
+            'customer_phone' => '25474023429',
+            'total' => 700,
+            'status' => 'confirmed',
+            'payment_status' => 'paid',
+        ]);
+        OrderProduct::create([
+            'order_id' => $order->id,
+            'product_id' => $ebook->id,
+            'name' => $ebook->name,
+            'quantity' => 1,
+            'price' => 700,
+            'fulfillment_data' => $ebook->fresh()->fulfillmentSnapshot(),
+        ]);
+
+        $this->postJson('/api/company/customers/resend-digital', [
+            'phone' => '074023429',
+        ])->assertStatus(422)->assertJsonPath('needsEmail', true);
+
+        $mail->sent = [];
+        $this->postJson('/api/company/customers/resend-digital', [
+            'phone' => '074023429',
+            'customerEmail' => 'brenda@example.com',
+        ])->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('emailSent', true)
+            ->assertJsonPath('pdfAttached', true);
+
+        $this->assertSame('brenda@example.com', $order->fresh()->customer_email);
+        $resent = collect($mail->sent)->first(
+            fn (array $message): bool => $message['to'] === 'brenda@example.com'
+        );
+        $this->assertNotNull($resent);
+        $names = array_column($resent['attachments'] ?? [], 'name');
+        $this->assertContains('guide.pdf', $names);
     }
 
     private function bindRecordingMail(): RecordingMailService

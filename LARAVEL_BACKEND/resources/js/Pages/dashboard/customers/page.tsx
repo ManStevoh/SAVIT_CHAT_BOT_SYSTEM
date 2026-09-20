@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -20,9 +21,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, MoreVertical, Users, UserPlus, UserCheck, TrendingUp, Download, Loader2 } from "lucide-react"
-import { companyExportData } from "@/lib/api-actions"
+import { Search, MoreVertical, Users, UserPlus, UserCheck, TrendingUp, Download, Loader2, Send } from "lucide-react"
+import { companyExportData, resendCustomerDigital } from "@/lib/api-actions"
 import { downloadFile } from "@/lib/api-client"
+import { Modal } from "@/components/shared/modal"
+import { useToast } from "@/hooks/use-toast"
 import {
   Popover,
   PopoverContent,
@@ -67,6 +70,8 @@ function getStatusLabel(customer: Customer): string {
 
 export default function CustomersPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const { toast } = useToast()
   const initialSearch = searchParams.get("search") ?? ""
   const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [page, setPage] = useState(1)
@@ -74,6 +79,9 @@ export default function CustomersPage() {
   const [exportOpen, setExportOpen] = useState(false)
   const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv")
   const [exporting, setExporting] = useState(false)
+  const [resendCustomer, setResendCustomer] = useState<Customer | null>(null)
+  const [resendEmail, setResendEmail] = useState("")
+  const [resending, setResending] = useState(false)
 
   // API call: GET /api/company/customers?search=&page=1&limit=10
   const { data, error, isLoading, mutate } = useCustomers({ search: searchQuery || undefined, page, limit })
@@ -93,6 +101,35 @@ export default function CustomersPage() {
       }
     } finally {
       setExporting(false)
+    }
+  }
+
+  const openResend = (customer: Customer) => {
+    setResendCustomer(customer)
+    setResendEmail(customer.email ?? "")
+  }
+
+  const handleResendDigital = async () => {
+    if (!resendCustomer) return
+    const email = resendEmail.trim()
+    setResending(true)
+    try {
+      const result = await resendCustomerDigital(resendCustomer.phone, email || null)
+      if (result.success) {
+        toast({
+          title: result.pdfAttached ? "Book sent" : "Files resent",
+          description: result.message ?? "The customer will receive the digital files by email.",
+        })
+        setResendCustomer(null)
+        return
+      }
+      toast({
+        title: result.needsEmail ? "Email needed" : "Could not resend",
+        description: result.message ?? "Add the customer email and try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setResending(false)
     }
   }
 
@@ -284,10 +321,17 @@ export default function CustomersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>View Profile</DropdownMenuItem>
-                            <DropdownMenuItem>View Orders</DropdownMenuItem>
-                            <DropdownMenuItem>Send Message</DropdownMenuItem>
-                            <DropdownMenuItem>Add Tag</DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(`/dashboard/orders?search=${encodeURIComponent(customer.phone)}`)
+                              }
+                            >
+                              View Orders
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openResend(customer)}>
+                              <Send className="mr-2 h-4 w-4" />
+                              Resend digital files
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -315,6 +359,55 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
+
+      <Modal
+        open={!!resendCustomer}
+        onOpenChange={(open) => {
+          if (!open) setResendCustomer(null)
+        }}
+        title="Resend digital files"
+        description={
+          resendCustomer
+            ? `Send ${resendCustomer.name} the book or PDF again by email. If WhatsApp is connected, we will try that too.`
+            : undefined
+        }
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setResendCustomer(null)} disabled={resending}>
+              Cancel
+            </Button>
+            <Button onClick={handleResendDigital} disabled={resending || !resendEmail.trim()}>
+              {resending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              {resending ? "Sending…" : "Resend files"}
+            </Button>
+          </>
+        }
+      >
+        {resendCustomer ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {resendCustomer.phone}
+              {resendCustomer.totalOrders > 1
+                ? ` · ${resendCustomer.totalOrders} orders (paid digital ones will be resent)`
+                : null}
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="resend-email">Customer email</Label>
+              <Input
+                id="resend-email"
+                type="email"
+                value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)}
+                placeholder="customer@email.com"
+                autoComplete="email"
+              />
+              <p className="text-xs text-muted-foreground">
+                Required so we can attach the PDF. We save it on the order for next time.
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   )
 }

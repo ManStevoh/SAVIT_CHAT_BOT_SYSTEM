@@ -65,6 +65,8 @@ export function PaymentsSection() {
   const [acceptFlutterwave, setAcceptFlutterwave] = useState(false)
   const [acceptPayPal, setAcceptPayPal] = useState(false)
   const [acceptCod, setAcceptCod] = useState(false)
+  const [acceptBank, setAcceptBank] = useState(false)
+  const [bankInstructions, setBankInstructions] = useState("")
   const [manualInstructions, setManualInstructions] = useState("")
   const [deliveryEnabled, setDeliveryEnabled] = useState(false)
   const [defaultFee, setDefaultFee] = useState("")
@@ -122,6 +124,8 @@ export function PaymentsSection() {
     if (settings.ordersAcceptFlutterwave != null) setAcceptFlutterwave(settings.ordersAcceptFlutterwave)
     if (settings.ordersAcceptPayPal != null) setAcceptPayPal(settings.ordersAcceptPayPal)
     if (settings.ordersAcceptCod != null) setAcceptCod(settings.ordersAcceptCod)
+    if (settings.ordersAcceptBankTransfer != null) setAcceptBank(settings.ordersAcceptBankTransfer)
+    if (settings.bankTransferInstructions != null) setBankInstructions(settings.bankTransferInstructions)
     if (settings.deliveryFeesEnabled != null) setDeliveryEnabled(settings.deliveryFeesEnabled)
     if (settings.defaultDeliveryFee != null) setDefaultFee(String(settings.defaultDeliveryFee))
     if (settings.freeDeliveryAbove != null) setFreeAbove(String(settings.freeDeliveryAbove))
@@ -514,6 +518,39 @@ export function PaymentsSection() {
             </span>
           }
         />
+        <SettingRow
+          label="Bank transfer"
+          hint="Show account details on checkout and event registration"
+          control={
+            <span className="flex items-center gap-2">
+              {saving["bankToggle"] && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+              <Switch
+                checked={acceptBank}
+                onCheckedChange={(v) => toggleOption("bankToggle", setAcceptBank, v, "ordersAcceptBankTransfer")}
+                disabled={!collectEnabled || saving["bankToggle"]}
+              />
+            </span>
+          }
+        />
+        {acceptBank && (
+          <div className="space-y-2 px-1 pb-3">
+            <Textarea
+              placeholder="Bank: Equity Bank&#10;Account name: Heal to Lead&#10;Account number: 0123456789&#10;Use the order number as the reference."
+              value={bankInstructions}
+              onChange={(e) => setBankInstructions(e.target.value)}
+              rows={4}
+              className="text-sm"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => saveWith("bankInstructions", { bankTransferInstructions: bankInstructions.trim() || null, ordersAcceptBankTransfer: true })}
+              disabled={saving["bankInstructions"]}
+            >
+              {saving["bankInstructions"] ? "Saving…" : "Save bank details"}
+            </Button>
+          </div>
+        )}
         <div className="rounded-xl border border-border">
           <button
             type="button"

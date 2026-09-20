@@ -75,6 +75,7 @@ export function BusinessSection() {
   const [businessMode, setBusinessMode] = useState<BusinessMode>("hybrid")
   const [enableCatalog, setEnableCatalog] = useState(true)
   const [enableBookings, setEnableBookings] = useState(true)
+  const [enableEvents, setEnableEvents] = useState(true)
   const [enableDineIn, setEnableDineIn] = useState(false)
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
@@ -97,6 +98,7 @@ export function BusinessSection() {
     if (settings.businessMode) setBusinessMode(settings.businessMode)
     if (settings.enableProductsCatalog != null) setEnableCatalog(settings.enableProductsCatalog)
     if (settings.enableBookings != null) setEnableBookings(settings.enableBookings)
+    if (settings.enableEvents != null) setEnableEvents(settings.enableEvents)
     if (settings.enableDineIn != null) setEnableDineIn(settings.enableDineIn)
     if (settings.email != null) setEmail(settings.email)
     if (settings.phone != null) setPhone(settings.phone)
@@ -155,6 +157,7 @@ export function BusinessSection() {
       businessMode,
       enableProductsCatalog: enableCatalog,
       enableBookings,
+      enableEvents,
       enableDineIn,
       attributionRetentionDays: retentionDays.trim()
         ? Math.min(730, Math.max(30, parseInt(retentionDays, 10) || 365))
@@ -244,6 +247,13 @@ export function BusinessSection() {
               label="Bookings"
               hint="Appointment scheduling"
               control={<Switch checked={enableBookings} onCheckedChange={setEnableBookings} />}
+            />
+          </div>
+          <div className="px-4 py-1">
+            <SettingRow
+              label="Events"
+              hint="Ticketed gatherings and registration links"
+              control={<Switch checked={enableEvents} onCheckedChange={setEnableEvents} />}
             />
           </div>
           <div className="px-4 py-1">

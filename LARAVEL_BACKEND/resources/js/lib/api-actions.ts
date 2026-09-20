@@ -385,6 +385,7 @@ export interface CreateOrderFromChatData {
     price: number
   }>
   sendWhatsApp?: boolean
+  customerEmail?: string
 }
 
 /**
@@ -527,6 +528,80 @@ export async function updateOrderStatus(
   }
 }
 
+export interface ResendDigitalFulfillmentResult {
+  success: boolean
+  message?: string
+  emailSent?: boolean
+  whatsappSent?: boolean
+  pdfAttached?: boolean
+  needsEmail?: boolean
+  orderNumber?: string
+  orders?: Array<{ orderNumber?: string; success: boolean; message?: string | null }>
+}
+
+/**
+ * Resend a digital order's files (email PDF + download link, WhatsApp if connected).
+ * Laravel: POST /api/company/orders/:orderId/resend-fulfillment
+ */
+export async function resendOrderFulfillment(
+  orderId: string,
+  customerEmail?: string | null
+): Promise<ResendDigitalFulfillmentResult> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true, message: 'Digital files resent.', emailSent: true, pdfAttached: true }
+  }
+  try {
+    return await apiRequest<ResendDigitalFulfillmentResult>(`/api/company/orders/${orderId}/resend-fulfillment`, {
+      method: 'POST',
+      body: customerEmail ? { customerEmail } : {},
+    })
+  } catch (e) {
+    const fallback = handleApiError(e)
+    const extra = (e as Error & { responseData?: ResendDigitalFulfillmentResult }).responseData
+    return {
+      ...fallback,
+      needsEmail: extra?.needsEmail,
+      emailSent: extra?.emailSent,
+      whatsappSent: extra?.whatsappSent,
+      pdfAttached: extra?.pdfAttached,
+    }
+  }
+}
+
+/**
+ * Resend paid digital files for a customer (by phone).
+ * Laravel: POST /api/company/customers/resend-digital
+ */
+export async function resendCustomerDigital(
+  phone: string,
+  customerEmail?: string | null
+): Promise<ResendDigitalFulfillmentResult> {
+  if (useMockApi()) {
+    await delay(500)
+    return { success: true, message: 'Digital files resent.', emailSent: true, pdfAttached: true }
+  }
+  try {
+    return await apiRequest<ResendDigitalFulfillmentResult>('/api/company/customers/resend-digital', {
+      method: 'POST',
+      body: {
+        phone,
+        ...(customerEmail ? { customerEmail } : {}),
+      },
+    })
+  } catch (e) {
+    const fallback = handleApiError(e)
+    const extra = (e as Error & { responseData?: ResendDigitalFulfillmentResult }).responseData
+    return {
+      ...fallback,
+      needsEmail: extra?.needsEmail,
+      emailSent: extra?.emailSent,
+      whatsappSent: extra?.whatsappSent,
+      pdfAttached: extra?.pdfAttached,
+    }
+  }
+}
+
 /**
  * Update only payment status (e.g. mark as paid manually).
  * Laravel: PATCH /api/company/orders/:orderId with body: { paymentStatus }
@@ -613,6 +688,7 @@ export async function createOrderFromChat(
   order?: { id: string; orderNumber: string }
   whatsappSent?: boolean
   whatsappError?: string | null
+  emailSent?: boolean
 }> {
   if (useMockApi()) {
     await delay(600)
@@ -622,6 +698,7 @@ export async function createOrderFromChat(
       order: { id: String(Date.now()), orderNumber: `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}` },
       whatsappSent: true,
       whatsappError: null,
+      emailSent: false,
     }
   }
   try {
@@ -631,6 +708,7 @@ export async function createOrderFromChat(
       order?: { id: string; orderNumber: string }
       whatsappSent?: boolean
       whatsappError?: string | null
+      emailSent?: boolean
     }>('/api/company/orders', {
       method: 'POST',
       body: data,
@@ -1314,6 +1392,8 @@ export interface UpdateSettingsData {
   ordersAcceptFlutterwave?: boolean
   ordersAcceptPayPal?: boolean
   ordersAcceptCod?: boolean
+  ordersAcceptBankTransfer?: boolean
+  bankTransferInstructions?: string | null
   attributionRetentionDays?: number | null
   ordersCollectPaymentEnabled?: boolean
   orderPaymentManualInstructions?: string | null
@@ -1365,6 +1445,8 @@ export interface UpdateSettingsData {
   businessMode?: 'retail' | 'services' | 'restaurant' | 'hybrid'
   enableProductsCatalog?: boolean
   enableBookings?: boolean
+  enableEvents?: boolean
+  eventReminderHours?: number
   enableDineIn?: boolean
   storeSlug?: string | null
   storefrontEnabled?: boolean

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Company;
 use App\Models\Order;
 use App\Models\PlatformSetting;
+use App\Models\StorefrontCustomer;
 use App\Models\User;
 use App\Support\MoneyFormatter;
 use App\Support\PlatformSmtpConfig;
@@ -96,14 +98,14 @@ class MailService
     /**
      * Send email using platform SMTP settings when configured; otherwise use default mailer.
      */
-    public function send(string $to, string $subject, string $htmlBody, ?string $textBody = null): void
+    public function send(string $to, string $subject, string $htmlBody, ?string $textBody = null, array $attachments = []): void
     {
         $settings = PlatformSetting::first();
         if ($settings && PlatformSmtpConfig::isReady($settings)) {
-            $this->sendViaPlatformSmtp($settings, $to, $subject, $htmlBody, $textBody);
+            $this->sendViaPlatformSmtp($settings, $to, $subject, $htmlBody, $textBody, $attachments);
             return;
         }
-        $this->sendViaDefaultMailer($to, $subject, $htmlBody, $textBody);
+        $this->sendViaDefaultMailer($to, $subject, $htmlBody, $textBody, $attachments);
     }
 
     /**
@@ -358,27 +360,109 @@ class MailService
         $this->send($to, $subject, $html, strip_tags($html));
     }
 
-    public function sendCustomerOrderConfirmationSafely(Order $order): void
+    public function sendCustomerOrderConfirmationSafely(Order $order, bool $attachDigitalPdfs = false): bool
     {
         try {
-            $this->sendCustomerOrderConfirmation($order->fresh(['company.settings', 'orderProducts.product']) ?? $order);
+            $fresh = $order->fresh(['company.settings', 'orderProducts.product']) ?? $order;
+            if ($this->customerEmail($fresh) === null) {
+                return false;
+            }
+            $this->sendCustomerOrderConfirmation($fresh, $attachDigitalPdfs);
+
+            return true;
         } catch (\Throwable $e) {
             Log::warning('Failed to send customer order confirmation email', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
             ]);
+
+            return false;
         }
     }
 
-    public function sendCustomerPaymentFulfillmentSafely(Order $order): void
+    /**
+     * Email to notify a shopper when WhatsApp is down: submitted address, then storefront or prior orders.
+     */
+    public function resolveNotifyEmail(?Company $company, ?string $phone, ?string $submitted = null): ?string
+    {
+        $submitted = strtolower(trim((string) $submitted));
+        if ($submitted !== '' && filter_var($submitted, FILTER_VALIDATE_EMAIL)) {
+            return $submitted;
+        }
+
+        if (! $company) {
+            return null;
+        }
+
+        $tail = $this->phoneTail($phone);
+        if ($tail === '') {
+            return null;
+        }
+
+        $customers = StorefrontCustomer::query()
+            ->where('company_id', $company->id)
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->whereNotNull('phone')
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get(['email', 'phone']);
+
+        foreach ($customers as $customer) {
+            if ($this->phoneTail((string) $customer->phone) !== $tail) {
+                continue;
+            }
+            $email = strtolower(trim((string) $customer->email));
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $email;
+            }
+        }
+
+        $orders = Order::query()
+            ->where('company_id', $company->id)
+            ->whereNotNull('customer_email')
+            ->where('customer_email', '!=', '')
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get(['customer_email', 'customer_phone']);
+
+        foreach ($orders as $prior) {
+            if ($this->phoneTail((string) $prior->customer_phone) !== $tail) {
+                continue;
+            }
+            $email = strtolower(trim((string) $prior->customer_email));
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $email;
+            }
+        }
+
+        return null;
+    }
+
+    private function phoneTail(?string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $phone) ?? '';
+
+        return $digits === '' ? '' : substr($digits, -9);
+    }
+
+    public function sendCustomerPaymentFulfillmentSafely(Order $order): bool
     {
         try {
-            $this->sendCustomerPaymentFulfillment($order->fresh(['company.settings', 'orderProducts.product']) ?? $order);
+            $fresh = $order->fresh(['company.settings', 'orderProducts.product']) ?? $order;
+            if ($this->customerEmail($fresh) === null) {
+                return false;
+            }
+            $this->sendCustomerPaymentFulfillment($fresh);
+
+            return true;
         } catch (\Throwable $e) {
             Log::warning('Failed to send customer payment / download email', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
             ]);
+
+            return false;
         }
     }
 
@@ -424,7 +508,7 @@ class MailService
     /**
      * Confirmation email to the shopper after any purchase (storefront, WhatsApp, or dashboard).
      */
-    public function sendCustomerOrderConfirmation(Order $order): void
+    public function sendCustomerOrderConfirmation(Order $order, bool $attachDigitalPdfs = false): void
     {
         $to = $this->customerEmail($order);
         if ($to === null) {
@@ -435,9 +519,11 @@ class MailService
         $store = trim((string) ($order->company?->name ?? '')) ?: 'the store';
         $name = trim((string) ($order->customer_name ?? '')) ?: 'there';
         $total = MoneyFormatter::formatFromSettings((float) $order->total, $order->company?->settings);
+        $paid = strtolower((string) $order->payment_status) === 'paid';
+        $digitalPdfs = ($attachDigitalPdfs || $paid) ? $this->digitalPdfAttachments($order) : [];
         $subject = 'Your order '.$order->order_number.' from '.$store;
-        $html = $this->customerOrderConfirmationHtml($order, $store, $name, $total);
-        $this->send($to, $subject, self::wrapEmailBody($html), strip_tags($html));
+        $html = $this->customerOrderConfirmationHtml($order, $store, $name, $total, $digitalPdfs !== []);
+        $this->send($to, $subject, self::wrapEmailBody($html), strip_tags($html), $digitalPdfs);
     }
 
     /**
@@ -456,7 +542,13 @@ class MailService
         $total = MoneyFormatter::formatFromSettings((float) $order->total, $order->company?->settings);
         $subject = 'Payment received — order '.$order->order_number.' from '.$store;
         $html = $this->customerPaymentFulfillmentHtml($order, $store, $name, $total);
-        $this->send($to, $subject, self::wrapEmailBody($html), strip_tags($html));
+        $this->send(
+            $to,
+            $subject,
+            self::wrapEmailBody($html),
+            strip_tags($html),
+            $this->digitalPdfAttachments($order)
+        );
     }
 
     private function customerEmail(Order $order): ?string
@@ -469,7 +561,7 @@ class MailService
         return $to;
     }
 
-    private function customerOrderConfirmationHtml(Order $order, string $store, string $name, string $total): string
+    private function customerOrderConfirmationHtml(Order $order, string $store, string $name, string $total, bool $digitalPdfAttached = false): string
     {
         $html = '<p>Hi '.e($name).',</p>';
         $html .= '<p>Thank you for your order from <strong>'.e($store).'</strong>.</p>';
@@ -489,7 +581,9 @@ class MailService
         }
         $html .= '</p>';
 
-        if ($this->orderHasDigitalItems($order) && ! $paid) {
+        if ($digitalPdfAttached) {
+            $html .= '<p>Your PDF is attached to this email — save it for offline download.</p>';
+        } elseif ($this->orderHasDigitalItems($order) && ! $paid) {
             $html .= '<p>Digital files or license keys will be emailed to this address after payment is confirmed.</p>';
         }
 
@@ -505,6 +599,9 @@ class MailService
         $html .= '<p><strong>Order:</strong> '.e((string) $order->order_number).'<br><strong>Total:</strong> '.e($total).'</p>';
         $html .= $this->orderItemsHtml($order);
         $html .= $this->digitalAccessHtml($order);
+        if ($this->digitalPdfAttachments($order) !== []) {
+            $html .= '<p>The PDF is also attached to this email so you can download it immediately.</p>';
+        }
         $html .= '<p>'.$this->emailButton($order->publicReceiptUrl(), 'View receipt').'</p>';
         $html .= '<p>Keep this email for your records.</p>';
 
@@ -525,18 +622,6 @@ class MailService
         return '<p><strong>Items</strong></p><ul>'.$rows.'</ul>';
     }
 
-    private function orderHasDigitalItems(Order $order): bool
-    {
-        $access = app(DigitalAccessService::class);
-        foreach ($order->orderProducts as $line) {
-            $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
-            if ($access->isDigitalFulfillment($data, $line->product)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     private function digitalAccessHtml(Order $order): string
     {
@@ -579,16 +664,125 @@ class MailService
         return '<p><a href="'.e($url).'" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">'.e($label).'</a></p>';
     }
 
-    private function sendViaPlatformSmtp(PlatformSetting $settings, string $to, string $subject, string $htmlBody, ?string $textBody): void
+    /**
+     * @return list<array{path: string, name: string, mime: string}>
+     */
+    public function digitalPdfAttachmentsFor(Order $order): array
     {
+        return $this->digitalPdfAttachments($order);
+    }
+
+    public function orderHasDigitalItems(Order $order): bool
+    {
+        $order->loadMissing('orderProducts.product');
+        $access = app(DigitalAccessService::class);
+        foreach ($order->orderProducts as $line) {
+            $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
+            if ($access->isDigitalFulfillment($data, $line->product)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<array{path: string, name: string, mime: string}>
+     */
+    private function digitalPdfAttachments(Order $order): array
+    {
+        $order->loadMissing('orderProducts.product');
+        $out = [];
+        foreach ($order->orderProducts as $line) {
+            $data = is_array($line->fulfillment_data) ? $line->fulfillment_data : [];
+            $path = (string) ($data['digitalFilePath'] ?? $line->product?->digital_file_path ?? '');
+            $name = (string) ($data['digitalFileName'] ?? $line->product?->digital_file_name ?? '');
+            $mime = strtolower((string) ($data['digitalFileMime'] ?? $line->product?->digital_file_mime ?? ''));
+            if ($path === '') {
+                continue;
+            }
+            $isPdf = str_contains($mime, 'pdf')
+                || str_ends_with(strtolower($name), '.pdf')
+                || str_ends_with(strtolower($path), '.pdf');
+            if (! $isPdf) {
+                continue;
+            }
+            $absolute = $this->resolveStoredFilePath($path);
+            if ($absolute === null) {
+                continue;
+            }
+            $size = @filesize($absolute) ?: 0;
+            if ($size < 1 || $size > 12 * 1024 * 1024) {
+                continue;
+            }
+            $filename = basename($name !== '' ? $name : $path) ?: 'download.pdf';
+            if (! str_ends_with(strtolower($filename), '.pdf')) {
+                $filename .= '.pdf';
+            }
+            $out[] = [
+                'path' => $absolute,
+                'name' => $filename,
+                'mime' => $mime !== '' ? $mime : 'application/pdf',
+            ];
+        }
+
+        return $out;
+    }
+
+    private function resolveStoredFilePath(string $path): ?string
+    {
+        if (is_file($path) && is_readable($path)) {
+            return $path;
+        }
+        foreach (['local', 'public'] as $disk) {
+            try {
+                if (Storage::disk($disk)->exists($path)) {
+                    return Storage::disk($disk)->path($path);
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  list<array{path: string, name: string, mime: string}>  $attachments
+     */
+    private function attachFiles(mixed $message, array $attachments): void
+    {
+        foreach ($attachments as $file) {
+            $path = (string) ($file['path'] ?? '');
+            if ($path === '' || ! is_readable($path)) {
+                continue;
+            }
+            $message->attach($path, [
+                'as' => $file['name'] ?? basename($path),
+                'mime' => $file['mime'] ?? 'application/pdf',
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<array{path: string, name: string, mime: string}>  $attachments
+     */
+    private function sendViaPlatformSmtp(
+        PlatformSetting $settings,
+        string $to,
+        string $subject,
+        string $htmlBody,
+        ?string $textBody,
+        array $attachments = []
+    ): void {
         $resolved = PlatformSmtpConfig::resolve($settings);
         $config = PlatformSmtpConfig::mailerArray($settings);
 
-        $this->dispatchPlatformSmtp($config, $resolved['fromAddress'], $resolved['fromName'], $to, $subject, $htmlBody);
+        $this->dispatchPlatformSmtp($config, $resolved['fromAddress'], $resolved['fromName'], $to, $subject, $htmlBody, true, $attachments);
     }
 
     /**
      * @param  array<string, mixed>  $config
+     * @param  list<array{path: string, name: string, mime: string}>  $attachments
      */
     private function dispatchPlatformSmtp(
         array $config,
@@ -597,21 +791,23 @@ class MailService
         string $to,
         string $subject,
         string $htmlBody,
-        bool $allowInsecureRetry = true
+        bool $allowInsecureRetry = true,
+        array $attachments = []
     ): void {
         Config::set('mail.mailers.platform_smtp', $config);
         Mail::purge('platform_smtp');
 
         try {
-            Mail::mailer('platform_smtp')->html($htmlBody, function ($message) use ($to, $subject, $fromAddress, $fromName) {
+            Mail::mailer('platform_smtp')->html($htmlBody, function ($message) use ($to, $subject, $fromAddress, $fromName, $attachments) {
                 $message->to($to)
                     ->from($fromAddress, $fromName)
                     ->subject($subject);
+                $this->attachFiles($message, $attachments);
             });
         } catch (\Throwable $e) {
             if ($allowInsecureRetry && PlatformSmtpConfig::isCertificateError($e->getMessage())) {
                 $config['verify_peer'] = false;
-                $this->dispatchPlatformSmtp($config, $fromAddress, $fromName, $to, $subject, $htmlBody, false);
+                $this->dispatchPlatformSmtp($config, $fromAddress, $fromName, $to, $subject, $htmlBody, false, $attachments);
 
                 return;
             }
@@ -619,10 +815,14 @@ class MailService
         }
     }
 
-    private function sendViaDefaultMailer(string $to, string $subject, string $htmlBody, ?string $textBody): void
+    /**
+     * @param  list<array{path: string, name: string, mime: string}>  $attachments
+     */
+    private function sendViaDefaultMailer(string $to, string $subject, string $htmlBody, ?string $textBody, array $attachments = []): void
     {
-        Mail::html($htmlBody, function ($message) use ($to, $subject) {
+        Mail::html($htmlBody, function ($message) use ($to, $subject, $attachments) {
             $message->to($to)->subject($subject);
+            $this->attachFiles($message, $attachments);
         });
     }
 

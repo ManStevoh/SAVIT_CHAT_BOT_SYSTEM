@@ -40,6 +40,7 @@ final class ResponseSpecRenderer
     {
         $products = Product::where('company_id', $company->id)
             ->where('status', 'active')
+            ->notEvent()
             ->orderBy('name')
             ->get();
 
@@ -68,6 +69,7 @@ final class ResponseSpecRenderer
     {
         $products = Product::where('company_id', $company->id)
             ->where('status', 'active')
+            ->notEvent()
             ->orderBy('name')
             ->get();
 

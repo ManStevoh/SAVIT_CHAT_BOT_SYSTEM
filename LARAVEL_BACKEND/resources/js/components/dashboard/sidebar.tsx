@@ -41,6 +41,8 @@ import {
   CalendarDays,
   History,
   Wrench,
+  Ticket,
+  UserCheck,
   UtensilsCrossed,
   ScanLine,
   Printer,
@@ -138,6 +140,23 @@ export function parseBookingsTab(value: string | null | undefined): BookingsTab 
   return "upcoming"
 }
 
+export type EventsTab = "events" | "sessions" | "tickets" | "registrations" | "check-in"
+
+export const eventsNavItems: DashboardNavItem[] = [
+  { name: "Events", href: "/dashboard/events", icon: Ticket },
+  { name: "Sessions", href: "/dashboard/events?tab=sessions", icon: CalendarDays },
+  { name: "Tickets", href: "/dashboard/events?tab=tickets", icon: Ticket },
+  { name: "Registrations", href: "/dashboard/events?tab=registrations", icon: Users },
+  { name: "Check-in", href: "/dashboard/events?tab=check-in", icon: UserCheck },
+]
+
+export function parseEventsTab(value: string | null | undefined): EventsTab {
+  if (value === "sessions" || value === "tickets" || value === "registrations" || value === "check-in") {
+    return value
+  }
+  return "events"
+}
+
 export type DineInTab = "tables" | "scan" | "print"
 
 export const dineInNavItems: DashboardNavItem[] = [
@@ -213,6 +232,7 @@ const defaultQueryByPath: Record<string, { key: string; emptyValues: string[] }>
   "/dashboard/products": { key: "tab", emptyValues: ["", "catalog", "all"] },
   "/dashboard/storefront": { key: "tab", emptyValues: ["", "design"] },
   "/dashboard/bookings": { key: "tab", emptyValues: ["", "upcoming", "schedule"] },
+  "/dashboard/events": { key: "tab", emptyValues: ["", "events"] },
   "/dashboard/dine-in": { key: "tab", emptyValues: ["", "tables"] },
   "/dashboard/analytics": { key: "tab", emptyValues: ["", "messages"] },
   "/dashboard/faq": { key: "tab", emptyValues: ["", "faqs"] },
@@ -239,6 +259,7 @@ export const dashboardNavigation: DashboardNavItem[] = [
   { name: "Taxes", href: "/dashboard/taxes", icon: Percent },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+  { name: "Events", href: "/dashboard/events", icon: Ticket },
   { name: "Dine-in", href: "/dashboard/dine-in", icon: QrCode },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Growth Engine", href: "/dashboard/growth", icon: Rocket },
@@ -268,6 +289,7 @@ export const dashboardNavGroups: DashboardNavGroup[] = [
       { name: "Taxes", href: "/dashboard/taxes", icon: Percent },
       { name: "Customers", href: "/dashboard/customers", icon: Users },
       { name: "Bookings", href: "/dashboard/bookings", icon: Calendar, children: bookingsNavItems },
+      { name: "Events", href: "/dashboard/events", icon: Ticket, children: eventsNavItems },
       { name: "Dine-in", href: "/dashboard/dine-in", icon: QrCode, children: dineInNavItems },
     ],
   },
@@ -553,6 +575,10 @@ export function DashboardNavLinks({
           if (navPath(item.href) === "/dashboard/bookings") {
             const isBookingsAllowed = settings.enableBookings ?? (settings.businessMode !== "retail")
             return isBookingsAllowed || isPathActive(pathname, item.href)
+          }
+          if (navPath(item.href) === "/dashboard/events") {
+            const isEventsAllowed = settings.enableEvents ?? true
+            return isEventsAllowed || isPathActive(pathname, item.href)
           }
           return true
         })

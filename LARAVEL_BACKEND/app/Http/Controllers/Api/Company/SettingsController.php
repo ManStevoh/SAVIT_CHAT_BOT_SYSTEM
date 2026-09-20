@@ -142,6 +142,10 @@ class SettingsController extends Controller
             'businessMode' => $settings?->business_mode ?? 'hybrid',
             'enableProductsCatalog' => (bool) ($settings?->enable_products_catalog ?? true),
             'enableBookings' => (bool) ($settings?->enable_bookings ?? true),
+            'enableEvents' => (bool) ($settings?->enable_events ?? true),
+            'eventReminderHours' => (int) ($settings?->event_reminder_hours ?? 24),
+            'ordersAcceptBankTransfer' => (bool) ($settings?->orders_accept_bank_transfer ?? false),
+            'bankTransferInstructions' => $settings?->bank_transfer_instructions ?? '',
             'enableDineIn' => (bool) ($settings?->enable_dine_in ?? false),
             'dineInQrTarget' => $settings?->dine_in_qr_target ?? 'web_menu',
             'dineInPaymentTiming' => $settings?->dine_in_payment_timing ?? 'pay_upfront',
@@ -350,6 +354,8 @@ class SettingsController extends Controller
             'businessMode' => 'sometimes|string|in:retail,services,restaurant,hybrid',
             'enableProductsCatalog' => 'sometimes|boolean',
             'enableBookings' => 'sometimes|boolean',
+            'enableEvents' => 'sometimes|boolean',
+            'eventReminderHours' => 'sometimes|integer|min:1|max:168',
             'enableDineIn' => 'sometimes|boolean',
             'dineInQrTarget' => 'sometimes|string|in:web_menu,whatsapp_chat,dual_choice',
             'dineInPaymentTiming' => 'sometimes|string|in:pay_upfront,open_tab,customer_choice',
@@ -1064,6 +1070,19 @@ class SettingsController extends Controller
         }
         if (array_key_exists('enableBookings', $companyValidated)) {
             $settings->enable_bookings = (bool) $companyValidated['enableBookings'];
+        }
+        if (array_key_exists('enableEvents', $companyValidated)) {
+            $settings->enable_events = (bool) $companyValidated['enableEvents'];
+        }
+        if (array_key_exists('eventReminderHours', $companyValidated)) {
+            $settings->event_reminder_hours = (int) $companyValidated['eventReminderHours'];
+        }
+        if (array_key_exists('ordersAcceptBankTransfer', $companyValidated)) {
+            $settings->orders_accept_bank_transfer = (bool) $companyValidated['ordersAcceptBankTransfer'];
+        }
+        if (array_key_exists('bankTransferInstructions', $companyValidated)) {
+            $v = $companyValidated['bankTransferInstructions'];
+            $settings->bank_transfer_instructions = (is_string($v) && trim($v) !== '') ? trim($v) : null;
         }
         if (array_key_exists('enableDineIn', $companyValidated)) {
             if ($companyValidated['enableDineIn'] && ! PlanLimitService::companyAllowsDineIn($company)) {

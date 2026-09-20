@@ -12,7 +12,7 @@ import { FormModal } from '@/components/shared/modal'
 import { SelectField } from '@/components/shared/form-field'
 import { useOrders, useOrder, useCompanySettings } from '@/lib/api-hooks'
 import { formatCurrencyAmount, normalizeCurrencyCode, currencyDisplayFromSettings } from '@/lib/format-currency'
-import { updateOrderStatus } from '@/lib/api-actions'
+import { updateOrderStatus, resendOrderFulfillment } from '@/lib/api-actions'
 import type { Order } from '@/lib/mock-data'
 import {
   Search,
@@ -29,6 +29,7 @@ import {
   MapPin,
   ExternalLink,
   Phone,
+  Mail,
   AlertCircle,
   XCircle,
   FileText,
@@ -75,18 +76,18 @@ function orderFulfillmentKind(order: Order): OrderFulfillmentKind {
     .filter(Boolean)
   const anyPhysical = (order.products ?? []).some((p) => p.needsShipping === true)
     || lineTypes.some((type) => type === 'physical')
-  const allService = lineTypes.length > 0 && lineTypes.every((type) => type === 'service')
+  const allService = lineTypes.length > 0 && lineTypes.every((type) => type === 'service' || type === 'event')
   const allDigital = lineTypes.length > 0 && lineTypes.every((type) => type === 'digital')
-  const noPhysicalLines = lineTypes.length > 0 && !anyPhysical && lineTypes.every((type) => type === 'digital' || type === 'service')
+  const noPhysicalLines = lineTypes.length > 0 && !anyPhysical && lineTypes.every((type) => type === 'digital' || type === 'service' || type === 'event')
 
   if (order.needsShipping === false || noPhysicalLines) {
     if (t === 'manual') return 'arrange'
-    if (t === 'service' || t === 'booking' || allService) return 'service'
+    if (t === 'ticket' || t === 'event' || t === 'service' || t === 'booking' || allService) return 'service'
     return 'digital'
   }
 
   if (t === 'digital' || t === 'download' || t === 'link' || allDigital) return 'digital'
-  if (t === 'service' || t === 'booking' || allService) return 'service'
+  if (t === 'ticket' || t === 'event' || t === 'service' || t === 'booking' || allService) return 'service'
   if (t === 'manual') return 'arrange'
   if (t === 'delivery' || t === 'shipping') return 'delivery'
   if (order.deliveryAddress?.trim()) return 'delivery'
@@ -97,7 +98,7 @@ function orderNeedsShipping(order: Order): boolean {
   if (typeof order.needsShipping === 'boolean') return order.needsShipping
   if ((order.products ?? []).some((p) => p.needsShipping === true)) return true
   const lineTypes = (order.products ?? []).map((p) => (p.productType || '').toLowerCase()).filter(Boolean)
-  if (lineTypes.length > 0 && lineTypes.every((type) => type === 'digital' || type === 'service')) {
+  if (lineTypes.length > 0 && lineTypes.every((type) => type === 'digital' || type === 'service' || type === 'event')) {
     return false
   }
   return orderFulfillmentKind(order) === 'delivery'
@@ -176,6 +177,8 @@ export default function OrdersPage() {
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const [resendEmail, setResendEmail] = useState('')
   const [newStatus, setNewStatus] = useState<string>('')
   const [newPaymentStatus, setNewPaymentStatus] = useState<Order['paymentStatus']>('pending')
   const [courierName, setCourierName] = useState<string>('')
@@ -211,6 +214,7 @@ export default function OrdersPage() {
     setCourierName(order.courierName || '')
     setTrackingNumber(order.trackingNumber || '')
     setDeliveryAddress(order.deliveryAddress || '')
+    setResendEmail(order.customerEmail || '')
   }
 
   // Calculate stats from total & items
@@ -303,6 +307,28 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
       setIsUpdating(false)
     }
   }, [selectedOrder, newStatus, newPaymentStatus, courierName, trackingNumber, deliveryAddress, mutate, statusFilter, searchQuery, page, toast])
+
+  const handleResendFulfillment = useCallback(async (order: Order, emailOverride?: string) => {
+    setIsResending(true)
+    try {
+      const email = (emailOverride ?? resendEmail).trim()
+      const result = await resendOrderFulfillment(order.id, email || order.customerEmail || null)
+      if (result.success) {
+        toast({
+          title: result.pdfAttached ? 'Book sent' : 'Files resent',
+          description: result.message ?? 'The customer received the digital files again.',
+        })
+        return
+      }
+      toast({
+        title: result.needsEmail ? 'Email needed' : 'Could not resend',
+        description: result.message ?? 'Add the customer email and try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsResending(false)
+    }
+  }, [resendEmail, toast])
 
   const handleExportOrders = async () => {
     setExporting(true)
@@ -467,6 +493,29 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
               <Eye className="h-3.5 w-3.5 mr-1" />
               View
             </Button>
+            {orderFulfillmentKind(order) === 'digital' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs px-2"
+                disabled={isResending}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (!order.customerEmail) {
+                    openOrderModal(order)
+                    toast({
+                      title: 'Email needed',
+                      description: 'Add the customer email in the order, then resend the book.',
+                    })
+                    return
+                  }
+                  void handleResendFulfillment(order, order.customerEmail)
+                }}
+              >
+                <Send className="h-3.5 w-3.5 mr-1" />
+                Resend
+              </Button>
+            ) : null}
           </div>
         )
       },
@@ -497,7 +546,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
             <Button
               variant={attributedOnly ? 'default' : 'outline'}
               size="sm"
-              className="h-9"
+              className="h-9 w-full sm:w-auto"
               onClick={() => { setAttributedOnly((v) => !v); setPage(1) }}
             >
               Attributed only
@@ -507,7 +556,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                 <TooltipTrigger asChild>
                   <Popover open={exportOpen} onOpenChange={setExportOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9">
+                      <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
                         Export
                       </Button>
@@ -637,35 +686,51 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
           }
         }}
         title={`Order ${selectedOrder?.orderNumber}`}
-        description={selectedOrder && orderNeedsShipping(selectedOrder) ? 'Update status, address, and courier details.' : 'Update status and payment. This order does not need shipping.'}
+        description={
+          !selectedOrder
+            ? undefined
+            : orderNeedsShipping(selectedOrder)
+              ? 'Update status, address, and courier details.'
+              : orderFulfillmentKind(selectedOrder) === 'service'
+                ? 'Service order — no shipping. Update status and payment.'
+                : 'Digital order — no shipping. Update status and payment.'
+        }
         onSubmit={handleUpdateStatus}
         submitLabel="Save & Update Customer"
         isLoading={isUpdating}
+        className="sm:max-w-2xl"
       >
         {selectedOrder && (
-          <div className="space-y-5 text-sm">
-            {/* Customer & Shipping Summary Header */}
-            <div className="rounded-xl border border-border/60 bg-secondary/30 p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border/40">
-                <div>
-                  <h4 className="font-semibold text-foreground text-base">{selectedOrder.customerName}</h4>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5" /> {selectedOrder.customerPhone}
-                    </span>
-                    {selectedOrder.customerEmail && <span>{selectedOrder.customerEmail}</span>}
+          <div className="min-w-0 space-y-5 text-sm">
+            <div className="min-w-0 space-y-3 rounded-xl border border-border/60 bg-secondary/30 p-4">
+              <div className="min-w-0 space-y-3">
+                <div className="min-w-0">
+                  <h4 className="truncate text-base font-semibold text-foreground">{selectedOrder.customerName}</h4>
+                  <div className="mt-1.5 flex flex-col gap-1 text-xs text-muted-foreground">
+                    {selectedOrder.customerPhone ? (
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 shrink-0" />
+                        <span className="break-all">{selectedOrder.customerPhone}</span>
+                      </span>
+                    ) : null}
+                    {selectedOrder.customerEmail ? (
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span className="break-all">{selectedOrder.customerEmail}</span>
+                      </span>
+                    ) : null}
                     <span>Placed {formatDate(selectedOrder.createdAt)}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-8 text-xs bg-background"
+                    className="h-8 bg-background text-xs"
                     onClick={() => copyShippingSlip(selectedOrder)}
                   >
-                    <FileText className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                    <FileText className="mr-1.5 h-3.5 w-3.5 text-primary" />
                     {orderNeedsShipping(selectedOrder) ? 'Copy shipping slip' : 'Copy order slip'}
                   </Button>
                   {selectedOrder.customerPhone && (
@@ -674,8 +739,8 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <Button type="button" variant="outline" size="sm" className="h-8 text-xs bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/30">
-                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                      <Button type="button" variant="outline" size="sm" className="h-8 border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-600 hover:bg-emerald-500/20">
+                        <MessageSquare className="mr-1 h-3.5 w-3.5" />
                         WhatsApp
                       </Button>
                     </a>
@@ -684,19 +749,19 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
               </div>
 
               {orderNeedsShipping(selectedOrder) ? (
-              <div>
-                <div className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+              <div className="min-w-0">
+                <div className="mb-1 flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                  <span className="flex min-w-0 items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                     Delivery address
                   </span>
                   {selectedOrder.deliveryAddress && (
                     <button
                       type="button"
                       onClick={() => copyToClipboard(selectedOrder.deliveryAddress!, 'Shipping Address')}
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                      className="inline-flex shrink-0 items-center gap-1 text-primary hover:underline"
                     >
-                      <Copy className="h-3 w-3" /> Copy Address
+                      <Copy className="h-3 w-3" /> Copy
                     </button>
                   )}
                 </div>
@@ -720,63 +785,105 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                 )}
               </div>
               ) : (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <FulfillmentBadge order={selectedOrder} />
-                  <span>No delivery address needed.</span>
+                <div className="flex min-w-0 items-start gap-3 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2.5">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-700 dark:text-sky-400">
+                    {orderFulfillmentKind(selectedOrder) === 'service' ? (
+                      <Phone className="h-4 w-4" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">
+                        {orderFulfillmentKind(selectedOrder) === 'service' ? 'Service appointment' : 'Digital delivery'}
+                      </p>
+                      <FulfillmentBadge order={selectedOrder} />
+                    </div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {orderFulfillmentKind(selectedOrder) === 'service'
+                        ? 'No shipping address. Confirm the appointment with the customer, then mark the order completed.'
+                        : 'No shipping address. After payment, send the file, download link, or license key to the customer email.'}
+                    </p>
+                    {orderFulfillmentKind(selectedOrder) === 'digital' ? (
+                      <div className="mt-3 space-y-2">
+                        <Input
+                          type="email"
+                          value={resendEmail}
+                          onChange={(e) => setResendEmail(e.target.value)}
+                          placeholder="Customer email for the PDF"
+                          className="bg-background text-xs"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 text-xs"
+                          disabled={isResending}
+                          onClick={() => void handleResendFulfillment(selectedOrder)}
+                        >
+                          {isResending ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="mr-1.5 h-3.5 w-3.5" />
+                          )}
+                          {isResending ? 'Sending…' : 'Resend book / PDF'}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Order Line Items */}
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order Items & Breakdown</p>
-              <div className="space-y-2 rounded-lg border border-border/50 bg-background p-3">
+            <div className="min-w-0">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Items</p>
+              <div className="min-w-0 space-y-2 rounded-lg border border-border/50 bg-background p-3">
                 {selectedOrder.products.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between text-sm">
-                    <span className="text-foreground">
-                      <strong className="text-primary">{item.quantity}x</strong> {item.name}
+                  <div key={item.id} className="flex min-w-0 items-start justify-between gap-3 text-sm">
+                    <span className="min-w-0 break-words text-foreground">
+                      <strong className="text-primary">{item.quantity}×</strong> {item.name}
                       {item.productType && item.productType !== 'physical' ? (
                         <span className="ml-1.5 text-[11px] font-normal capitalize text-muted-foreground">
                           · {item.productType}
                         </span>
                       ) : null}
                     </span>
-                    <span className="font-medium text-foreground">
+                    <span className="shrink-0 font-medium tabular-nums text-foreground">
                       {formatCurrency(item.price * item.quantity)}
                     </span>
                   </div>
                 ))}
-                <div className="border-t border-border/40 pt-2 mt-2 space-y-1 text-xs">
+                <div className="mt-2 space-y-1 border-t border-border/40 pt-2 text-xs">
                   {selectedOrder.subtotal !== undefined && (
-                    <div className="flex justify-between text-muted-foreground">
+                    <div className="flex justify-between gap-3 text-muted-foreground">
                       <span>Subtotal</span>
-                      <span>{formatCurrency(selectedOrder.subtotal)}</span>
+                      <span className="shrink-0 tabular-nums">{formatCurrency(selectedOrder.subtotal)}</span>
                     </div>
                   )}
                   {selectedOrder.deliveryFee && orderNeedsShipping(selectedOrder) ? (
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Delivery Fee</span>
-                      <span>{formatCurrency(selectedOrder.deliveryFee)}</span>
+                    <div className="flex justify-between gap-3 text-muted-foreground">
+                      <span>Delivery fee</span>
+                      <span className="shrink-0 tabular-nums">{formatCurrency(selectedOrder.deliveryFee)}</span>
                     </div>
                   ) : null}
                   {(selectedOrder.taxTotal ?? 0) > 0 && (
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Tax Total</span>
-                      <span>{formatCurrency(selectedOrder.taxTotal ?? 0)}</span>
+                    <div className="flex justify-between gap-3 text-muted-foreground">
+                      <span>Tax</span>
+                      <span className="shrink-0 tabular-nums">{formatCurrency(selectedOrder.taxTotal ?? 0)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-bold text-foreground pt-1 border-t border-border/30">
-                    <span>Total Amount</span>
-                    <span className="text-primary">{formatCurrency(selectedOrder.total)}</span>
+                  <div className="flex justify-between gap-3 border-t border-border/30 pt-1 text-sm font-bold text-foreground">
+                    <span>Total</span>
+                    <span className="shrink-0 tabular-nums text-primary">{formatCurrency(selectedOrder.total)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4 rounded-xl border border-border/60 bg-muted/30 p-4">
+            <div className="min-w-0 space-y-4 rounded-xl border border-border/60 bg-muted/30 p-4">
               {orderNeedsShipping(selectedOrder) && (
               <>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="flex items-center gap-2 font-semibold text-foreground">
                   <Truck className="h-4 w-4 text-primary" />
                   Courier
@@ -787,7 +894,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
+                <div className="min-w-0">
                   <label className="mb-1 block text-xs font-medium text-foreground">Courier / Carrier Name</label>
                   <Input
                     value={courierName}
@@ -796,7 +903,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                     className="bg-background text-xs"
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="mb-1 block text-xs font-medium text-foreground">Tracking Number / Reference</label>
                   <Input
                     value={trackingNumber}
@@ -813,6 +920,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                 <SelectField
                   label="Order Status"
                   name="status"
+                  className="min-w-0"
                   value={newStatus}
                   onChange={setNewStatus}
                   options={
@@ -837,6 +945,7 @@ Total: ${formatCurrency(order.total)} (${order.paymentStatus === 'paid' ? 'PAID'
                 <SelectField
                   label="Payment Status"
                   name="paymentStatus"
+                  className="min-w-0"
                   value={newPaymentStatus}
                   onChange={(v) => setNewPaymentStatus(v as Order['paymentStatus'])}
                   options={[
