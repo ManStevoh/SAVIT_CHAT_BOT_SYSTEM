@@ -86,13 +86,15 @@ class CommerceAgentPhase3Test extends TestCase
 
     public function test_tool_registry_has_eighteen_tools(): void
     {
-        $this->assertCount(23, app(AgentToolRegistry::class)->all());
+        $this->assertCount(25, app(AgentToolRegistry::class)->all());
         $names = array_map(fn ($t) => $t->name(), app(AgentToolRegistry::class)->all());
         $this->assertContains('get_product_relationships', $names);
         $this->assertContains('check_delivery_status', $names);
         $this->assertContains('get_weather', $names);
         $this->assertContains('send_order_invoice', $names);
         $this->assertContains('share_payment_details', $names);
+        $this->assertContains('send_event_ticket', $names);
+        $this->assertContains('share_event_link', $names);
     }
 
     public function test_specialists_consult_on_turn_without_llm(): void
