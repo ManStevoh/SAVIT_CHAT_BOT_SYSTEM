@@ -519,9 +519,6 @@ export default function ProductsPage() {
             </div>
             <div>
               <span className="font-medium text-foreground">{product.name}</span>
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {product.description}
-              </p>
               <p className="text-xs text-muted-foreground">
                 {(product.productType ?? 'physical')} · {(product.fulfillmentType ?? 'shipping')}
               </p>
