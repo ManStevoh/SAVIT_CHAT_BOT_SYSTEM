@@ -110,18 +110,20 @@ export function parseProductsTab(value: string | null | undefined): ProductsTab 
   return value === "categories" ? "categories" : "catalog"
 }
 
-export type StorefrontTab = "design" | "link" | "advanced"
+export type StorefrontTab = "insights" | "design" | "link" | "advanced"
 
 export const storefrontNavItems: DashboardNavItem[] = [
-  { name: "Design", href: "/dashboard/storefront", icon: Palette },
+  { name: "Dashboard", href: "/dashboard/storefront", icon: LayoutDashboard },
+  { name: "Design", href: "/dashboard/storefront?tab=design", icon: Palette },
   { name: "Store link & settings", href: "/dashboard/storefront?tab=link", icon: Link2 },
   { name: "Advanced settings", href: "/dashboard/storefront?tab=advanced", icon: SlidersHorizontal },
 ]
 
 export function parseStorefrontTab(value: string | null | undefined): StorefrontTab {
+  if (value === "design") return "design"
   if (value === "link" || value === "settings") return "link"
   if (value === "advanced") return "advanced"
-  return "design"
+  return "insights"
 }
 
 export type BookingsTab = "upcoming" | "calendar" | "past" | "setup"
@@ -230,7 +232,7 @@ export function parseSettingsTab(value: string | null | undefined): SettingsTab 
 const defaultQueryByPath: Record<string, { key: string; emptyValues: string[] }> = {
   "/dashboard/orders": { key: "status", emptyValues: ["", "all"] },
   "/dashboard/products": { key: "tab", emptyValues: ["", "catalog", "all"] },
-  "/dashboard/storefront": { key: "tab", emptyValues: ["", "design"] },
+  "/dashboard/storefront": { key: "tab", emptyValues: ["", "insights", "dashboard"] },
   "/dashboard/bookings": { key: "tab", emptyValues: ["", "upcoming", "schedule"] },
   "/dashboard/events": { key: "tab", emptyValues: ["", "events"] },
   "/dashboard/dine-in": { key: "tab", emptyValues: ["", "tables"] },

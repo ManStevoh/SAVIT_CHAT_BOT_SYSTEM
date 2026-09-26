@@ -37,6 +37,7 @@ import {
 import { StorefrontCouponsCard } from '@/components/dashboard/StorefrontCouponsCard'
 import { BrandCustomizationCard } from '@/components/dashboard/BrandCustomizationCard'
 import { StorefrontShareActions } from '@/components/dashboard/StorefrontShareActions'
+import { StorefrontInsightsDashboard } from '@/components/dashboard/StorefrontInsightsDashboard'
 import type { BrandTheme } from '@/lib/theme-utils'
 
 type BioLink = { label: string; url: string }
@@ -378,7 +379,9 @@ export default function DashboardStorefrontPage() {
             </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            How your shop looks, where it lives, and what happens after checkout.
+            {activeTab === 'insights'
+              ? 'Visits, product views, and where shoppers are coming from.'
+              : 'How your shop looks, where it lives, and what happens after checkout.'}
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -389,10 +392,12 @@ export default function DashboardStorefrontPage() {
               </a>
             </Button>
           )}
-          <Button onClick={() => void save()} disabled={saving} size="sm" className="gap-1.5">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Save changes
-          </Button>
+          {activeTab !== 'insights' && (
+            <Button onClick={() => void save()} disabled={saving} size="sm" className="gap-1.5">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Save changes
+            </Button>
+          )}
         </div>
       </div>
 
@@ -436,7 +441,11 @@ export default function DashboardStorefrontPage() {
       </div>
 
       <Tabs value={activeTab} className="space-y-6">
-        {/* TAB 1: how it looks */}
+        <TabsContent value="insights" className="space-y-4 outline-none">
+          <StorefrontInsightsDashboard />
+        </TabsContent>
+
+        {/* TAB: how it looks */}
         <TabsContent value="design" className="space-y-4 outline-none">
           <BrandCustomizationCard
             initialLogo={companyLogo}

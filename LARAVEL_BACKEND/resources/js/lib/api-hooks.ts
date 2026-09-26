@@ -701,6 +701,31 @@ export function useAnalytics(period?: string) {
   )
 }
 
+export type StorefrontAnalytics = {
+  days: number
+  visitors: number
+  visitorsChange: number
+  view_catalog: number
+  view_product: number
+  add_to_cart: number
+  begin_checkout: number
+  purchase: number
+  visitorsPerDay: { date: string; value: number }[]
+  topProducts: { name: string; views: number }[]
+  countries: { country: string; visitors: number }[]
+}
+
+export function useStorefrontAnalytics(days = 30) {
+  return useSWR<StorefrontAnalytics>(
+    ['storefront-analytics', days],
+    () =>
+      apiRequest<StorefrontAnalytics>(
+        buildPath('/api/company/storefront/analytics', { days })
+      ),
+    { revalidateOnFocus: false }
+  )
+}
+
 // ── Dashboard Summary (single combined endpoint to prevent concurrent 503s) ──
 
 export interface DashboardSummaryData {

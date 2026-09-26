@@ -21,10 +21,17 @@ class StorefrontAnalyticsController extends Controller
 
         $company = Company::findOrFail($companyId);
         $days = max(1, min(90, (int) $request->query('days', 30)));
+        $summary = $this->storefront->analyticsSummary($company, $days);
 
-        return response()->json([
+        return response()->json(array_merge([
             'days' => $days,
-            'funnel' => $this->storefront->analyticsSummary($company, $days),
-        ]);
+            'funnel' => [
+                'view_catalog' => $summary['view_catalog'],
+                'view_product' => $summary['view_product'],
+                'add_to_cart' => $summary['add_to_cart'],
+                'begin_checkout' => $summary['begin_checkout'],
+                'purchase' => $summary['purchase'],
+            ],
+        ], $summary));
     }
 }
