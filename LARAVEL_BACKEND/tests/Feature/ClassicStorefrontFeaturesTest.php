@@ -570,4 +570,38 @@ class ClassicStorefrontFeaturesTest extends TestCase
             ->assertOk()
             ->assertJsonPath('storefrontOgImage', 'https://cdn.example.com/og-banner.jpg');
     }
+
+    public function test_storefront_dashboard_counts_unique_visitors_and_country(): void
+    {
+        [$company, $latte] = $this->seedStore();
+        $slug = $company->store_slug;
+
+        $this->withHeaders(['CF-IPCountry' => 'KE'])
+            ->get("/s/{$slug}")
+            ->assertOk();
+        $this->withHeaders(['CF-IPCountry' => 'KE'])
+            ->get("/s/{$slug}/p/{$latte->slug}")
+            ->assertOk();
+
+        $this->flushSession();
+
+        $this->withHeaders(['CF-IPCountry' => 'US'])
+            ->get("/s/{$slug}")
+            ->assertOk();
+
+        $this->actingAsStoreOwner($company);
+
+        $payload = $this->getJson('/api/company/storefront/analytics?days=30')
+            ->assertOk()
+            ->assertJsonPath('visitors', 2)
+            ->assertJsonPath('view_catalog', 2)
+            ->assertJsonPath('view_product', 1)
+            ->assertJsonPath('topProducts.0.name', 'Vanilla Latte')
+            ->json();
+
+        $countries = collect($payload['countries'])->keyBy('country');
+        $this->assertSame(1, (int) $countries['KE']['visitors']);
+        $this->assertSame(1, (int) $countries['US']['visitors']);
+        $this->assertNotEmpty($payload['visitorsPerDay']);
+    }
 }

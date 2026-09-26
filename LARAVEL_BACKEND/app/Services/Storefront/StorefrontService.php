@@ -1244,6 +1244,13 @@ class StorefrontService
 
     public function recordEvent(Company $company, string $event, ?string $sessionToken = null, ?int $productId = null, array $meta = []): void
     {
+        if (! isset($meta['country'])) {
+            $country = $this->visitorCountryFromRequest();
+            if ($country !== null) {
+                $meta['country'] = $country;
+            }
+        }
+
         StorefrontEvent::create([
             'company_id' => $company->id,
             'session_token' => $sessionToken,
@@ -1254,11 +1261,27 @@ class StorefrontService
     }
 
     /**
-     * @return array<string, int>
+     * Unique shop visitors, funnel counts, daily series, top products, and country mix.
+     *
+     * @return array{
+     *   visitors: int,
+     *   visitorsChange: float,
+     *   view_catalog: int,
+     *   view_product: int,
+     *   add_to_cart: int,
+     *   begin_checkout: int,
+     *   purchase: int,
+     *   visitorsPerDay: list<array{date: string, value: int}>,
+     *   topProducts: list<array{name: string, views: int}>,
+     *   countries: list<array{country: string, visitors: int}>
+     * }
      */
     public function analyticsSummary(Company $company, int $days = 30): array
     {
-        $since = now()->subDays(max(1, $days));
+        $daysCount = max(1, min(90, $days));
+        $since = now()->subDays($daysCount);
+        $previousSince = now()->subDays($daysCount * 2);
+
         $rows = StorefrontEvent::where('company_id', $company->id)
             ->where('created_at', '>=', $since)
             ->selectRaw('event, COUNT(*) as c')
@@ -1266,13 +1289,127 @@ class StorefrontService
             ->pluck('c', 'event')
             ->all();
 
+        $visitors = $this->uniqueVisitorCount($company->id, $since);
+        $previousVisitors = $this->uniqueVisitorCount($company->id, $previousSince, $since);
+
+        $dailyRows = StorefrontEvent::where('company_id', $company->id)
+            ->where('created_at', '>=', $since->copy()->startOfDay())
+            ->whereNotNull('session_token')
+            ->where('session_token', '!=', '')
+            ->selectRaw('DATE(created_at) as d, COUNT(DISTINCT session_token) as c')
+            ->groupByRaw('DATE(created_at)')
+            ->get();
+        $byDay = [];
+        foreach ($dailyRows as $row) {
+            $byDay[(string) $row->d] = (int) $row->c;
+        }
+
+        $visitorsPerDay = [];
+        for ($i = $daysCount - 1; $i >= 0; $i--) {
+            $day = now()->subDays($i);
+            $visitorsPerDay[] = [
+                'date' => $day->format('M j'),
+                'value' => (int) ($byDay[$day->toDateString()] ?? 0),
+            ];
+        }
+
+        $topRows = StorefrontEvent::where('company_id', $company->id)
+            ->where('created_at', '>=', $since)
+            ->where('event', 'view_product')
+            ->whereNotNull('product_id')
+            ->selectRaw('product_id, COUNT(*) as views')
+            ->groupBy('product_id')
+            ->orderByDesc('views')
+            ->limit(8)
+            ->get();
+        $names = Product::whereIn('id', $topRows->pluck('product_id'))->pluck('name', 'id');
+        $topProducts = $topRows->map(fn ($row) => [
+            'name' => (string) ($names[$row->product_id] ?? 'Product'),
+            'views' => (int) $row->views,
+        ])->values()->all();
+
+        $countryExpr = $this->jsonCountryExpression();
+        $countryRows = StorefrontEvent::where('company_id', $company->id)
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('session_token')
+            ->where('session_token', '!=', '')
+            ->whereNotNull('meta')
+            ->whereRaw("{$countryExpr} IS NOT NULL")
+            ->whereRaw("{$countryExpr} != ''")
+            ->whereRaw("{$countryExpr} != 'XX'")
+            ->selectRaw("{$countryExpr} as country, COUNT(DISTINCT session_token) as visitors")
+            ->groupByRaw($countryExpr)
+            ->orderByDesc('visitors')
+            ->limit(12)
+            ->get();
+        $countries = $countryRows
+            ->map(fn ($row) => [
+                'country' => strtoupper(trim((string) $row->country)),
+                'visitors' => (int) $row->visitors,
+            ])
+            ->filter(fn (array $row) => preg_match('/^[A-Z]{2}$/', $row['country']) === 1)
+            ->values()
+            ->all();
+
         return [
+            'visitors' => $visitors,
+            'visitorsChange' => $this->percentChange($visitors, $previousVisitors),
             'view_catalog' => (int) ($rows['view_catalog'] ?? 0),
             'view_product' => (int) ($rows['view_product'] ?? 0),
             'add_to_cart' => (int) ($rows['add_to_cart'] ?? 0),
             'begin_checkout' => (int) ($rows['begin_checkout'] ?? 0),
             'purchase' => (int) ($rows['purchase'] ?? 0),
+            'visitorsPerDay' => $visitorsPerDay,
+            'topProducts' => $topProducts,
+            'countries' => $countries,
         ];
+    }
+
+    protected function uniqueVisitorCount(int $companyId, \Carbon\CarbonInterface $from, ?\Carbon\CarbonInterface $to = null): int
+    {
+        $query = StorefrontEvent::where('company_id', $companyId)
+            ->where('created_at', '>=', $from)
+            ->whereNotNull('session_token')
+            ->where('session_token', '!=', '');
+        if ($to) {
+            $query->where('created_at', '<', $to);
+        }
+
+        return (int) $query->selectRaw('COUNT(DISTINCT session_token) as c')->value('c');
+    }
+
+    protected function percentChange(int $current, int $previous): float
+    {
+        if ($previous === 0) {
+            return $current > 0 ? 100.0 : 0.0;
+        }
+
+        return round((($current - $previous) / $previous) * 100, 1);
+    }
+
+    protected function jsonCountryExpression(): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "json_extract(meta, '$.country')"
+            : "JSON_UNQUOTE(JSON_EXTRACT(meta, '$.country'))";
+    }
+
+    protected function visitorCountryFromRequest(): ?string
+    {
+        try {
+            $request = request();
+        } catch (\Throwable) {
+            return null;
+        }
+        if (! $request) {
+            return null;
+        }
+        $country = strtoupper(trim((string) $request->header('CF-IPCountry', '')));
+        if ($country === '' || $country === 'XX' || preg_match('/^[A-Z]{2}$/', $country) !== 1) {
+            return null;
+        }
+
+        return $country;
     }
 
     public function whatsappUrl(?string $number, ?string $prefill = null): ?string
